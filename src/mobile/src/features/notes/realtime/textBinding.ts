@@ -1,3 +1,4 @@
+import { AppState } from "react-native";
 import type * as Y from "yjs";
 import type { YTextEvent } from "yjs";
 import {
@@ -192,6 +193,12 @@ export function createTextBinding(opts: TextBindingOptions): TextBinding {
     }, PUSH_DEBOUNCE_MS);
   };
 
+  // iOS can suspend or kill the app from inactive or background without another JS turn, so text
+  // still waiting for the debounce goes into the document, its device copy and the transport now.
+  const lifecycle = AppState.addEventListener("change", (state) => {
+    if (state === "background" || state === "inactive") flush();
+  });
+
   const applyNow = () => {
     clearRemoteTimer();
     if (!remotePending || cancelled) return;
@@ -276,6 +283,7 @@ export function createTextBinding(opts: TextBindingOptions): TextBinding {
 
   const dispose = () => {
     cancelled = true;
+    lifecycle.remove();
     if (observing) ytext.unobserve(observer);
     clearRemoteTimer();
     // The pre-detach hook already flushed while the doc was live; this

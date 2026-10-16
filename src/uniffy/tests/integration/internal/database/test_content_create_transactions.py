@@ -92,13 +92,13 @@ async def test_project_create_rolls_back_defaults_when_tag_validation_fails(
 
 
 async def test_note_create_rolls_back_when_tag_validation_fails(
-    session, env, search_indexer
+    session, env, search_indexer, buffer
 ) -> None:
     title = f"Rollback note {generate_id().hex[:10]}"
 
     try:
         with pytest.raises(NotFoundError):
-            await NoteOperations(session, AsyncMock(), search_indexer).create(
+            await NoteOperations(session, AsyncMock(), search_indexer, buffer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -187,6 +187,7 @@ async def test_calendar_event_create_rolls_back_children_when_tag_validation_fai
     session,
     env,
     search_indexer,
+    buffer,
 ) -> None:
     calendar = Calendar(
         organization_id=env.org_id,
@@ -201,7 +202,7 @@ async def test_calendar_event_create_rolls_back_children_when_tag_validation_fai
 
     try:
         with pytest.raises(NotFoundError):
-            await CalendarEventOperations(session, search_indexer).create(
+            await CalendarEventOperations(session, search_indexer, buffer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -234,6 +235,7 @@ async def test_calendar_event_and_room_booking_roll_back_together_on_late_confli
     session,
     env,
     search_indexer,
+    buffer,
 ) -> None:
     calendar = Calendar(
         organization_id=env.org_id,
@@ -263,7 +265,7 @@ async def test_calendar_event_and_room_booking_roll_back_together_on_late_confli
             ),
             pytest.raises(ValidationError, match="already booked"),
         ):
-            await CalendarEventOperations(session, search_indexer).create(
+            await CalendarEventOperations(session, search_indexer, buffer).create(
                 user_id=env.admin_id,
                 organization_id=env.org_id,
                 title=title,
@@ -302,6 +304,7 @@ async def test_calendar_event_replaces_and_cancels_room_bookings(
     session,
     env,
     search_indexer,
+    buffer,
 ) -> None:
     calendar = Calendar(
         organization_id=env.org_id,
@@ -324,7 +327,7 @@ async def test_calendar_event_replaces_and_cancels_room_bookings(
     calendar_id = calendar.id
     room_ids = [room.id for room in rooms]
     start_time = datetime.now(UTC) + timedelta(days=2)
-    operations = CalendarEventOperations(session, search_indexer)
+    operations = CalendarEventOperations(session, search_indexer, buffer)
 
     try:
         event = await operations.create(
@@ -368,9 +371,7 @@ async def test_calendar_event_replaces_and_cancels_room_bookings(
         assert replacement.status == BookingStatus.CANCELLED
     finally:
         await session.rollback()
-        await session.execute(
-            delete(RoomBooking).where(RoomBooking.room_id.in_(room_ids))
-        )
+        await session.execute(delete(RoomBooking).where(RoomBooking.room_id.in_(room_ids)))
         await _delete_calendar(session, calendar_id)
         await session.execute(delete(Room).where(Room.id.in_(room_ids)))
         await session.commit()

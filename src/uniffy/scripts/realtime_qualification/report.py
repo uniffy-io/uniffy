@@ -52,6 +52,8 @@ def _latency_row(label: str, stats: dict[str, Any]) -> str:
 
 def _scenario_markdown(scenario: dict[str, Any]) -> list[str]:
     workload = scenario["workload"]
+    edits = scenario["edits"]
+    received = scenario["received"]
     latency = scenario["latency_ms"]
     postgres = scenario["postgres"]
     valkey = scenario["valkey"]
@@ -64,14 +66,19 @@ def _scenario_markdown(scenario: dict[str, Any]) -> list[str]:
         f"{workload['sockets']} sockets, edit phase {workload['edit_seconds']} s, "
         f"measured window {scenario['window_seconds']} s.",
         "",
-        f"Edits made {scenario['edits']['made']}, frames sent {scenario['edits']['frames']}, "
-        f"unacknowledged at end {scenario['edits']['unacknowledged']}, peer deliveries missing "
-        f"at end {scenario['edits']['unseen']}, converged {scenario['edits']['converged']}.",
+        f"Edits made {edits['made']}, update frames sent {edits['frames']}, at end unaccepted "
+        f"{edits['unaccepted']}, uncheckpointed {edits['uncheckpointed']}, peer deliveries "
+        f"missing {edits['unseen']}, converged {edits['converged']}.",
+        "",
+        f"Frames received: accepted receipts (11) {received['accepted_receipt']}, checkpoint "
+        f"progress (12) {received['checkpoint_progress']}, session state (13) "
+        f"{received['session_state']}, committed (7) {received['committed']}.",
         "",
         "| Latency (ms) | count | p50 | p95 | p99 | max |",
         "| --- | --- | --- | --- | --- | --- |",
-        _latency_row("acceptance, send to ack", latency["acceptance"]),
-        _latency_row("edit to ack", latency["edit_to_ack"]),
+        _latency_row("acceptance, send to receipt", latency["acceptance"]),
+        _latency_row("edit to receipt", latency["edit_to_acceptance"]),
+        _latency_row("checkpoint age, edit to checkpoint", latency["checkpoint_age"]),
         _latency_row("peer visibility from edit", latency["visibility_from_edit"]),
         _latency_row("peer visibility from send", latency["visibility_from_send"]),
         _latency_row("valkey competing probe", valkey.get("probe_ms", {})),

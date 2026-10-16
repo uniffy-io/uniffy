@@ -268,6 +268,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         user_id: UUID,
         organization_id: UUID,
         project_id: UUID,
+        *,
+        buffer: UpdateBuffer,
         **kwargs,
     ) -> Project:
         """Access-policy changes go through ``permissions.v1.MembersService``, never this method."""
@@ -325,6 +327,7 @@ class ProjectOperations(BaseContentOperations[Project]):
                     organization_id=organization_id,
                     target_urn=project_urn,
                     new_label=project.name,
+                    buffer=buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(
@@ -351,9 +354,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         project_id: UUID,
         permanent: bool = False,
         *,
-        buffer: UpdateBuffer | None = None,
+        buffer: UpdateBuffer,
     ) -> bool:
-        buffer = buffer or UpdateBuffer()
         await lock_document(self.session, (ContentType.PROJECT, project_id))
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_delete(user_id, organization_id, project)

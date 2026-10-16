@@ -35,6 +35,7 @@ from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.projects import queries
@@ -122,6 +123,8 @@ async def _task_payload(
 
 
 class TaskHandlers:
+    buffer: UpdateBuffer
+
     async def create_task(
         self,
         request: CreateTaskRequest,
@@ -140,6 +143,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 task = await ops.create(
                     user_id=user_id,
@@ -204,6 +208,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 task, spawned_task = await ops.update(user_id, organization_id, task_id, **updates)
 
@@ -235,6 +240,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 task, spawned_task = await ops.move(
                     user_id,
@@ -273,6 +279,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 tasks = await ops.bulk_update(
                     user_id,
@@ -313,6 +320,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 await ops.delete(user_id, organization_id, task_id, permanent=request.permanent)
                 return DeleteTaskResponse(success=True, message="Task deleted successfully")
@@ -335,6 +343,7 @@ class TaskHandlers:
                     session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                 )
                 count = 0
                 for task_id_str in request.task_ids:

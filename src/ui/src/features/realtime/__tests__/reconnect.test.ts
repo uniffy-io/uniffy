@@ -9,7 +9,7 @@ import {
   type FakeWebSocket,
   closeSockets,
   currentSocket,
-  durableWrites,
+  updateWrites,
   installBrowser,
   reopenSocket,
 } from "@/features/realtime/persistence/__tests__/browser";
@@ -115,7 +115,7 @@ describe("reconnect after a backend restart", () => {
     expect(chip).toEqual(["synced", null]);
     note.server.attach(ws);
 
-    expect(durableWrites(ws, note.docName)).toEqual([]);
+    expect(updateWrites(ws, note.docName)).toEqual([]);
     expect(note.state()).toMatchObject({ transportPending: false, checkpointPending: false });
     expect(chip).toEqual(["synced", null, "saved"]);
   });
@@ -131,7 +131,7 @@ describe("reconnect after a backend restart", () => {
     const ws = reopenSocket();
     note.server.attach(ws);
 
-    const writes = durableWrites(ws, note.docName);
+    const writes = updateWrites(ws, note.docName);
     for (const update of accepted)
       expect(writes.filter((write) => write.id === update.id)).toEqual([update]);
     note.server.accept(ws);
@@ -144,13 +144,13 @@ describe("reconnect after a backend restart", () => {
   it("resends an update that never got a receipt exactly once under its id", () => {
     const note = openNote("unanswered", "base");
     note.edit(append(" unanswered"));
-    const [sent] = durableWrites(note.ws, note.docName);
+    const [sent] = updateWrites(note.ws, note.docName);
 
     note.ws.serverClose(1006);
     const ws = reopenSocket();
     note.server.attach(ws);
 
-    expect(durableWrites(ws, note.docName)).toEqual([sent]);
+    expect(updateWrites(ws, note.docName)).toEqual([sent]);
     note.server.accept(ws);
     note.server.checkpoint([ws]);
     expect(note.server.text).toBe("base unanswered");
@@ -159,14 +159,14 @@ describe("reconnect after a backend restart", () => {
   it("resends an update that never got a receipt exactly once when the epoch also changed", () => {
     const note = openNote("unanswered-new-epoch", "base");
     note.edit(append(" unanswered"));
-    const [sent] = durableWrites(note.ws, note.docName);
+    const [sent] = updateWrites(note.ws, note.docName);
 
     note.ws.serverClose(1006);
     note.server.loseBuffer("E2");
     const ws = reopenSocket();
     note.server.attach(ws);
 
-    expect(durableWrites(ws, note.docName).filter((write) => write.id === sent.id)).toEqual([sent]);
+    expect(updateWrites(ws, note.docName).filter((write) => write.id === sent.id)).toEqual([sent]);
     note.server.accept(ws);
     note.server.checkpoint([ws]);
     expect(note.server.text).toBe("base unanswered");
@@ -184,7 +184,7 @@ describe("reconnect after a backend restart", () => {
     const ws = reopenSocket();
     note.server.attach(ws);
 
-    const writes = durableWrites(ws, note.docName);
+    const writes = updateWrites(ws, note.docName);
     expect(writes).toHaveLength(1);
     note.server.accept(ws);
     note.server.checkpoint([ws]);
@@ -214,13 +214,13 @@ describe("periodic resync", () => {
     note.edit(append(" accepted"));
     note.edit((markdown) => markdown.delete(0, 1));
     note.server.accept(note.ws);
-    const writes = durableWrites(note.ws, note.docName).length;
+    const writes = updateWrites(note.ws, note.docName).length;
     const transitions = events.length;
     const state = note.state();
 
     vi.advanceTimersByTime(RESYNC_MS);
     note.server.resync(note.ws);
-    expect(durableWrites(note.ws, note.docName)).toHaveLength(writes);
+    expect(updateWrites(note.ws, note.docName)).toHaveLength(writes);
     expect(events).toHaveLength(transitions);
     expect(note.state()).toBe(state);
 
@@ -231,6 +231,6 @@ describe("periodic resync", () => {
       note.server.resync(note.ws);
     }
     expect(chip).toEqual(["saved"]);
-    expect(durableWrites(note.ws, note.docName)).toHaveLength(writes);
+    expect(updateWrites(note.ws, note.docName)).toHaveLength(writes);
   });
 });

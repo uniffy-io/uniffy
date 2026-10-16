@@ -89,36 +89,36 @@ async function storedKeys(): Promise<string[][]> {
 }
 
 describe("realtime local recovery", () => {
-  it("records an edit for discovery before any acknowledgment and stops counting it once acknowledged", async () => {
+  it("records an edit for discovery before any checkpoint and stops counting it once checkpointed", async () => {
     const doc = new Y.Doc();
     doc.getMap("doc_meta").set("generation", "g");
-    let acknowledged = true;
+    let checkpointed = true;
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
       contentId: "crash",
       ydoc: doc,
       scope: scopeFor("crash"),
-      isAcknowledged: () => acknowledged,
+      isCheckpointed: () => checkpointed,
     });
     doc.getText("markdown").insert(0, "first offline edit");
-    acknowledged = false;
+    checkpointed = false;
     await persistence.flush();
     expect(await discoverStoredPendingDocs("alice")).toBe(true);
     expect(await discoverStoredPendingDocs("bob")).toBe(false);
-    acknowledged = true;
-    await persistence.acknowledge();
+    checkpointed = true;
+    await persistence.markCheckpointed();
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
-    await persistence.destroy({ acknowledged: true });
+    await persistence.destroy({ checkpointed: true });
     doc.destroy();
   });
 
-  it("keeps an unacknowledged close dirty after the transport detached", async () => {
+  it("keeps an uncheckpointed close dirty after the transport detached", async () => {
     const doc = new Y.Doc();
     const persistence = attachEncryptedPersistence({
       contentType: "TASK",
       contentId: "detach",
       ydoc: doc,
-      isAcknowledged: () => true,
+      isCheckpointed: () => true,
     });
     doc.getText("markdown").insert(0, "pending");
     await persistence.destroy();
@@ -436,16 +436,16 @@ describe("realtime local recovery", () => {
     later.destroy();
   });
 
-  it("keeps an acknowledged close as a cache, never as a draft", async () => {
+  it("keeps a checkpointed close as a cache, never as a draft", async () => {
     const { doc, persistence } = await openUnder("G", "server text");
     doc.transact(() => doc.getText("markdown").insert(11, " synced later"), "session-id");
-    await persistence.destroy({ acknowledged: true });
+    await persistence.destroy({ checkpointed: true });
     doc.destroy();
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
 
     const { doc: cached, persistence: same } = await openUnder("G", "server text");
     expect(cached.getText("markdown").toString()).toBe("server text synced later");
-    await same.destroy({ acknowledged: true });
+    await same.destroy({ checkpointed: true });
     cached.destroy();
 
     const { doc: later, persistence: reopened } = await openUnder("H", "replacement");
@@ -548,7 +548,7 @@ describe("rows without coverage identity", () => {
     expect(await readRecoveredDrafts(doc)).toEqual([]);
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
     expect(listPendingDocs()).toEqual([]);
-    await persistence.destroy({ discard: true, acknowledged: true });
+    await persistence.destroy({ discard: true, checkpointed: true });
     doc.destroy();
     stale.destroy();
   });

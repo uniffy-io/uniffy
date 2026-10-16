@@ -65,7 +65,7 @@ def projection_job(note: BufferedDocument, revision: int) -> tuple[str, str, tup
     return (
         SAVE_REALTIME_SNAPSHOT.name,
         f"{note.namespace}projection:{ContentType.NOTE.value}:{note.key[1]}:{revision}",
-        (ContentType.NOTE.value, str(note.key[1]), str(note.org), "", ""),
+        (ContentType.NOTE.value, str(note.key[1]), str(note.org)),
     )
 
 
@@ -320,7 +320,7 @@ async def test_attachment_cleanup_defers_until_the_columns_show_every_accepted_e
     # The tail is checkpointed but the column still lacks the reference until projection.
     assert reference not in await projected()
     assert await pending(live_note.buffer)
-    outcome = await persist_snapshot(*live_note.key, live_note.org, b"", b"")
+    outcome = await persist_snapshot(*live_note.key, live_note.org)
     assert outcome is SnapshotOutcome.RENDERED
     assert reference in await projected()
     assert not await pending(live_note.buffer)

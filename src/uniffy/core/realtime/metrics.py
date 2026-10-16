@@ -26,28 +26,10 @@ REALTIME_HYDRATION_DURATION = Histogram(
     ["content_type", "source"],
 )
 
-REALTIME_SNAPSHOT_TASK_DURATION = Histogram(
-    "uniffy_realtime_snapshot_task_duration_seconds",
-    "End-to-end duration of the realtime snapshot job",
+REALTIME_PROJECTION_DURATION = Histogram(
+    "uniffy_realtime_projection_duration_seconds",
+    "Duration of one projection job rendering a committed checkpoint into domain columns",
     ["content_type"],
-)
-
-REALTIME_SNAPSHOT_SUPERSEDED_TOTAL = Counter(
-    "uniffy_realtime_snapshot_superseded_total",
-    "Snapshot jobs skipped because a newer snapshot or a newer plain write landed first",
-    ["content_type", "reason"],
-)
-
-REALTIME_RENDER_CONFLICTS_TOTAL = Counter(
-    "uniffy_realtime_render_conflicts_total",
-    "Domain renders that lost their version race and were handed to the worker retry",
-    ["content_type"],
-)
-
-REALTIME_UPDATE_MESSAGES_TOTAL = Counter(
-    "uniffy_realtime_update_messages_total",
-    "Yjs synchronization update frames observed per direction",
-    ["content_type", "direction"],
 )
 
 REALTIME_AWARENESS_MESSAGES_TOTAL = Counter(
@@ -93,7 +75,7 @@ REALTIME_REAUTH_CLOSES_TOTAL = Counter(
 )
 
 REALTIME_WRITE_REJECTIONS = Counter(
-    "uniffy_realtime_write_rejections_total", "Rejected durable document writes", ["reason"]
+    "uniffy_realtime_write_rejections_total", "Live document updates refused", ["reason"]
 )
 REALTIME_PROJECTION_OUTCOMES = Counter(
     "uniffy_realtime_projection_outcomes_total", "Worker projection attempts", ["outcome"]
@@ -176,6 +158,15 @@ REALTIME_BUFFER_EPOCH_RESETS_TOTAL = Counter(
     "uniffy_realtime_buffer_epoch_resets_total",
     "Buffer epochs replaced, by the condition that forced the reset",
     ["reason"],
+)
+REALTIME_BUFFER_RECLAIMED_TOTAL = Counter(
+    "uniffy_realtime_buffer_reclaimed_total",
+    "Buffer epochs whose keys maintenance removed: idle checkpointed epochs and orphan controls",
+    ["kind"],
+)
+REALTIME_BUFFER_RETIRED_RECORDS_DROPPED_TOTAL = Counter(
+    "uniffy_realtime_buffer_retired_records_dropped_total",
+    "Records a retired buffer epoch retained, dropped once they outlived the retention age",
 )
 REALTIME_RECEIPT_LATENCY = Histogram(
     "uniffy_realtime_receipt_latency_seconds",

@@ -4,7 +4,6 @@ import contextlib
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any
-from unittest.mock import AsyncMock
 from uuid import UUID
 
 import pycrdt
@@ -37,6 +36,7 @@ from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.binary import get_binary_client
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.tests.integration.access.recording_search import recording_indexer
 
 BUDGET = 1024 * 1024 * 1024
 # Nothing listens here, so every call fails the way an unreachable Valkey does.
@@ -197,7 +197,7 @@ async def buffered(key: DocKey, access: Any, namespace: str) -> BufferedDocument
 @pytest_asyncio.fixture(loop_scope="session")
 async def live_note(access, valkey_namespace) -> AsyncIterator[BufferedDocument]:
     """A member's note whose snapshot row is seeded and bound to a fresh buffer epoch."""
-    register_realtime_adapter(NoteRealtimeAdapter(AsyncMock()))
+    register_realtime_adapter(NoteRealtimeAdapter(recording_indexer()))
     async with open_session() as db:
         note = Note(
             organization_id=access.org_id,
@@ -303,10 +303,9 @@ async def published_progress(subscription: Any) -> list[dict[str, Any]]:
     ]
 
 
-async def published_replacements(subscription: Any) -> list[str]:
-    """Content the document channel told resident replicas to graft, oldest first."""
-    return [
-        payload["content"]
+async def replacement_hints(subscription: Any) -> int:
+    """How many times the document channel told resident replicas to reload."""
+    return sum(
+        payload.get("kind") == RealtimePayloadKind.CONTENT_REPLACE
         for payload in await published(subscription)
-        if payload.get("kind") == RealtimePayloadKind.CONTENT_REPLACE
-    ]
+    )

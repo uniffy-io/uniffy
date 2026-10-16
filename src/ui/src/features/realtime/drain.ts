@@ -12,7 +12,6 @@ import { attachEncryptedPersistence } from "@/features/realtime/persistence/encr
 import {
   SEED_CONFLICT_REASON,
   WS_CLOSE_FORBIDDEN,
-  WS_CLOSE_NOT_FOUND,
   WS_CLOSE_TOKEN_REVOKED,
   WS_CLOSE_UNAUTHENTICATED,
 } from "@/features/realtime/protocol";
@@ -48,7 +47,7 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
       contentId,
       ydoc,
       scope: entry,
-      isAcknowledged: () => !realtimeMultiplexer.getDocState(docName).checkpointPending,
+      isCheckpointed: () => !realtimeMultiplexer.getDocState(docName).checkpointPending,
     });
     let settled = false;
     let hydrating = false;
@@ -68,7 +67,7 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
       void persistence
         .destroy({
           discard: outcome === "drained" && entry.discardOnClean,
-          acknowledged: outcome === "drained",
+          checkpointed: outcome === "drained",
         })
         .finally(() => {
           // Disposal records a denied doc again for unsent updates only its recovered draft holds.
@@ -132,7 +131,6 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
         if (
           code === WS_CLOSE_UNAUTHENTICATED ||
           code === WS_CLOSE_FORBIDDEN ||
-          code === WS_CLOSE_NOT_FOUND ||
           code === WS_CLOSE_TOKEN_REVOKED
         )
           finish("retry");

@@ -17,6 +17,7 @@ from uniffy.core.models.login.organization_member import (
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.tags.operations import TagOperations
@@ -54,6 +55,7 @@ class DemoContext:
     storage: ObjectStorage
     search: WorkspaceSearch
     search_indexer: SearchIndexer
+    buffer: UpdateBuffer
     organization_id: UUID
     actor_id: UUID
     timezone: str

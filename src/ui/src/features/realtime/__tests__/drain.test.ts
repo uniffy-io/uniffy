@@ -5,7 +5,7 @@ import {
   FakeRealtimeServer,
   closeSockets,
   currentSocket,
-  durableWrites,
+  updateWrites,
   eventually,
   installBrowser,
   openEditor,
@@ -190,10 +190,21 @@ describe("realtime drain", () => {
     );
     vi.advanceTimersByTime(BATCH_MS);
     // Its receipt is still in the buffer, so the restored update is not resent.
-    expect(durableWrites(ws, server.docName).map(({ id }) => id)).not.toContain(write.id);
+    expect(updateWrites(ws, server.docName).map(({ id }) => id)).not.toContain(write.id);
     server.checkpoint([ws]);
     expect(await second).toBe("drained");
     expect(hasPendingDoc("TASK", "slow")).toBe(false);
+  });
+
+  it("keeps the entry and every row when the server forbids the connection", async () => {
+    const server = new FakeRealtimeServer("TASK:forbidden", GENERATION);
+    await strandRows(server, "forbidden", "typed offline");
+    recordPendingDoc(entryFor("forbidden"));
+    const { outcome, ws } = await startDrain(server, entryFor("forbidden"));
+    ws.serverClose(4403);
+    expect(await outcome).toBe("retry");
+    expect(hasPendingDoc("TASK", "forbidden")).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
   });
 
   it("hands a closed editor's accepted edits to the drain and holds sign-out until the checkpoint", async () => {
@@ -222,7 +233,7 @@ describe("realtime drain", () => {
         checkpointPending: true,
       }),
     );
-    expect(durableWrites(ws, "NOTE:closed").map(({ id }) => id)).toEqual([write.id]);
+    expect(updateWrites(ws, "NOTE:closed").map(({ id }) => id)).toEqual([write.id]);
     expect(hasUnsyncedEdits("alice")).toBe(true);
 
     server.checkpoint([ws]);
@@ -250,7 +261,7 @@ describe("realtime drain", () => {
       if (!denialFirst) ws.receive(deniedFrame(server.docName, "read only"));
       expect(await outcome).toBe("retained");
       expect(hasPendingDoc("TASK", contentId)).toBe(false);
-      expect(durableWrites(ws, server.docName)).toEqual([]);
+      expect(updateWrites(ws, server.docName)).toEqual([]);
       expect(await discoverStoredPendingDocs("alice")).toBe(true);
       expect(await offeredDrafts(server, contentId)).toEqual(["typed offline"]);
     },

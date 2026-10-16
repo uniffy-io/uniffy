@@ -113,6 +113,7 @@ async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         project_id=project_id,
+        buffer=ctx.buffer,
         **kwargs,
     )
 
@@ -141,6 +142,7 @@ async def _execute_delete_project(ctx: ToolContext, args: dict) -> ToolResult:
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         project_id=project_id,
+        buffer=ctx.buffer,
     )
 
     return ToolResult(success=True, data="Project deleted successfully.")
@@ -350,7 +352,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
         kwargs["sprint_id"] = sprint_id
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if "description" in kwargs:  # noqa: PLR2004
         kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task = await ops.create(
@@ -446,7 +448,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if "description" in kwargs:  # noqa: PLR2004
         kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task, _ = await ops.update(
@@ -475,7 +477,7 @@ async def _execute_delete_task(ctx: ToolContext, args: dict) -> ToolResult:
     except ValueError:
         return ToolResult(success=False, data="", error=f"Invalid task_id: {task_id_str}")
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -593,7 +595,7 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
     # sort_order defaults to appending at the end of the target column
     sort_order = args.get("sort_order", 0)
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     task, _ = await ops.move(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,

@@ -10,10 +10,25 @@ import {
   APPLY_COALESCE_MS,
   COMPOSITION_RECHECK_MS,
   createTextBinding,
+  PUSH_DEBOUNCE_MS,
   selectPushBase,
   TYPING_IDLE_MS,
   type TextBinding,
 } from "@features/notes/realtime/textBinding";
+
+const appState = vi.hoisted(() => ({ listeners: new Set<(state: string) => void>() }));
+vi.mock("react-native", () => ({
+  AppState: {
+    addEventListener: (_event: string, listener: (state: string) => void) => {
+      appState.listeners.add(listener);
+      return { remove: () => appState.listeners.delete(listener) };
+    },
+  },
+}));
+
+function moveApp(state: string): void {
+  for (const listener of appState.listeners) listener(state);
+}
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -80,6 +95,33 @@ async function bind(
 function peer(ydoc: Y.Doc, edit: (text: Y.Text) => void): void {
   ydoc.transact(() => edit(getMarkdownYText(ydoc)), "peer");
 }
+
+it.each(["background", "inactive"])(
+  "writes debounced typing into the document when the app turns %s",
+  async (state) => {
+    const h = await bind("draft");
+    h.local = "draft typed";
+    h.binding.schedule(h.local);
+    expect(h.doc()).toBe("draft");
+    moveApp(state);
+    expect(h.doc()).toBe("draft typed");
+    vi.advanceTimersByTime(PUSH_DEBOUNCE_MS);
+    expect(h.doc()).toBe("draft typed");
+    h.binding.dispose();
+  },
+);
+
+it("keeps the debounce while the app stays in the foreground and stops listening after dispose", async () => {
+  const h = await bind("draft");
+  h.binding.schedule("draft typed");
+  moveApp("active");
+  expect(h.doc()).toBe("draft");
+  h.binding.dispose();
+  expect(h.doc()).toBe("draft typed");
+  h.binding.schedule("draft typed again");
+  moveApp("background");
+  expect(h.doc()).toBe("draft typed");
+});
 
 it("rebases typing after detach against the input base from the live session", async () => {
   const first = await bind("live base");

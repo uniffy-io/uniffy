@@ -7,13 +7,16 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.notes.note import Note
-from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
+from uniffy.core.types import ContentType
 from uniffy.domains.notes.content.fields import extract_canvas_text
 from uniffy.domains.notes.content.notifications import NoteNotifications
 from uniffy.domains.notes.content.projections import NoteProjections
 from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
-from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.reader import NoteReader
+from uniffy.domains.tags.context import ContentTagMutations
+from uniffy.domains.tags.sync import sync_inline_tags
 
 
 class NoteProjectionOperations(NoteReader):
@@ -80,13 +83,22 @@ class NoteProjectionOperations(NoteReader):
         tag_ids: list[UUID] | None,
         parsed_inline_names: list[str] | None,
     ) -> None:
-        await NoteUpdates(self).sync_tags_after_save(
-            user_id=user_id,
-            organization_id=organization_id,
-            note=note,
-            tag_ids=tag_ids,
-            parsed_inline_names=parsed_inline_names,
-        )
+        urn = build_content_urn(ContentType.NOTE, note.id)
+        if tag_ids is not None:
+            await ContentTagMutations(self.session, self.search_indexer).replace_manual_tags(
+                actor_id=user_id,
+                organization_id=organization_id,
+                content_urn=urn,
+                tag_ids=tag_ids,
+            )
+        if parsed_inline_names is not None:
+            await sync_inline_tags(
+                self.session,
+                content_urn=urn,
+                organization_id=organization_id,
+                actor_id=user_id,
+                parsed_names=parsed_inline_names,
+            )
 
     async def _notify_new_mentions(
         self,
@@ -111,5 +123,6 @@ class NoteProjectionOperations(NoteReader):
         self,
         organization_id: UUID,
         note: Note,
+        buffer: UpdateBuffer,
     ) -> None:
-        await NoteProjections(self).propagate_title(organization_id, note)
+        await NoteProjections(self).propagate_title(organization_id, note, buffer)

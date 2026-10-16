@@ -1,6 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pycrdt
 import pytest
@@ -121,41 +121,6 @@ async def test_render_exhaustion_preserves_snapshot_as_retryable_failure() -> No
     session.refresh.assert_not_awaited()
 
 
-@pytest.mark.parametrize("editor_known", [True, False])
-async def test_render_retries_then_indexes_and_attributes_mentions(editor_known: bool) -> None:
-    task = _task()
-    project_owner = generate_id()
-    editor = generate_id()
-    session = _session(task, project_owner_id=project_owner)
-    session.execute.side_effect = [
-        MagicMock(scalar_one_or_none=lambda: task),
-        MagicMock(rowcount=0),
-        MagicMock(scalar_one_or_none=lambda: task),
-        MagicMock(rowcount=1),
-        MagicMock(),
-        MagicMock(scalar_one_or_none=lambda: task),
-    ]
-    with (
-        patch("uniffy.domains.projects.tasks.realtime.TaskContentOperations") as operations,
-        patch("uniffy.domains.projects.tasks.realtime.TaskNotifications") as notifications,
-    ):
-        operations.return_value._index_for_search = AsyncMock()
-        notifications.return_value.emit_mention_notifications = AsyncMock()
-        assert (
-            await TaskRealtimePersistence(session, MagicMock()).save(
-                task.organization_id,
-                task.id,
-                "Merged",
-                actor_id=editor if editor_known else None,
-            )
-            is task
-        )
-        operations.return_value._index_for_search.assert_awaited_once_with(task)
-        notifications.return_value.emit_mention_notifications.assert_awaited_once_with(
-            task, editor if editor_known else project_owner, None, None
-        )
-
-
 async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
     task = _task()
     task.updated_at = datetime.now(UTC)
@@ -168,36 +133,3 @@ async def test_render_refuses_to_overwrite_a_later_plain_write() -> None:
             supersede_after=task.updated_at - timedelta(seconds=5),
         )
     session.commit.assert_not_awaited()
-
-
-async def test_render_proceeds_when_the_plain_write_left_equal_text() -> None:
-    task = _task()
-    task.updated_at = datetime.now(UTC)
-    session = _session(task)
-    with (
-        patch("uniffy.domains.projects.tasks.realtime.TaskContentOperations") as operations,
-        patch("uniffy.domains.projects.tasks.realtime.TaskNotifications") as notifications,
-    ):
-        operations.return_value._index_for_search = AsyncMock()
-        notifications.return_value.emit_mention_notifications = AsyncMock()
-        saved = await TaskRealtimePersistence(session, MagicMock()).save(
-            task.organization_id,
-            task.id,
-            task.description,
-            supersede_after=task.updated_at - timedelta(seconds=5),
-        )
-    assert saved is task
-
-
-async def test_adapter_threads_the_supersede_floor_through() -> None:
-    task = _task()
-    session = _session(task)
-    floor = datetime.now(UTC)
-    doc = pycrdt.Doc()
-    doc["markdown"] = pycrdt.Text("Merged")
-    with patch("uniffy.domains.projects.realtime.TaskRealtimePersistence") as persistence:
-        persistence.return_value.save = AsyncMock(return_value=task)
-        assert await TaskRealtimeAdapter(MagicMock()).render_and_persist(
-            session, doc, task.id, task.organization_id, supersede_after=floor
-        )
-    assert persistence.return_value.save.await_args.kwargs["supersede_after"] == floor

@@ -26,6 +26,7 @@ import {
   encodeCommitted,
   encodeGeneration,
   encodeSessionState,
+  MESSAGE_UPDATE,
 } from "@/features/realtime/protocol";
 import {
   initStorageEncryption,
@@ -174,17 +175,17 @@ export function beforeUnloadPrevented(): boolean {
   return event.defaultPrevented;
 }
 
-export interface DurableWrite {
+export interface UpdateWrite {
   id: string;
   update: Uint8Array;
 }
 
-/** Type 6 writes the client sent for one document, oldest first. */
-export function durableWrites(ws: FakeWebSocket, docName: string): DurableWrite[] {
-  const writes: DurableWrite[] = [];
+/** Update frames the client sent for one document, oldest first. */
+export function updateWrites(ws: FakeWebSocket, docName: string): UpdateWrite[] {
+  const writes: UpdateWrite[] = [];
   for (const frame of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(frame);
-    if (name !== docName || frame[payloadOffset] !== 6) continue;
+    if (name !== docName || frame[payloadOffset] !== MESSAGE_UPDATE) continue;
     const decoder = decoding.createDecoder(frame.subarray(payloadOffset));
     decoding.readVarUint(decoder);
     decoding.readVarString(decoder);
@@ -226,12 +227,12 @@ export class FakeRealtimeServer {
     ws.receive(encodeDocFrame(this.docName, payload));
   }
 
-  /** What an attach hears, in the server's order: the attaching frame draws generation, session
-   * state and the server's SyncStep1; the client's SyncStep1 draws them again with SyncStep2. */
+  /** What an attach hears, in the server's order: the client's first SyncStep1 draws generation,
+   * session state and the server's SyncStep1 once, then the SyncStep2 that answers it. */
   attach(ws: FakeWebSocket): void {
     this.handshake(ws);
     this.sync(ws, (encoder) => syncProtocol.writeSyncStep1(encoder, this.doc));
-    this.resync(ws);
+    this.sync(ws, (encoder) => syncProtocol.writeSyncStep2(encoder, this.doc));
   }
 
   /** The answer to the client's periodic SyncStep1. */
@@ -261,15 +262,15 @@ export class FakeRealtimeServer {
     this.send(ws, encoding.toUint8Array(encoder));
   }
 
-  private unread(ws: FakeWebSocket): DurableWrite[] {
-    const writes = durableWrites(ws, this.docName);
+  private unread(ws: FakeWebSocket): UpdateWrite[] {
+    const writes = updateWrites(ws, this.docName);
     const fresh = writes.slice(this.consumed.get(ws) ?? 0);
     this.consumed.set(ws, writes.length);
     return fresh;
   }
 
   /** Buffers every new write and answers it with a receipt; a repeated id keeps its sequence. */
-  accept(ws: FakeWebSocket): DurableWrite[] {
+  accept(ws: FakeWebSocket): UpdateWrite[] {
     const writes = this.unread(ws);
     for (const write of writes) {
       let sequence = this.accepted.findIndex((entry) => entry.id === write.id) + 1;
@@ -292,7 +293,7 @@ export class FakeRealtimeServer {
   }
 
   /** Commits every new write at once with message 7, the way synchronous writes are answered. */
-  commit(ws: FakeWebSocket): DurableWrite[] {
+  commit(ws: FakeWebSocket): UpdateWrite[] {
     const writes = this.unread(ws);
     for (const write of writes) {
       Y.applyUpdate(this.doc, write.update);
@@ -364,7 +365,7 @@ export interface Editor {
   hydrated: Promise<void>;
   type: (text: string) => void;
   /** Closes like the session hook unless `flags` overrides what the close claims. */
-  close: (flags?: { acknowledged: boolean; discard: boolean }) => Promise<void>;
+  close: (flags?: { checkpointed: boolean; discard: boolean }) => Promise<void>;
 }
 
 /** A NOTE editor wired the way the session hook wires local recovery and transport. */
@@ -386,7 +387,7 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
       userId: signedInUser,
       discardOnClean,
     },
-    isAcknowledged: () => !realtimeMultiplexer.getDocState(docName).checkpointPending,
+    isCheckpointed: () => !realtimeMultiplexer.getDocState(docName).checkpointPending,
   });
   let markHydrated!: () => void;
   const hydrated = new Promise<void>((resolve) => {
@@ -424,9 +425,9 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
       ydoc.transact(() => markdown.insert(markdown.length, text), "session");
     },
     close: async (flags) => {
-      const acknowledged = !realtimeMultiplexer.getDocState(docName).checkpointPending;
-      const close = flags ?? { acknowledged, discard: acknowledged && discardOnClean };
-      if (close.acknowledged) clearPendingDoc(contentType, contentId);
+      const checkpointed = !realtimeMultiplexer.getDocState(docName).checkpointPending;
+      const close = flags ?? { checkpointed, discard: checkpointed && discardOnClean };
+      if (close.checkpointed) clearPendingDoc(contentType, contentId);
       subscription.destroy();
       awareness.destroy();
       await persistence.destroy(close);

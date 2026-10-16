@@ -159,10 +159,10 @@ async def test_canvas_checkpoint_commits_both_edits_and_projection_renders_them(
             SAVE_REALTIME_SNAPSHOT.name,
             f"{live_canvas.namespace}projection:{ContentType.NOTE.value}:"
             f"{live_canvas.key[1]}:{row.revision}",
-            (ContentType.NOTE.value, str(live_canvas.key[1]), str(live_canvas.org), "", ""),
+            (ContentType.NOTE.value, str(live_canvas.key[1]), str(live_canvas.org)),
         )
     ]
-    outcome = await persist_snapshot(*live_canvas.key, live_canvas.org, b"", b"")
+    outcome = await persist_snapshot(*live_canvas.key, live_canvas.org)
     assert outcome is SnapshotOutcome.RENDERED
     async with open_session() as db:
         note = await db.get(Note, live_canvas.key[1])

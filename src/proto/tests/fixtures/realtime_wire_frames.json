@@ -33,7 +33,7 @@
     ]
   },
   "fields": {
-    "update_id": "Minted by the client for one durable write. The server echoes it in messages 7 and 11.",
+    "update_id": "Minted by the client for one update. The server echoes it in messages 7 and 11.",
     "generation": "Minted by the server in PostgreSQL. Changes only on intentional replacement. Empty for historical snapshots.",
     "epoch": "Minted by the server in PostgreSQL when the edit buffer is initialized or reset. The generation stays the same. Opaque and compared only for equality.",
     "accepted_sequence": "Issued by the server for one accepted update. Strictly increasing within one generation and epoch, starting at 1.",
@@ -56,7 +56,7 @@
     "Progress that arrives before a receipt stays as the epoch watermark and checkpoints the update when its receipt arrives.",
     "Session state with a new epoch returns every accepted update that is not checkpointed to local. Those updates replay and get receipts in the new epoch.",
     "A frame for another generation or epoch never changes coverage.",
-    "Message 7 still means committed. The server sends it for synchronous writes such as fragment seed proposals and for an update whose bytes the checkpoint already holds, never for a buffer append."
+    "Message 7 means committed. The server sends it for synchronous writes such as fragment seed proposals and for an update whose bytes the checkpoint already holds, never for a buffer append."
   ],
   "cases": [
     {
@@ -76,7 +76,7 @@
       "hex": "0500"
     },
     {
-      "name": "ack_committed",
+      "name": "committed",
       "type": 7,
       "fields": {
         "update_id": "6b2d9e41-3c8f-4a07-b5d2-91e8f0a4c637"
@@ -215,7 +215,7 @@
       "hex": "052433663963316135322d37"
     },
     {
-      "name": "ack_truncated",
+      "name": "committed_truncated",
       "type": 7,
       "error": "string runs past the frame",
       "hex": "0724"

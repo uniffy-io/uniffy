@@ -32,6 +32,7 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import ContentType, ParentSelection, SortOrder
 from uniffy.domains.files.converters import (
     file_to_proto,
@@ -51,6 +52,8 @@ from uniffy.domains.files.rpc.support import (
 
 
 class FileItemHandlers:
+    buffer: UpdateBuffer
+
     async def download_file(
         self,
         request: DownloadFileRequest,
@@ -204,6 +207,7 @@ class FileItemHandlers:
                     filename=request.filename if request.has_field("filename") else None,
                     tag_ids=tag_ids,
                     description=request.description if request.has_field("description") else None,
+                    buffer=self.buffer,
                 )
 
                 tags_by_urn = await _hydrate_file_tags(session, organization_id, [file])

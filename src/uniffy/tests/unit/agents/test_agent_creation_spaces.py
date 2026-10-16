@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import AccessMode, generate_id
 from uniffy.domains.agents.runtime.workspace import WORKSPACE_PROMPT
 from uniffy.domains.agents.tools.builtin.content import (
@@ -40,6 +41,7 @@ def _tool_context() -> ToolContext:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         storage=MagicMock(),
         search_indexer=MagicMock(),
     )
@@ -307,6 +309,7 @@ async def test_generated_image_file_uses_requested_space(
         session=session,
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
     )
     provider = SimpleNamespace(

@@ -17,6 +17,7 @@ from uniffy_proto.cal.v1.calendar_pb import (
 from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.scheduling.calendar import queries
@@ -38,6 +39,8 @@ from uniffy.infrastructure.database import open_session
 
 
 class AttendeeHandlers:
+    buffer: UpdateBuffer
+
     async def update_attendee_status(
         self,
         request: UpdateAttendeeStatusRequest,
@@ -49,7 +52,9 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                await CalendarEventOperations(session, self.search_indexer).update_attendee_status(
+                await CalendarEventOperations(
+                    session, self.search_indexer, self.buffer
+                ).update_attendee_status(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,
@@ -73,7 +78,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(session, self.search_indexer, self.buffer)
                 event = await operations.update_attendee_role(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -109,7 +114,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(session, self.search_indexer, self.buffer)
                 event = await operations.add_attendees(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -146,7 +151,7 @@ class AttendeeHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(session, self.search_indexer, self.buffer)
                 event = await operations.remove_attendees(
                     user_id=user_id,
                     organization_id=organization_id,

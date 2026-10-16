@@ -10,10 +10,13 @@ import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCac
 import { uploadService } from "@/features/files/upload";
 import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
 import { clearAllCache as clearNotesCache } from "@/features/notes/utils/notesCache";
-import { clearPendingDocsFor, hasUnsyncedEdits } from "@/features/realtime";
+import {
+  clearPendingDocsFor,
+  discoverStoredPendingDocs,
+  hasUnsyncedEdits,
+} from "@/features/realtime";
 import { cancelRecording } from "@/features/recording/store/recordingThunks";
 import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
-import { discoverStoredPendingDocs } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 /** Caches outside the store that hold one organization's content; Redux state is reset by `withSessionScope`. */
 export function clearSessionCaches(dispatch: AppDispatch): void {
@@ -24,7 +27,7 @@ export function clearSessionCaches(dispatch: AppDispatch): void {
 }
 
 export interface SignOutOptions {
-  /** The caller confirmed that edits the server has not acknowledged may be lost. */
+  /** The caller confirmed that edits no checkpoint covers yet may be lost. */
   discardUnsynced?: boolean;
 }
 

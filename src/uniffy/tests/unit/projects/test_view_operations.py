@@ -16,7 +16,9 @@ from uniffy.core.models.projects.view_config import (
     ProjectViewVisibility,
     ViewConfig,
 )
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import ContentRole
+from uniffy.domains.permissions.access import ResourceAudienceResolver
 from uniffy.domains.projects import audience, queries
 from uniffy.domains.projects import projects as project_operations
 from uniffy.domains.projects.projects import ProjectOperations
@@ -40,7 +42,12 @@ class Harness(SimpleNamespace):
 def harness(monkeypatch: pytest.MonkeyPatch) -> Harness:
     user_id, other_id = uuid4(), uuid4()
     project = SimpleNamespace(
-        id=uuid4(), organization_id=uuid4(), owner_id=other_id, default_view_id="view_table"
+        id=uuid4(),
+        organization_id=uuid4(),
+        owner_id=other_id,
+        access_mode=None,
+        baseline_role=None,
+        default_view_id="view_table",
     )
     session = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar=MagicMock(return_value=None)))
@@ -51,7 +58,7 @@ def harness(monkeypatch: pytest.MonkeyPatch) -> Harness:
     monkeypatch.setattr(ProjectOperations, "get_for_view_mutation", AsyncMock(return_value=project))
     monkeypatch.setattr(queries, "get_fields_for_project", AsyncMock(return_value=[]))
     monkeypatch.setattr(queries, "get_views_for_project", AsyncMock(return_value=[]))
-    monkeypatch.setattr(audience, "resolve_project_audience", AsyncMock(return_value=None))
+    monkeypatch.setattr(ResourceAudienceResolver, "fanout_audience", AsyncMock(return_value=None))
     publish = AsyncMock()
     monkeypatch.setattr(audience, "publish_content_access_changed", publish)
 
@@ -422,7 +429,13 @@ async def test_changing_the_default_view_tells_other_clients(monkeypatch, harnes
     publish = project_update_stubs(monkeypatch, harness)
     ops = ProjectOperations(harness.session, search_indexer=MagicMock(), storage=MagicMock())
 
-    await ops.update(harness.user_id, uuid4(), harness.project.id, default_view_id="view_board")
+    await ops.update(
+        harness.user_id,
+        uuid4(),
+        harness.project.id,
+        default_view_id="view_board",
+        buffer=UpdateBuffer(),
+    )
 
     assert harness.project.default_view_id == "view_board"
     publish.assert_awaited_once_with(harness.session, harness.project)
@@ -432,6 +445,12 @@ async def test_keeping_the_default_view_publishes_nothing(monkeypatch, harness) 
     publish = project_update_stubs(monkeypatch, harness)
     ops = ProjectOperations(harness.session, search_indexer=MagicMock(), storage=MagicMock())
 
-    await ops.update(harness.user_id, uuid4(), harness.project.id, default_view_id="view_table")
+    await ops.update(
+        harness.user_id,
+        uuid4(),
+        harness.project.id,
+        default_view_id="view_table",
+        buffer=UpdateBuffer(),
+    )
 
     publish.assert_not_awaited()

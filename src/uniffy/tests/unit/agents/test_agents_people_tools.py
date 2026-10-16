@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.tools.builtin.people import (
     MAX_PEOPLE_RESULTS,
@@ -20,6 +21,7 @@ def _ctx() -> ToolContext:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
     )
 
 

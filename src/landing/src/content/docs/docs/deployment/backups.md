@@ -1,6 +1,6 @@
 ---
 title: Backups and Restore
-description: Continuous Postgres backups to S3 with point in time recovery, the master key ritual, what not to bother backing up, and the restore procedures for both install paths.
+description: Continuous Postgres backups to S3 with point in time recovery, the master key ritual, what Valkey persistence means for edits not yet saved, what not to bother backing up, and the restore procedures for both install paths.
 sidebar:
   label: Backups and Restore
   order: 5
@@ -17,11 +17,33 @@ Back up three things to restore Uniffy: PostgreSQL, object storage, and `APP_MAS
 | Object storage | Originals, retained versions, thumbnails, and completed video copies | Protect the bucket with a backup or versioning and recovery policy. On a VM, back up the file store volume too. |
 | Media scratch | Temporary conversion outputs | No backup. Disk backed `emptyDir` can be discarded when a pod is removed. |
 | Meilisearch | Search index | Nothing. Rebuilt from Postgres by a background job. |
-| Valkey | Queues and caches | Nothing. Queues drain, caches refill. |
+| Valkey | Queues, caches, and edits accepted in the last few seconds that PostgreSQL does not hold yet | No backup. Its persistence setting decides what a crash costs. [Below](#valkey-and-edits-not-yet-saved). |
 
 A database backup without the master key leaves stored credentials unreadable. Without object storage, file metadata can return while downloads and videos stay missing. Storage durability protects against hardware failure; it does not replace a recovery plan for deleted or overwritten objects.
 
 Media scratch is disposable. Pending video work can restart from object storage after recovery reclaims an expired processing claim. Keep stored originals and completed copies in your file backup policy.
+
+## Valkey and edits not yet saved
+
+Valkey is more than queues and caches. When someone types in a note, a task or an event description, the server accepts the edit into Valkey first and writes it to PostgreSQL about ten seconds after the first unsaved edit, later when the workers fall behind. Collaborators see the edit at once. The chip in the editor reads Synced while the edit waits and Saved once PostgreSQL holds it.
+
+So a Valkey crash can cost the server its copy of those last seconds. How much depends on the persistence Valkey runs with. Uniffy reads that setting at startup and logs the loss window it implies, but never changes it.
+
+| Valkey persistence | What a crash loses |
+|---|---|
+| AOF with `appendfsync always` | Nothing |
+| AOF with `appendfsync everysec` | About the last second of accepted edits |
+| AOF with `appendfsync no` | Whatever the operating system had not written to disk yet |
+| RDB snapshots only | Edits accepted since the last snapshot |
+| No persistence | Every edit not yet in PostgreSQL, on any restart |
+
+That is only the server's copy. Every editor also keeps its own edits in encrypted storage on the device until PostgreSQL holds them. When Valkey comes back, open editors send again whatever the server lost. An editor that was closed in the meantime sends it the next time its author opens Uniffy on that device.
+
+An edit is gone for good only when its author never returns to that device, signs out and discards it, or edits in a browser that cannot store it. When a write to the device fails, the chip reads Not saved on device, so the author knows to keep the editor open.
+
+That is why Valkey needs no backup. Pick its persistence for how much of the last few seconds you can afford to lose, and keep backing up PostgreSQL.
+
+Valkey holds document text in memory and in its persistence files. Uniffy does not encrypt those bytes, so protect Valkey, its disk and its files the way you protect PostgreSQL. Never give it an `allkeys-*` eviction policy; [Configure Uniffy](/docs/deployment/configure/#valkey) explains why.
 
 ## Continuous Postgres backups to S3
 

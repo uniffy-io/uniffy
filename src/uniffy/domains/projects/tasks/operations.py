@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.projects.task import Task
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.projects.tasks.creation import TaskCreateOperations
@@ -18,8 +19,11 @@ class TaskOperations(TaskReader):
         session: AsyncSession,
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
     ) -> None:
         super().__init__(session, storage, search_indexer)
+        # Accepted realtime edits that description writes merge with and deletion retires.
+        self.buffer = buffer
 
     async def create(
         self,
@@ -48,7 +52,7 @@ class TaskOperations(TaskReader):
         task_id: UUID,
         **kwargs,
     ) -> tuple[Task, Task | None]:
-        return await TaskMutationOperations(self.session, self).update(
+        return await TaskMutationOperations(self.session, self, self.buffer).update(
             user_id,
             organization_id,
             task_id,
@@ -91,7 +95,7 @@ class TaskOperations(TaskReader):
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        return await TaskMutationOperations(self.session, self).delete(
+        return await TaskMutationOperations(self.session, self, self.buffer).delete(
             user_id,
             organization_id,
             task_id,

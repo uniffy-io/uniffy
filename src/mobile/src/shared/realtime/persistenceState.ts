@@ -22,7 +22,11 @@ export type PersistenceState =
 
 type CoverageState = Pick<
   RealtimeDocState,
-  "transportPending" | "checkpointPending" | "oldestUncheckpointedAt" | "savingUnavailable"
+  | "transportPending"
+  | "checkpointPending"
+  | "oldestUncheckpointedAt"
+  | "savingUnavailable"
+  | "coverageKnown"
 >;
 
 export interface PersistenceInput {
@@ -44,7 +48,8 @@ export function saveDelayedAt(doc: CoverageState): number | null {
     : null;
 }
 
-/** Exceptional states win; only checkpoint coverage reaches Saved, a receipt stops at Synced. */
+/** Exceptional states win; only checkpoint coverage reaches Saved, a receipt stops at Synced, and
+ * neither shows before the current socket's session state. */
 export function persistenceState({
   status,
   doc,
@@ -71,6 +76,7 @@ export function persistenceState({
     (transportSettledAt !== null && now < transportSettledAt + SYNCING_SETTLE_MS)
   )
     return "syncing";
-  if (!synced || status === "idle" || status === "connecting") return "connecting";
+  if (!synced || !doc.coverageKnown || status === "idle" || status === "connecting")
+    return "connecting";
   return doc.checkpointPending ? "synced" : "saved";
 }

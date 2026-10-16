@@ -7,7 +7,7 @@ worker can never commit over newer state or trim beyond what PostgreSQL covers.
 import asyncio
 import contextlib
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -29,15 +29,15 @@ from uniffy.core.realtime.buffer import (
     UpdateBuffer,
 )
 from uniffy.core.realtime.buffer_keys import (
-    LAYOUT_VERSION,
     MAX_PENDING_DOCUMENT_RECORDS,
     BufferedUpdate,
     BufferScope,
+    KeyKind,
     TrimResult,
     buffer_keys,
+    key_pattern,
     merge_tail,
-    parse_member,
-    scope_of_stream,
+    scopes_of_keys,
 )
 from uniffy.core.realtime.epoch import ensure_epoch
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
@@ -82,7 +82,8 @@ class CheckpointStatus(StrEnum):
     CLEAN = "clean"
     # The epoch was replaced; its provable prefix went into the checkpoint first.
     RESET = "reset"
-    # The scope's epoch was replaced earlier; its records stay for investigation.
+    # The scope's epoch was replaced earlier; its records stay for investigation until
+    # maintenance drops them past the retention age.
     STALE = "stale"
     # The document or this generation is gone.
     OBSOLETE = "obsolete"
@@ -190,24 +191,6 @@ async def buffer_errors() -> AsyncIterator[None]:
         raise BufferUnavailable("Valkey instance changed") from None
     except _VALKEY_FAILURES as exc:
         raise BufferUnavailable("Valkey call failed") from exc
-
-
-def stream_scopes(keys: Iterable[bytes | str], namespace: str) -> list[BufferScope]:
-    """Scopes of well-formed stream keys, in a stable order; anything else is skipped."""
-    scopes: set[BufferScope] = set()
-    for key in keys:
-        text = key.decode() if isinstance(key, bytes) else key
-        try:
-            scope = parse_member(text.partition(":stream:")[2])
-            scope_of_stream(text, scope.bucket, namespace)
-        except ValueError:
-            continue
-        scopes.add(scope)
-    return sorted(scopes, key=lambda scope: scope.member)
-
-
-def stream_match(namespace: str) -> str:
-    return f"{namespace}rtbuf:{{v{LAYOUT_VERSION}:*}}:stream:*"
 
 
 def _key(scope: BufferScope) -> DocKey:
@@ -407,7 +390,7 @@ async def enqueue_projection(
         await enqueue(
             SAVE_REALTIME_SNAPSHOT,
             f"{buffer.namespace}projection:{key[0].value}:{key[1]}:{revision}",
-            (key[0].value, str(key[1]), str(organization_id), "", ""),
+            (key[0].value, str(key[1]), str(organization_id)),
         )
     except Exception:
         logger.opt(exception=True).warning("Projection not enqueued; projection recovery repairs it")
@@ -479,10 +462,10 @@ async def checkpoint_all_pending(
         found = [
             key
             async for key in buffer_client().scan_iter(
-                match=stream_match(buffer.namespace), count=_SCAN_COUNT
+                match=key_pattern(KeyKind.STREAM, buffer.namespace), count=_SCAN_COUNT
             )
         ]
-    scopes = stream_scopes(found, buffer.namespace)
+    scopes = scopes_of_keys(found, (KeyKind.STREAM,), buffer.namespace)
     checkpointed = records = 0
     unreadable: list[UnreadableStream] = []
     for scope in scopes:

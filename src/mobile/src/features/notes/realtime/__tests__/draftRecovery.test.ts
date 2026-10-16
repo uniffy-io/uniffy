@@ -4,6 +4,10 @@ import { hydrateOfflineDraft, offlineReplayBase } from "@features/notes/realtime
 import { createTextBinding } from "@features/notes/realtime/textBinding";
 import type { MobileRecoveredDraft } from "@shared/realtime/draftStorage";
 
+vi.mock("react-native", () => ({
+  AppState: { addEventListener: () => ({ remove: () => {} }) },
+}));
+
 function draft(text: string, base = "base"): MobileRecoveredDraft {
   return { id: text, generation: "unmerged:offline", text, base, update: "" };
 }

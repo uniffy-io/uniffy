@@ -543,6 +543,7 @@ async def _execute_update_file(ctx: ToolContext, args: dict) -> ToolResult:
         filename=filename,
         tag_ids=tag_ids,
         description=description,
+        buffer=ctx.buffer,
     )
 
     urn = f"urn:uniffy:content:FILE:{file.id}"

@@ -13,12 +13,14 @@ const clean = {
   checkpointPending: false,
   oldestUncheckpointedAt: null,
   savingUnavailable: false,
+  coverageKnown: true,
 };
 const local = {
   transportPending: true,
   checkpointPending: true,
   oldestUncheckpointedAt: EDITED_AT,
   savingUnavailable: false,
+  coverageKnown: true,
 };
 const accepted = { ...local, transportPending: false };
 
@@ -51,6 +53,12 @@ it("reads Saving delayed once the oldest uncheckpointed edit is thirty seconds o
   expect(state({ doc: accepted, now: EDITED_AT + SAVE_DELAYED_AFTER_MS - 1 })).toBe("synced");
   expect(state({ doc: accepted, now: EDITED_AT + SAVE_DELAYED_AFTER_MS })).toBe("delayed");
   expect(state({ doc: local, now: EDITED_AT + SAVE_DELAYED_AFTER_MS })).toBe("delayed");
+});
+
+it("never claims Synced or Saved before the current socket's session state", () => {
+  expect(state({ doc: { ...clean, coverageKnown: false } })).toBe("connecting");
+  expect(state({ doc: { ...accepted, coverageKnown: false } })).toBe("connecting");
+  expect(state({ doc: { ...local, coverageKnown: false } })).toBe("syncing");
 });
 
 it("never claims Saved before the first sync or while connecting", () => {

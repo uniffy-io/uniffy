@@ -1,7 +1,13 @@
 """Producer-facing realtime background-job contracts."""
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
-from uniffy.core.jobs.types import RecoveryStore
+from uniffy.core.jobs import (
+    JobRecovery,
+    JobRef,
+    JobReliability,
+    JobWorkload,
+    QueueName,
+    RecoveryStore,
+)
 
 _PROJECTION_RECOVERY = JobRecovery(
     fact="realtime_yjs_snapshots revision > rendered_revision or effects_pending",

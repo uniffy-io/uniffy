@@ -20,6 +20,7 @@ async def test_attendee_removal_revokes_auto_created_room_membership(
     session,
     env,
     search_indexer,
+    buffer,
 ) -> None:
     suffix = generate_id().hex[:10]
     calendar = Calendar(
@@ -90,7 +91,7 @@ async def test_attendee_removal_revokes_auto_created_room_membership(
     lifecycle.remove_member = AsyncMock()
 
     try:
-        await CalendarEventOperations(session, search_indexer).remove_attendees(
+        await CalendarEventOperations(session, search_indexer, buffer).remove_attendees(
             user_id=env.admin_id,
             organization_id=env.org_id,
             event_id=event.id,

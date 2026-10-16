@@ -19,6 +19,7 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import (
     AccessMode,
     AttendeeStatus,
@@ -91,37 +92,37 @@ async def _attendee_status(session, event_id, user_id) -> AttendeeStatus:
     return row.status
 
 
-async def _respond(session, access, user_id, event_id) -> bool:
+async def _respond(session, access, buffer: UpdateBuffer, user_id, event_id) -> bool:
     return await CalendarEventOperations(
-        session, search_indexer=MagicMock()
+        session, search_indexer=MagicMock(), buffer=buffer
     ).update_attendee_status(user_id, access.org_id, event_id, AttendeeStatus.ACCEPTED)
 
 
 class TestRsvpMembershipGate:
-    async def test_an_active_attendee_responds(self, session, access, monkeypatch) -> None:
+    async def test_an_active_attendee_responds(self, session, access, buffer, monkeypatch) -> None:
         monkeypatch.setattr(NOTIFY, AsyncMock())
         event = await _event_with_attendee(session, access, access.peer_id)
 
-        assert await _respond(session, access, access.peer_id, event.id) is True
+        assert await _respond(session, access, buffer, access.peer_id, event.id) is True
 
         assert await _attendee_status(session, event.id, access.peer_id) is AttendeeStatus.ACCEPTED
 
-    async def test_a_deactivated_attendee_cannot_respond(self, session, access) -> None:
+    async def test_a_deactivated_attendee_cannot_respond(self, session, access, buffer) -> None:
         event = await _event_with_attendee(session, access, access.peer_id)
         await _deactivate(session, access, access.peer_id)
 
         with pytest.raises(PermissionDeniedError):
-            await _respond(session, access, access.peer_id, event.id)
+            await _respond(session, access, buffer, access.peer_id, event.id)
 
         assert await _attendee_status(session, event.id, access.peer_id) is AttendeeStatus.PENDING
 
     async def test_an_attendee_row_from_another_org_confers_nothing(
-        self, session, access
+        self, session, access, buffer
     ) -> None:
         event = await _event_with_attendee(session, access, access.outsider_id)
 
         with pytest.raises(PermissionDeniedError):
-            await _respond(session, access, access.outsider_id, event.id)
+            await _respond(session, access, buffer, access.outsider_id, event.id)
 
         assert (
             await _attendee_status(session, event.id, access.outsider_id) is AttendeeStatus.PENDING
@@ -187,9 +188,7 @@ class TestTemplateDirectRead:
 
         assert fetched.id == template.id
 
-    async def test_a_blocked_member_is_denied_on_an_org_wide_template(
-        self, session, access
-    ) -> None:
+    async def test_a_blocked_member_is_denied_on_an_org_wide_template(self, session, access) -> None:
         template = await _template(
             session,
             access,

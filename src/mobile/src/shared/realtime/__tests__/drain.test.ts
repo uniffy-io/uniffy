@@ -274,6 +274,23 @@ it("hands a closed editor's accepted edits to a drain that clears only on checkp
   stop();
 });
 
+it("attaches without presence and never asks peers to announce theirs", async () => {
+  const server = serverDoc("base");
+  const editor = await openEditor(server, "E1");
+  editor.send(() => editor.text.insert(4, " headless"));
+  await editor.stored();
+  kill();
+
+  const app = await restart();
+  await app.runMobileDrain("user", "org", () => true);
+  const socket = FakeSocket.sockets.at(-1)!;
+  serve(socket, server, "E1");
+  await vi.waitFor(() => expect(socket.writes()).toHaveLength(1));
+  expect(socket.types()[0]).toBe(0);
+  expect(socket.types()).not.toContain(1);
+  expect(socket.types()).not.toContain(3);
+});
+
 it("detaches after a drain timeout with the draft intact and finishes on the next run", async () => {
   const server = serverDoc("base");
   const editor = await openEditor(server);

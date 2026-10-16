@@ -96,14 +96,12 @@ class ClientHandle:
     can_edit: bool
     token_version: int | None
     ws: WebSocket
+    doc_key: DocKey
+    ws_session: WSSession
     can_seed: bool = False
     awareness_client_id: int | None = None
     awareness_user: dict | None = None
     session_id: UUID | None = None
-    # ``doc_key`` / ``ws_session`` are ``None`` only in tests that exercise
-    # gate logic without a real doc.
-    doc_key: DocKey | None = None
-    ws_session: WSSession | None = None
     closed: bool = False
 
 

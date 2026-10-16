@@ -29,7 +29,6 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.models.notes.note import Note
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import NodeType
-from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.converters import node_type_from_proto, note_to_proto
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notes.rpc.support import (
@@ -71,8 +70,7 @@ async def _note_proto(
 
 
 class NoteMutationHandlers:
-    # Accepted realtime edits that content writes merge with and checkpoint.
-    buffer: UpdateBuffer = UpdateBuffer()
+    buffer: UpdateBuffer
 
     async def create_note(
         self,
@@ -111,6 +109,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -158,9 +157,8 @@ class NoteMutationHandlers:
 
         try:
             async with open_session() as session:
-                note = await NoteUpdates(
-                    NoteOperations(session, self.storage, self.search_indexer),
-                    self.buffer,
+                note = await NoteOperations(
+                    session, self.storage, self.search_indexer, self.buffer
                 ).update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -201,6 +199,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).delete(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -228,6 +227,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).restore(user_id, organization_id, note_id)
                 return RestoreNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)
@@ -250,6 +250,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).empty_trash(user_id, organization_id)
                 return EmptyTrashResponse(
                     deleted_count=count,
@@ -282,6 +283,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).move(
                     user_id=user_id,
                     organization_id=organization_id,

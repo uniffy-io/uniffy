@@ -10,6 +10,7 @@ from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.models.agents.cron_task import AgentCronRunStatus
 from uniffy.core.models.agents.run_log import AgentRunKind, AgentRunStatus
 from uniffy.core.models.agents.session import AgentSessionKind
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.calls.lifecycle import CALL_LIFECYCLE_CTX_KEY
@@ -103,6 +104,7 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
     executed = 0
     errors = 0
     storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+    buffer = UpdateBuffer()
     session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
 
     try:
@@ -128,6 +130,7 @@ async def execute_agent_cron_tasks(ctx: dict[str, Any]) -> dict[str, Any]:
                         task,
                         storage,
                         ctx[SEARCH_INDEXER_CTX_KEY],
+                        buffer,
                         session_factory,
                         cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
                     )
@@ -173,6 +176,7 @@ async def execute_single_agent_cron_task(
     task_uuid = UUID(task_id)
     log_uuid = UUID(run_log_id)
     storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+    buffer = UpdateBuffer()
     session_factory = cast(SessionFactory, ctx[SESSION_FACTORY_CTX_KEY])
 
     try:
@@ -233,6 +237,7 @@ async def execute_single_agent_cron_task(
                     session,
                     storage,
                     ctx[SEARCH_INDEXER_CTX_KEY],
+                    buffer,
                     session_factory,
                     cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
                 )
@@ -285,6 +290,7 @@ async def _execute_single_cron_task(
     task,
     storage: ObjectStorage,
     search_indexer,
+    buffer: UpdateBuffer,
     session_factory: SessionFactory,
     call_lifecycle: ChannelCallLifecycle,
 ) -> None:
@@ -319,6 +325,7 @@ async def _execute_single_cron_task(
             session,
             storage,
             search_indexer,
+            buffer,
             session_factory,
             call_lifecycle,
         )

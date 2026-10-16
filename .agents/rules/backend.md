@@ -123,7 +123,8 @@ meaningful contract.
   identifiers, but it never commits. Do not add generic `commit=False` flags.
 - Search, cache invalidation, realtime publication, email, and other external effects run only after
   the authoritative commit. A required durable effect uses an owner-defined typed job contract backed
-  by a PostgreSQL recovery fact; an in-memory retry or a queue call alone is not durable.
+  by a PostgreSQL recovery fact; an in-memory retry or a queue call alone is not durable. The one
+  Valkey-backed exception is accepted realtime edits before their checkpoint (`BUFFERED`, below).
 - PostgreSQL authorization facts remain authoritative when a post-commit projection or notification
   fails. Degraded external effects are logged and retried through their owner where a recovery path
   exists; they never cause a second write to weaken or roll back an already committed access fact.
@@ -250,12 +251,13 @@ Cache adoption + invalidation hooks are part of any change that adds a hot read/
 
 ## Valkey cache layer
 
-Four physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
+Five physical clients per process; importing the right tier matters (mismatches cause subtle hangs):
 
 | Tier | Module | Purpose | Resilience |
 |---|---|---|---|
 | Pubsub | `infrastructure/valkey/pubsub.py` | PUBLISH / SUBSCRIBE / PSUBSCRIBE transport | 5s socket timeout, retries, long-lived connections |
 | Ops | `infrastructure/valkey/ops.py` | Fail-fast non-blocking commands | 200ms connect, 100ms read, zero retries, 150ms `ops_call` deadline |
+| Binary | `infrastructure/valkey/binary.py` | Raw bytes of the realtime update buffer | 200ms connect, 150ms read, zero retries, `VALKEY_BINARY_MAX_CONNECTIONS` pool; each new connection verifies the server `run_id` |
 | Streams | `infrastructure/valkey/streams.py` | Blocking XREAD for agent-run replay | 30s socket timeout, zero retries |
 | Queue | `infrastructure/valkey/queue.py` | ARQ pools | 10s timeout, 5 retries |
 
@@ -271,6 +273,9 @@ Conventions:
 - Per-namespace kill-switch: `CACHE_DISABLED_NAMESPACES` env var (misses still counted).
 - Soft-deleted rows are NOT seeded into caches whose read path filters `is_deleted=false`.
 - **The fail-fast contract is load-bearing:** a cache call returns within ~150ms or returns `CACHE_MISS`. Holding a request thread on Valkey beyond that budget is a bug.
+- The realtime update buffer is the one Valkey store whose loss loses user data. Its keys carry no
+  TTL, its scripts and key layout belong to `core/realtime/`, and a failed call never falls through
+  to PostgreSQL: admission and content writes fail retryably instead. `notes-realtime.md` owns it.
 
 ## Authentication
 
@@ -317,8 +322,14 @@ manages their resources, and renders the executable inventory.
    constant; changing an existing name or queue is a compatibility migration, not a refactor.
 3. **Make durability concrete.** A `DURABLE` ref declares `JobRecovery` with the exact PostgreSQL
    pending/outbox fact and the automatic sweep or schedule that retries it. Commit that fact before
-   enqueueing. Use `BEST_EFFORT` only when losing the job cannot leave authoritative state incomplete
-   or incorrect.
+   enqueueing. A `BUFFERED` ref declares `JobRecovery(store=RecoveryStore.VALKEY)` naming the Valkey
+   fact and the sweep that rediscovers it; losing that Valkey data loses the work with it. Only the
+   realtime buffer jobs (checkpoint, dispatcher and maintenance in `core/realtime/job_contracts.py`)
+   use it, and only for accepted edits before their checkpoint; projection and its effects stay
+   `DURABLE`. `JobRef` validation refuses a `DURABLE` ref without a PostgreSQL fact and a `BUFFERED`
+   ref without a Valkey fact. Never relabel buffered work as durable or add per-item PostgreSQL rows
+   to satisfy the label. Use `BEST_EFFORT` only when losing the job cannot leave authoritative state
+   incomplete or incorrect.
 4. **Keep the handler domain-shaped.** Handlers are async, accept ARQ `ctx` first, and receive only
    primitive values or JSON strings. Reload authoritative rows inside the job, carry
    `organization_id` for tenant work unless a single canonical payload row supplies it, enforce the
@@ -336,7 +347,9 @@ manages their resources, and renders the executable inventory.
    `*_SCHEDULED_REGISTRATIONS` tuple. Do not add domain jobs directly to `WorkerSettings.functions` or
    `cron_jobs`; fleet settings consume the validated registry output. If the handler needs a process
    resource its fleet does not already own, add it to the typed resource profile and lifecycle hooks
-   instead of initializing an undeclared global inside the handler.
+   instead of initializing an undeclared global inside the handler. A schedule that fires every
+   second passes `quiet=True`, which logs its successful runs at DEBUG; retries, aborts and failures
+   keep their level.
 7. **Test behavior at the owner.** Cover the real effect, idempotent replay, retry/recovery path,
    tenant scope, and the typed ref passed through the dispatch boundary. Keep only registry,
    lifecycle, resource-topology, and queue mechanics under `tests/unit/workers/`; never snapshot job

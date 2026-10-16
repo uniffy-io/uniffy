@@ -23,8 +23,15 @@ __all__ = [
     "MAX_WIRE_STRING_BYTES",
     "MESSAGE_ACCEPTED_RECEIPT",
     "MESSAGE_CHECKPOINT_PROGRESS",
+    "MESSAGE_COMMITTED",
     "MESSAGE_FRAGMENT_SEEDER",
+    "MESSAGE_GENERATION",
+    "MESSAGE_QUERY_AWARENESS",
+    "MESSAGE_SEED_CAPABILITY",
+    "MESSAGE_SEED_REJECTED",
+    "MESSAGE_SEED_UPDATE",
     "MESSAGE_SESSION_STATE",
+    "MESSAGE_UPDATE",
     "Y_MESSAGE_AUTH",
     "AcceptedReceipt",
     "CheckpointProgress",
@@ -35,28 +42,35 @@ __all__ = [
     "create_auth_denied_message",
     "create_awareness_message",
     "create_checkpoint_progress_message",
+    "create_committed_message",
     "create_fragment_seeder_message",
+    "create_generation_message",
+    "create_seed_rejected_message",
     "create_session_state_message",
     "create_sync_message",
     "create_update_message",
+    "decode_state_vector",
     "handle_sync_message",
     "is_sync_write_frame",
     "parse_accepted_receipt_message",
-    "parse_ack_message",
     "parse_checkpoint_progress_message",
+    "parse_committed_message",
     "parse_generation_message",
     "parse_session_state_message",
     "peek_message_type",
     "peek_sync_sub_type",
+    "sync_step1_state_vector",
 ]
 
 # y-protocols/auth: pycrdt only models SYNC and AWARENESS.
 Y_MESSAGE_AUTH = 2
 _AUTH_PERMISSION_DENIED = 0
+# No server-side awareness map; a query is relayed so live peers re-announce.
+MESSAGE_QUERY_AWARENESS = 3
 MESSAGE_FRAGMENT_SEEDER = 4
 MESSAGE_GENERATION = 5
-MESSAGE_DURABLE_UPDATE = 6
-MESSAGE_ACK = 7
+MESSAGE_UPDATE = 6
+MESSAGE_COMMITTED = 7
 MESSAGE_SEED_UPDATE = 8
 MESSAGE_SEED_REJECTED = 9
 MESSAGE_SEED_CAPABILITY = 10
@@ -160,13 +174,13 @@ def parse_generation_message(frame: bytes) -> str:
     return generation
 
 
-def create_ack_message(update_id: str) -> bytes:
-    """Committed acknowledgment: PostgreSQL holds the update, never a buffer-only append."""
-    return write_var_uint(MESSAGE_ACK) + write_var_string(update_id)
+def create_committed_message(update_id: str) -> bytes:
+    """PostgreSQL holds the update; never sent for a buffer-only append."""
+    return write_var_uint(MESSAGE_COMMITTED) + write_var_string(update_id)
 
 
-def parse_ack_message(frame: bytes) -> str:
-    reader = _FrameReader(frame, MESSAGE_ACK)
+def parse_committed_message(frame: bytes) -> str:
+    reader = _FrameReader(frame, MESSAGE_COMMITTED)
     update_id = reader.string()
     reader.end()
     return update_id
@@ -280,3 +294,25 @@ def is_sync_write_frame(frame: bytes) -> bool:
     """
     sub = peek_sync_sub_type(frame)
     return sub in (YSyncMessageType.SYNC_STEP2, YSyncMessageType.SYNC_UPDATE)
+
+
+def sync_step1_state_vector(frame: bytes) -> bytes:
+    """The encoded state vector a SYNC_STEP1 frame carries."""
+    if peek_sync_sub_type(frame) != YSyncMessageType.SYNC_STEP1:
+        raise ValueError("not a SyncStep1 frame")
+    length, offset = read_var_uint(frame, 2)
+    if offset + length != len(frame):
+        raise ValueError("invalid state vector length")
+    return frame[offset:]
+
+
+def decode_state_vector(state_vector: bytes) -> dict[int, int]:
+    """Yjs client id to the clock it has reached."""
+    count, offset = read_var_uint(state_vector)
+    clocks: dict[int, int] = {}
+    for _ in range(count):
+        client, offset = read_var_uint(state_vector, offset)
+        clocks[client], offset = read_var_uint(state_vector, offset)
+    if offset != len(state_vector):
+        raise ValueError("trailing bytes after state vector")
+    return clocks

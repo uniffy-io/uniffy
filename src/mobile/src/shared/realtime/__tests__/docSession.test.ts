@@ -98,8 +98,16 @@ const receipt = (updateId: string, acceptedSequence: number) =>
   encodeAcceptedReceipt({ updateId, generation: "G", epoch: "E", acceptedSequence });
 const progress = (coveredSequence: number) =>
   encodeCheckpointProgress({ generation: "G", epoch: "E", coveredSequence, checkpointRevision: 1 });
+const sessionState = (headSequence = 0, checkpointSequence = 0) =>
+  encodeSessionState({
+    generation: "G",
+    epoch: "E",
+    headSequence,
+    checkpointSequence,
+    checkpointRevision: checkpointSequence,
+  });
 
-async function openNote({ sessionState = true } = {}) {
+async function openNote({ withSessionState = true } = {}) {
   const { openDocSession } = await import("@shared/realtime/docSession");
   const { setAccessToken } = await import("@core/auth/auth");
   setAccessToken("token");
@@ -113,16 +121,7 @@ async function openNote({ sessionState = true } = {}) {
   const socket = FakeSocket.sockets.at(-1)!;
   socket.open();
   socket.deliver(encodeGeneration("G"));
-  if (sessionState)
-    socket.deliver(
-      encodeSessionState({
-        generation: "G",
-        epoch: "E",
-        headSequence: 0,
-        checkpointSequence: 0,
-        checkpointRevision: 0,
-      }),
-    );
+  if (withSessionState) socket.deliver(sessionState());
   expect(handle.getSnapshot().persistence).toBe("connecting");
   socket.deliver(syncStep2());
   await handle.session.whenSynced;
@@ -154,10 +153,29 @@ it("shows Syncing until a receipt, Synced until checkpoint progress, then Saved"
   expect(persistence()).toBe("saved");
 });
 
-it("shows Saved on a committed acknowledgment from a server without receipts", async () => {
-  const { socket, send, persistence } = await openNote({ sessionState: false });
-  socket.deliver(encodeCommitted(send(" edit")));
+it("shows Connecting, never Saved, until the socket's session state arrives", async () => {
+  const { socket, persistence } = await openNote({ withSessionState: false });
+  expect(persistence()).toBe("connecting");
+  socket.deliver(sessionState());
+  expect(persistence()).toBe("saved");
+});
+
+it("waits for the new socket's session state before Synced or Saved after a reconnect", async () => {
+  const { socket, send, persistence } = await openNote();
+  socket.deliver(receipt(send(" edit"), 1));
   vi.advanceTimersByTime(1_000);
+  expect(persistence()).toBe("synced");
+  socket.close(1006);
+  expect(persistence()).toBe("offline");
+
+  // The checkpoint lands while no socket is open.
+  vi.advanceTimersByTime(1_000);
+  const replacement = FakeSocket.sockets.at(-1)!;
+  expect(replacement).not.toBe(socket);
+  replacement.open();
+  replacement.deliver(encodeGeneration("G"));
+  expect(persistence()).toBe("connecting");
+  replacement.deliver(sessionState(1, 1));
   expect(persistence()).toBe("saved");
 });
 

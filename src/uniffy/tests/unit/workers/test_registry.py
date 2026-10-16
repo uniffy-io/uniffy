@@ -2,9 +2,14 @@ import inspect
 
 import pytest
 
-from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload
-from uniffy.core.jobs import QueueName
-from uniffy.core.jobs.types import RecoveryStore
+from uniffy.core.jobs import (
+    JobRecovery,
+    JobRef,
+    JobReliability,
+    JobWorkload,
+    QueueName,
+    RecoveryStore,
+)
 from uniffy.vendor.arq.worker import create_worker
 from uniffy.workers.fleets import CoreWorkerSettings, EgressWorkerSettings, MediaWorkerSettings
 from uniffy.domains.files.jobs.contracts import FILE_JOB_REFS

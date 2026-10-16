@@ -33,6 +33,11 @@ local function field(fields, name)
     end
   end
 end
+
+local function clock_ms()
+  local now = redis.call('TIME')
+  return tonumber(now[1]) * 1000 + math.floor(tonumber(now[2]) / 1000)
+end
 """
 
 _ADMIT = """
@@ -74,8 +79,7 @@ if (count(redis.call('HGET', accounting, 'bytes')) or 0) + #update > budget then
   return {'budget_exhausted'}
 end
 
-local now = redis.call('TIME')
-local now_ms = tonumber(now[1]) * 1000 + math.floor(tonumber(now[2]) / 1000)
+local now_ms = clock_ms()
 local seq = head + 1
 local appended = redis.pcall('XADD', stream, string.format('%d-0', seq), 'i', update_id,
   'u', update, 'a', actor, 't', string.format('%d', now_ms), 'v', ARGV[13])
@@ -83,7 +87,7 @@ if type(appended) == 'table' and appended['err'] then
   return {'recovery_required'}
 end
 redis.call('HSET', control, 'head', seq, 'bytes', pending_bytes + #update,
-  'records', pending_records + 1)
+  'records', pending_records + 1, 'last_ms', now_ms)
 redis.call('HSETNX', control, 'first_ms', now_ms)
 redis.call('HINCRBY', accounting, 'bytes', #update)
 redis.call('HINCRBY', accounting, 'records', 1)
@@ -202,8 +206,67 @@ if redis.call('EXISTS', control) == 1 then
   return 0
 end
 redis.call('HSET', control, 'head', 0, 'bytes', 0, 'records', 0, 'committed', 0,
-  'revision', ARGV[1])
+  'revision', ARGV[1], 'last_ms', clock_ms())
 return 1
+"""
+
+_RECLAIM = """
+local stream, control, receipts, due, accounting = KEYS[1], KEYS[2], KEYS[3], KEYS[4], KEYS[5]
+local watermark, member, cutoff = count(ARGV[1]), ARGV[2], count(ARGV[3])
+if not (watermark and cutoff) or #member == 0 then
+  return redis.error_reply('ERR buffer reclaim needs a watermark, a member and a cutoff')
+end
+if not (holds(stream, 'stream') and holds(control, 'hash') and holds(receipts, 'hash')
+    and holds(due, 'zset') and holds(accounting, 'hash')) then
+  return redis.error_reply('WRONGTYPE buffer key holds another type')
+end
+
+-- Idle means PostgreSQL covers the head, nothing is scheduled and the last append is older than
+-- the cutoff. Safety rests on the first two; a control without an append time is simply old.
+local state = redis.call('HMGET', control, 'head', 'last_ms', 'bytes', 'records')
+if count(state[1]) ~= watermark or redis.call('ZSCORE', due, member)
+    or (count(state[2]) or 0) >= cutoff then
+  return 0
+end
+-- Committed records a lost cleanup left in the stream still count against the bucket.
+local bytes, records = count(state[3]) or 0, count(state[4]) or 0
+if bytes ~= 0 or records ~= 0 then
+  redis.call('HINCRBY', accounting, 'bytes', -bytes)
+  redis.call('HINCRBY', accounting, 'records', -records)
+  redis.call('HINCRBY', accounting, 'changes', 1)
+end
+redis.call('DEL', stream, control, receipts)
+return 1
+"""
+
+_DROP_RETIRED = """
+local stream, control, accounting = KEYS[1], KEYS[2], KEYS[3]
+local cutoff = count(ARGV[1])
+if not cutoff then
+  return redis.error_reply('ERR buffer drop needs a cutoff')
+end
+if not (holds(stream, 'stream') and holds(control, 'hash') and holds(accounting, 'hash')) then
+  return redis.error_reply('WRONGTYPE buffer key holds another type')
+end
+
+-- A control record means the epoch still issues sequences; only a retired epoch loses records.
+if redis.call('EXISTS', control) == 1 then
+  return {0, 0}
+end
+local newest = redis.call('XREVRANGE', stream, '+', '-', 'COUNT', 1)[1]
+if not newest or (count(field(newest[2], 't')) or 0) >= cutoff then
+  return {0, 0}
+end
+local entries = redis.call('XRANGE', stream, '-', '+')
+local bytes = 0
+for _, entry in ipairs(entries) do
+  bytes = bytes + #(field(entry[2], 'u') or '')
+end
+redis.call('DEL', stream)
+redis.call('HINCRBY', accounting, 'bytes', -bytes)
+redis.call('HINCRBY', accounting, 'records', -#entries)
+redis.call('HINCRBY', accounting, 'changes', 1)
+return {bytes, #entries}
 """
 
 
@@ -223,6 +286,8 @@ TRIM_SCRIPT = _script(_TRIM)
 REPAIR_SCRIPT = _script(_REPAIR)
 REBASE_SCRIPT = _script(_REBASE)
 INITIALIZE_SCRIPT = _script(_INITIALIZE)
+RECLAIM_SCRIPT = _script(_RECLAIM)
+DROP_RETIRED_SCRIPT = _script(_DROP_RETIRED)
 
 
 async def run_script(

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage, ChatMessageMetadataKind, SenderType
 from uniffy.core.models.files.file import File
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType
@@ -34,6 +35,7 @@ async def regenerate_image(
     session: AsyncSession,
     storage: ObjectStorage,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     user_id: UUID,
     organization_id: UUID,
     channel_id: UUID,
@@ -129,6 +131,7 @@ async def regenerate_image(
         session=session,
         storage=storage,
         search_indexer=search_indexer,
+        buffer=buffer,
         user_id=user_id,
         organization_id=organization_id,
         agent_id=agent.id,

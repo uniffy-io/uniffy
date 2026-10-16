@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import CompletionResult, ToolCall
 from uniffy.domains.agents.runtime.prompt import build_system_prompt
@@ -143,6 +144,7 @@ def _ctx(**overrides) -> ToolContext:
         session=AsyncMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         session_id=generate_id(),
         deferred_tool_groups={"Notes": ["notes.tool_0", "notes.tool_1"]},

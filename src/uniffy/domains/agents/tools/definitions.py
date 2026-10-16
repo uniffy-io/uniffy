@@ -9,6 +9,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType
@@ -28,6 +29,8 @@ class ToolContext:
     session: AsyncSession
     user_id: UUID
     organization_id: UUID
+    # Accepted realtime edits that content tools read and merge with.
+    buffer: UpdateBuffer
     storage: ObjectStorage | None = None
     search_indexer: SearchIndexer | None = None
     call_lifecycle: ChannelCallLifecycle | None = None

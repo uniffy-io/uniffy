@@ -1,16 +1,10 @@
 """Project committed realtime checkpoints into domain columns and their durable effects."""
 
-from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
 from uniffy.core.realtime.adapter import DeferredProjection, get_realtime_adapter
-from uniffy.core.realtime.storage import (
-    compact_update,
-    decode_snapshot,
-    load_snapshot,
-    lock_document,
-)
+from uniffy.core.realtime.storage import decode_snapshot, load_snapshot, lock_document
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.database.session import open_session
 
@@ -23,16 +17,9 @@ class SnapshotOutcome(StrEnum):
 
 
 async def persist_snapshot(
-    content_type: ContentType,
-    content_id: UUID,
-    organization_id: UUID,
-    update_bytes: bytes,
-    state_vector: bytes,
-    *,
-    actor_id: UUID | None = None,
-    encoded_at: datetime | None = None,
+    content_type: ContentType, content_id: UUID, organization_id: UUID
 ) -> SnapshotOutcome:
-    # Queued payloads are projection hints. Only committed state may replace a domain column.
+    """Render the committed checkpoint under the document lock; projection jobs carry no state."""
     async with open_session() as db:
         key = (content_type, content_id)
         await lock_document(db, key, organization_id)
@@ -61,8 +48,6 @@ async def persist_snapshot(
             await db.delete(snapshot)
             await db.commit()
             return SnapshotOutcome.TARGET_MISSING
-        # Accepted frames merge raw bytes; this pass collects their deleted content.
-        snapshot.updates = compact_update(snapshot.updates)
         snapshot.effects_pending = True
         snapshot.rendered_revision = snapshot.revision
         await db.commit()

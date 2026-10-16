@@ -45,33 +45,37 @@ async def _cleanup(session: AsyncSession, *project_ids: UUID) -> None:
     await session.rollback()
     for project_id in project_ids:
         await session.execute(delete(ViewConfig).where(ViewConfig.project_id == project_id))
-        await session.execute(delete(FieldDefinition).where(FieldDefinition.project_id == project_id))
+        await session.execute(
+            delete(FieldDefinition).where(FieldDefinition.project_id == project_id)
+        )
         await session.execute(delete(Project).where(Project.id == project_id))
     await session.commit()
 
 
 async def test_rename_normalizes_and_keeps_the_requested_slug(
-    session, env, search_indexer
+    session, env, search_indexer, buffer
 ) -> None:
     project = await _create_project(session, env, search_indexer, slug="SLGA")
     project_id = project.id
     try:
         renamed = await ProjectOperations(session, _storage(), search_indexer).update(
-            env.admin_id, env.org_id, project_id, slug="slgb"
+            env.admin_id, env.org_id, project_id, slug="slgb", buffer=buffer
         )
         assert renamed.slug == "SLGB"
     finally:
         await _cleanup(session, project_id)
 
 
-async def test_rename_rejects_a_slug_another_project_holds(session, env, search_indexer) -> None:
+async def test_rename_rejects_a_slug_another_project_holds(
+    session, env, search_indexer, buffer
+) -> None:
     taken = await _create_project(session, env, search_indexer, slug="SLGC")
     project = await _create_project(session, env, search_indexer, slug="SLGD")
     taken_id, project_id = taken.id, project.id
     try:
         with pytest.raises(ValidationError) as exc:
             await ProjectOperations(session, _storage(), search_indexer).update(
-                env.admin_id, env.org_id, project_id, slug="SLGC"
+                env.admin_id, env.org_id, project_id, slug="SLGC", buffer=buffer
             )
         assert exc.value.message == "Slug 'SLGC' is already used by another project"
 
@@ -85,26 +89,28 @@ async def test_rename_rejects_a_slug_another_project_holds(session, env, search_
 
 @pytest.mark.parametrize("slug", ["", "X", "2FAST", "TOOLONG", "AB-CD"])
 async def test_rename_rejects_a_slug_task_keys_could_not_carry(
-    session, env, search_indexer, slug
+    session, env, search_indexer, buffer, slug
 ) -> None:
     project = await _create_project(session, env, search_indexer, slug="SLGE")
     project_id = project.id
     try:
         with pytest.raises(ValidationError) as exc:
             await ProjectOperations(session, _storage(), search_indexer).update(
-                env.admin_id, env.org_id, project_id, slug=slug
+                env.admin_id, env.org_id, project_id, slug=slug, buffer=buffer
             )
         assert "must be 2-5 uppercase letters/digits" in exc.value.message
     finally:
         await _cleanup(session, project_id)
 
 
-async def test_keeping_the_current_slug_is_not_a_conflict(session, env, search_indexer) -> None:
+async def test_keeping_the_current_slug_is_not_a_conflict(
+    session, env, search_indexer, buffer
+) -> None:
     project = await _create_project(session, env, search_indexer, slug="SLGF")
     project_id = project.id
     try:
         updated = await ProjectOperations(session, _storage(), search_indexer).update(
-            env.admin_id, env.org_id, project_id, name="Renamed", slug="slgf"
+            env.admin_id, env.org_id, project_id, name="Renamed", slug="slgf", buffer=buffer
         )
         assert updated.slug == "SLGF"
         assert updated.name == "Renamed"

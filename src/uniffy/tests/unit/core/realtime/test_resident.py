@@ -3,8 +3,8 @@ from uuid import UUID
 import pycrdt
 import pytest
 
-from uniffy.core.realtime import resident as resident_module
 from uniffy.core.realtime.buffer_keys import BufferedUpdate, BufferHead, BufferScope, LatestState
+from uniffy.core.realtime.limits import MAX_DOCUMENT_BYTES
 from uniffy.core.realtime.markdown import (
     DOC_GENERATION_KEY,
     DOC_META_FIELD,
@@ -16,17 +16,27 @@ from uniffy.core.realtime.resident import (
     check_update,
     follow,
     follow_record,
+    holds_unknown_updates,
+    merge_change,
     session_state_message,
 )
 from uniffy.core.realtime.state import YDocSession
-from uniffy.core.realtime.storage import DocumentTooLarge, GenerationConflict, SeedConflict
+from uniffy.core.realtime.storage import (
+    DocumentTooLarge,
+    GenerationConflict,
+    SeedConflict,
+    compact_update,
+)
 from uniffy.core.realtime.wire import (
     SessionState,
     YMessageType,
     YSyncMessageType,
+    create_sync_message,
+    create_update_message,
     handle_sync_message,
     parse_generation_message,
     parse_session_state_message,
+    sync_step1_state_vector,
 )
 from uniffy.core.types import ContentType, generate_id
 
@@ -206,6 +216,37 @@ def test_sync_reply_with_only_known_deletions_adds_nothing() -> None:
     assert text_of(session.ydoc) == "ase"
 
 
+def test_deletions_a_compacted_checkpoint_already_holds_add_nothing() -> None:
+    base = baseline("base text")
+    deletion = deleted(base, count=5)
+    checkpoint = compact_update(pycrdt.merge_updates(base, deletion))
+    session = resident(latest(checkpoint))
+
+    assert merge_change(checkpoint, deletion) is None
+    assert check_update(session, GENERATION, deletion) is False
+    assert merge_change(checkpoint, deleted(checkpoint)) is not None
+    assert check_update(session, GENERATION, deleted(checkpoint)) is True
+    assert text_of(session.ydoc) == "text"
+
+
+def test_only_a_client_holding_structs_the_resident_lacks_holds_unknown_updates() -> None:
+    base = baseline()
+    offline = typed(base, suffix=" offline")
+    session = resident(latest(base))
+
+    def state_vector(*updates: bytes) -> bytes:
+        return sync_step1_state_vector(create_sync_message(decoded(*updates)))
+
+    assert holds_unknown_updates(session, state_vector()) is False
+    assert holds_unknown_updates(session, state_vector(base)) is False
+    assert holds_unknown_updates(session, state_vector(base, deleted(base))) is False
+    assert holds_unknown_updates(session, state_vector(base, offline)) is True
+    with pytest.raises(ValueError):
+        holds_unknown_updates(session, b"\x01")
+    with pytest.raises(ValueError):
+        sync_step1_state_vector(create_update_message(offline))
+
+
 def test_a_record_applies_only_when_it_continues_the_head() -> None:
     base = baseline()
     first = typed(base, suffix=" one")
@@ -220,9 +261,7 @@ def test_a_record_applies_only_when_it_continues_the_head() -> None:
     assert session.head_seq == 2
 
 
-def test_refused_updates_leave_the_resident_document_untouched(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_refused_updates_leave_the_resident_document_untouched() -> None:
     base = baseline()
     session = resident(latest(base))
     claim = decoded(base)
@@ -240,9 +279,8 @@ def test_refused_updates_leave_the_resident_document_untouched(
         check_update(session, GENERATION, claim.get_update(before))
     with pytest.raises(ValueError):
         check_update(session, GENERATION, b"\x01\x02\x03")
-    monkeypatch.setattr(resident_module, "MAX_DOCUMENT_BYTES", 8)
     with pytest.raises(DocumentTooLarge):
-        check_update(session, GENERATION, typed(base, suffix=" grows"))
+        check_update(session, GENERATION, typed(base, suffix="x" * MAX_DOCUMENT_BYTES))
     assert text_of(session.ydoc) == "base"
 
 

@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.content.references import MENTION_PATTERN, extract_urns_from_content, parse_urn
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import ContentType, EventVisibility, RecurrencePattern, generate_id
 from uniffy.domains.agents.tools.builtin.calendar import (
     _event_mention,
@@ -17,6 +18,7 @@ def _context() -> ToolContext:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         user_timezone="UTC",
     )
 
@@ -54,7 +56,8 @@ async def test_list_uses_stored_event_references_and_keeps_occurrence_times() ->
         new=AsyncMock(return_value=[_occurrence(series), standalone]),
     ):
         result = await _execute_list_events(
-            ctx, {"start_date": "2026-09-27", "end_date": "2026-10-04"},
+            ctx,
+            {"start_date": "2026-09-27", "end_date": "2026-10-04"},
         )
 
     assert result.success
@@ -106,7 +109,8 @@ async def test_shared_private_occurrence_does_not_disclose_title_or_reference() 
         new=AsyncMock(return_value=[_occurrence(event)]),
     ):
         result = await _execute_list_events(
-            ctx, {"start_date": "2026-09-27", "end_date": "2026-10-04"},
+            ctx,
+            {"start_date": "2026-09-27", "end_date": "2026-10-04"},
         )
 
     assert result.success

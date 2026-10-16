@@ -1,7 +1,8 @@
 """Data contract of the realtime update buffer: key layout, records, limits and results."""
 
+import contextlib
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Collection, Iterable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
@@ -84,6 +85,14 @@ def parse_member(member: bytes | str) -> BufferScope:
     )
 
 
+class KeyKind(StrEnum):
+    """Per-document keys, each named by its bucket prefix, its kind and the scope member."""
+
+    STREAM = "stream"
+    CONTROL = "control"
+    RECEIPTS = "receipts"
+
+
 @dataclass(frozen=True, slots=True)
 class BufferKeys:
     stream: str
@@ -114,28 +123,49 @@ def accounting_key(bucket: int, namespace: str = "") -> str:
     return f"{bucket_prefix(bucket, namespace)}:accounting"
 
 
-def stream_pattern(bucket: int, namespace: str = "") -> str:
-    return f"{bucket_prefix(bucket, namespace)}:stream:*"
+def key_pattern(kind: KeyKind | None, namespace: str = "", bucket: int | None = None) -> str:
+    """Glob over one kind of per-document key, or every buffer key, in one bucket or all."""
+    prefix = (
+        f"{namespace}rtbuf:{{v{LAYOUT_VERSION}:*}}"
+        if bucket is None
+        else bucket_prefix(bucket, namespace)
+    )
+    return f"{prefix}:*" if kind is None else f"{prefix}:{kind}:*"
+
+
+def _document_key(scope: BufferScope, kind: KeyKind, namespace: str) -> str:
+    return f"{bucket_prefix(scope.bucket, namespace)}:{kind}:{scope.member}"
 
 
 def buffer_keys(scope: BufferScope, namespace: str = "") -> BufferKeys:
-    prefix = bucket_prefix(scope.bucket, namespace)
-    member = scope.member
     return BufferKeys(
-        stream=f"{prefix}:stream:{member}",
-        control=f"{prefix}:control:{member}",
-        receipts=f"{prefix}:receipts:{member}",
-        due=f"{prefix}:due",
-        accounting=f"{prefix}:accounting",
+        stream=_document_key(scope, KeyKind.STREAM, namespace),
+        control=_document_key(scope, KeyKind.CONTROL, namespace),
+        receipts=_document_key(scope, KeyKind.RECEIPTS, namespace),
+        due=due_key(scope.bucket, namespace),
+        accounting=accounting_key(scope.bucket, namespace),
     )
 
 
-def scope_of_stream(key: bytes | str, bucket: int, namespace: str = "") -> BufferScope:
+def scope_of_key(key: bytes | str, kind: KeyKind, namespace: str = "") -> BufferScope:
+    """The scope a per-document key of ``kind`` names; ``ValueError`` for any other key."""
     text = key.decode() if isinstance(key, bytes) else key
-    prefix = f"{bucket_prefix(bucket, namespace)}:stream:"
-    if not text.startswith(prefix):
-        raise ValueError(f"{text!r} is not a stream key of bucket {bucket}")
-    return parse_member(text[len(prefix) :])
+    scope = parse_member(text.partition(f":{kind}:")[2])
+    if text != _document_key(scope, kind, namespace):
+        raise ValueError(f"{text!r} is not a {kind} key in namespace {namespace!r}")
+    return scope
+
+
+def scopes_of_keys(
+    keys: Iterable[bytes | str], kinds: Collection[KeyKind], namespace: str
+) -> list[BufferScope]:
+    """Scopes named by well-formed keys of ``kinds``, in a stable order; other keys are skipped."""
+    scopes: set[BufferScope] = set()
+    for key in keys:
+        for kind in kinds:
+            with contextlib.suppress(ValueError):
+                scopes.add(scope_of_key(key, kind, namespace))
+    return sorted(scopes, key=lambda scope: scope.member)
 
 
 def validate_update(update_id: str, update: bytes) -> None:

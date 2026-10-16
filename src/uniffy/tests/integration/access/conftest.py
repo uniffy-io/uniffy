@@ -1,26 +1,20 @@
-"""One org with real content, for the access guards that used to be asserted
-by grepping compiled SQL.
+"""One org with real content on the live PostgreSQL and Valkey, shared by the access suites.
 
-Every test here answers the only question that matters for an access filter:
-which rows come back. That cannot be established from the text of a query, so
-these run against the real engine through `open_session`, with content rows
-created the way the domains create them.
-
-``init_db`` binds a pooled engine to the event loop that created it, so every
-fixture and test in this suite shares one session-scoped loop. The schema is
-expected to be at head already; the dev stack migrates on boot.
+Access filters are asserted on the rows they return. ``init_db`` binds its pooled engine to the
+loop that created it, so every fixture and test here shares one session-scoped loop; the schema
+is expected at head because the dev stack migrates on boot.
 """
 
 import os
 from collections.abc import AsyncIterator
 from types import SimpleNamespace as NS
-from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.jobs.types import QueueName
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.activity import EventActivity
@@ -35,6 +29,7 @@ from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.comments.comment import Comment
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.files.folder import Folder
+from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
@@ -44,10 +39,12 @@ from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_access_request import ContentAccessRequest
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.models.permissions.org_permission_defaults import OrganizationPermissionDefaults
 from uniffy.core.models.platform.support_session import SupportSession
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
 from uniffy.domains.files.registration import register_file_content
 from uniffy.domains.notes.registration import register_note_content
@@ -61,6 +58,19 @@ from uniffy.infrastructure.valkey.binary import (
     init_binary_client,
 )
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
+from uniffy.infrastructure.valkey.queue import close_queue, init_queue
+from uniffy.tests.integration.access.realtime_documents import (
+    LIVE_TYPES,
+    SharedDocument,
+    create_document,
+    discard,
+)
+from uniffy.tests.integration.access.realtime_live import BUDGET
+from uniffy.tests.integration.access.recording_search import recording_indexer
+from uniffy.vendor.arq.constants import job_key_prefix
+
+# No worker consumes queues in this logical database.
+UNREAD_QUEUE_DATABASE = 15
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -69,7 +79,7 @@ async def database():
     register_file_content()
     register_note_content()
     register_project_content()
-    register_event_realtime_adapter(MagicMock())
+    register_event_realtime_adapter(recording_indexer())
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:
@@ -96,6 +106,26 @@ async def valkey_backend():
     finally:
         await close_binary_client()
         await close_ops_client()
+
+
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def unread_job_queues(valkey_backend) -> AsyncIterator[None]:
+    """Queue pools open on a Valkey database no worker reads, so test jobs never reach a worker."""
+    for name in QueueName:
+        await close_queue(name)
+    if get_binary_client() is None:
+        yield
+        return
+    with pytest.MonkeyPatch.context() as env:
+        env.setenv("VALKEY_DATABASE", str(UNREAD_QUEUE_DATABASE))
+        pools = {name: await init_queue(name) for name in QueueName}
+    try:
+        yield
+    finally:
+        for name, pool in pools.items():
+            stranded = await pool.zrange(name.valkey_name, 0, -1)
+            await pool.delete(name.valkey_name, *(job_key_prefix + job.decode() for job in stranded))
+            await close_queue(name)
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -303,7 +333,7 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         delete(ChatAgentFolder).where(ChatAgentFolder.organization_id.in_(env.org_ids))
     )
     await db_session.execute(delete(Tag).where(Tag.organization_id.in_(env.org_ids)))
-    # Tests grant domain-admin rows and open channels; both hold FKs on the org.
+    # Tests grant domain-admin rows, open channels and change defaults; all hold FKs on the org.
     channel_ids = (
         (
             await db_session.execute(
@@ -319,6 +349,11 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
         )
         await db_session.execute(delete(ChatChannel).where(ChatChannel.id.in_(channel_ids)))
     await db_session.execute(delete(DomainAdmin).where(DomainAdmin.organization_id.in_(env.org_ids)))
+    await db_session.execute(
+        delete(OrganizationPermissionDefaults).where(
+            OrganizationPermissionDefaults.organization_id.in_(env.org_ids)
+        )
+    )
     await db_session.execute(
         delete(ContentMember).where(ContentMember.organization_id.in_(env.org_ids))
     )
@@ -349,6 +384,10 @@ async def _teardown_access(db_session: AsyncSession, env: NS) -> None:
     await db_session.execute(delete(GroupMember).where(GroupMember.group_id.in_(env.group_ids)))
     await db_session.execute(delete(Group).where(Group.organization_id.in_(env.org_ids)))
     await db_session.execute(delete(Folder).where(Folder.organization_id.in_(env.org_ids)))
+    # Removing an inline upload books its bytes off the uploader's usage row.
+    await db_session.execute(
+        delete(StorageUsage).where(StorageUsage.organization_id.in_(env.org_ids))
+    )
     # audit_events is append-only; teardown is maintenance, so it opts out.
     await db_session.execute(text("SET LOCAL uniffy.audit_maintenance = 'on'"))
     await db_session.execute(delete(AuditEvent).where(AuditEvent.organization_id.in_(env.org_ids)))
@@ -367,3 +406,22 @@ async def access(session):
         yield seeded
     finally:
         await _teardown_access(session, seeded)
+
+
+@pytest_asyncio.fixture(loop_scope="session")
+async def buffer(valkey_namespace: str) -> UpdateBuffer:
+    return UpdateBuffer(namespace=valkey_namespace, pending_budget_bytes=BUDGET)
+
+
+@pytest_asyncio.fixture(
+    loop_scope="session", params=LIVE_TYPES, ids=[kind.value.lower() for kind in LIVE_TYPES]
+)
+async def shared(
+    request: pytest.FixtureRequest, access: NS, buffer: UpdateBuffer
+) -> AsyncIterator[SharedDocument]:
+    """The member's explicitly shared note, task or event; the test grants the peer its role."""
+    document = await create_document(access, buffer, request.param, AccessMode.EXPLICIT_MEMBERS)
+    try:
+        yield document
+    finally:
+        await discard(document.doc.key)

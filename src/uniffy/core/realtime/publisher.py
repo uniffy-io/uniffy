@@ -94,21 +94,17 @@ async def publish_doc_update(
     )
 
 
-async def publish_content_replace(
-    content_type: ContentType,
-    content_id: UUID,
-    content: str,
-) -> None:
+async def publish_content_replace(content_type: ContentType, content_id: UUID) -> None:
     """Tell replicas holding the document to reload checkpoint plus buffered tail after a write.
 
-    Not origin-deduped, because the publishing process may itself hold the live session.
+    Carries no content: every replica reloads authoritative state. Not origin-deduped, because
+    the publishing process may itself hold the live session.
     """
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
             "kind": RealtimePayloadKind.CONTENT_REPLACE,
             "origin_replica": replica_id(),
-            "content": content,
             "published_at": time.time(),
         },
     )

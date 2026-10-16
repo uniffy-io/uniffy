@@ -6,6 +6,7 @@ from prometheus_client import CollectorRegistry, Counter
 
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.chat.message import ChatMessage
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import CompletionResult, EventType, StreamEvent
 from uniffy.domains.agents.runtime import output, publishers, writers
@@ -187,7 +188,12 @@ async def test_runners_store_mocked_completion_and_attribute_actual_provider(mon
     monkeypatch.setattr(output, "AGENT_OUTPUT_REPAIRS_TOTAL", counter)
     operations = MagicMock()
     operations.add_message = AsyncMock(side_effect=lambda **kwargs: AgentMessage(**kwargs))
-    ctx = ToolContext(session=MagicMock(), user_id=generate_id(), organization_id=generate_id())
+    ctx = ToolContext(
+        session=MagicMock(),
+        user_id=generate_id(),
+        organization_id=generate_id(),
+        buffer=UpdateBuffer(),
+    )
     session_id = generate_id()
     kwargs = dict(
         user_id=ctx.user_id,

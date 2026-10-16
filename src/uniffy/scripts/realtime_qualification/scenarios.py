@@ -12,6 +12,12 @@ from typing import Any
 from uuid import UUID
 
 from uniffy.core.realtime.state import doc_name_for
+from uniffy.core.realtime.wire import (
+    MESSAGE_ACCEPTED_RECEIPT,
+    MESSAGE_CHECKPOINT_PROGRESS,
+    MESSAGE_COMMITTED,
+    MESSAGE_SESSION_STATE,
+)
 from uniffy.core.types import ContentType
 from uniffy.scripts.realtime_qualification.client import (
     DocReplica,
@@ -173,10 +179,11 @@ async def _loop_lag(samples: list[float]) -> None:
 
 
 async def _drain(layout: Layout, timeout: float) -> float:
+    """Wait until every own update is checkpointed and every peer saw every edit."""
     started = time.perf_counter()
     replicas = [item for items in layout.replicas_by_doc.values() for item in items]
     while time.perf_counter() - started < timeout:
-        if not any(item.unacked or item.unseen() for item in replicas):
+        if not any(item.updates or item.unseen() for item in replicas):
             break
         await asyncio.sleep(DRAIN_POLL_SECONDS)
     return time.perf_counter() - started
@@ -252,15 +259,23 @@ async def run_scenario(
         "edits": {
             "made": sum(len(writer.log.clocks) for writer in layout.writers if writer.log),
             "frames": recorder.frames,
-            "unacknowledged": sum(len(item.unacked) for item in replicas),
+            "unaccepted": sum(item.unaccepted() for item in replicas),
+            "uncheckpointed": sum(len(item.updates) for item in replicas),
             "unseen": sum(item.unseen() for item in replicas),
             "converged": all(len(variants) == 1 for variants in texts.values()),
         },
         "latency_ms": {
             "acceptance": distribution(recorder.acceptance),
-            "edit_to_ack": distribution(recorder.edit_to_ack),
+            "edit_to_acceptance": distribution(recorder.edit_to_acceptance),
+            "checkpoint_age": distribution(recorder.checkpoint_age),
             "visibility_from_edit": distribution(recorder.visibility_from_edit),
             "visibility_from_send": distribution(recorder.visibility_from_send),
+        },
+        "received": {
+            "committed": recorder.received[MESSAGE_COMMITTED],
+            "accepted_receipt": recorder.received[MESSAGE_ACCEPTED_RECEIPT],
+            "checkpoint_progress": recorder.received[MESSAGE_CHECKPOINT_PROGRESS],
+            "session_state": recorder.received[MESSAGE_SESSION_STATE],
         },
         "postgres": postgres,
         "valkey": valkey,

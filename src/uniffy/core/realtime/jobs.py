@@ -1,7 +1,6 @@
 """Realtime jobs: buffered checkpoints, their scheduling, and projection persistence."""
 
 import asyncio
-import base64
 import time
 from datetime import UTC, datetime
 from typing import Any
@@ -18,8 +17,8 @@ from uniffy.core.realtime.dispatch import dispatch_due, run_checkpoint_job
 from uniffy.core.realtime.maintenance import maintain_buffer
 from uniffy.core.realtime.metrics import (
     REALTIME_BACKLOG_DEPTH,
+    REALTIME_PROJECTION_DURATION,
     REALTIME_PROJECTION_OUTCOMES,
-    REALTIME_SNAPSHOT_TASK_DURATION,
 )
 from uniffy.core.realtime.snapshot import persist_snapshot
 from uniffy.core.types import ContentType
@@ -74,8 +73,8 @@ async def maintain_realtime_buffer(ctx: dict[str, Any]) -> dict[str, int]:
         report = await maintain_buffer(UpdateBuffer())
     except BufferUnavailable:
         logger.warning("Realtime buffer maintenance skipped: Valkey is unavailable")
-        return {"streams": 0}
-    return {"streams": report.streams} | {
+        return {"documents": 0}
+    return {"documents": report.documents} | {
         action.value: count for action, count in report.actions.items()
     }
 
@@ -128,7 +127,7 @@ async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
             continue
         try:
             outcome = await persist_snapshot(
-                snapshot.content_type, snapshot.content_id, snapshot.organization_id, b"", b""
+                snapshot.content_type, snapshot.content_id, snapshot.organization_id
             )
             REALTIME_PROJECTION_OUTCOMES.labels(outcome=outcome.value).inc()
         except Exception:
@@ -139,36 +138,19 @@ async def recover_realtime_projections(ctx: dict[str, Any]) -> None:
 
 
 async def save_realtime_snapshot(
-    ctx: dict[str, Any],
-    content_type_str: str,
-    content_id_str: str,
-    organization_id_str: str,
-    update_b64: str,
-    state_vector_b64: str,
-    actor_id_str: str = "",
-    encoded_at_iso: str = "",
+    ctx: dict[str, Any], content_type: str, content_id: str, organization_id: str
 ) -> dict[str, Any]:
-    content_type = ContentType(content_type_str)
+    kind = ContentType(content_type)
     started = time.perf_counter()
-
     try:
-        outcome = await persist_snapshot(
-            content_type,
-            UUID(content_id_str),
-            UUID(organization_id_str),
-            base64.b64decode(update_b64),
-            base64.b64decode(state_vector_b64),
-            actor_id=UUID(actor_id_str) if actor_id_str else None,
-            encoded_at=datetime.fromisoformat(encoded_at_iso) if encoded_at_iso else None,
-        )
+        outcome = await persist_snapshot(kind, UUID(content_id), UUID(organization_id))
     except RealtimeRenderConflict as exc:
         # Seconds, not the usual tens: the loser of a version race only needs the
         # competing metadata write to land, and the column should not lag the doc.
         raise Retry(defer=ctx.get("job_try", 1)) from exc
     finally:
-        REALTIME_SNAPSHOT_TASK_DURATION.labels(content_type=content_type.value).observe(
+        REALTIME_PROJECTION_DURATION.labels(content_type=kind.value).observe(
             time.perf_counter() - started
         )
-
     REALTIME_PROJECTION_OUTCOMES.labels(outcome=outcome.value).inc()
-    return {"status": outcome.value, "content_id": content_id_str}
+    return {"status": outcome.value, "content_id": content_id}

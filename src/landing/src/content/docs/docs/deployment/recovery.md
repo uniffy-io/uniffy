@@ -1,6 +1,6 @@
 ---
 title: Account Recovery
-description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged.
+description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged. Also what happens to edits not yet saved when Valkey restarts.
 sidebar:
   label: Account Recovery
   order: 11
@@ -89,7 +89,7 @@ The command opens a database session, finds the user by email, deletes the two f
 
 The audit row is the forensic record. It carries the target user id, the target email, the reason text you supplied, and a timestamp. The `actor_user_id` field is null on purpose. There is no signed in user when the command runs. The reason field is your accountability.
 
-The token version bump publishes a revocation watermark to Valkey. Within the time it takes to reach Valkey from the backend pod, every access token the user holds is rejected. They are signed out cluster wide. The next sign in is a fresh start.
+The token version bump and the revoked sessions land in the same commit. Every request checks those facts in PostgreSQL, so every access token the user holds is rejected from the next request on, and open live editing connections close within thirty seconds. They are signed out cluster wide. The next sign in is a fresh start.
 
 ## After the reset
 
@@ -116,3 +116,19 @@ It will not recover lost notes, lost files, or any other content. Two factor aut
 It will not work if the database is unreachable or the master key is missing. The reset writes to the same database the backend uses, and the audit row goes through the same writer the rest of the app uses. If the backend cannot start, this command cannot run either.
 
 If your last admin has lost their device, your master key is intact, and your database is reachable, this command gets them back in. That is the whole scope.
+
+## Unsaved edits after a Valkey restart
+
+Live edits wait in Valkey for a few seconds before Uniffy saves them to PostgreSQL. A Valkey restart needs no command from you, with or without persistence. This is what happens.
+
+Every restart gives Valkey a new identity, even when persistence kept every key. Uniffy ties each document's waiting edits to the identity that accepted them, so it never mistakes a restarted instance for the old one. On the next touch of a document, Uniffy saves the unbroken run of edits the restarted Valkey still holds and starts a fresh buffer for that document. A touch is an edit, someone opening the document, a write through the API, a save job, or the maintenance pass that runs each minute and works through every document with keys left in Valkey.
+
+Editors notice the fresh buffer and send again every edit the server has not saved. Open editors do it at once. A closed editor does it the next time its author opens Uniffy on that device. While Valkey is down, people keep typing, their chip reads Saving unavailable, and collaborators stop seeing each other's new edits until it is back.
+
+Each backend and worker logs `Valkey instance changed` with the old and new identity, and `uniffy_realtime_buffer_epoch_resets_total` counts the fresh buffers by reason. `uninitialized` is a document starting a fresh buffer and is routine. That happens the first time someone opens or edits it live, on the first touch after an hour without edits freed its buffer, and on the first touch after its content was replaced. `identity_changed` is the restart. `missing_control`, `stale_tail` and `gap` mean keys disappeared or went back in time while Valkey kept running.
+
+### Planned Valkey maintenance
+
+Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data is different: the server's copy of every waiting edit goes with it. There is no command that saves every waiting edit on demand. To wipe safely, stop the backend pods so no new edits arrive, keep the core workers running, and wait until `uniffy_realtime_buffer_oldest_pending_seconds` reads 0 on the core worker metrics. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
+
+Never restore or delete Uniffy's keys inside a running Valkey. Load a different data set only by restarting Valkey, so it gets a new identity. If keys vanish while it keeps running, Uniffy notices on the next touch and starts that document afresh, but edits that lived only in those keys are gone from the server.

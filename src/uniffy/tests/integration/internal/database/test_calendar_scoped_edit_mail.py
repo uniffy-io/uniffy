@@ -47,7 +47,7 @@ SERIES_START = datetime(2026, 3, 18, 9, tzinfo=UTC)
 OCCURRENCE = date(2026, 3, 25)
 
 
-async def _series(session, env) -> tuple[Calendar, CalendarEvent]:
+async def _series(session, env, buffer) -> tuple[Calendar, CalendarEvent]:
     register_calendar_content()
     calendar = Calendar(
         organization_id=env.org_id,
@@ -57,7 +57,7 @@ async def _series(session, env) -> tuple[Calendar, CalendarEvent]:
     session.add(calendar)
     await session.commit()
 
-    event = await CalendarEventOperations(session, MagicMock(spec=SearchIndexer)).create(
+    event = await CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer).create(
         user_id=env.admin_id,
         organization_id=env.org_id,
         title="Standup",
@@ -112,12 +112,12 @@ async def _clear(session, env, calendar_id) -> None:
     await session.commit()
 
 
-async def test_moving_one_occurrence_tells_the_room(session, env) -> None:
+async def test_moving_one_occurrence_tells_the_room(session, env, buffer) -> None:
     """A scoped edit used to settle silently: the occurrence moved and nobody
     on the meeting heard about it."""
-    calendar, event = await _series(session, env)
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     before = event.ical_sequence
     await _invitation_already_sent(session, env)
 
@@ -156,12 +156,12 @@ async def test_moving_one_occurrence_tells_the_room(session, env) -> None:
         await _clear(session, env, calendar_id)
 
 
-async def test_splitting_a_series_tells_the_room_about_both_halves(session, env) -> None:
+async def test_splitting_a_series_tells_the_room_about_both_halves(session, env, buffer) -> None:
     """The series everybody holds now stops earlier, and the one taking over
     is a meeting they have never been sent."""
-    calendar, event = await _series(session, env)
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     await _invitation_already_sent(session, env)
 
     try:
@@ -181,10 +181,12 @@ async def test_splitting_a_series_tells_the_room_about_both_halves(session, env)
 
 
 @pytest.mark.parametrize("occurrence", [SERIES_START.date(), OCCURRENCE])
-async def test_cancel_following_withdraws_original_series_identity(session, env, occurrence) -> None:
-    calendar, event = await _series(session, env)
+async def test_cancel_following_withdraws_original_series_identity(
+    session, env, buffer, occurrence
+) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     before = event.ical_sequence
     await _invitation_already_sent(session, env)
     try:
@@ -209,10 +211,10 @@ async def test_cancel_following_withdraws_original_series_identity(session, env,
 
 
 @pytest.mark.parametrize("permanent", [False, True])
-async def test_deleted_series_delivers_minimal_cancellation(session, env, permanent) -> None:
-    calendar, event = await _series(session, env)
+async def test_deleted_series_delivers_minimal_cancellation(session, env, buffer, permanent) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     try:
         event.ical_uid = "imported-meeting@example.test"
         event.description = "Private agenda"
@@ -280,10 +282,10 @@ async def test_deleted_series_delivers_minimal_cancellation(session, env, perman
 
 
 @pytest.mark.parametrize("revoke", ["membership", "blocked"])
-async def test_deleted_event_withdrawal_rechecks_recipient(session, env, revoke) -> None:
-    calendar, event = await _series(session, env)
+async def test_deleted_event_withdrawal_rechecks_recipient(session, env, buffer, revoke) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     try:
         await session.execute(
             update(User).where(User.id == env.member_id).values(email_verified=True)
@@ -332,10 +334,12 @@ async def test_deleted_event_withdrawal_rechecks_recipient(session, env, revoke)
 
 
 @pytest.mark.parametrize("permanent", [False, True])
-async def test_delete_audit_failure_rolls_back_room_and_withdrawal(session, env, permanent) -> None:
-    calendar, event = await _series(session, env)
+async def test_delete_audit_failure_rolls_back_room_and_withdrawal(
+    session, env, buffer, permanent
+) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     room = Room(
         organization_id=env.org_id,
         owner_id=env.admin_id,
@@ -373,12 +377,12 @@ async def test_delete_audit_failure_rolls_back_room_and_withdrawal(session, env,
         await _clear(session, env, calendar_id)
 
 
-async def test_delete_following_stages_range_cancellation(session, env) -> None:
-    calendar, event = await _series(session, env)
+async def test_delete_following_stages_range_cancellation(session, env, buffer) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
     try:
         await _invitation_already_sent(session, env)
-        await CalendarEventOperations(session, MagicMock(spec=SearchIndexer)).delete(
+        await CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer).delete(
             env.admin_id,
             env.org_id,
             event_id,
@@ -393,10 +397,12 @@ async def test_delete_following_stages_range_cancellation(session, env) -> None:
 
 
 @pytest.mark.parametrize("delete_range", [False, True])
-async def test_withdrawing_following_removes_moved_occurrences(session, env, delete_range) -> None:
-    calendar, event = await _series(session, env)
+async def test_withdrawing_following_removes_moved_occurrences(
+    session, env, buffer, delete_range
+) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     try:
         moved = await ops.edit_single_occurrence(
             env.admin_id,
@@ -431,10 +437,12 @@ async def test_withdrawing_following_removes_moved_occurrences(session, env, del
 
 
 @pytest.mark.parametrize("single", [False, True])
-async def test_tagged_scoped_edit_failure_rolls_back_event_and_mail(session, env, single) -> None:
-    calendar, event = await _series(session, env)
+async def test_tagged_scoped_edit_failure_rolls_back_event_and_mail(
+    session, env, buffer, single
+) -> None:
+    calendar, event = await _series(session, env, buffer)
     calendar_id, event_id = calendar.id, event.id
-    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer))
+    ops = CalendarEventOperations(session, MagicMock(spec=SearchIndexer), buffer)
     tag = Tag(organization_id=env.org_id, name="Meeting", slug="meeting", created_by=env.admin_id)
     session.add(tag)
     await session.flush()

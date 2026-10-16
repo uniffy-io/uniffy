@@ -18,6 +18,7 @@ from uniffy.core.realtime.wire import (
     create_session_state_message,
     create_sync_message,
     create_update_message,
+    decode_state_vector,
 )
 
 _NO_CHANGE = b"\x00\x00"
@@ -166,3 +167,14 @@ def check_update(session: YDocSession, generation: str, update: bytes) -> bool:
     if adds_seed_claim(resident, after):
         raise SeedConflict
     return True
+
+
+def holds_unknown_updates(session: YDocSession, state_vector: bytes) -> bool:
+    """Whether a client at ``state_vector`` holds structs the resident document lacks.
+
+    Within one epoch every accepted update is resident, so such a client has unsent edits or
+    holds updates a buffer reset lost. Raises ``ValueError`` for an undecodable state vector.
+    """
+    known = decode_state_vector(session.ydoc.get_state())
+    held = decode_state_vector(state_vector)
+    return any(clock > known.get(client, 0) for client, clock in held.items())

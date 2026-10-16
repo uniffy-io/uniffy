@@ -1,10 +1,9 @@
-"""Checkpoint workers and scheduling recovery on live Valkey and PostgreSQL in a disposable namespace."""
+"""Checkpoint workers and scheduling recovery on live Valkey and PostgreSQL, in disposable keys."""
 
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pycrdt
@@ -14,11 +13,12 @@ import valkey.asyncio as aioredis
 from prometheus_client import REGISTRY
 from sqlalchemy import delete, update
 
+from uniffy.core.jobs import JobEnqueueOutcome, JobRef, JobReliability, RecoveryStore
 from uniffy.core.json_codec import loads
-from uniffy.core.jobs import JobEnqueueOutcome, JobRef
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.admission import latest_under_lock
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
@@ -26,12 +26,14 @@ from uniffy.core.realtime.buffer_keys import (
     AdmissionOutcome,
     AdmissionStatus,
     BufferHead,
+    LatestState,
     PendingUsage,
     Receipt,
     TrimResult,
     accounting_key,
     bucket_for,
     buffer_keys,
+    parse_record,
 )
 from uniffy.core.realtime.checkpoint import (
     CheckpointCapture,
@@ -55,10 +57,16 @@ from uniffy.core.realtime.dispatch import (
     dispatch_due,
     run_checkpoint_job,
 )
-from uniffy.core.realtime.epoch import ensure_epoch
+from uniffy.core.realtime.epoch import ensure_epoch, start_epoch
 from uniffy.core.realtime.job_contracts import CHECKPOINT_REALTIME_DOCUMENT, SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.live import stage_text_merge
-from uniffy.core.realtime.maintenance import REPAIR_ROTATION_MS, MaintenanceAction, maintain_buffer
+from uniffy.core.realtime.maintenance import (
+    IDLE_RECLAIM_MS,
+    REPAIR_ROTATION_MS,
+    RETIRED_RETENTION_MS,
+    MaintenanceAction,
+    maintain_buffer,
+)
 from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD, markdown_text
 from uniffy.core.realtime.publisher import doc_channel
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
@@ -67,13 +75,15 @@ from uniffy.core.realtime.storage import load_snapshot, lock_document
 from uniffy.core.types import ContentType
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.infrastructure.database.session import open_session
-from uniffy.infrastructure.valkey.binary import get_binary_client
+from uniffy.infrastructure.valkey.binary import get_binary_client, server_identity
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
+from uniffy.tests.integration.access.recording_search import recording_indexer
 from uniffy.vendor.arq import Worker, create_pool, func
 from uniffy.vendor.arq.connections import ArqValkey
 from uniffy.vendor.arq.constants import retry_key_prefix
 from uniffy.vendor.arq.jobs import Job
+from uniffy.workers.inventory import worker_inventory
 from uniffy.workers.registry import CORE_JOB_REGISTRATIONS
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -154,7 +164,7 @@ async def seed_checkpoint(key: DocKey, organization_id) -> bytes:
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def env(access, valkey_namespace) -> AsyncIterator[SimpleNamespace]:
-    register_realtime_adapter(NoteRealtimeAdapter(AsyncMock()))
+    register_realtime_adapter(NoteRealtimeAdapter(recording_indexer()))
     keys = [
         (ContentType.NOTE, note_id)
         for note_id in (access.private_note_id, access.shared_note_id, access.org_note_id)
@@ -273,10 +283,10 @@ def poison_count() -> float:
     return sample or 0.0
 
 
-async def maintenance_cycle(buffer: UpdateBuffer) -> dict:
+async def maintenance_cycle(buffer: UpdateBuffer, now_ms: int | None = None) -> dict:
     totals: dict = {}
     for _ in range(100):
-        report = await maintain_buffer(buffer)
+        report = await maintain_buffer(buffer, now_ms=now_ms)
         for action, count in report.actions.items():
             totals[action] = totals.get(action, 0) + count
         if report.cycle_complete:
@@ -450,7 +460,8 @@ async def test_idle_documents_get_no_checkpoint_writes(env) -> None:
     report = await checkpoint_all_pending(env.buffer, enqueue=jobs)
 
     assert dispatched == DispatchReport(due=0, early=0, claimed=0, enqueued=0)
-    assert actions == {}
+    # Fresh epochs are neither due nor idle long enough to give up their keys.
+    assert actions == {MaintenanceAction.KEPT: len(env.keys)}
     assert report == CheckpointReport(streams=0, checkpointed=0, records=0, unreadable=())
     assert jobs.jobs == []
     after = [await stored_row(key) for key in env.keys]
@@ -727,57 +738,78 @@ async def test_commit_publishes_progress_and_enqueues_projection_for_the_new_rev
         (
             SAVE_REALTIME_SNAPSHOT.name,
             f"{env.namespace}projection:{ContentType.NOTE.value}:{env.key[1]}:{result.revision}",
-            (ContentType.NOTE.value, str(env.key[1]), str(env.org), "", ""),
+            (ContentType.NOTE.value, str(env.key[1]), str(env.org)),
         )
     ]
 
 
-async def test_projection_renders_the_checkpoint_text_and_revisions(env) -> None:
+async def test_projection_payload_runs_through_the_registered_core_handler(env) -> None:
     head = await establish(env)
     await admit(env, head, "u-1", edit(env.base, " Alice"))
-    result = await checkpoint_document(env.buffer, head.scope, enqueue=env.jobs)
+    jobs = Recorder()
+    result = await checkpoint_document(env.buffer, head.scope, enqueue=jobs)
+    ((name, job_id, payload),) = jobs.jobs
+    registration = next(item for item in CORE_JOB_REGISTRATIONS if item.ref.name == name)
+    (listed,) = [entry for entry in worker_inventory() if entry.ref is registration.ref]
 
-    outcome = await persist_snapshot(*env.key, env.org, b"", b"")
-
+    first = await registration.handler({"job_try": 1}, *payload)
     projected = await stored_row(env.key)
+    replayed = await registration.handler({"job_try": 1}, *payload)
+
+    # Projection recovers from PostgreSQL, unlike the buffered checkpoint that enqueued it.
+    assert listed.ref.reliability is JobReliability.DURABLE
+    assert listed.ref.recovery is not None
+    assert listed.ref.recovery.store is RecoveryStore.POSTGRESQL
+    note_id = env.key[1]
+    assert (
+        job_id == f"{env.namespace}projection:{ContentType.NOTE.value}:{note_id}:{result.revision}"
+    )
+    assert (
+        first
+        == replayed
+        == {"status": SnapshotOutcome.RENDERED.value, "content_id": str(env.key[1])}
+    )
+    assert projected.rendered_revision == projected.revision == result.revision
+    assert (projected.checkpoint_seq, projected.buffer_epoch) == (1, head.scope.epoch)
+    again = await stored_row(env.key)
+    assert (again.revision, again.rendered_revision, again.updated_at) == (
+        projected.revision,
+        projected.rendered_revision,
+        projected.updated_at,
+    )
     async with open_session() as db:
         note = await db.get(Note, env.key[1])
-    assert outcome is SnapshotOutcome.RENDERED
-    assert text_of(projected.updates) == "base Alice"
-    assert (projected.checkpoint_seq, projected.buffer_epoch) == (1, head.scope.epoch)
-    assert projected.rendered_revision == projected.revision == result.revision
     assert note is not None and note.content == "base Alice"
 
 
-async def test_projection_collects_content_that_merged_frames_deleted(env) -> None:
+async def test_checkpoint_collects_deleted_content_and_projection_keeps_its_bytes(env) -> None:
+    head = await establish(env)
     doc = pycrdt.Doc()
     doc.apply_update(env.base)
     text = markdown_text(doc)
     frames = []
-    for _ in range(20):
+    for index in range(20):
         before = doc.get_state()
         text.insert(len(str(text)), "x" * 5000)
         frames.append(doc.get_update(before))
         before = doc.get_state()
         del text[len("base") :]
         frames.append(doc.get_update(before))
-    # Accepted frames merge into the row as raw bytes, deleted inserts included.
-    merged = pycrdt.merge_updates(env.base, *frames)
-    await set_row(
-        env.key,
-        updates=merged,
-        state_vector=pycrdt.get_state(merged),
-        revision=RealtimeYjsSnapshot.revision + 1,
-    )
+        await admit(env, head, f"u-{index}-insert", frames[-2])
+        await admit(env, head, f"u-{index}-delete", frames[-1])
 
-    outcome = await persist_snapshot(*env.key, env.org, b"", b"")
+    committed = await checkpoint_document(env.buffer, head.scope, enqueue=env.jobs)
+    checkpointed = await stored_row(env.key)
+    outcome = await persist_snapshot(*env.key, env.org)
 
     projected = await stored_row(env.key)
     async with open_session() as db:
         note = await db.get(Note, env.key[1])
+    assert (committed.status, committed.covered) == (CheckpointStatus.COMMITTED, len(frames))
+    assert text_of(checkpointed.updates) == "base"
+    assert len(checkpointed.updates) * 100 < len(pycrdt.merge_updates(env.base, *frames))
     assert outcome is SnapshotOutcome.RENDERED
-    assert text_of(projected.updates) == "base"
-    assert len(projected.updates) * 100 < len(merged)
+    assert projected.updates == checkpointed.updates
     assert note is not None and note.content == "base"
 
 
@@ -879,3 +911,178 @@ async def test_dispatch_reports_the_age_of_the_oldest_pending_edit(env) -> None:
 
     assert (pending, waiting) == (15.0, 5.0)
     assert gauge("uniffy_realtime_buffer_oldest_pending_seconds") == 0.0
+
+
+def reclaimed(kind: str) -> float:
+    return REGISTRY.get_sample_value("uniffy_realtime_buffer_reclaimed_total", {"kind": kind}) or 0.0
+
+
+def retired_records_dropped() -> float:
+    sample = REGISTRY.get_sample_value("uniffy_realtime_buffer_retired_records_dropped_total")
+    return sample or 0.0
+
+
+async def idle_after(head: BufferHead, namespace: str) -> int:
+    """The first instant at which the epoch counts as idle."""
+    last_ms = await valkey().hget(buffer_keys(head.scope, namespace).control, "last_ms")
+    return int(last_ms) + IDLE_RECLAIM_MS + 1
+
+
+async def attach(env: SimpleNamespace) -> LatestState:
+    """Settle the document the way an opening editor hydrates it."""
+    async with open_session() as db:
+        await lock_document(db, env.key, env.org)
+        state = await latest_under_lock(env.buffer, db, env.key, env.org)
+        await db.commit()
+    return state
+
+
+@pytest.mark.parametrize("cleanup", ["trimmed", "lost"])
+async def test_idle_epoch_gives_up_its_keys_and_the_next_attach_starts_a_fresh_epoch(
+    env, cleanup
+) -> None:
+    head = await establish(env)
+    keys = buffer_keys(head.scope, env.namespace)
+    alice = edit(env.base, " Alice")
+    await admit(env, head, "u-1", alice)
+    capture = await capture_checkpoint(env.buffer, head.scope)
+    assert isinstance(capture, CheckpointCapture)
+    await commit_checkpoint(env.buffer, capture)
+    if cleanup == "trimmed":
+        await clean_checkpoint(env.buffer, head.scope)
+    else:
+        # The worker died before its cleanup and the due entry was lost with the queue.
+        await valkey().zrem(keys.due, head.scope.member)
+    pending = await env.buffer.bucket_usage(head.scope.bucket)
+    before = await stored_row(env.key)
+    counted = reclaimed("idle")
+
+    actions = await maintenance_cycle(env.buffer, now_ms=await idle_after(head, env.namespace))
+
+    after = await stored_row(env.key)
+    assert pending == (PendingUsage(0, 0) if cleanup == "trimmed" else PendingUsage(len(alice), 1))
+    assert actions == {MaintenanceAction.RECLAIMED: 1}
+    assert reclaimed("idle") == counted + 1
+    assert await valkey().exists(keys.stream, keys.control, keys.receipts) == 0
+    assert await env.buffer.bucket_usage(head.scope.bucket) == PendingUsage(0, 0)
+    assert (after.buffer_epoch, after.valkey_run_id, after.checkpoint_seq) == (None, None, 0)
+    assert (after.generation, after.revision, after.updates) == (
+        before.generation,
+        before.revision,
+        before.updates,
+    )
+
+    state = await attach(env)
+    bob = await env.buffer.admit(
+        state.head, update_id="u-2", update=edit(after.updates, " Bob"), actor_id=env.bob
+    )
+    saved = await checkpoint_document(env.buffer, state.head.scope, enqueue=env.jobs)
+
+    assert state.head.scope.epoch != head.scope.epoch
+    assert state.head.scope.generation == head.scope.generation
+    assert (state.head.head_seq, state.head.checkpoint_seq, state.tail) == (0, 0, ())
+    assert text_of(state.checkpoint) == "base Alice"
+    assert bob == AdmissionOutcome(
+        AdmissionStatus.ACCEPTED,
+        Receipt(head.scope.generation, state.head.scope.epoch, 1, "u-2"),
+    )
+    assert (saved.status, saved.covered) == (CheckpointStatus.COMMITTED, 1)
+    assert text_of((await stored_row(env.key)).updates) == "base Alice Bob"
+
+
+@pytest.mark.parametrize("busy", ["due", "pending", "recent"])
+async def test_reclaim_leaves_a_due_entry_a_pending_tail_and_a_recent_edit_alone(env, busy) -> None:
+    head = await establish(env)
+    keys = buffer_keys(head.scope, env.namespace)
+    await admit(env, head, "u-1", edit(env.base, " Alice"))
+    if busy == "due":
+        capture = await capture_checkpoint(env.buffer, head.scope)
+        assert isinstance(capture, CheckpointCapture)
+        await commit_checkpoint(env.buffer, capture)
+    elif busy == "recent":
+        await checkpoint_document(env.buffer, head.scope, enqueue=env.jobs)
+    idle = await idle_after(head, env.namespace)
+    counted = reclaimed("idle")
+
+    actions = await maintenance_cycle(env.buffer, now_ms=None if busy == "recent" else idle)
+
+    expected = {
+        "due": MaintenanceAction.CLEANED,
+        "pending": MaintenanceAction.KEPT,
+        "recent": MaintenanceAction.KEPT,
+    }[busy]
+    assert actions == {expected: 1}
+    assert reclaimed("idle") == counted
+    assert (await stored_row(env.key)).buffer_epoch == head.scope.epoch
+    assert await valkey().hget(keys.control, "head") == b"1"
+    assert await valkey().xlen(keys.stream) == (1 if busy == "pending" else 0)
+    assert (await valkey().zscore(keys.due, head.scope.member) is None) == (busy != "pending")
+
+
+async def test_orphan_controls_of_a_rolled_back_epoch_and_a_deleted_row_are_reclaimed(
+    env,
+) -> None:
+    head = await establish(env)
+    async with open_session() as db:
+        await lock_document(db, env.key, env.org)
+        row = await load_snapshot(db, env.key)
+        identity = server_identity()
+        assert row is not None and identity is not None
+        rolled_back = await start_epoch(env.buffer, row, env.org, identity)
+        await db.rollback()
+    deleted = await establish(env, env.keys[1])
+    async with open_session() as db:
+        await db.execute(
+            delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == env.keys[1][1])
+        )
+        await db.commit()
+    orphans = [buffer_keys(scope, env.namespace) for scope in (rolled_back, deleted.scope)]
+    present = [await valkey().exists(keys.control) for keys in orphans]
+    counted = reclaimed("orphan")
+
+    actions = await maintenance_cycle(env.buffer)
+
+    assert present == [1, 1]
+    assert actions == {
+        CheckpointStatus.STALE: 1,
+        CheckpointStatus.OBSOLETE: 1,
+        MaintenanceAction.KEPT: 1,
+    }
+    assert reclaimed("orphan") == counted + 2
+    assert [await valkey().exists(keys.control) for keys in orphans] == [0, 0]
+    assert await valkey().hget(buffer_keys(head.scope, env.namespace).control, "head") == b"0"
+    assert (await stored_row(env.key)).buffer_epoch == head.scope.epoch
+
+
+async def test_records_a_retired_epoch_kept_are_dropped_and_counted_past_retention(env) -> None:
+    head = await establish(env)
+    keys = buffer_keys(head.scope, env.namespace)
+    frank = edit(env.base, " Frank")
+    for index, payload in enumerate((edit(env.base, " Dan"), edit(env.base, " Erin"), frank)):
+        await admit(env, head, f"u-{index + 1}", payload)
+    await valkey().xdel(keys.stream, "2-0")
+    # The gap moves the document to a fresh epoch; the record past it stays for investigation.
+    reset = await checkpoint_document(env.buffer, head.scope, enqueue=env.jobs)
+    kept = await valkey().xrange(keys.stream)
+    newest = parse_record(*kept[-1])
+    assert newest is not None
+    retained = await env.buffer.bucket_usage(head.scope.bucket)
+    counted = retired_records_dropped()
+
+    young = await maintenance_cycle(env.buffer, now_ms=newest.accepted_at_ms + RETIRED_RETENTION_MS)
+    still = await valkey().xrange(keys.stream)
+    old = await maintenance_cycle(
+        env.buffer, now_ms=newest.accepted_at_ms + RETIRED_RETENTION_MS + 1
+    )
+
+    assert reset.status is CheckpointStatus.RESET
+    assert [entry_id for entry_id, _ in kept] == [b"3-0"]
+    assert retained == PendingUsage(len(frank), 1)
+    # A week later the fresh epoch is idle too and gives up its keys in the same walk.
+    assert young == {CheckpointStatus.STALE: 1, MaintenanceAction.RECLAIMED: 1}
+    assert still == kept
+    assert old == {MaintenanceAction.DROPPED: 1}
+    assert retired_records_dropped() == counted + 1
+    assert await valkey().exists(keys.stream) == 0
+    assert await env.buffer.bucket_usage(head.scope.bucket) == PendingUsage(0, 0)
+    assert text_of((await stored_row(env.key)).updates) == "base Dan"

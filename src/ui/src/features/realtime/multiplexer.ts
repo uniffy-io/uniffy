@@ -28,9 +28,9 @@ import {
   MESSAGE_ACCEPTED_RECEIPT,
   MESSAGE_COMMITTED,
   MESSAGE_CHECKPOINT_PROGRESS,
-  MESSAGE_DURABLE_UPDATE,
   MESSAGE_GENERATION,
   MESSAGE_SESSION_STATE,
+  MESSAGE_UPDATE,
   UNAVAILABLE_REASON,
   UPDATE_CONFLICT_REASON,
   WS_CLOSE_FORBIDDEN,
@@ -979,7 +979,7 @@ class RealtimeMultiplexer {
         for (const listener of listeners) listener(transition);
       } else if (update) {
         for (const listener of listeners) listener({ ...transition, update });
-        this.sendDurableUpdate(entry, transition.updateId, update);
+        this.sendUpdate(entry, transition.updateId, update);
       }
     }
     this.publishState(entry);
@@ -987,14 +987,14 @@ class RealtimeMultiplexer {
 
   private sendRetained(entry: DocEntry, id: string): void {
     const update = entry.retained.get(id);
-    if (update) this.sendDurableUpdate(entry, id, update);
+    if (update) this.sendUpdate(entry, id, update);
   }
 
-  private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
+  private sendUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
     if (entry.generation === null || entry.readOnly || entry.rejected || entry.conflicted.has(id))
       return;
     const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, MESSAGE_DURABLE_UPDATE);
+    encoding.writeVarUint(encoder, MESSAGE_UPDATE);
     encoding.writeVarString(encoder, entry.generation);
     encoding.writeVarString(encoder, id);
     encoding.writeVarUint8Array(encoder, update);

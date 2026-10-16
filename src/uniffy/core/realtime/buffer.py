@@ -4,17 +4,14 @@ import asyncio
 import contextlib
 import dataclasses
 import hashlib
-from collections import OrderedDict
 from collections.abc import AsyncIterator
 from enum import StrEnum
 from uuid import UUID
 
 import valkey.asyncio as aioredis
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from valkey.exceptions import OutOfMemoryError, ValkeyError
 
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
     DUE_DELAY_MS,
@@ -26,6 +23,7 @@ from uniffy.core.realtime.buffer_keys import (
     BufferedUpdate,
     BufferHead,
     BufferScope,
+    KeyKind,
     LatestState,
     PendingUsage,
     Receipt,
@@ -33,20 +31,29 @@ from uniffy.core.realtime.buffer_keys import (
     accounting_key,
     buffer_keys,
     due_key,
+    key_pattern,
     parse_member,
     parse_record,
-    scope_of_stream,
-    stream_pattern,
+    scopes_of_keys,
     validate_namespace,
     validate_update,
 )
 from uniffy.core.realtime.buffer_script import (
     ADMIT_SCRIPT,
+    DROP_RETIRED_SCRIPT,
     INITIALIZE_SCRIPT,
     REBASE_SCRIPT,
+    RECLAIM_SCRIPT,
     REPAIR_SCRIPT,
     TRIM_SCRIPT,
     run_script,
+)
+from uniffy.core.realtime.latest import (
+    CheckpointFacts,
+    CheckpointMoved,
+    LatestCache,
+    read_checkpoint,
+    read_facts,
 )
 from uniffy.core.realtime.limits import MAX_FRAME_BYTES
 from uniffy.core.realtime.metrics import REALTIME_BUFFER_ADMISSIONS_TOTAL
@@ -104,90 +111,7 @@ class RecoveryRequired(Exception):
         self.reason = reason
 
 
-class _FactsChanged(Exception):
-    pass
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class _Facts:
-    organization_id: UUID | None
-    generation: str | None
-    epoch: str | None
-    run_id: str | None
-    checkpoint_seq: int
-    revision: int
-
-
-def _matches(key: DocKey) -> tuple:
-    return (
-        RealtimeYjsSnapshot.content_type == key[0],
-        RealtimeYjsSnapshot.content_id == key[1],
-    )
-
-
-async def _read_facts(db: AsyncSession, key: DocKey) -> _Facts | None:
-    row = (
-        await db.execute(
-            select(
-                RealtimeYjsSnapshot.organization_id,
-                RealtimeYjsSnapshot.generation,
-                RealtimeYjsSnapshot.buffer_epoch,
-                RealtimeYjsSnapshot.valkey_run_id,
-                RealtimeYjsSnapshot.checkpoint_seq,
-                RealtimeYjsSnapshot.revision,
-            ).where(*_matches(key))
-        )
-    ).one_or_none()
-    return None if row is None else _Facts(*row)
-
-
-async def _read_checkpoint(db: AsyncSession, key: DocKey, facts: _Facts) -> bytes:
-    updates = (
-        await db.execute(
-            select(RealtimeYjsSnapshot.updates).where(
-                *_matches(key),
-                RealtimeYjsSnapshot.revision == facts.revision,
-                RealtimeYjsSnapshot.checkpoint_seq == facts.checkpoint_seq,
-                RealtimeYjsSnapshot.buffer_epoch == facts.epoch,
-            )
-        )
-    ).scalar_one_or_none()
-    if updates is None:
-        raise _FactsChanged
-    return updates
-
-
-class _LatestCache:
-    """Per-process LRU of reconstructed documents, bounded by retained bytes."""
-
-    def __init__(self, max_bytes: int) -> None:
-        self._entries: OrderedDict[tuple[str, DocKey], LatestState] = OrderedDict()
-        self._bytes = 0
-        self._max_bytes = max_bytes
-
-    def get(self, key: tuple[str, DocKey]) -> LatestState | None:
-        state = self._entries.get(key)
-        if state is not None:
-            self._entries.move_to_end(key)
-        return state
-
-    def put(self, key: tuple[str, DocKey], state: LatestState) -> None:
-        self.discard(key)
-        if state.size > self._max_bytes:
-            return
-        self._entries[key] = state
-        self._bytes += state.size
-        while self._bytes > self._max_bytes:
-            _, evicted = self._entries.popitem(last=False)
-            self._bytes -= evicted.size
-
-    def discard(self, key: tuple[str, DocKey]) -> None:
-        state = self._entries.pop(key, None)
-        if state is not None:
-            self._bytes -= state.size
-
-
-_latest_cache = _LatestCache(_CACHE_MAX_BYTES)
+_latest_cache = LatestCache(_CACHE_MAX_BYTES)
 
 
 class UpdateBuffer:
@@ -291,16 +215,16 @@ class UpdateBuffer:
         await ensure_buffer_ready()
         failure: RecoveryRequired | None = None
         for _ in range(_ATTEMPTS):
-            facts = await _read_facts(db, key)
+            facts = await read_facts(db, key)
             if facts is None:
                 return None
             try:
                 return await self._load(db, key, facts)
-            except _FactsChanged:
+            except CheckpointMoved:
                 continue
             except RecoveryRequired as exc:
                 failure = exc
-                if await _read_facts(db, key) == facts:
+                if await read_facts(db, key) == facts:
                     raise
         raise failure or BufferUnavailable("realtime checkpoint kept changing during the read")
 
@@ -368,6 +292,37 @@ class UpdateBuffer:
         await ensure_buffer_ready()
         return await self._trim(scope, through, retire=True)
 
+    async def reclaim_idle(
+        self, scope: BufferScope, checkpoint_seq: int, idle_before_ms: int
+    ) -> bool:
+        """Drop an epoch PostgreSQL covers through its head, with nothing due and no recent append.
+
+        The caller holds the document lock and clears the row's epoch in the same transaction.
+        """
+        await ensure_buffer_ready()
+        keys = buffer_keys(scope, self.namespace)
+        async with self._valkey_call():
+            reclaimed = await run_script(
+                self._valkey(),
+                RECLAIM_SCRIPT,
+                [keys.stream, keys.control, keys.receipts, keys.due, keys.accounting],
+                [checkpoint_seq, scope.member, max(idle_before_ms, 0)],
+            )
+        return bool(reclaimed)
+
+    async def drop_retired(self, scope: BufferScope, older_than_ms: int) -> PendingUsage:
+        """Drop what a retired epoch kept once its newest record is older than the cutoff."""
+        await ensure_buffer_ready()
+        keys = buffer_keys(scope, self.namespace)
+        async with self._valkey_call():
+            dropped_bytes, dropped_records = await run_script(
+                self._valkey(),
+                DROP_RETIRED_SCRIPT,
+                [keys.stream, keys.control, keys.accounting],
+                [max(older_than_ms, 0)],
+            )
+        return PendingUsage(dropped_bytes, dropped_records)
+
     def forget(self, key: DocKey) -> None:
         _latest_cache.discard((self.namespace, key))
 
@@ -410,18 +365,15 @@ class UpdateBuffer:
         for _ in range(_ATTEMPTS):
             async with self._valkey_call():
                 changes = await client.hget(accounting, "changes") or b"0"
-                streams = {
+                streams = [
                     key
                     async for key in client.scan_iter(
-                        match=stream_pattern(bucket, self.namespace), count=_SCAN_COUNT
+                        match=key_pattern(KeyKind.STREAM, self.namespace, bucket),
+                        count=_SCAN_COUNT,
                     )
-                }
+                ]
                 total_bytes = total_records = 0
-                for stream in streams:
-                    try:
-                        scope = scope_of_stream(stream, bucket, self.namespace)
-                    except ValueError:
-                        continue
+                for scope in scopes_of_keys(streams, (KeyKind.STREAM,), self.namespace):
                     keys = buffer_keys(scope, self.namespace)
                     found_bytes, found_records = await run_script(
                         client, REPAIR_SCRIPT, [keys.stream, keys.control, keys.accounting], []
@@ -462,7 +414,7 @@ class UpdateBuffer:
         except _VALKEY_FAILURES as exc:
             raise BufferUnavailable("Valkey call failed") from exc
 
-    async def _load(self, db: AsyncSession, key: DocKey, facts: _Facts) -> LatestState:
+    async def _load(self, db: AsyncSession, key: DocKey, facts: CheckpointFacts) -> LatestState:
         if facts.epoch is None or facts.generation is None or facts.organization_id is None:
             raise RecoveryRequired(RecoveryReason.UNINITIALIZED)
         identity = server_identity()
@@ -492,7 +444,7 @@ class UpdateBuffer:
                 scope, after=cached.head.head_seq, through=head_seq
             )
         else:
-            checkpoint = await _read_checkpoint(db, key, facts)
+            checkpoint = await read_checkpoint(db, key, facts)
             tail = await self.read_updates(scope, after=facts.checkpoint_seq, through=head_seq)
         state = LatestState(head, checkpoint, tail)
         _latest_cache.put(cache_key, state)

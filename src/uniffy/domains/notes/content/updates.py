@@ -30,17 +30,15 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType, NotificationType
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.notes.content.fields import NoteContentFields, extract_content_fields
-from uniffy.domains.tags.context import ContentTagMutations
-from uniffy.domains.tags.sync import sync_inline_tags
 
 if TYPE_CHECKING:
     from uniffy.domains.notes.operations import NoteOperations
 
 
 class NoteUpdates:
-    def __init__(self, operations: NoteOperations, buffer: UpdateBuffer | None = None) -> None:
+    def __init__(self, operations: NoteOperations, buffer: UpdateBuffer) -> None:
         self.operations = operations
-        self.buffer = buffer or UpdateBuffer()
+        self.buffer = buffer
 
     async def update(
         self,
@@ -233,7 +231,7 @@ class NoteUpdates:
         await self.operations.session.refresh(note)
         parsed_inline_names = fields.parsed_inline_tag_names if fields is not None else None
         if content_changed and fields is not None:
-            await publish_content_replace(ContentType.NOTE, note_id, fields.content)
+            await publish_content_replace(ContentType.NOTE, note_id)
 
         await self.operations._sync_tags_after_save(
             user_id=user_id,
@@ -246,7 +244,7 @@ class NoteUpdates:
         await self.operations.session.commit()
 
         if title_changed:
-            await self.operations._propagate_title_to_mentions(organization_id, note)
+            await self.operations._propagate_title_to_mentions(organization_id, note, self.buffer)
             if note.node_type == NodeType.FOLDER:
                 await self.operations._refresh_children_parent_label(note)
         if parent_changed:
@@ -275,32 +273,3 @@ class NoteUpdates:
                 writer_id=user_id,
             )
         return note
-
-    async def sync_tags_after_save(
-        self,
-        *,
-        user_id: UUID,
-        organization_id: UUID,
-        note: Note,
-        tag_ids: list[UUID] | None,
-        parsed_inline_names: list[str] | None,
-    ) -> None:
-        urn = build_content_urn(ContentType.NOTE, note.id)
-        if tag_ids is not None:
-            await ContentTagMutations(
-                self.operations.session,
-                self.operations.search_indexer,
-            ).replace_manual_tags(
-                actor_id=user_id,
-                organization_id=organization_id,
-                content_urn=urn,
-                tag_ids=tag_ids,
-            )
-        if parsed_inline_names is not None:
-            await sync_inline_tags(
-                self.operations.session,
-                content_urn=urn,
-                organization_id=organization_id,
-                actor_id=user_id,
-                parsed_names=parsed_inline_names,
-            )

@@ -16,6 +16,7 @@ from sqlalchemy import func, select
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
@@ -38,9 +39,9 @@ async def _calendar(session, *, organization_id, owner_id) -> Calendar:
     return calendar
 
 
-async def _create(session, access, *, calendar_id, title) -> CalendarEvent:
+async def _create(session, access, buffer: UpdateBuffer, *, calendar_id, title) -> CalendarEvent:
     start = datetime.now(UTC) + timedelta(days=1)
-    return await CalendarEventOperations(session, _indexer()).create(
+    return await CalendarEventOperations(session, _indexer(), buffer).create(
         user_id=access.member_id,
         organization_id=access.org_id,
         title=title,
@@ -62,24 +63,24 @@ async def _events_titled(session, access, title) -> int:
 
 
 class TestCreateTargetsOwnCalendar:
-    async def test_the_author_files_on_their_own_calendar(self, session, access) -> None:
+    async def test_the_author_files_on_their_own_calendar(self, session, access, buffer) -> None:
         calendar = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
 
-        event = await _create(session, access, calendar_id=calendar.id, title="own-calendar")
+        event = await _create(session, access, buffer, calendar_id=calendar.id, title="own-calendar")
 
         assert event.calendar_id == calendar.id
 
-    async def test_a_colleagues_calendar_is_refused(self, session, access) -> None:
+    async def test_a_colleagues_calendar_is_refused(self, session, access, buffer) -> None:
         calendar = await _calendar(session, organization_id=access.org_id, owner_id=access.peer_id)
         title = f"planted-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=calendar.id, title=title)
+            await _create(session, access, buffer, calendar_id=calendar.id, title=title)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
 
-    async def test_another_tenants_calendar_is_refused(self, session, access) -> None:
+    async def test_another_tenants_calendar_is_refused(self, session, access, buffer) -> None:
         """The organization is compared too, so a leaked id from elsewhere is
         as useless as one that does not exist."""
         calendar = await _calendar(
@@ -88,16 +89,16 @@ class TestCreateTargetsOwnCalendar:
         title = f"cross-tenant-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=calendar.id, title=title)
+            await _create(session, access, buffer, calendar_id=calendar.id, title=title)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
 
-    async def test_an_unknown_calendar_is_refused(self, session, access) -> None:
+    async def test_an_unknown_calendar_is_refused(self, session, access, buffer) -> None:
         title = f"nowhere-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=generate_id(), title=title)
+            await _create(session, access, buffer, calendar_id=generate_id(), title=title)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
@@ -105,16 +106,16 @@ class TestCreateTargetsOwnCalendar:
 
 class TestMoveTargetsOwnCalendar:
     async def test_an_event_cannot_be_moved_onto_a_colleagues_calendar(
-        self, session, access
+        self, session, access, buffer
     ) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         theirs = await _calendar(session, organization_id=access.org_id, owner_id=access.peer_id)
-        event = await _create(session, access, calendar_id=mine.id, title="stays-put")
+        event = await _create(session, access, buffer, calendar_id=mine.id, title="stays-put")
         # Read through the ids before the rollback expires the instances.
         mine_id, theirs_id, event_id = mine.id, theirs.id, event.id
 
         with pytest.raises(NotFoundError):
-            await CalendarEventOperations(session, _indexer()).update(
+            await CalendarEventOperations(session, _indexer(), buffer).update(
                 user_id=access.member_id,
                 organization_id=access.org_id,
                 event_id=event_id,

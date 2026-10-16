@@ -67,7 +67,7 @@ These settings control the first database seed and whether registration is open.
 
 ## Valkey
 
-Valkey backs the ARQ job queue, pub/sub channels, and the operational cache.
+Valkey backs the ARQ job queue, pub/sub channels, the operational cache, and the buffer of live edits that PostgreSQL does not hold yet.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -75,8 +75,31 @@ Valkey backs the ARQ job queue, pub/sub channels, and the operational cache.
 | `VALKEY_PORT` | `6380` | TCP port. The local compose maps Valkey to 6380 to avoid collision with a host Redis on 6379. |
 | `VALKEY_PASSWORD` | `uniffy-valkey-dev` | Auth password. |
 | `VALKEY_DATABASE` | `0` | Logical DB used by app code. |
+| `VALKEY_BINARY_MAX_CONNECTIONS` | `10` | Connection cap per process for the pool that stores live edits not yet saved. Connections open on demand. |
+| `REALTIME_VALKEY_PREFLIGHT` | `strict` | Startup check of the eviction policy. `strict` stops accepting live edits into Valkey when the policy is `allkeys-*`. `warn` only logs. |
+| `REALTIME_PENDING_BUDGET_BYTES` | empty | Bytes of unsaved live edits Valkey may hold across all documents. Empty means a quarter of `maxmemory` capped at 512 MiB, or 256 MiB when `maxmemory` is 0 or unreadable. |
 
-Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request.
+Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request. Live edit calls have the same deadline but never fall back to PostgreSQL. The edit stays on the editor's device, the chip reads Saving unavailable, and the editor sends it again a few seconds later.
+
+**Eviction requirement.** Valkey's eviction policy must not be one of the `allkeys-*` policies. Under those, Valkey can silently delete edits that are waiting for their save when memory runs low. `noeviction`, the Valkey default, and every `volatile-*` policy are safe. Waiting edits carry no expiry, so caches go first, and a full instance refuses new edits instead of dropping old ones. Editors show that as Saving unavailable and keep the edits on the device.
+
+The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
+
+Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
+
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets, and one document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. An edit over any of these limits is refused for now and kept on the device until saves catch up.
+
+## Realtime editing
+
+Limits for live editing of notes, task descriptions and event descriptions. Each backend process applies them on its own.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `REALTIME_MAX_DOCUMENT_BYTES` | `524288` | Largest rendered text of one document, in UTF-8 bytes. Larger live edits are refused and stay on the editor's device. Content writes through the API use the same cap. |
+| `REALTIME_MAX_SNAPSHOT_BYTES` | `8388608` | Largest stored CRDT state of one live document, in bytes. |
+| `REALTIME_MAX_DOCS_PER_SOCKET` | `32` | Documents one browser tab or mobile app may have open live at once. |
+| `REALTIME_MAX_SOCKETS_PER_USER` | `16` | Live connections one user may hold on each backend process. |
+| `REALTIME_MAX_MESSAGES_PER_SECOND` | `120` | Messages per second one connection may send, with bursts up to twice that. A client above it is disconnected and reconnects. |
 
 ## Meilisearch
 

@@ -81,8 +81,8 @@ export interface CloseDisposalInput {
 
 export interface CloseDisposal {
   /** A checkpoint covers every own edit under the current generation; the rows are a cache. */
-  acknowledged: boolean;
-  /** Drop this session's rows; only an acknowledged close of an opt-in session. */
+  checkpointed: boolean;
+  /** Drop this session's rows; only a checkpointed close of an opt-in session. */
   discard: boolean;
   /** Leave the rows to the drain, which resends what the server lacks and awaits the checkpoint. */
   drain: boolean;
@@ -92,7 +92,7 @@ export interface CloseDisposal {
 // neither counts as a clean close no matter what the transport reports. A receipt alone is no
 // clean close either: until a checkpoint covers the edit, the device copy is its only backup.
 export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
-  const acknowledged =
+  const checkpointed =
     input.serverSynced &&
     input.hydrationComplete &&
     input.transportStatus === "connected" &&
@@ -100,8 +100,8 @@ export function resolveCloseDisposal(input: CloseDisposalInput): CloseDisposal {
     !input.generationChanged &&
     !input.denied;
   return {
-    acknowledged,
-    discard: input.discardLocalOnCleanClose && acknowledged,
+    checkpointed,
+    discard: input.discardLocalOnCleanClose && checkpointed,
     drain: input.checkpointPending && !input.readOnly && !input.generationChanged && !input.denied,
   };
 }
@@ -198,7 +198,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
             discardOnClean: discardLocalOnCleanClose,
           }
         : undefined,
-      isAcknowledged: () =>
+      isCheckpointed: () =>
         serverSynced &&
         transportStatus === "connected" &&
         !generationChanged &&
@@ -299,7 +299,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
       const checkpointed = checkpointPending && !state.checkpointPending;
       checkpointPending = state.checkpointPending;
       if (!checkpointed) return;
-      void persistence.acknowledge().then(() => {
+      void persistence.markCheckpointed().then(() => {
         if (!disposed && !realtimeMultiplexer.getDocState(docName).checkpointPending)
           clearPendingDoc(contentType, contentId);
       });
@@ -334,12 +334,12 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         generationChanged,
         denied,
       });
-      if (disposal.acknowledged) clearPendingDoc(contentType, contentId);
+      if (disposal.checkpointed) clearPendingDoc(contentType, contentId);
       subscription.destroy();
       undoManager?.destroy();
       awareness.destroy();
       void persistence
-        .destroy({ discard: disposal.discard, acknowledged: disposal.acknowledged })
+        .destroy({ discard: disposal.discard, checkpointed: disposal.checkpointed })
         .finally(() => ydoc.destroy());
       sessionRef.current = null;
     };

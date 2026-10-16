@@ -1,38 +1,23 @@
-export { realtimeMultiplexer } from "@/features/realtime/multiplexer";
-export type { DocSubscription, MultiplexerAttachOptions } from "@/features/realtime/multiplexer";
 export { useDocSession } from "@/features/realtime/hooks/useDocSession";
 export { useMarkdownDocSession } from "@/features/realtime/hooks/useMarkdownDocSession";
-export { docContentTypeName, docNameFor } from "@/features/realtime/docNames";
-export { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStatusBadge";
-export { RealtimeSessionStatus } from "@/features/realtime/components/RealtimeSessionStatus";
-export type { DocSession, UseDocSessionOptions } from "@/features/realtime/hooks/useDocSession";
-export { useDocAwareness, setLocalAwareness } from "@/features/realtime/hooks/useDocAwareness";
+export { useDocAwareness } from "@/features/realtime/hooks/useDocAwareness";
 export {
   useDeviceRecoveryState,
   useDocSaveState,
   useRealtimeDocState,
   type SaveState,
 } from "@/features/realtime/hooks/useDocSaveState";
-export { useRealtimeDrain, usePendingDocSync } from "@/features/realtime/hooks/useRealtimeDrain";
+export { usePendingDocSync } from "@/features/realtime/hooks/useRealtimeDrain";
+export { docContentTypeName, docNameFor } from "@/features/realtime/docNames";
+export { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStatusBadge";
+export { RealtimeSessionStatus } from "@/features/realtime/components/RealtimeSessionStatus";
 export { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
 export { clearPendingDocsFor } from "@/features/realtime/pendingDocs";
-export type { AwarenessPeer } from "@/features/realtime/hooks/useDocAwareness";
-export { RealtimePresence } from "@/features/realtime/components/RealtimePresence";
 export {
-  attachEncryptedPersistence,
+  discoverStoredPendingDocs,
   HYDRATION_ORIGIN,
-  REMOTE_ORIGIN,
+  type DeviceRecoveryState,
+  type DeviceStorage,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
-export type {
-  EncryptedPersistence,
-  EncryptedPersistenceOptions,
-} from "@/features/realtime/persistence/encryptedYjsPersistence";
-export {
-  CANONICAL_SUBPROTOCOL,
-  WS_CLOSE_FORBIDDEN,
-  WS_CLOSE_TOKEN_REVOKED,
-  WS_CLOSE_NOT_FOUND,
-  statusFromCloseCode,
-} from "@/features/realtime/protocol";
+export type { RealtimeDocState } from "@/features/realtime/multiplexer";
 export type { RealtimeStatus } from "@/features/realtime/protocol";
-export { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";

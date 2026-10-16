@@ -405,9 +405,7 @@ class EventUpdateOperations:
             await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
         if merge is not None:
             await publish_content_changed(ContentType.CALENDAR_EVENT, event.id, organization_id)
-            await publish_content_replace(
-                ContentType.CALENDAR_EVENT, event.id, event.description or ""
-            )
+            await publish_content_replace(ContentType.CALENDAR_EVENT, event.id)
 
         if tag_ids is not None:
             tag_ops = TagOperations(
@@ -434,6 +432,7 @@ class EventUpdateOperations:
                     organization_id=organization_id,
                     target_urn=event_urn,
                     new_label=event.title,
+                    buffer=self.events.buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(

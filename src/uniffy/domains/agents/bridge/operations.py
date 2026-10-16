@@ -19,6 +19,7 @@ from uniffy.core.models.agents.approval_audit import AgentApprovalAudit, AgentAp
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.models.chat.message import ChatMessage, SenderType
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import ContentType, SubjectType, generate_id
@@ -82,6 +83,7 @@ class AgentChatBridge:
         *,
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
         call_lifecycle: ChannelCallLifecycle,
     ) -> None:
         """Invoke the agent in response to a user chat message.
@@ -180,6 +182,7 @@ class AgentChatBridge:
                 self._session,
                 storage,
                 search_indexer,
+                buffer,
                 self._session_factory,
                 call_lifecycle,
             )

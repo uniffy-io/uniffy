@@ -117,6 +117,7 @@ def _install_runtime_stub(
             _session: Any,
             _storage: Any,
             _search_indexer: Any,
+            _buffer: Any,
             _session_factory: Any,
             _call_lifecycle: Any,
         ) -> None:
@@ -220,6 +221,7 @@ class TestRunAgentSession:
                 _session: Any,
                 _storage: Any,
                 _search_indexer: Any,
+                _buffer: Any,
                 _session_factory: Any,
                 _call_lifecycle: Any,
             ) -> None:

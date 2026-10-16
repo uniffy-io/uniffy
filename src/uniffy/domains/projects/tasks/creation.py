@@ -7,16 +7,14 @@ from loguru import logger
 from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.converters.common_proto import content_type_to_proto
-from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
 from uniffy.core.realtime.limits import validate_document_size
-from uniffy.core.types import ContentType
 from uniffy.domains.projects import queries
-from uniffy.domains.projects.audience import resolve_project_audience
+from uniffy.domains.projects.audience import publish_project_access
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.statuses import (
     load_task_status_semantics,
@@ -157,13 +155,6 @@ class TaskCreateOperations:
             task, user_id, None, task.outgoing_references
         )
 
-        audience = await resolve_project_audience(self.session, organization_id, project)
-        await publish_content_access_changed(
-            content_type=content_type_to_proto(ContentType.PROJECT),
-            content_id=project_id,
-            action=ContentAccessAction.CHILD_ADDED,
-            organization_id=organization_id,
-            target_user_ids=audience,
-        )
+        await publish_project_access(self.session, project, ContentAccessAction.CHILD_ADDED)
 
         return task

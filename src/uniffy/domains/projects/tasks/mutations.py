@@ -50,11 +50,11 @@ class TaskMutationOperations:
         self,
         session: AsyncSession,
         content: TaskContentOperations,
-        buffer: UpdateBuffer | None = None,
+        buffer: UpdateBuffer,
     ) -> None:
         self.session = session
         self.content = content
-        self.buffer = buffer or UpdateBuffer()
+        self.buffer = buffer
 
     async def update(
         self,
@@ -267,7 +267,7 @@ class TaskMutationOperations:
         if merge is not None:
             await merge.after_commit()
             await publish_content_changed(ContentType.TASK, task_id, organization_id)
-            await publish_content_replace(ContentType.TASK, task_id, task.description or "")
+            await publish_content_replace(ContentType.TASK, task_id)
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 
@@ -306,6 +306,7 @@ class TaskMutationOperations:
                     organization_id=organization_id,
                     target_urn=task_urn,
                     new_label=task.title,
+                    buffer=self.buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(

@@ -4,6 +4,7 @@ from types import SimpleNamespace as NS
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.models.agents.memory import MemoryScope
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.tools.builtin.memory import (
@@ -24,6 +25,7 @@ def _tool_ctx(*, is_test_session: bool) -> ToolContext:
         session=session,
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         memory_scope=MemoryScopeRef(MemoryScope.USER, generate_id()),
         is_test_session=is_test_session,

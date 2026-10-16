@@ -1,17 +1,23 @@
 """Realtime edits stay durable through admission, checkpoint, projection and their effects."""
 
 import asyncio
+import contextlib
+from collections.abc import Awaitable, Callable, Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any
+from uuid import UUID
 
 import pycrdt
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, select, update
 
+from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.events.bus import emit_notification, event_from_json, stage_notification_events
 from uniffy.core.events.types import NotificationEvent
+from uniffy.core.models.files.attachment import Attachment
+from uniffy.core.models.files.file import File
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.outbox import NotificationOutbox
@@ -20,14 +26,14 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.adapter import RealtimeRenderConflict, register_realtime_adapter
 from uniffy.core.realtime.buffer_keys import Receipt
 from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
 from uniffy.core.realtime.lifecycle import stage_replacement
 from uniffy.core.realtime.live import accept_seed, claim_seed
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.rename import stage_mention_rename
-from uniffy.core.realtime.snapshot import persist_snapshot
+from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.state import WSSession
 from uniffy.core.realtime.storage import (
     EditDenied,
@@ -39,7 +45,7 @@ from uniffy.core.realtime.storage import (
     stage_seed,
 )
 from uniffy.core.realtime.ydoc_manager import YDocManager
-from uniffy.core.search.indexer import SearchIndexer
+from uniffy.core.search.engine import SearchEngineError
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -49,16 +55,20 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
-from uniffy.domains.files.jobs.attachments import _reconcile
+from uniffy.domains.files.jobs.attachments import INLINE_UPLOAD_GRACE, reconcile_inline_item
+from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY, NotificationChannel
 from uniffy.domains.notifications.delivery.app import InAppAdapter
 from uniffy.domains.notifications.jobs.events import deliver_notification_outbox
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
-from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.infrastructure.database.session import open_session
 from uniffy.tests.integration.access.realtime_live import Recorder, buffered, stored, text_of
-from uniffy.tests.integration.access.test_realtime_live_routing import Socket
-
-emit_mentions = TaskNotifications.emit_mention_notifications
+from uniffy.tests.integration.access.realtime_sockets import Socket
+from uniffy.tests.integration.access.recording_search import (
+    RecordingSearchEngine,
+    recording_indexer,
+)
+from uniffy.vendor.arq import Retry
+from uniffy.workers.registry import CORE_JOB_REGISTRATIONS
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -84,23 +94,21 @@ async def document(session, access, valkey_namespace):
     )
     session.add(task)
     await session.commit()
-    indexer = AsyncMock(spec=SearchIndexer)
+    engine = RecordingSearchEngine()
+    indexer = recording_indexer(engine)
     adapter = TaskRealtimeAdapter(indexer)
     register_realtime_adapter(adapter)
     key = ContentType.TASK, task.id
-    with patch(
-        "uniffy.domains.projects.tasks.realtime.TaskNotifications.emit_mention_notifications",
-        new_callable=AsyncMock,
-    ):
-        live = await buffered(key, access, valkey_namespace)
-        yield SimpleNamespace(
-            key=key,
-            seed=await stored(key),
-            access=access,
-            adapter=adapter,
-            indexer=indexer,
-            live=live,
-        )
+    live = await buffered(key, access, valkey_namespace)
+    yield SimpleNamespace(
+        key=key,
+        seed=await stored(key),
+        access=access,
+        adapter=adapter,
+        engine=engine,
+        indexer=indexer,
+        live=live,
+    )
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == task.id)
@@ -118,7 +126,32 @@ async def accepted(document, doc):
 
 
 async def project(document):
-    await persist_snapshot(*document.key, document.access.org_id, b"", b"")
+    await persist_snapshot(*document.key, document.access.org_id)
+
+
+class _RenderGate:
+    """The registered task adapter with a hook that runs before every render."""
+
+    def __init__(self, inner: Any, before: Callable[[], Awaitable[None]]) -> None:
+        self._inner = inner
+        self._before = before
+        self.content_type = inner.content_type
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    async def stage_render(self, *args: Any, **kwargs: Any) -> Any:
+        await self._before()
+        return await self._inner.stage_render(*args, **kwargs)
+
+
+@contextlib.contextmanager
+def gated_render(document, before: Callable[[], Awaitable[None]]) -> Iterator[None]:
+    register_realtime_adapter(_RenderGate(document.adapter, before))
+    try:
+        yield
+    finally:
+        register_realtime_adapter(document.adapter)
 
 
 async def test_admissions_from_two_replicas_both_reach_projection_without_pubsub(document):
@@ -172,7 +205,7 @@ async def test_metadata_write_does_not_supersede_content(document):
         assert task.title == "renamed"
 
 
-async def test_external_replacement_fences_stale_admission_and_projection_payloads(document):
+async def test_external_replacement_fences_stale_admission_and_projection(document):
     stale = decode_snapshot(document.seed)
     markdown_text(stale).insert(4, " stale")
     async with open_session() as db:
@@ -186,9 +219,7 @@ async def test_external_replacement_fences_stale_admission_and_projection_payloa
     await after_commit()
     with pytest.raises(GenerationConflict):
         await document.live.admit_live("u-stale", stale.get_update())
-    await persist_snapshot(
-        *document.key, document.access.org_id, stale.get_update(), stale.get_state()
-    )
+    await project(document)
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         task = await db.get(Task, document.key[1])
@@ -203,9 +234,12 @@ async def test_failed_projection_keeps_accepted_bytes_for_retry(document):
     doc = decode_snapshot(document.seed)
     markdown_text(doc).insert(4, " durable")
     await accepted(document, doc)
-    with patch.object(document.adapter, "stage_render", side_effect=OSError("database interrupted")):
-        with pytest.raises(OSError):
-            await project(document)
+
+    async def interrupted() -> None:
+        raise OSError("database interrupted")
+
+    with gated_render(document, interrupted), pytest.raises(OSError):
+        await project(document)
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         assert snapshot.revision > snapshot.rendered_revision
@@ -213,19 +247,46 @@ async def test_failed_projection_keeps_accepted_bytes_for_retry(document):
     await project(document)
 
 
+async def test_projection_job_retries_soon_after_its_render_loses_a_version_race(document):
+    doc = decode_snapshot(document.seed)
+    markdown_text(doc).insert(4, " contended")
+    await accepted(document, doc)
+    name, _, payload = document.live.jobs.jobs[-1]
+    project_job = next(
+        registration.handler
+        for registration in CORE_JOB_REGISTRATIONS
+        if registration.ref is SAVE_REALTIME_SNAPSHOT
+    )
+
+    async def contended() -> None:
+        raise RealtimeRenderConflict("a metadata write committed first")
+
+    with gated_render(document, contended), pytest.raises(Retry) as retry:
+        await project_job({"job_try": 2}, *payload)
+    pending = await stored(document.key)
+    result = await project_job({"job_try": 3}, *payload)
+
+    assert name == SAVE_REALTIME_SNAPSHOT.name
+    # Seconds per try: only the competing metadata write has to land first.
+    assert retry.value.defer_score == 2000
+    assert pending.revision > pending.rendered_revision
+    assert result == {"status": SnapshotOutcome.RENDERED.value, "content_id": str(document.key[1])}
+    async with open_session() as db:
+        task = await db.get(Task, document.key[1])
+    assert task is not None and task.description == "base contended"
+
+
 async def test_projection_lock_prevents_older_render_from_finishing_last(document):
     first = decode_snapshot(document.seed)
     markdown_text(first).insert(4, " first")
     await accepted(document, first)
     entered, release = asyncio.Event(), asyncio.Event()
-    original = document.adapter.stage_render
 
-    async def paused(*args, **kwargs):
+    async def paused() -> None:
         entered.set()
         await release.wait()
-        return await original(*args, **kwargs)
 
-    with patch.object(document.adapter, "stage_render", side_effect=paused):
+    with gated_render(document, paused):
         rendering = asyncio.create_task(project(document))
         await entered.wait()
         second = decode_snapshot(document.seed)
@@ -466,11 +527,10 @@ async def test_projection_failure_retains_original_mentions_and_retries_search(d
     mention = f" [[[Peer|urn:uniffy:content:USER:{document.access.peer_id}]]]"
     markdown_text(doc).insert(4, mention)
     await accepted(document, doc)
-    document.indexer.index.side_effect = OSError("search down")
-    with patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions):
-        with pytest.raises(OSError, match="search down"):
-            await project(document)
-    document.indexer.index.side_effect = None
+    document.engine.available = False
+    with pytest.raises(SearchEngineError):
+        await project(document)
+    document.engine.available = True
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         assert snapshot.effects_pending
@@ -493,6 +553,7 @@ async def test_projection_failure_retains_original_mentions_and_retries_search(d
         assert event.target_user_ids == [document.access.peer_id]
         event_id = event.event_id
     await project(document)
+    assert "Peer" in (document.engine.indexed_text(*document.key) or "")
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         assert not snapshot.effects_pending
@@ -561,34 +622,57 @@ async def test_rename_grafts_unprojected_text_and_survives_late_typing(document)
         assert task.description == f"base [[[Renamed|{urn}]]] human offline"
 
 
+def _database_down() -> Any:
+    raise OSError("database unavailable")
+
+
 async def test_notification_delivery_failure_keeps_original_outbox(document):
+    access = document.access
+    async with open_session() as db:
+        task = await db.get(Task, document.key[1])
+        db.add(
+            ContentMember(
+                organization_id=access.org_id,
+                content_type=ContentType.PROJECT,
+                content_id=task.project_id,
+                subject_type=SubjectType.USER,
+                subject_id=access.peer_id,
+                role=ContentRole.VIEWER,
+                added_by_user_id=access.member_id,
+            )
+        )
+        await db.commit()
     doc = decode_snapshot(document.seed)
-    markdown_text(doc).insert(4, f" [[[Peer|urn:uniffy:content:USER:{document.access.peer_id}]]]")
+    markdown_text(doc).insert(4, f" [[[Peer|urn:uniffy:content:USER:{access.peer_id}]]]")
     await accepted(document, doc)
-    with patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions):
-        await project(document)
+    await project(document)
     async with open_session() as db:
         event = (
             await db.execute(
-                select(NotificationOutbox).where(
-                    NotificationOutbox.organization_id == document.access.org_id
-                )
+                select(NotificationOutbox).where(NotificationOutbox.organization_id == access.org_id)
             )
         ).scalar_one()
         event_id, payload = event.event_id, event.payload
-    with patch(
-        "uniffy.domains.notifications.jobs.events.process_notification_event",
-        AsyncMock(return_value={"status": "error"}),
-    ):
-        with pytest.raises(RuntimeError):
-            await deliver_notification_outbox({}, str(event_id))
+    adapters = {NotificationChannel.IN_APP: InAppAdapter()}
+
+    unavailable = {SESSION_FACTORY_CTX_KEY: _database_down, DELIVERY_ADAPTERS_CTX_KEY: adapters}
+    with pytest.raises(OSError):
+        await deliver_notification_outbox(unavailable, str(event_id))
     async with open_session() as db:
         assert (await db.get(NotificationOutbox, event_id)).payload == payload
-    delivered = AsyncMock(return_value={"status": "success"})
-    with patch("uniffy.domains.notifications.jobs.events.process_notification_event", delivered):
-        await deliver_notification_outbox({}, str(event_id))
-        await deliver_notification_outbox({}, str(event_id))
-    delivered.assert_awaited_once_with({}, payload)
+
+    available = {SESSION_FACTORY_CTX_KEY: open_session, DELIVERY_ADAPTERS_CTX_KEY: adapters}
+    await deliver_notification_outbox(available, str(event_id))
+    await deliver_notification_outbox(available, str(event_id))
+    async with open_session() as db:
+        assert await db.get(NotificationOutbox, event_id) is None
+        rows = (
+            await db.scalars(select(Notification).where(Notification.event_id == event_id))
+        ).all()
+        assert [row.user_id for row in rows] == [access.peer_id]
+        for row in rows:
+            await db.delete(row)
+        await db.commit()
 
 
 async def test_continuous_edit_notifications_coalesce_per_actor(document):
@@ -620,44 +704,117 @@ async def test_continuous_edit_notifications_coalesce_per_actor(document):
         }
 
 
-async def test_inline_cleanup_waits_for_projection_and_retries_failed_effect(document):
-    file_id = generate_id()
-    doc = decode_snapshot(document.seed)
-    markdown_text(doc).insert(4, f" ![image](/api/files/{document.access.org_id}/{file_id})")
-    await accepted(document, doc)
+class _Storage:
+    """Object storage that records deletions and fails every call while unavailable."""
+
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+        self.available = True
+
+    async def delete_object(self, key: str) -> None:
+        if not self.available:
+            raise OSError("storage down")
+        self.deleted.append(key)
+
+
+async def inline_upload(document, name: str) -> File:
+    """An editor upload on the task, attached before any upload grace would protect it."""
+    access = document.access
     async with open_session() as db:
-        await stage_inline_reconciliation(db, *document.key, document.access.org_id)
-        await db.rollback()
-        assert (
-            await db.get(InlineAttachmentReconciliation, (document.key[0].value, document.key[1]))
-            is None
+        file = File(
+            organization_id=access.org_id,
+            owner_id=access.member_id,
+            access_mode=AccessMode.OWNER_ONLY,
+            filename=name,
+            original_filename=name,
+            mime_type="image/png",
+            size_bytes=10,
+            storage_key=f"itdb/{generate_id().hex}",
+            storage_bucket="itdb",
         )
-        await stage_inline_reconciliation(db, *document.key, document.access.org_id)
+        db.add(file)
+        await db.flush()
+        db.add(
+            Attachment(
+                organization_id=access.org_id,
+                file_id=file.id,
+                source_file_id=file.id,
+                content_type=ContentType.TASK,
+                content_id=document.key[1],
+                attached_by_user_id=access.member_id,
+                attached_at=datetime.now(UTC) - 2 * INLINE_UPLOAD_GRACE,
+            )
+        )
         await db.commit()
-        item = await db.get(InlineAttachmentReconciliation, (document.key[0].value, document.key[1]))
-    from_ctx = {"object_storage": MagicMock(), "search_indexer": MagicMock()}
-    effect = AsyncMock()
-    buffer = document.live.buffer
-    with patch("uniffy.domains.files.jobs.attachments.reconcile_inline_attachments", effect):
-        await _reconcile(from_ctx, item, buffer)
-        effect.assert_not_awaited()
+    return file
+
+
+async def attached_files(document) -> set[UUID]:
+    async with open_session() as db:
+        return set(
+            await db.scalars(
+                select(Attachment.file_id).where(Attachment.content_id == document.key[1])
+            )
+        )
+
+
+async def test_inline_cleanup_waits_for_projection_and_retries_failed_storage(document):
+    org = document.access.org_id
+    row_key = (document.key[0].value, document.key[1])
+    kept, dropped = (
+        await inline_upload(document, "kept.png"),
+        await inline_upload(document, "gone.png"),
+    )
+    storage = _Storage()
+
+    async def pending() -> bool:
+        async with open_session() as db:
+            return await db.get(InlineAttachmentReconciliation, row_key) is not None
+
+    try:
+        doc = decode_snapshot(document.seed)
+        markdown_text(doc).insert(4, f" ![image](/api/files/{org}/{kept.id})")
+        await accepted(document, doc)
+        async with open_session() as db:
+            await stage_inline_reconciliation(db, *document.key, org)
+            await db.rollback()
+            assert await db.get(InlineAttachmentReconciliation, row_key) is None
+            await stage_inline_reconciliation(db, *document.key, org)
+            await db.commit()
+            item = await db.get(InlineAttachmentReconciliation, row_key)
+
+        async def reconcile() -> None:
+            await reconcile_inline_item(
+                item, buffer=document.live.buffer, storage=storage, search_indexer=document.indexer
+            )
+
+        # The column does not show the accepted reference yet, so nothing may go.
+        await reconcile()
+        assert await attached_files(document) == {kept.id, dropped.id}
+        assert await pending()
+
         await project(document)
-        effect.side_effect = OSError("storage down")
+        storage.available = False
         with pytest.raises(OSError):
-            await _reconcile(from_ctx, item, buffer)
+            await reconcile()
+        assert await attached_files(document) == {kept.id, dropped.id}
+        assert await pending()
+
+        storage.available = True
+        await reconcile()
+        assert await attached_files(document) == {kept.id}
+        assert storage.deleted == [dropped.storage_key]
+        assert not await pending()
+    finally:
         async with open_session() as db:
-            assert (
-                await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
-                is not None
+            await db.execute(
+                delete(InlineAttachmentReconciliation).where(
+                    InlineAttachmentReconciliation.content_id == document.key[1]
+                )
             )
-        effect.side_effect = None
-        await _reconcile(from_ctx, item, buffer)
-        assert effect.await_args.kwargs["referenced_file_ids"] == {file_id}
-        async with open_session() as db:
-            assert (
-                await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
-                is None
-            )
+            await db.execute(delete(Attachment).where(Attachment.content_id == document.key[1]))
+            await db.execute(delete(File).where(File.id.in_([kept.id, dropped.id])))
+            await db.commit()
 
 
 async def test_locked_hydration_refuses_deleted_content_without_orphan(document):

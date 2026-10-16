@@ -13,7 +13,7 @@ import {
   type MultiplexerAttachOptions,
 } from "@/features/realtime/multiplexer";
 import {
-  MESSAGE_DURABLE_UPDATE,
+  MESSAGE_UPDATE,
   encodeAcceptedReceipt,
   encodeCheckpointProgress,
   encodeGeneration,
@@ -122,10 +122,6 @@ export function connect(doc: AttachedDoc): FakeWebSocket {
     ws.onopen?.();
   }
   ws.receive(doc.docName, encodeGeneration(GENERATION));
-  const sync = encoding.createEncoder();
-  encoding.writeVarUint(sync, 0);
-  syncProtocol.writeSyncStep2(sync, new Y.Doc());
-  ws.receive(doc.docName, encoding.toUint8Array(sync));
   ws.receive(
     doc.docName,
     encodeSessionState({
@@ -136,6 +132,10 @@ export function connect(doc: AttachedDoc): FakeWebSocket {
       checkpointRevision: 0,
     }),
   );
+  const sync = encoding.createEncoder();
+  encoding.writeVarUint(sync, 0);
+  syncProtocol.writeSyncStep2(sync, new Y.Doc());
+  ws.receive(doc.docName, encoding.toUint8Array(sync));
   return ws;
 }
 
@@ -144,13 +144,12 @@ export function lastUpdateId(ws: FakeWebSocket, doc: AttachedDoc): string {
   for (const frame of ws.sent) {
     const { docName, payloadOffset } = peekVarString(frame);
     const decoder = decoding.createDecoder(frame.subarray(payloadOffset));
-    if (docName !== doc.docName || decoding.readVarUint(decoder) !== MESSAGE_DURABLE_UPDATE)
-      continue;
+    if (docName !== doc.docName || decoding.readVarUint(decoder) !== MESSAGE_UPDATE) continue;
     decoding.readVarString(decoder);
     ids.push(decoding.readVarString(decoder));
   }
   const id = ids.at(-1);
-  if (!id) throw new Error(`no durable update sent for ${doc.docName}`);
+  if (!id) throw new Error(`no update sent for ${doc.docName}`);
   return id;
 }
 

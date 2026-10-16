@@ -70,6 +70,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 ./manage.py format [-s backend|ui|mobile]    # ruff format (backend) / oxfmt (ui, mobile)
 ./manage.py test [-s backend|ui|mobile|cli]  # pytest / vitest / go test
 ./manage.py bench                            # backend benchmarks
+./manage.py qualify [--keep] [-- ARGS]       # realtime qualification on a disposable uniffy-qual stack (`-- --help` for driver flags)
 ./manage.py gitleaks                         # full-history secret scan (allowlist: .gitleaks.toml)
 
 # Database

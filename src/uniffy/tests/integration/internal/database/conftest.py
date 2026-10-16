@@ -35,6 +35,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.files.registration import register_file_content
@@ -73,6 +74,12 @@ async def session(database):
 @pytest.fixture
 def search_indexer() -> SearchIndexer:
     return MagicMock(spec=SearchIndexer)
+
+
+@pytest.fixture
+def buffer() -> UpdateBuffer:
+    """No document in this suite gains a buffer epoch, so live state stays the stored row."""
+    return UpdateBuffer(namespace=f"test:{generate_id().hex}:")
 
 
 async def seed_env(db_session: AsyncSession) -> NS:

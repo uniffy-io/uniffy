@@ -6,6 +6,7 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.domains.agents.bridge.operations import AgentChatBridge
@@ -45,6 +46,7 @@ async def respond_to_chat_message(
                 trigger_rule=trigger_rule,
                 storage=storage,
                 search_indexer=ctx[SEARCH_INDEXER_CTX_KEY],
+                buffer=UpdateBuffer(),
                 call_lifecycle=cast(ChannelCallLifecycle, ctx[CALL_LIFECYCLE_CTX_KEY]),
             )
             return {

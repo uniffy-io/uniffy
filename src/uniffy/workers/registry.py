@@ -382,6 +382,7 @@ CORE_SCHEDULED_REGISTRATIONS = (
         dispatch_realtime_checkpoints,
         second=None,
         timeout=DISPATCH_JOB_TIMEOUT_SECONDS,
+        quiet=True,
     ),
     _bind_schedule(
         MAINTAIN_REALTIME_BUFFER_SCHEDULE,

@@ -153,8 +153,9 @@ async def update_task(task: BufferedDocument, buffer: UpdateBuffer, **fields: An
 
 
 async def update_task_rpc(task: BufferedDocument, **fields: Any) -> None:
-    """Call the UpdateTask RPC as the task's owner, against the process buffer."""
+    """Call the UpdateTask RPC as the task's owner, against the task's buffer."""
     service = ProjectsServiceImpl(MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
+    service.buffer = task.buffer
     request = UpdateTaskRequest(task_id=str(task.key[1]), organization_id=str(task.org), **fields)
     await call_rpc(service.update_task, request, user_id=task.owner, organization_id=task.org)
 

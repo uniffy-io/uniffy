@@ -1,5 +1,6 @@
 """Pure parts of the realtime update buffer: key layout, bucket mapping, arguments and merging."""
 
+from fnmatch import fnmatchcase
 from typing import Any, cast
 from uuid import UUID, uuid4
 
@@ -11,13 +12,16 @@ from uniffy.core.realtime.buffer_keys import (
     BUCKET_COUNT,
     BufferedUpdate,
     BufferScope,
+    KeyKind,
     accounting_key,
     bucket_for,
     buffer_keys,
     due_key,
+    key_pattern,
     merge_tail,
     parse_member,
-    scope_of_stream,
+    scope_of_key,
+    scopes_of_keys,
     validate_update,
 )
 from uniffy.core.realtime.limits import MAX_FRAME_BYTES
@@ -101,12 +105,61 @@ def test_document_keys_carry_tenant_type_id_generation_and_epoch() -> None:
 
 
 @pytest.mark.parametrize("generation", [GENERATION, ""])
-def test_due_member_and_stream_key_name_their_scope(generation: str) -> None:
+def test_due_member_and_document_keys_name_their_scope(generation: str) -> None:
     original = scope(generation=generation)
+    keys = buffer_keys(original, "ns:")
 
     assert parse_member(original.member) == original
     assert parse_member(original.member.encode()) == original
-    assert scope_of_stream(buffer_keys(original, "ns:").stream, original.bucket, "ns:") == original
+    assert scope_of_key(keys.stream, KeyKind.STREAM, "ns:") == original
+    assert scope_of_key(keys.control.encode(), KeyKind.CONTROL, "ns:") == original
+
+
+@pytest.mark.parametrize(
+    ("kind", "namespace"),
+    [(KeyKind.STREAM, "ns:"), (KeyKind.RECEIPTS, "ns:"), (KeyKind.CONTROL, "other:")],
+)
+def test_a_key_of_another_kind_or_namespace_names_no_scope(kind: KeyKind, namespace: str) -> None:
+    control = buffer_keys(scope(), "ns:").control
+
+    with pytest.raises(ValueError):
+        scope_of_key(control, kind, namespace)
+
+
+def test_scopes_of_keys_collects_each_document_once_and_skips_other_buffer_keys() -> None:
+    first, second = scope(), scope(epoch=str(uuid4()))
+    keys = buffer_keys(first, "ns:")
+    found = [
+        keys.stream,
+        keys.control,
+        keys.receipts,
+        buffer_keys(second, "ns:").control,
+        buffer_keys(scope(content_id=uuid4()), "other:").stream,
+        due_key(first.bucket, "ns:"),
+        accounting_key(first.bucket, "ns:"),
+        f"{keys.control}:trailing",
+    ]
+
+    scopes = scopes_of_keys(found, (KeyKind.STREAM, KeyKind.CONTROL), "ns:")
+
+    assert scopes == sorted([first, second], key=lambda item: item.member)
+
+
+def test_key_patterns_match_one_kind_or_every_buffer_key() -> None:
+    keys = buffer_keys(scope(), "ns:")
+    bucket = scope().bucket
+
+    assert fnmatchcase(keys.stream, key_pattern(KeyKind.STREAM, "ns:"))
+    assert fnmatchcase(keys.stream, key_pattern(KeyKind.STREAM, "ns:", bucket))
+    assert not fnmatchcase(keys.control, key_pattern(KeyKind.STREAM, "ns:"))
+    assert not fnmatchcase(
+        keys.stream, key_pattern(KeyKind.STREAM, "ns:", (bucket + 1) % BUCKET_COUNT)
+    )
+    assert all(
+        fnmatchcase(key, key_pattern(None, "ns:"))
+        for key in (keys.stream, keys.control, keys.receipts, keys.due, keys.accounting)
+    )
+    assert not fnmatchcase(keys.stream, key_pattern(None, "other:"))
 
 
 @pytest.mark.parametrize(

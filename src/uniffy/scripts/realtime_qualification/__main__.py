@@ -68,7 +68,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--batch-ms",
         type=float,
-        default=250,
+        default=50,
         help="Client transport batch window, as the web client",
     )
     parser.add_argument(
@@ -85,13 +85,13 @@ def _parse_args() -> argparse.Namespace:
         "--settle",
         type=float,
         default=15,
-        help="Seconds measured after drain, so debounced projections land in the same window",
+        help="Seconds measured after drain, so the last projections land in the same window",
     )
     parser.add_argument(
         "--drain-timeout",
         type=float,
         default=120,
-        help="Seconds to wait for outstanding acks and peer deliveries after the edit phase",
+        help="Seconds to wait for receipts, checkpoints and peer deliveries after the edit phase",
     )
     parser.add_argument("--valkey-probe-hz", type=float, default=20, help="0 disables")
     parser.add_argument(

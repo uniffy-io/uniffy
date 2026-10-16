@@ -48,11 +48,11 @@ class CalendarEventOperations(CalendarEventReader):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer,
-        buffer: UpdateBuffer | None = None,
+        buffer: UpdateBuffer,
     ) -> None:
         super().__init__(session, _search_indexer=search_indexer)
         # Accepted realtime edits that description writes and occurrence copies include.
-        self.buffer = buffer or UpdateBuffer()
+        self.buffer = buffer
 
     async def create(
         self,

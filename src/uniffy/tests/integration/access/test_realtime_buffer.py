@@ -7,7 +7,6 @@ import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pycrdt
@@ -61,6 +60,7 @@ from uniffy.infrastructure.valkey.binary import (
     server_identity,
 )
 from uniffy.infrastructure.valkey.config import ValkeyConfig
+from uniffy.tests.integration.access.recording_search import recording_indexer
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -128,7 +128,7 @@ def epoch_resets(reason: RecoveryReason) -> float:
 
 @pytest_asyncio.fixture(loop_scope="session")
 async def env(access, valkey_namespace) -> AsyncIterator[SimpleNamespace]:
-    register_realtime_adapter(NoteRealtimeAdapter(MagicMock()))
+    register_realtime_adapter(NoteRealtimeAdapter(recording_indexer()))
     keys = [
         (ContentType.NOTE, note_id)
         for note_id in (access.private_note_id, access.shared_note_id, access.org_note_id)
@@ -284,6 +284,8 @@ async def test_accepted_update_stores_record_receipt_due_entry_and_counters(env)
         control[b"first_ms"],
     )
     assert int(after[b"bytes"]) == len(alice) + len(bob)
+    # The latest append time marks the epoch busy for idle reclaim.
+    assert int(after[b"last_ms"]) == int(entries[1][1][b"t"])
     assert await valkey().hget(keys.receipts, "u-2") == (
         f"2:{hashlib.sha256(bob).hexdigest()}".encode()
     )
@@ -372,7 +374,6 @@ async def test_document_record_limit_refuses_further_edits_without_trimming(env)
 
 async def test_document_byte_limit_refuses_further_edits_without_trimming(env) -> None:
     head = await establish(env)
-    keys = buffer_keys(head.scope, env.namespace)
     chunk = b"x" * MAX_FRAME_BYTES
 
     outcomes = {

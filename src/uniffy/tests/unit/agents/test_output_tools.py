@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.agents.tools.builtin import calendar, notes, projects
 from uniffy.domains.agents.tools.definitions import ToolContext
@@ -22,6 +23,7 @@ def mutations(monkeypatch):
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         storage=MagicMock(),
         search_indexer=MagicMock(),
         call_lifecycle=MagicMock(),

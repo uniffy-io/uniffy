@@ -30,4 +30,4 @@ async def test_schedules_skip_while_valkey_is_unreachable(monkeypatch: pytest.Mo
 
     assert await dispatch_realtime_checkpoints({}) == {"enqueued": 0}
     assert await dispatch_realtime_checkpoints({}) == {"enqueued": 0}
-    assert await maintain_realtime_buffer({}) == {"streams": 0}
+    assert await maintain_realtime_buffer({}) == {"documents": 0}

@@ -17,8 +17,7 @@ from uniffy.core.models.files.storage_usage import StorageUsage
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
-from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
+from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -28,7 +27,7 @@ from uniffy.core.types import (
 )
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.attachments.operations import AttachmentOperations
-from uniffy.domains.files.jobs.attachments import _reconcile
+from uniffy.domains.files.jobs.attachments import reconcile_inline_item
 from uniffy.domains.files.operations import FileOperations
 from uniffy.domains.notes.adapter import register_note_realtime_adapter
 from uniffy.domains.notes.operations import NoteOperations
@@ -359,7 +358,7 @@ async def test_purge_removes_attachment_and_file_rows(session, env, s3_mock, qui
 
 
 async def test_note_permanent_delete_purges_linked_attachment(
-    session, env, s3_mock, quiet_search
+    session, env, s3_mock, quiet_search, buffer
 ) -> None:
     ops = AttachmentOperations(session, s3_mock, quiet_search)
     try:
@@ -381,7 +380,7 @@ async def test_note_permanent_delete_purges_linked_attachment(
         )
         await session.commit()
 
-        await NoteOperations(session, s3_mock, quiet_search).delete(
+        await NoteOperations(session, s3_mock, quiet_search, buffer).delete(
             env.admin_id, env.org_id, note.id, permanent=True
         )
 
@@ -394,7 +393,7 @@ async def test_note_permanent_delete_purges_linked_attachment(
 
 
 async def test_note_empty_trash_purges_realtime_snapshot(
-    session, env, s3_mock, quiet_search
+    session, env, s3_mock, quiet_search, buffer
 ) -> None:
     note = _note(env, access_mode=AccessMode.OWNER_ONLY)
     note.is_deleted = True
@@ -410,7 +409,7 @@ async def test_note_empty_trash_purges_realtime_snapshot(
     await session.commit()
 
     try:
-        count = await NoteOperations(session, s3_mock, quiet_search).empty_trash(
+        count = await NoteOperations(session, s3_mock, quiet_search, buffer).empty_trash(
             env.admin_id,
             env.org_id,
         )
@@ -472,7 +471,7 @@ async def test_reconcile_detaches_only_unreferenced_linked_attachments(
 
 @pytest.mark.parametrize("url_projected", [False, True])
 async def test_inline_upload_grace_retains_pending_cleanup(
-    session, env, s3_mock, quiet_search, url_projected
+    session, env, s3_mock, quiet_search, buffer, url_projected
 ):
     register_note_realtime_adapter(quiet_search)
     ops = AttachmentOperations(session, s3_mock, quiet_search)
@@ -491,8 +490,9 @@ async def test_inline_upload_grace_retains_pending_cleanup(
         item = await session.get(InlineAttachmentReconciliation, (ContentType.NOTE.value, note_id))
         session.expunge(item)
         await session.rollback()
-        ctx = {OBJECT_STORAGE_CTX_KEY: s3_mock, SEARCH_INDEXER_CTX_KEY: quiet_search}
-        await _reconcile(ctx, item)
+        await reconcile_inline_item(
+            item, buffer=buffer, storage=s3_mock, search_indexer=quiet_search
+        )
         session.expire_all()
         assert await session.get(Attachment, link_id) is not None
         assert await session.get(File, upload_id) is not None
@@ -507,7 +507,9 @@ async def test_inline_upload_grace_retains_pending_cleanup(
                 .values(attached_at=datetime.now(UTC) - timedelta(days=2))
             )
             await session.commit()
-            await _reconcile(ctx, item)
+            await reconcile_inline_item(
+                item, buffer=buffer, storage=s3_mock, search_indexer=quiet_search
+            )
             session.expire_all()
             assert await session.get(Attachment, link_id) is None
             assert await session.get(File, upload_id) is None

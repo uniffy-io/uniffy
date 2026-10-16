@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pycrdt
 import pytest
@@ -31,6 +31,7 @@ from uniffy.core.realtime.live import (
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.storage import load_snapshot, lock_document
+from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
     AccessMode,
     ContentType,
@@ -38,8 +39,8 @@ from uniffy.core.types import (
     RecurrencePattern,
     generate_id,
 )
+from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
-from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.projects.defaults import stage_default_project_fields
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
@@ -56,13 +57,14 @@ from uniffy.tests.integration.access.realtime_live import (
     establish,
     live_note,  # noqa: F401 - fixture
     published_progress,
-    published_replacements,
+    replacement_hints,
     stored,
     text_of,
     typed,
     unreachable_buffer,  # noqa: F401 - fixture
     valkey,
 )
+from uniffy.tests.integration.access.recording_search import recording_indexer
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -72,9 +74,9 @@ MERGED = "base human agent"
 
 @pytest.fixture(autouse=True)
 def adapters() -> None:
-    register_realtime_adapter(TaskRealtimeAdapter(AsyncMock()))
-    register_realtime_adapter(EventRealtimeAdapter(AsyncMock()))
-    register_realtime_adapter(NoteRealtimeAdapter(AsyncMock()))
+    register_realtime_adapter(TaskRealtimeAdapter(recording_indexer()))
+    register_realtime_adapter(EventRealtimeAdapter(recording_indexer()))
+    register_realtime_adapter(NoteRealtimeAdapter(recording_indexer()))
 
 
 async def _type_live(document: SimpleNamespace) -> pycrdt.Doc:
@@ -220,20 +222,19 @@ async def test_plain_write_merges_into_live_generation_and_tells_resident_replic
     revision = (await stored(document.key)).revision
 
     async with doc_subscription(document.key) as messages:
-        with patch("uniffy.domains.notes.content.updates.emit_notification", new_callable=AsyncMock):
-            row = await _write(session, access, document, **_fields(document, "base agent"))
-        replacements = await published_replacements(messages)
+        row = await _write(session, access, document, **_fields(document, "base agent"))
+        replacements = await replacement_hints(messages)
 
     assert getattr(row, next(iter(_fields(document, "")))) == MERGED
     assert await _column(document) == MERGED
-    assert replacements == [MERGED]
+    assert replacements == 1
     await _assert_merged_snapshot(document, access.member_id, revision)
     await _assert_same_generation_update_accepted(document, client)
 
 
 async def _project(document: SimpleNamespace, access: SimpleNamespace) -> None:
     await document.live.checkpointed()
-    outcome = await persist_snapshot(*document.key, access.org_id, b"", b"")
+    outcome = await persist_snapshot(*document.key, access.org_id)
     assert outcome == SnapshotOutcome.RENDERED
 
 
@@ -241,19 +242,21 @@ async def _write(session, access, document, **fields):
     kind, content_id = document.key
     buffer = document.live.buffer
     if kind == ContentType.TASK:
-        content = TaskContentOperations(session, search_indexer=AsyncMock())
+        content = TaskContentOperations(session, search_indexer=recording_indexer())
         row, _ = await TaskMutationOperations(session, content, buffer).update(
             access.member_id, access.org_id, content_id, **fields
         )
         return row
     if kind == ContentType.CALENDAR_EVENT:
-        return await CalendarEventOperations(session, AsyncMock(), buffer).update(
-            access.member_id, access.org_id, content_id, call_lifecycle=MagicMock(), **fields
+        return await CalendarEventOperations(session, recording_indexer(), buffer).update(
+            access.member_id,
+            access.org_id,
+            content_id,
+            call_lifecycle=CallsLifecycle(open_session),
+            **fields,
         )
-    operations = NoteOperations(session, MagicMock(), AsyncMock())
-    return await NoteUpdates(operations, buffer).update(
-        access.member_id, access.org_id, content_id, **fields
-    )
+    operations = NoteOperations(session, MagicMock(spec=ObjectStorage), recording_indexer(), buffer)
+    return await operations.update(access.member_id, access.org_id, content_id, **fields)
 
 
 @pytest.fixture(params=["task_document", "event_document", "note_document"])

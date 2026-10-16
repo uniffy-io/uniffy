@@ -172,7 +172,7 @@ async def propagate_rename(
     target_urn: str,
     new_label: str,
     *,
-    buffer: UpdateBuffer | None = None,
+    buffer: UpdateBuffer,
     enqueue: Enqueue = enqueue_core,
 ) -> int:
     """Rename ``target_urn`` labels in domain columns and live documents, one batch per commit.
@@ -180,7 +180,6 @@ async def propagate_rename(
     Live documents take the label together with their buffered tail. A document whose live state
     cannot be verified keeps its old label and is counted; every other document is renamed.
     """
-    buffer = buffer or UpdateBuffer()
     buffered = await _buffered(buffer, organization_id)
     batches = rename_batches(await _candidates(session, organization_id, target_urn, buffered))
     # Each batch locks and commits in a transaction of its own.
@@ -204,7 +203,7 @@ async def propagate_rename(
         for settle in settles:
             await settle()
         for kind, content_id in changed:
-            await publish_content_replace(kind, content_id, "")
+            await publish_content_replace(kind, content_id)
         if changed:
             await _reindex(organization_id, changed, enqueue)
         renamed += len(changed)

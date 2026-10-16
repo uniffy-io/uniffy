@@ -87,6 +87,7 @@ class Function:
     keep_result_s: Optional[float]
     keep_result_forever: Optional[bool]
     max_tries: Optional[int]
+    quiet: bool
 
 
 def func(
@@ -97,6 +98,7 @@ def func(
     timeout: Optional['SecondsTimedelta'] = None,
     keep_result_forever: Optional[bool] = None,
     max_tries: Optional[int] = None,
+    quiet: bool = False,
 ) -> Function:
     """
     Wrapper for a job function which lets you configure more settings.
@@ -107,6 +109,7 @@ def func(
     :param keep_result_forever: whether to keep results forever, if None use Worker default, wins over ``keep_result``
     :param timeout: maximum time the job should take
     :param max_tries: maximum number of tries allowed for the function, use 1 to prevent retrying
+    :param quiet: log a successful start and finish at DEBUG, for jobs that run every second
     """
     if isinstance(coroutine, Function):
         return coroutine
@@ -122,7 +125,9 @@ def func(
     timeout = to_seconds(timeout)
     keep_result = to_seconds(keep_result)
 
-    return Function(name or coroutine_.__qualname__, coroutine_, timeout, keep_result, keep_result_forever, max_tries)
+    return Function(
+        name or coroutine_.__qualname__, coroutine_, timeout, keep_result, keep_result_forever, max_tries, quiet
+    )
 
 
 class Retry(RuntimeError):
@@ -702,8 +707,10 @@ class Worker:
 
         success = False
         job_status = _JOB_STATUS_FAILED
+        # A quiet job runs every second; its routine start and finish would drown the worker log.
+        log_run = logger.debug if function.quiet else logger.info
         try:
-            logger.info(
+            log_run(
                 'Started job %s',
                 function_name,
                 extra=_job_log_fields(
@@ -800,7 +807,7 @@ class Worker:
             success = True
             job_status = _JOB_STATUS_SUCCESS
             finished_ms = timestamp_ms()
-            logger.info(
+            log_run(
                 'Finished job %s',
                 function_name,
                 extra=_job_log_fields(

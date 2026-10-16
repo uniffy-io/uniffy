@@ -84,21 +84,21 @@ describe("resolveCloseDisposal", () => {
     denied: false,
   };
 
-  it("discards only an acknowledged close of an opt-in session", () => {
+  it("discards only a checkpointed close of an opt-in session", () => {
     expect(resolveCloseDisposal(clean)).toEqual({
-      acknowledged: true,
+      checkpointed: true,
       discard: true,
       drain: false,
     });
     expect(resolveCloseDisposal({ ...clean, discardLocalOnCleanClose: false })).toMatchObject({
-      acknowledged: true,
+      checkpointed: true,
       discard: false,
     });
   });
 
   it("never treats a generation change as a clean close", () => {
     expect(resolveCloseDisposal({ ...clean, generationChanged: true })).toEqual({
-      acknowledged: false,
+      checkpointed: false,
       discard: false,
       drain: false,
     });
@@ -116,7 +116,7 @@ describe("resolveCloseDisposal", () => {
 
   it("records pending editable docs for the drain, not denied or replaced ones", () => {
     expect(resolveCloseDisposal({ ...clean, checkpointPending: true })).toEqual({
-      acknowledged: false,
+      checkpointed: false,
       discard: false,
       drain: true,
     });
@@ -186,7 +186,7 @@ describe("Done", () => {
     ws.receive(doc.docName, receipt(lastUpdateId(ws, doc), 1));
     const { checkpointPending } = realtimeMultiplexer.getDocState(doc.docName);
     expect(resolveCloseDisposal({ ...closing, checkpointPending })).toEqual({
-      acknowledged: false,
+      checkpointed: false,
       discard: false,
       drain: true,
     });
@@ -201,7 +201,7 @@ describe("Done", () => {
     ws.receive(doc.docName, progress(1));
     const { checkpointPending } = realtimeMultiplexer.getDocState(doc.docName);
     expect(resolveCloseDisposal({ ...closing, checkpointPending })).toEqual({
-      acknowledged: true,
+      checkpointed: true,
       discard: true,
       drain: false,
     });

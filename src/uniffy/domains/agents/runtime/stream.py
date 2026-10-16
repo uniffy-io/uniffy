@@ -14,6 +14,7 @@ from uniffy.core.database import SessionFactory
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.agents.operations import AgentOperations
@@ -83,6 +84,7 @@ class MessageStreamer:
         session: AsyncSession,
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
         session_factory: SessionFactory,
         call_lifecycle: ChannelCallLifecycle,
     ) -> None:
@@ -90,6 +92,7 @@ class MessageStreamer:
         self._session_factory = session_factory
         self._storage = storage
         self._search_indexer = search_indexer
+        self._buffer = buffer
         self._call_lifecycle = call_lifecycle
         self._org_operations = OrganizationOperations(session)
         self._user_operations = UserOperations(session, search_indexer)
@@ -382,6 +385,7 @@ class MessageStreamer:
                 session=self._session,
                 user_id=user_id,
                 organization_id=organization_id,
+                buffer=self._buffer,
                 storage=self._storage,
                 search_indexer=self._search_indexer,
                 call_lifecycle=self._call_lifecycle,

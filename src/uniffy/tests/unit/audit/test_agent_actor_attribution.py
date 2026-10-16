@@ -9,6 +9,7 @@ identity through ``details.actor_kind = "agent"`` plus
 
 from unittest.mock import AsyncMock, MagicMock
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
@@ -44,6 +45,7 @@ async def test_tool_call_attributes_to_human_with_agent_kind_detail() -> None:
         session=session,
         user_id=human_id,
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=agent_id,
         allowed_tools=frozenset({"notes.create_note"}),
     )

@@ -21,15 +21,17 @@ export function RealtimeConnectionNotice({
   if (status === "update_rejected")
     return (
       <p role="status" className="px-6 py-3 text-sm text-muted-foreground">
-        This edit is too large to sync. Keep or export your draft and reduce its size.
+        This edit could not be synced. Keep or export your local draft. Very large edits must be
+        smaller to sync.
       </p>
     );
   if (!waiting) return null;
+  // Recovered drafts show beside the editor when one exists, so this copy promises none.
   if (status === "permission_lost" || status === "access_lost" || status === "token_revoked") {
     return (
       <p role="status" className="px-6 py-3 text-sm text-muted-foreground">
         {status === "access_lost"
-          ? "Access lost. Keep this editor open to recover unsaved edits."
+          ? "Access lost. This item was deleted or is no longer shared with you."
           : status === "permission_lost"
             ? "Edit access removed."
             : "Session ended. Reload to sign in."}

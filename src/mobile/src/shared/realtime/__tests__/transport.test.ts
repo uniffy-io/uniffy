@@ -1,3 +1,4 @@
+import { nativeStorage } from "@shared/realtime/__tests__/storageHarness";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
@@ -7,6 +8,7 @@ import * as syncProtocol from "y-protocols/sync";
 import { encodeDocFrame, peekVarString } from "@shared/realtime/multiplex";
 import type { RealtimeDocState, UpdateCoverageEvent } from "@shared/realtime/multiplexer";
 import {
+  MESSAGE_UPDATE,
   encodeAcceptedReceipt,
   encodeCheckpointProgress,
   encodeCommitted,
@@ -19,15 +21,24 @@ const lifecycle = vi.hoisted(() => ({
 }));
 vi.mock("react-native", () => ({
   AppState: {
+    currentState: "active",
     addEventListener: (_: string, callback: (state: string) => void) => {
       lifecycle.onChange = callback;
+      return { remove: () => {} };
     },
   },
+  Platform: { OS: "ios", Version: "18" },
 }));
-vi.mock("@core/auth/auth", () => ({ getAccessToken: () => "token" }));
-vi.mock("@core/auth/refresh", () => ({ refreshSession: vi.fn() }));
-vi.mock("@core/api/connectivity", () => ({ addOnlineListener: vi.fn() }));
-vi.mock("@core/config/serverUrl", () => ({ getServerUrl: () => "http://test.local" }));
+vi.mock("expo-constants", () => ({ default: { expoConfig: { version: "0" } } }));
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: { getItem: async () => null, setItem: async () => {}, removeItem: async () => {} },
+}));
+
+/** A fresh app process signed in with an access token, as the multiplexer reads it. */
+async function loadTransport() {
+  (await import("@core/auth/auth")).setAccessToken("token");
+  return import("@shared/realtime/multiplexer");
+}
 
 class Socket {
   static instances: Socket[] = [];
@@ -74,6 +85,7 @@ beforeEach(() => {
   vi.spyOn(Math, "random").mockReturnValue(0.5);
   Socket.instances = [];
   vi.stubGlobal("WebSocket", Socket);
+  nativeStorage.secure.clear();
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -84,7 +96,7 @@ afterEach(() => {
 it.each([false, true])(
   "reconnects after proxy normal close and preserves explicit read-only=%s",
   async (readOnly) => {
-    const { realtimeMultiplexer } = await import("@shared/realtime/multiplexer");
+    const { realtimeMultiplexer } = await loadTransport();
     const doc = new Y.Doc();
     const awareness = new Awareness(doc);
     const sub = realtimeMultiplexer.attach({
@@ -116,7 +128,7 @@ it.each([false, true])(
 );
 
 async function openDocument(id: string) {
-  const { realtimeMultiplexer } = await import("@shared/realtime/multiplexer");
+  const { realtimeMultiplexer } = await loadTransport();
   const doc = new Y.Doc();
   const awareness = new Awareness(doc);
   const statuses: RealtimeStatus[] = [];
@@ -159,7 +171,9 @@ async function reconnect(h: Awaited<ReturnType<typeof openDocument>>): Promise<S
 }
 
 function writes(socket: Socket): Uint8Array[] {
-  return socket.sent.filter((frame) => frame[peekVarString(frame).payloadOffset] === 6);
+  return socket.sent.filter(
+    (frame) => frame[peekVarString(frame).payloadOffset] === MESSAGE_UPDATE,
+  );
 }
 
 function readWrite(frame: Uint8Array) {
@@ -215,7 +229,7 @@ it("retains writes through reconnect and clears only matching acknowledgments", 
   h.destroy();
 });
 
-it("batches continuous typing into twenty durable frames per second", async () => {
+it("batches continuous typing into twenty update frames per second", async () => {
   const h = await openDocument("typing");
   const server = new Y.Doc();
   for (let i = 0; i < 40; i++) {
@@ -513,7 +527,7 @@ it("ignores duplicate, foreign and malformed coverage frames", async () => {
 });
 
 it("publishes the oldest uncheckpointed edit to listeners subscribed before attach", async () => {
-  const { realtimeMultiplexer } = await import("@shared/realtime/multiplexer");
+  const { realtimeMultiplexer } = await loadTransport();
   vi.setSystemTime(1_000);
   const seen: RealtimeDocState[] = [];
   const stop = realtimeMultiplexer.subscribeDocState("NOTE:clock", (state) => seen.push(state));
@@ -537,6 +551,33 @@ it("publishes the oldest uncheckpointed edit to listeners subscribed before atta
   expect(seen.at(-1)).toEqual(realtimeMultiplexer.getDocState("NOTE:clock"));
   expect(seen.at(-1)?.checkpointPending).toBe(false);
   stop();
+});
+
+it("knows coverage only from the current socket's session state", async () => {
+  const h = await openDocument("coverage-known");
+  expect(h.state().coverageKnown).toBe(false);
+  h.socket.deliver(h.sub.docName, session("e1"));
+  expect(h.state().coverageKnown).toBe(true);
+
+  const second = await reconnect(h);
+  expect(h.state().coverageKnown).toBe(false);
+  second.deliver(h.sub.docName, session("e1"));
+  expect(h.state().coverageKnown).toBe(true);
+  h.destroy();
+});
+
+it("ignores session state heard before this socket names the generation", async () => {
+  const h = await openDocument("state-before-generation");
+  h.socket.close(1006);
+  await vi.advanceTimersByTimeAsync(500);
+  const socket = Socket.instances.at(-1)!;
+  socket.open();
+  socket.deliver(h.sub.docName, session("e1"));
+  expect(h.state().coverageKnown).toBe(false);
+  socket.receive(h.sub.docName, 5, "g");
+  socket.deliver(h.sub.docName, session("e1"));
+  expect(h.state().coverageKnown).toBe(true);
+  h.destroy();
 });
 
 it("replays a previous session's updates under their ids for the confirmed generation only", async () => {
@@ -567,14 +608,11 @@ it("offers only the v2 subprotocol and carries the bearer in a header", async ()
 
 it("asks for an update on close 4426 and never reconnects", async () => {
   const h = await openDocument("upgrade");
-  const { addOnlineListener } = await import("@core/api/connectivity");
-  const online = vi.mocked(addOnlineListener).mock.calls.at(-1)![0];
   h.doc.getText("markdown").insert(0, "kept on this device");
   vi.advanceTimersByTime(50);
 
   h.socket.close(4426);
   expect(h.statuses.at(-1)).toBe("upgrade_required");
-  online(true);
   lifecycle.onChange?.("active");
   await vi.advanceTimersByTimeAsync(120_000);
   expect(Socket.instances).toHaveLength(1);
@@ -683,15 +721,13 @@ function syncFrame(write: (encoder: encoding.Encoder) => void): Uint8Array {
 }
 
 /** The rest of an attach after message 5, in the server's order: session state and the server's
- * SyncStep1, then the answer to the client's SyncStep1. */
+ * SyncStep1 once, then the SyncStep2 that answers the client's SyncStep1. */
 function finishAttach(socket: Socket, name: string, server: Y.Doc, state: Uint8Array) {
   socket.deliver(name, state);
   socket.deliver(
     name,
     syncFrame((encoder) => syncProtocol.writeSyncStep1(encoder, server)),
   );
-  socket.receive(name, 5, "g");
-  socket.deliver(name, state);
   socket.deliver(
     name,
     syncFrame((encoder) => syncProtocol.writeSyncStep2(encoder, server)),

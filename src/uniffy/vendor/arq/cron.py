@@ -107,6 +107,7 @@ class CronJob:
     keep_result_s: Optional[float]
     keep_result_forever: Optional[bool]
     max_tries: Optional[int]
+    quiet: bool
     next_run: Optional[datetime] = None
 
     def calculate_next(self, prev_run: datetime) -> None:
@@ -143,6 +144,7 @@ def cron(
     keep_result: Optional[float] = 0,
     keep_result_forever: Optional[bool] = False,
     max_tries: Optional[int] = 1,
+    quiet: bool = False,
 ) -> CronJob:
     """
     Create a cron job, eg. it should be executed at specific times.
@@ -167,6 +169,7 @@ def cron(
     :param keep_result: how long to keep the result for
     :param keep_result_forever: whether to keep results forever
     :param max_tries: maximum number of tries for the job
+    :param quiet: log a successful start and finish at DEBUG, for jobs that run every second
     """
 
     if isinstance(coroutine, str):
@@ -197,4 +200,5 @@ def cron(
         keep_result,
         keep_result_forever,
         max_tries,
+        quiet,
     )

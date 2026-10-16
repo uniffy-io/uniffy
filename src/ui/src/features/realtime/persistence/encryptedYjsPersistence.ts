@@ -50,7 +50,7 @@ registerEncryptedDatabase(DB_NAME, async () => {
   await Promise.allSettled([...allPendingWrites, ...pendingDisposals.values()]);
   const pending = dbPromise;
   dbPromise = null;
-  (await pending)?.close();
+  (await pending?.catch(() => null))?.close();
 });
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
@@ -247,7 +247,7 @@ export async function discardRecoveredDraft(ydoc: Y.Doc, lineage: string): Promi
 
 function getDB(): Promise<IDBPDatabase> {
   if (!dbPromise) {
-    dbPromise = openDB(DB_NAME, DB_VERSION, {
+    const opening = openDB(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!Array.from(db.objectStoreNames).includes(UPDATES_STORE))
           db.createObjectStore(UPDATES_STORE);
@@ -260,6 +260,11 @@ function getDB(): Promise<IDBPDatabase> {
       terminated() {
         dbPromise = null;
       },
+    });
+    dbPromise = opening;
+    // A failed open, such as a newer schema left by another tab, must not wedge every later read.
+    opening.catch(() => {
+      if (dbPromise === opening) dbPromise = null;
     });
   }
   return dbPromise;
@@ -430,11 +435,11 @@ export interface EncryptedPersistenceOptions {
   compactEvery?: number;
   scope?: PendingDoc;
   /** True while a checkpoint covers every local edit; snapshots taken then are a cache, not a draft. */
-  isAcknowledged?: () => boolean;
+  isCheckpointed?: () => boolean;
 }
 
 export interface EncryptedPersistence {
-  acknowledge: () => Promise<void>;
+  markCheckpointed: () => Promise<void>;
   hydrate: (options?: { serverGeneration: string | null }) => Promise<void>;
   compact: () => Promise<void>;
   /** Writes queued edits and coverage now; resolves once they are on this device or failed. */
@@ -442,10 +447,10 @@ export interface EncryptedPersistence {
   quarantine: () => Promise<boolean>;
   /** True once a local user edit changed document content in this session or in a hydrated row. */
   isDirty: () => boolean;
-  /** `discard` drops this doc's snapshot rows instead of compacting them; `acknowledged` marks
+  /** `discard` drops this doc's snapshot rows instead of compacting them; `checkpointed` marks
    * the compacted snapshot as checkpointed so it is never offered as a draft. Updates no
    * checkpoint covers keep their rows either way. */
-  destroy: (options?: { discard?: boolean; acknowledged?: boolean }) => Promise<void>;
+  destroy: (options?: { discard?: boolean; checkpointed?: boolean }) => Promise<void>;
 }
 
 interface TrackedUpdate {
@@ -484,7 +489,7 @@ export function attachEncryptedPersistence(
   let dirty = false;
   let hydratedDirty = false;
   let beforeText: string | null = null;
-  let acknowledgedClose = false;
+  let checkpointedClose = false;
   const hydratedSeqs = new Set<string>();
   // Own updates no checkpoint covers yet; their rows go only when a checkpoint covers them.
   const tracked = new Map<string, TrackedUpdate>();
@@ -502,18 +507,18 @@ export function attachEncryptedPersistence(
   let unsubscribeCoverage = () => {};
 
   const transport = () => recoveryTransports.get(docKey);
-  const acknowledgedNow = () =>
-    acknowledgedClose ||
+  const checkpointedNow = () =>
+    checkpointedClose ||
     (!destroyed &&
-      (opts.isAcknowledged?.() ?? false) &&
+      (opts.isCheckpointed?.() ?? false) &&
       !(transport()?.isCheckpointPending() ?? false));
   const holdsUncheckpointed = () =>
-    tracked.size > 0 || ((dirty || hydratedDirty) && !acknowledgedNow());
+    tracked.size > 0 || ((dirty || hydratedDirty) && !checkpointedNow());
   // Closing now could lose an edit: it is not on this device and no checkpoint holds it.
   const atRisk = () => {
     if (localUpdates <= persistedUpdates) return false;
     const attached = destroyed ? undefined : transport();
-    return attached ? attached.isCheckpointPending() : !acknowledgedNow();
+    return attached ? attached.isCheckpointPending() : !checkpointedNow();
   };
   const publishDevice = () => publishDeviceState(docKey);
 
@@ -599,7 +604,7 @@ export function attachEncryptedPersistence(
     return {
       kind: "snapshot",
       update: bytesToBase64(update),
-      dirty: (dirty || hydratedDirty) && !acknowledgedNow(),
+      dirty: (dirty || hydratedDirty) && !checkpointedNow(),
       scope: opts.scope,
     };
   }
@@ -937,10 +942,10 @@ export function attachEncryptedPersistence(
     await settleWrites();
   }
 
-  function destroy(options?: { discard?: boolean; acknowledged?: boolean }): Promise<void> {
+  function destroy(options?: { discard?: boolean; checkpointed?: boolean }): Promise<void> {
     if (destroyPromise) return destroyPromise;
     destroyed = true;
-    acknowledgedClose = Boolean(options?.acknowledged);
+    checkpointedClose = Boolean(options?.checkpointed);
     ydoc.off("beforeTransaction", onBeforeTransaction);
     ydoc.off("update", onUpdate);
     unsubscribeCoverage();
@@ -1010,14 +1015,14 @@ export function attachEncryptedPersistence(
   if (attached) session.link(attached);
   publishDevice();
 
-  const acknowledge = async () => {
+  const markCheckpointed = async () => {
     await settleWrites();
-    if (!destroyed && acknowledgedNow()) await compact();
+    if (!destroyed && checkpointedNow()) await compact();
   };
   return {
     hydrate,
     compact,
-    acknowledge,
+    markCheckpointed,
     flush,
     quarantine,
     isDirty: () => dirty || hydratedDirty,

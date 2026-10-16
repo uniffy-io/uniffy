@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 from uniffy.core.errors import RateLimitExceededError
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
@@ -26,6 +27,7 @@ def _executor_for(
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         allowed_tools=frozenset({tool.name}) if allowed is None else allowed,
     )
     return ToolExecutor(registry, ctx)

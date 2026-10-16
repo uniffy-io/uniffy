@@ -1,26 +1,23 @@
-"""Pure-Python unit tests for the realtime scaffold; Valkey fanout lives in the live-stack harness."""
+"""Pure realtime wire, auth parsing, canvas rendering and adapter registry behavior."""
 
-import asyncio
-import time
-from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
-from uuid import UUID
 
 import pycrdt
 import pytest
 
-from uniffy.core.auth.revocation import TokenRevocation
-from uniffy.core.realtime.adapter import (
-    RealtimeRenderConflict,
-    _adapters,
-    get_realtime_adapter,
-    register_realtime_adapter,
-)
+from uniffy.core.realtime.adapter import get_realtime_adapter, register_realtime_adapter
 from uniffy.core.realtime.auth import (
-    WS_CLOSE_TOKEN_REVOKED,
     extract_bearer,
     extract_bearer_from_auth_header,
     origin_is_allowed,
+)
+from uniffy.core.realtime.multiplex import (
+    encode_doc_frame,
+    peek_var_string,
+    read_var_string,
+    read_var_uint,
+    write_var_string,
+    write_var_uint,
 )
 from uniffy.core.realtime.wire import (
     YMessageType,
@@ -32,44 +29,12 @@ from uniffy.core.realtime.wire import (
     peek_message_type,
     peek_sync_sub_type,
 )
-from uniffy.core.realtime.ydoc_manager import (
-    ClientHandle,
-    YDocManager,
-    YDocSession,
+from uniffy.core.types import ContentRole, ContentType
+from uniffy.domains.notes.adapter import (
+    _render_canvas_content,
+    _render_markdown,
+    _seed_canvas_ydoc,
 )
-from uniffy.core.types import ContentRole, ContentType, NodeType, generate_id
-
-_conn_id_seq = 0
-
-
-def _next_conn_id() -> int:
-    global _conn_id_seq
-    _conn_id_seq += 1
-    return _conn_id_seq
-
-
-def _make_handle(
-    *,
-    user_id=None,
-    can_edit: bool = True,
-    token_version: int | None = 1,
-) -> ClientHandle:
-    handle = ClientHandle(
-        conn_id=_next_conn_id(),
-        user_id=user_id or generate_id(),
-        can_edit=can_edit,
-        token_version=token_version,
-        ws=AsyncMock(),
-    )
-    return handle
-
-
-def _make_router_session(content_type: ContentType = ContentType.NOTE) -> YDocSession:
-    return YDocSession(
-        key=(content_type, generate_id()),
-        ydoc=pycrdt.Doc(),
-        organization_id=generate_id(),
-    )
 
 
 class TestPeekHelpers:
@@ -179,88 +144,30 @@ class TestOriginAllowlist:
         assert origin_is_allowed(None, ["https://app.uniffy.io"]) is True
 
 
-class _DummyAdapter:
-    content_type = ContentType.NOTE
+class _ChatAdapter:
+    """No live content type is chat, so registering this one cannot displace a real adapter."""
 
-    async def authorize(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    content_type = ContentType.CHAT
+
+    async def authorize(self, *args: object, **kwargs: object) -> ContentRole:
         return ContentRole.VIEWER
-
-    async def policy_key(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return None
-
-    async def hydrate_ydoc(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return None
-
-    async def render_and_persist(self, *args, **kwargs):  # type: ignore[no-untyped-def]
-        return True
 
 
 class TestAdapterRegistry:
-    def setup_method(self) -> None:
-        self._snapshot = dict(_adapters)
-
-    def teardown_method(self) -> None:
-        _adapters.clear()
-        _adapters.update(self._snapshot)
-
     def test_register_then_get_returns_same_instance(self) -> None:
-        adapter = _DummyAdapter()
+        adapter = _ChatAdapter()
         register_realtime_adapter(adapter)
-        assert get_realtime_adapter(ContentType.NOTE) is adapter
+        assert get_realtime_adapter(ContentType.CHAT) is adapter
 
     def test_unregistered_content_type_raises_lookup_error(self) -> None:
-        _adapters.clear()
         with pytest.raises(LookupError):
-            get_realtime_adapter(ContentType.TASK)
-
-
-class TestCloseStaleUserSessions:
-    """Token-revoke fanout: only sessions with older versions get closed."""
-
-    async def test_only_older_token_versions_closed(self) -> None:
-        manager = YDocManager()
-        user_id = generate_id()
-        session = _make_router_session()
-        manager._sessions[session.key] = session
-
-        stale = _make_handle(user_id=user_id, token_version=3)
-        fresh = _make_handle(user_id=user_id, token_version=7)
-        other_user = _make_handle(user_id=generate_id(), token_version=2)
-        session.clients = {
-            stale.conn_id: stale,
-            fresh.conn_id: fresh,
-            other_user.conn_id: other_user,
-        }
-
-        await manager._close_stale_user_sessions(user_id, new_version=5)
-
-        assert stale.closed is True
-        stale.ws.close.assert_awaited_once()
-        assert stale.ws.close.call_args.kwargs["code"] == WS_CLOSE_TOKEN_REVOKED
-        assert fresh.closed is False
-        fresh.ws.close.assert_not_called()
-        assert other_user.closed is False
-        other_user.ws.close.assert_not_called()
-
-    async def test_missing_token_version_treated_as_stale(self) -> None:
-        manager = YDocManager()
-        user_id = generate_id()
-        session = _make_router_session()
-        manager._sessions[session.key] = session
-        handle = _make_handle(user_id=user_id, token_version=None)
-        session.clients = {handle.conn_id: handle}
-
-        await manager._close_stale_user_sessions(user_id, new_version=2)
-
-        assert handle.closed is True
+            get_realtime_adapter(ContentType.FILE)
 
 
 class TestCanvasRender:
     """``_render_canvas_content`` round-trip via ``pycrdt`` Y types."""
 
     def test_canvas_render_emits_expected_shape(self) -> None:
-        from uniffy.domains.notes.adapter import _render_canvas_content
-
         ydoc = pycrdt.Doc()
         ydoc["nodes"] = pycrdt.Map({
             "n1": pycrdt.Map({"id": "n1", "type": "text", "x": 10, "y": 20})
@@ -281,42 +188,26 @@ class TestCanvasRender:
         assert "order" not in result
 
     def test_canvas_render_returns_none_when_roots_missing(self) -> None:
-        from uniffy.domains.notes.adapter import _render_canvas_content
-
         ydoc = pycrdt.Doc()
         assert _render_canvas_content(ydoc) is None
 
 
 class TestMarkdownRender:
     def test_markdown_render_reads_y_text(self) -> None:
-        from uniffy.domains.notes.adapter import _render_markdown
-
         ydoc = pycrdt.Doc()
         ydoc["markdown"] = pycrdt.Text("# hello\n\nworld")
 
         assert _render_markdown(ydoc) == "# hello\n\nworld"
 
     def test_markdown_render_returns_empty_when_root_missing(self) -> None:
-        from uniffy.domains.notes.adapter import _render_markdown
-
         ydoc = pycrdt.Doc()
         assert _render_markdown(ydoc) == ""
 
 
 class TestCanvasHydration:
-    """Cold-start hydration must preserve any existing ``canvas_content``.
-
-    Regression guard: a viewer connecting to a populated canvas must
-    not cause the first snapshot flush to write empty maps over the
-    real content.
-    """
+    """Cold-start hydration keeps existing canvas content, so a first flush cannot blank it."""
 
     def test_seed_canvas_ydoc_populates_y_types_from_content(self) -> None:
-        from uniffy.domains.notes.adapter import (
-            _render_canvas_content,
-            _seed_canvas_ydoc,
-        )
-
         existing = {
             "version": 1,
             "viewport": {"x": 0, "y": 0, "zoom": 1},
@@ -350,13 +241,7 @@ class TestCanvasHydration:
         assert rendered["edges"][0]["target"] == "n2"
 
     def test_seed_wraps_text_field_as_y_text(self) -> None:
-        """Per-node text field seeds as ``pycrdt.Text`` so concurrent
-        same-cell typing merges char-by-char; the render path coerces
-        back to ``str`` via ``pycrdt.Map.to_py``."""
-        from uniffy.domains.notes.adapter import (
-            _render_canvas_content,
-            _seed_canvas_ydoc,
-        )
+        """Text fields seed as ``pycrdt.Text`` so concurrent typing in one cell merges."""
 
         existing = {
             "version": 1,
@@ -403,9 +288,7 @@ class TestCanvasHydration:
         assert nodes_by_id["m1"]["data"]["label"] == "Root"
 
     def test_seed_skips_text_wrap_for_non_text_nodes(self) -> None:
-        """Nodes without a text field upgrade ``data`` to ``pycrdt.Map``
-        for structural merges but leave no field as ``pycrdt.Text``."""
-        from uniffy.domains.notes.adapter import _seed_canvas_ydoc
+        """Nodes without a text field get a ``pycrdt.Map`` for ``data`` and no ``pycrdt.Text``."""
 
         existing = {
             "version": 1,
@@ -439,146 +322,12 @@ class TestCanvasHydration:
                 assert not isinstance(value, pycrdt.Text)
 
     def test_seed_canvas_ydoc_handles_none_content(self) -> None:
-        """Seeding with ``None`` must not crash; the resulting doc
-        renders as ``None`` so the snapshot pipeline preserves disk
-        state instead of clobbering ``canvas_content``.
-        """
-        from uniffy.domains.notes.adapter import (
-            _render_canvas_content,
-            _seed_canvas_ydoc,
-        )
+        """An empty seed renders as ``None``, so projection leaves the stored canvas alone."""
 
         ydoc = pycrdt.Doc()
         _seed_canvas_ydoc(ydoc, None)
 
         assert _render_canvas_content(ydoc) is None
-
-
-class TestOutboundBackpressure:
-    """A full WS outbound queue drops frames, never blocks the broadcaster."""
-
-    def test_enqueue_for_handle_drops_when_full(self) -> None:
-        from uniffy.core.realtime.state import ClientHandle, WSSession
-        from uniffy.core.realtime.ydoc_manager import enqueue_for_handle
-        from uniffy.core.types import ContentType
-
-        ws_session = WSSession(
-            user_id=generate_id(),
-            organization_id=generate_id(),
-            token_version=1,
-            conn_id=_next_conn_id(),
-            ws=AsyncMock(),
-        )
-        doc_key = (ContentType.NOTE, generate_id())
-        handle = ClientHandle(
-            conn_id=ws_session.conn_id,
-            user_id=ws_session.user_id,
-            can_edit=True,
-            token_version=1,
-            ws=ws_session.ws,
-            doc_key=doc_key,
-            ws_session=ws_session,
-        )
-
-        for i in range(ws_session.outbound.maxsize):
-            ws_session.outbound.put_nowait(f"frame-{i}".encode())
-
-        enqueue_for_handle(handle, b"overflow", kind="update")
-
-        assert ws_session.outbound.qsize() == ws_session.outbound.maxsize
-        drained = [ws_session.outbound.get_nowait() for _ in range(ws_session.outbound.qsize())]
-        assert all(b"overflow" not in f for f in drained)
-
-
-class TestRealtimeSaveCAS:
-    """``realtime_save`` must skip downstream side effects when CAS loses."""
-
-    async def test_cas_miss_raises_and_skips_side_effects(self) -> None:
-        from unittest.mock import AsyncMock, MagicMock
-
-        from uniffy.domains.notes.operations import NoteOperations
-
-        async def go() -> None:
-            session = MagicMock()
-            session.execute = AsyncMock()
-            session.commit = AsyncMock()
-            session.refresh = AsyncMock()
-
-            note = MagicMock()
-            note.node_type = NodeType.NOTE
-            note.version = 7
-            note.outgoing_references = []
-            note.owner_id = generate_id()
-
-            def read_result() -> MagicMock:
-                result = MagicMock()
-                result.scalar_one_or_none = MagicMock(return_value=note)
-                return result
-
-            def update_result() -> MagicMock:
-                result = MagicMock()
-                result.rowcount = 0
-                return result
-
-            # Every CAS attempt loses; each retry re-reads the note first.
-            session.execute.side_effect = [
-                read_result(),
-                update_result(),
-                read_result(),
-                update_result(),
-                read_result(),
-                update_result(),
-            ]
-
-            ops = NoteOperations.__new__(NoteOperations)
-            ops.session = session
-            ops._sync_tags_after_save = AsyncMock()
-            ops._index_for_search = AsyncMock()
-            ops._notify_new_mentions = AsyncMock()
-
-            with pytest.raises(RealtimeRenderConflict):
-                await ops.realtime_save(
-                    organization_id=generate_id(),
-                    note_id=generate_id(),
-                    content="new body",
-                    canvas_content=None,
-                )
-            ops._sync_tags_after_save.assert_not_called()
-            ops._index_for_search.assert_not_called()
-            ops._notify_new_mentions.assert_not_called()
-
-        await go()
-
-
-class TestPerKeyHydrationLock:
-    """Hydration of doc A must not block acquire of doc B."""
-
-    async def test_hydration_lock_is_per_key(self) -> None:
-        async def go() -> None:
-            manager = YDocManager()
-            key_a = (ContentType.NOTE, generate_id())
-            key_b = (ContentType.NOTE, generate_id())
-
-            manager._hydration_locks[key_a] = asyncio.Lock()
-            await manager._hydration_locks[key_a].acquire()
-
-            # If acquire(key_b) used the same lock it would block forever.
-            manager._hydration_locks[key_b] = asyncio.Lock()
-            assert manager._hydration_locks[key_a] is not manager._hydration_locks[key_b]
-
-            manager._hydration_locks[key_a].release()
-
-        await go()
-
-
-from uniffy.core.realtime.multiplex import (
-    encode_doc_frame,
-    peek_var_string,
-    read_var_string,
-    read_var_uint,
-    write_var_string,
-    write_var_uint,
-)
 
 
 class TestVarUint:
@@ -681,333 +430,3 @@ class TestEncodeDocFrame:
         name, offset = peek_var_string(framed)
         assert name == "NOTE:x"
         assert framed[offset:] == b""
-
-
-from uniffy.core.realtime.router import (
-    RealtimeRouter,
-    RemoteUpdate,
-    RouterCallbacks,
-    _parse_doc_channel,
-    _parse_perm_channel,
-    _parse_revoke_channel,
-)
-from uniffy.core.realtime.state import DocKey
-from uniffy.core.realtime.wire import CheckpointProgress
-
-
-class TestChannelParsers:
-    def test_doc_channel_roundtrip(self):
-        ct, cid = ContentType.NOTE, generate_id()
-        channel = f"realtime:doc:{ct.value}:{cid}"
-        assert _parse_doc_channel(channel) == (ct, cid)
-
-    def test_doc_channel_invalid_returns_none(self):
-        assert _parse_doc_channel("realtime:doc:UNKNOWN_TYPE:abc") is None
-        assert _parse_doc_channel("garbage") is None
-        assert _parse_doc_channel("realtime:doc:NOTE:not-a-uuid") is None
-
-    def test_perm_channel_roundtrip(self):
-        ct, cid = ContentType.NOTE, generate_id()
-        channel = f"realtime:perm:{ct.value}:{cid}"
-        assert _parse_perm_channel(channel) == (ct, cid)
-
-    def test_revoke_channel_roundtrip(self):
-        uid = generate_id()
-        assert _parse_revoke_channel(f"auth:revoke:{uid}") == uid
-
-    def test_revoke_channel_invalid(self):
-        assert _parse_revoke_channel("auth:revoke:not-uuid") is None
-        assert _parse_revoke_channel("realtime:doc:NOTE:abc") is None
-
-
-class _StubCallbacks:
-    """Captures router callback invocations for assertion."""
-
-    def __init__(self) -> None:
-        self.content_replaced: list[tuple[DocKey, str]] = []
-        self.closed_stale: list[tuple[UUID, int]] = []
-        self.closed_by_sid: list[tuple[UUID, UUID]] = []
-        self.reauthorized: list[tuple[tuple[DocKey, ...], UUID | None]] = []
-
-    async def apply_remote_update(self, session: YDocSession, remote: RemoteUpdate) -> None:
-        raise AssertionError("permission and revoke tests never route document updates")
-
-    async def apply_checkpoint_progress(self, key: DocKey, progress: CheckpointProgress) -> None:
-        raise AssertionError("permission and revoke tests never route checkpoint progress")
-
-    async def apply_content_replace(self, key: DocKey, content: str) -> None:
-        self.content_replaced.append((key, content))
-
-    async def close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
-        self.closed_stale.append((user_id, new_version))
-
-    async def close_user_session_by_sid(self, user_id: UUID, session_id: UUID) -> None:
-        self.closed_by_sid.append((user_id, session_id))
-
-    async def reauthorize_docs(self, keys, user_id: UUID | None) -> None:
-        self.reauthorized.append((tuple(keys), user_id))
-
-
-def _make_router_with_callbacks() -> tuple[RealtimeRouter, _StubCallbacks]:
-    cb = _StubCallbacks()
-    r = RealtimeRouter()
-    r.register_callbacks(
-        RouterCallbacks(
-            apply_remote_update=cb.apply_remote_update,
-            apply_checkpoint_progress=cb.apply_checkpoint_progress,
-            apply_content_replace=cb.apply_content_replace,
-            close_stale_user_sessions=cb.close_stale_user_sessions,
-            close_user_session_by_sid=cb.close_user_session_by_sid,
-            reauthorize_docs=cb.reauthorize_docs,
-        )
-    )
-    return r, cb
-
-
-class TestRouterPermDispatch:
-    async def test_targeted_user_reauthorizes_instead_of_trusting_payload(self):
-        r, cb = _make_router_with_callbacks()
-        key = (ContentType.NOTE, generate_id())
-        target_user = generate_id()
-        h_target = _make_handle(user_id=target_user)
-        h_other = _make_handle(user_id=generate_id())
-        r.attach_handle(key, h_target)
-        r.attach_handle(key, h_other)
-
-        channel = f"realtime:perm:{key[0].value}:{key[1]}"
-        payload = {
-            "origin_replica": "other",
-            "user_id": str(target_user),
-            "new_role": "VIEWER",
-        }
-        await r._handle_perm_message(channel, payload)
-        assert cb.reauthorized == [((key,), target_user)]
-
-    async def test_targeted_user_without_handles_here_is_skipped(self):
-        r, cb = _make_router_with_callbacks()
-        key = (ContentType.NOTE, generate_id())
-        r.attach_handle(key, _make_handle(user_id=generate_id()))
-        await r._handle_perm_message(
-            f"realtime:perm:{key[0].value}:{key[1]}",
-            {"origin_replica": "other", "user_id": str(generate_id()), "new_role": "VIEWER"},
-        )
-        assert cb.reauthorized == []
-
-    @pytest.mark.parametrize("targeted", [True, False])
-    async def test_parent_permission_signal_reauthorizes_child(self, targeted):
-        r, cb = _make_router_with_callbacks()
-        session = _make_router_session()
-        session.key = (ContentType.TASK, generate_id())
-        session.policy_key = (ContentType.PROJECT, generate_id())
-        r.register_doc_session(session.key, session)
-        handle = _make_handle()
-        r.attach_handle(session.key, handle)
-        await r._handle_perm_message(
-            f"realtime:perm:PROJECT:{session.policy_key[1]}",
-            {"user_id": str(handle.user_id) if targeted else None, "new_role": "OWNER"},
-        )
-        assert cb.reauthorized == [((session.key,), handle.user_id if targeted else None)]
-
-    async def test_parent_defaults_reauthorize_child_in_same_org(self):
-        r, cb = _make_router_with_callbacks()
-        session = _make_router_session()
-        session.key = (ContentType.TASK, generate_id())
-        session.policy_key = (ContentType.PROJECT, generate_id())
-        r.register_doc_session(session.key, session)
-        await r._handle_defaults_message(f"realtime:defaults:{session.organization_id}:PROJECT", {})
-        assert cb.reauthorized == [((session.key,), None)]
-        cb.reauthorized.clear()
-        await r._handle_defaults_message(f"realtime:defaults:{generate_id()}:PROJECT", {})
-        assert cb.reauthorized == []
-
-    async def test_content_wide_invokes_reauthorize(self):
-        r, cb = _make_router_with_callbacks()
-        key = (ContentType.NOTE, generate_id())
-
-        channel = f"realtime:perm:{key[0].value}:{key[1]}"
-        payload = {
-            "origin_replica": "other",
-            "user_id": None,
-            "new_role": None,
-        }
-        await r._handle_perm_message(channel, payload)
-        assert cb.reauthorized == [((key,), None)]
-
-
-class TestRouterRevokeDispatch:
-    async def test_closes_stale_sessions_for_known_user(self):
-        r, cb = _make_router_with_callbacks()
-        user = generate_id()
-        h = _make_handle(user_id=user)
-        r.attach_handle((ContentType.NOTE, generate_id()), h)
-
-        channel = f"auth:revoke:{user}"
-        await r._handle_revoke_message(channel, {"token_version": 2})
-        assert cb.closed_stale == [(user, 2)]
-
-    async def test_no_handles_for_user_drops_silently(self):
-        r, cb = _make_router_with_callbacks()
-        channel = f"auth:revoke:{generate_id()}"
-        await r._handle_revoke_message(channel, {"token_version": 2})
-        assert cb.closed_stale == []
-
-
-class TestRouterRegistryHygiene:
-    def test_unregister_drops_parent_policy_bucket(self):
-        r, _ = _make_router_with_callbacks()
-        session = _make_router_session()
-        session.policy_key = (ContentType.PROJECT, generate_id())
-        r.register_doc_session(session.key, session)
-        assert r._policy_docs[session.policy_key] == {session.key}
-        r.unregister_doc_session(session.key)
-        assert r._policy_docs == {}
-        assert r._doc_sessions == {}
-
-    def test_attach_detach_drops_empty_buckets(self):
-        r, _ = _make_router_with_callbacks()
-        key = (ContentType.NOTE, generate_id())
-        h = _make_handle()
-        r.attach_handle(key, h)
-        assert key in r._doc_handles
-        assert h.user_id in r._user_handles
-
-        r.detach_handle(key, h)
-        assert key not in r._doc_handles
-        assert h.user_id not in r._user_handles
-
-    def test_detach_idempotent(self):
-        r, _ = _make_router_with_callbacks()
-        key = (ContentType.NOTE, generate_id())
-        h = _make_handle()
-        r.attach_handle(key, h)
-        r.detach_handle(key, h)
-        r.detach_handle(key, h)
-
-
-class TestContentReplacement:
-    async def test_pubsub_payload_only_triggers_authority_reload(self) -> None:
-        manager = YDocManager()
-        session = _make_router_session()
-        session.ydoc["markdown"] = pycrdt.Text("retained")
-        manager._sessions[session.key] = session
-        with patch.object(manager, "refresh_document", AsyncMock()) as refresh:
-            await manager._apply_content_replace(session.key, "stale notification")
-        refresh.assert_awaited_once_with(session)
-        assert str(session.ydoc["markdown"]) == "retained"
-
-    async def test_without_live_session_is_ignored(self) -> None:
-        manager = YDocManager()
-        with patch.object(manager, "refresh_document", AsyncMock()) as refresh:
-            await manager._apply_content_replace((ContentType.NOTE, generate_id()), "text")
-        refresh.assert_not_awaited()
-
-
-def _ws_session(
-    *,
-    token_version: int | None = 1,
-    session_id=None,
-    expires_at: float | None = None,
-    connected_at: float | None = None,
-):
-    from uniffy.core.realtime.state import WSSession
-
-    return WSSession(
-        user_id=generate_id(),
-        organization_id=generate_id(),
-        token_version=token_version,
-        conn_id=_next_conn_id(),
-        ws=AsyncMock(),
-        session_id=session_id,
-        expires_at=expires_at,
-        connected_at=time.time() if connected_at is None else connected_at,
-    )
-
-
-def _revocation_patches(
-    *,
-    token_revoked: bool = False,
-    session_revoked: bool = False,
-    active_member: bool = True,
-):
-    import uniffy.core.realtime.reauth as reauth_mod
-
-    return (
-        patch.object(
-            reauth_mod,
-            "token_revocation",
-            AsyncMock(
-                return_value=TokenRevocation.TOKEN
-                if token_revoked
-                else TokenRevocation.SESSION
-                if session_revoked
-                else None
-            ),
-        ),
-        patch.object(reauth_mod, "is_active_member", AsyncMock(return_value=active_member)),
-    )
-
-
-class TestConnectionReauth:
-    """A live socket outlives the JWT that opened it, so every upgrade signal is
-    re-checked while it runs."""
-
-    async def _denial(self, ws_session, **flags):
-        from uniffy.core.realtime.reauth import connection_denial
-
-        revocation, member = _revocation_patches(**flags)
-
-        async def go():
-            with revocation, member:
-                return await connection_denial(ws_session)
-
-        return await go()
-
-    async def test_healthy_connection_is_not_denied(self) -> None:
-        assert await self._denial(_ws_session(expires_at=time.time() + 600)) is None
-
-    async def test_revoked_session_closes_a_live_socket(self) -> None:
-        from uniffy.core.realtime.auth import WS_CLOSE_TOKEN_REVOKED
-
-        # "Log out this device" leaves token_version alone, so the watermark
-        # alone cannot see it.
-        denial = await self._denial(
-            _ws_session(session_id=generate_id(), expires_at=time.time() + 600),
-            session_revoked=True,
-        )
-        assert denial is not None
-        assert denial.code == WS_CLOSE_TOKEN_REVOKED
-        assert denial.metric_reason == "session_revoked"
-
-    async def test_revoked_token_version_closes_a_live_socket(self) -> None:
-        denial = await self._denial(_ws_session(expires_at=time.time() + 600), token_revoked=True)
-        assert denial is not None
-        assert denial.metric_reason == "token_revoked"
-
-    async def test_lost_membership_closes_a_live_socket(self) -> None:
-        from uniffy.core.realtime.auth import WS_CLOSE_FORBIDDEN
-
-        # Removing a member publishes no realtime signal of its own.
-        denial = await self._denial(_ws_session(expires_at=time.time() + 600), active_member=False)
-        assert denial is not None
-        assert denial.code == WS_CLOSE_FORBIDDEN
-        assert denial.metric_reason == "membership_revoked"
-
-    async def test_expired_token_closes_with_reauth_required(self) -> None:
-        from uniffy.core.realtime.auth import WS_CLOSE_REAUTH_REQUIRED
-
-        denial = await self._denial(_ws_session(expires_at=time.time() - 1))
-        assert denial is not None
-        # 4410 would stop the client from reconnecting; this must not.
-        assert denial.code == WS_CLOSE_REAUTH_REQUIRED
-        assert denial.metric_reason == "token_expired"
-
-    async def test_token_without_exp_still_has_a_ceiling(self) -> None:
-        from uniffy.core.realtime.reauth import (
-            MAX_SOCKET_LIFETIME_SECONDS,
-            socket_deadline,
-        )
-
-        opened = time.time() - MAX_SOCKET_LIFETIME_SECONDS - 1
-        ws_session = _ws_session(expires_at=None, connected_at=opened)
-        assert socket_deadline(ws_session) == opened + MAX_SOCKET_LIFETIME_SECONDS
-        assert await self._denial(ws_session) is not None

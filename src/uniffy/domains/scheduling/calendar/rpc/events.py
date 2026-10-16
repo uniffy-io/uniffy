@@ -47,8 +47,7 @@ from uniffy.infrastructure.database import open_session
 
 
 class EventMutationHandlers:
-    # Accepted realtime edits that description writes merge with and checkpoint.
-    buffer: UpdateBuffer = UpdateBuffer()
+    buffer: UpdateBuffer
 
     async def create_event(
         self,
@@ -101,7 +100,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(session, self.search_indexer, self.buffer)
 
                 calendar_id = None
                 if request.calendar_id:

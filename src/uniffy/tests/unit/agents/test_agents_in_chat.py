@@ -1,4 +1,5 @@
 from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.realtime.buffer import UpdateBuffer
 
 """Unit tests for the agents-in-chat integration.
 
@@ -385,6 +386,7 @@ class TestAgentChatBridgeStub:
             agent_id=generate_id(),
             storage=MagicMock(),
             search_indexer=MagicMock(),
+            buffer=UpdateBuffer(),
             call_lifecycle=MagicMock(),
         )
 

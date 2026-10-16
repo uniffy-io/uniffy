@@ -1,7 +1,6 @@
+import pytest
 from prometheus_client import REGISTRY
 from valkey.exceptions import ResponseError
-
-import pytest
 
 from uniffy.core.realtime.preflight import (
     PreflightMode,
@@ -16,7 +15,7 @@ RUN_ID = "565deefd1b36dff07a7d63be7f9b8352d97885ec"
 
 
 class FakeValkey:
-    """Answers INFO and CONFIG GET from fixed facts; ``config=None`` behaves like a renamed CONFIG."""
+    """Answers INFO and CONFIG GET from fixed facts; ``config=None`` acts like a renamed CONFIG."""
 
     def __init__(self, config: dict[str, str] | None, *, aof_enabled: int = 1) -> None:
         self.sections: dict[str, dict[str, object]] = {

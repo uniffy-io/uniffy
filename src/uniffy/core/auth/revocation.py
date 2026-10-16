@@ -10,6 +10,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import select
 
+from uniffy.core.errors import UnavailableError
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.infrastructure.database import open_session
@@ -60,7 +61,7 @@ class TokenRevocation(StrEnum):
     SESSION = "session_revoked"
 
 
-class RevocationUnavailableError(RuntimeError):
+class RevocationUnavailableError(UnavailableError):
     """Authentication cannot proceed without fresh durable revocation facts."""
 
 

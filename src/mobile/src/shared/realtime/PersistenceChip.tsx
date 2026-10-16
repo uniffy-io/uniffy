@@ -49,13 +49,13 @@ const COPY: Record<PersistenceState, ChipCopy> = {
   },
   view_only: {
     label: "View-only",
-    title: "You can read this item but not edit it. Any local draft is kept.",
+    title: "You can read this item but not edit it.",
     dot: "red",
     alert: true,
   },
   access_lost: {
     label: "Access lost",
-    title: "This item was deleted or is no longer shared with you. Any local draft is kept.",
+    title: "This item was deleted or is no longer shared with you.",
     dot: "red",
     alert: true,
   },

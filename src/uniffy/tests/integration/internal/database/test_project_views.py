@@ -1,7 +1,7 @@
 """Project views on real rows: who sees which view, and what follows a view's removal."""
 
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
@@ -39,15 +39,6 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 SHARED = ProjectViewVisibility.SHARED
 PERSONAL = ProjectViewVisibility.PERSONAL
-
-
-@pytest.fixture(autouse=True)
-def quiet_realtime():
-    with patch(
-        "uniffy.domains.projects.audience.publish_content_access_changed",
-        AsyncMock(),
-    ):
-        yield
 
 
 def _storage() -> ObjectStorage:
@@ -149,7 +140,7 @@ async def test_viewer_cannot_create_a_shared_view(session, env, search_indexer) 
         await _cleanup(session, project_id)
 
 
-async def test_default_view_rules_hold_on_real_rows(session, env, search_indexer) -> None:
+async def test_default_view_rules_hold_on_real_rows(session, env, search_indexer, buffer) -> None:
     project = await _create_project(session, env, search_indexer)
     project_id = project.id
     try:
@@ -157,7 +148,9 @@ async def test_default_view_rules_hold_on_real_rows(session, env, search_indexer
         personal_id = personal.id
         projects = ProjectOperations(session, _storage(), search_indexer)
         with pytest.raises(ValidationError):
-            await projects.update(env.admin_id, env.org_id, project_id, default_view_id=personal_id)
+            await projects.update(
+                env.admin_id, env.org_id, project_id, default_view_id=personal_id, buffer=buffer
+            )
         await session.rollback()
 
         await ProjectViewOperations(session).delete(
@@ -169,7 +162,11 @@ async def test_default_view_rules_hold_on_real_rows(session, env, search_indexer
         assert stored is None
 
         updated = await projects.update(
-            env.admin_id, env.org_id, project_id, default_view_id=DefaultProjectViewId.BOARD
+            env.admin_id,
+            env.org_id,
+            project_id,
+            default_view_id=DefaultProjectViewId.BOARD,
+            buffer=buffer,
         )
         assert updated.default_view_id == DefaultProjectViewId.BOARD
     finally:
@@ -264,13 +261,15 @@ async def test_view_on_a_deleted_field_loads_but_no_longer_saves(
         await _cleanup(session, project_id)
 
 
-async def test_permanent_project_delete_removes_every_view(session, env, search_indexer) -> None:
+async def test_permanent_project_delete_removes_every_view(
+    session, env, search_indexer, buffer
+) -> None:
     project = await _create_project(session, env, search_indexer)
     project_id = project.id
     await _create_view(session, env, project_id, env.member_id, PERSONAL)
 
     await ProjectOperations(session, _storage(), search_indexer).delete(
-        env.admin_id, env.org_id, project_id, permanent=True
+        env.admin_id, env.org_id, project_id, permanent=True, buffer=buffer
     )
 
     remaining = await session.scalar(

@@ -26,6 +26,7 @@ import {
   MESSAGE_COMMITTED,
   MESSAGE_GENERATION,
   MESSAGE_SESSION_STATE,
+  MESSAGE_UPDATE,
   UNAVAILABLE_REASON,
   UPDATE_CONFLICT_REASON,
   WS_CLOSE_NORMAL,
@@ -102,6 +103,9 @@ export interface RealtimeDocState {
   readonly generation: string | null;
   /** The server refused an own edit it may take later; edits stay local and resend on their own. */
   readonly savingUnavailable: boolean;
+  /** This socket's session state has arrived. Until then nothing proves the document synced or
+   * saved, because a checkpoint can land while no socket is open. */
+  readonly coverageKnown: boolean;
 }
 
 const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
@@ -110,6 +114,7 @@ const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
   oldestUncheckpointedAt: null,
   generation: null,
   savingUnavailable: false,
+  coverageKnown: false,
 });
 
 function sameState(a: RealtimeDocState, b: RealtimeDocState): boolean {
@@ -402,7 +407,6 @@ class RealtimeMultiplexer {
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
-        entry.socketEpoch = null;
         entry.readOnly = entry.requestedReadOnly;
         this.bootstrapDoc(entry);
       }
@@ -463,6 +467,8 @@ class RealtimeMultiplexer {
       entry.syncDeadline = null;
       // Answers to writes sent on the old socket never arrive.
       entry.awaiting = [];
+      entry.socketEpoch = null;
+      this.publishState(entry);
     }
     this.ws = null;
     this.wsConnected = false;
@@ -619,7 +625,7 @@ class RealtimeMultiplexer {
       // Accepted updates wait for session state to prove or refute their presence.
       if (reconnecting)
         for (const id of entry.coverage.localIds())
-          this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
+          this.sendUpdate(entry, id, entry.retained.get(id)!);
       this.publishState(entry);
     } else if (messageType === MESSAGE_COMMITTED) {
       const id = decodeCommitted(payload);
@@ -634,7 +640,7 @@ class RealtimeMultiplexer {
     } else if (messageType === MESSAGE_SESSION_STATE) {
       const state = decodeSessionState(payload);
       // Message 5 owns generation changes; state for another generation proves nothing here.
-      if (entry.generation !== null && state.generation !== entry.generation) return;
+      if (state.generation !== entry.generation) return;
       // The server reads a write sent on this socket only after the socket's first session state.
       // A later epoch change can still answer earlier writes with receipts of the retired epoch,
       // which coverage ignores, so those go out again; the server deduplicates by id.
@@ -646,7 +652,7 @@ class RealtimeMultiplexer {
         entry.owesState = true;
       entry.socketEpoch = state.epoch;
       this.applyCoverage(entry, entry.coverage.applySessionState(state));
-      for (const id of inFlight) this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
+      for (const id of inFlight) this.sendUpdate(entry, id, entry.retained.get(id)!);
     } else if (messageType === MESSAGE_SYNC) {
       if (entry.syncDeadline) clearTimeout(entry.syncDeadline);
       entry.syncDeadline = null;
@@ -742,8 +748,7 @@ class RealtimeMultiplexer {
     entry.retryTimer = setTimeout(() => {
       entry.retryTimer = null;
       for (const id of entry.coverage.localIds())
-        if (!entry.awaiting.includes(id))
-          this.sendDurableUpdate(entry, id, entry.retained.get(id)!);
+        if (!entry.awaiting.includes(id)) this.sendUpdate(entry, id, entry.retained.get(id)!);
     }, entry.retryDelayMs);
     entry.retryDelayMs = Math.min(entry.retryDelayMs * RECONNECT_MULTIPLIER, RECONNECT_MAX_MS);
   }
@@ -822,18 +827,10 @@ class RealtimeMultiplexer {
           : tracked,
       generation: entry.serverGeneration,
       savingUnavailable: entry.savingUnavailable,
+      coverageKnown: entry.socketEpoch !== null,
     });
-    const previous = entry.state;
-    if (sameState(previous, state)) return;
+    if (sameState(entry.state, state)) return;
     entry.state = state;
-    if (
-      state.transportPending !== previous.transportPending &&
-      this.wsConnected &&
-      !entry.denied &&
-      !entry.rejected &&
-      entry.conflicted.size === 0
-    )
-      entry.options.onStatus?.(state.transportPending ? "syncing" : "connected");
     this.notifyState(entry.docName, state);
   }
 
@@ -851,7 +848,7 @@ class RealtimeMultiplexer {
     });
     if (events.length) entry.options.onCoverage?.(events);
     for (const event of events)
-      if (event.coverage === "local") this.sendDurableUpdate(entry, event.updateId, event.update);
+      if (event.coverage === "local") this.sendUpdate(entry, event.updateId, event.update);
     this.publishState(entry);
   }
 
@@ -882,11 +879,11 @@ class RealtimeMultiplexer {
     this.applyCoverage(entry, entry.coverage.add(id, editedAt));
   }
 
-  private sendDurableUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
+  private sendUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
     if (entry.generation === null || entry.readOnly || entry.rejected || entry.conflicted.has(id))
       return;
     const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, 6);
+    encoding.writeVarUint(encoder, MESSAGE_UPDATE);
     encoding.writeVarString(encoder, entry.generation);
     encoding.writeVarString(encoder, id);
     encoding.writeVarUint8Array(encoder, update);
@@ -922,6 +919,8 @@ class RealtimeMultiplexer {
 
   private bootstrapDoc(entry: DocEntry): void {
     this.sendInitialSync(entry);
+    // A headless session, such as a drain, has no presence to show or to watch.
+    if (entry.awareness.getLocalState() === null) return;
     // Push our awareness so peers see us immediately...
     this.sendLocalAwareness(entry);
     // ...and ask peers to re-announce theirs. The backend keeps no awareness
@@ -954,9 +953,7 @@ class RealtimeMultiplexer {
             ? "access_lost"
             : this.upgradeRequired
               ? "upgrade_required"
-              : status === "connected" && entry.state.transportPending
-                ? "syncing"
-                : status,
+              : status,
       );
     }
   }

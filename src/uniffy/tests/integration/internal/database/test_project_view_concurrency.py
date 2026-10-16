@@ -177,7 +177,7 @@ async def test_editor_response_excludes_later_private_definition(
 
 @pytest.mark.parametrize("remove", [False, True])
 async def test_default_selection_serializes_with_view_privacy_and_deletion(
-    project_view, env, search_indexer, monkeypatch, remove
+    project_view, env, search_indexer, buffer, monkeypatch, remove
 ) -> None:
     project_id, view_id = project_view
     async with open_session() as selector, open_session() as competitor:
@@ -187,7 +187,11 @@ async def test_default_selection_serializes_with_view_privacy_and_deletion(
             async with paused_commit(selector, monkeypatch) as (ready, release):
                 selection = tasks.create_task(
                     ProjectOperations(selector, _storage(), search_indexer).update(
-                        env.admin_id, env.org_id, project_id, default_view_id=view_id
+                        env.admin_id,
+                        env.org_id,
+                        project_id,
+                        default_view_id=view_id,
+                        buffer=buffer,
                     )
                 )
                 await ready.wait()

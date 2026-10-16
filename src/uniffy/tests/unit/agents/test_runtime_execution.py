@@ -9,6 +9,7 @@ import pytest
 
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.run_log import AgentRunStatus
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
@@ -156,6 +157,7 @@ async def test_completion_loop_preserves_order_and_session_isolation(
         session=main_session,
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         allowed_tools=frozenset(registry.get(call.name).name for call in calls),
     )
     traces = []
@@ -235,6 +237,7 @@ async def test_streaming_loop_rejection_and_placeholder_finalization(monkeypatch
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         allowed_tools=frozenset({"files.delete"}),
     )
     approval_store = MagicMock()
@@ -312,6 +315,7 @@ async def test_streaming_tool_trace_records_read_and_write_outcomes(monkeypatch,
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         allowed_tools=frozenset({"notes.read", "notes.write"}),
     )
     executor = ToolExecutor(registry, context)
@@ -426,6 +430,7 @@ async def _run_streaming_runner(
                 session=MagicMock(),
                 user_id=generate_id(),
                 organization_id=generate_id(),
+                buffer=UpdateBuffer(),
             ),
             deferred_pool={},
         )
@@ -591,6 +596,7 @@ async def _run_completion_runner(monkeypatch, provider, recorder=None, invocatio
             session=MagicMock(),
             user_id=generate_id(),
             organization_id=generate_id(),
+            buffer=UpdateBuffer(),
         ),
         deferred_pool={},
     )

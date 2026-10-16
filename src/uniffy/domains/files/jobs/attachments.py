@@ -29,6 +29,8 @@ INLINE_UPLOAD_GRACE = timedelta(hours=24)
 
 async def reconcile_pending_inline_attachments(ctx: dict[str, Any]) -> None:
     buffer = UpdateBuffer()
+    storage = cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY])
+    search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
     async with open_session() as db:
         depth = await db.scalar(select(func.count()).select_from(InlineAttachmentReconciliation))
         REALTIME_BACKLOG_DEPTH.labels(kind="inline_attachments").set(depth or 0)
@@ -49,18 +51,23 @@ async def reconcile_pending_inline_attachments(ctx: dict[str, Any]) -> None:
         await db.commit()
     for item in pending:
         try:
-            await _reconcile(ctx, item, buffer)
+            await reconcile_inline_item(
+                item, buffer=buffer, storage=storage, search_indexer=search_indexer
+            )
         except Exception:
             logger.exception(
                 "Inline attachment reconciliation failed", content_id=str(item.content_id)
             )
 
 
-async def _reconcile(
-    ctx: dict[str, Any],
+async def reconcile_inline_item(
     item: InlineAttachmentReconciliation,
-    buffer: UpdateBuffer | None = None,
+    *,
+    buffer: UpdateBuffer,
+    storage: ObjectStorage,
+    search_indexer: SearchIndexer,
 ) -> None:
+    """Remove inline uploads the content no longer references, unless live edits still may."""
     kind = ContentType(item.content_type)
     key = (kind, item.content_id)
     models = {
@@ -75,7 +82,7 @@ async def _reconcile(
         if pending is None:
             return
         # Accepted edits the columns do not show yet may still reference an upload.
-        if await may_have_unprojected_edits(buffer or UpdateBuffer(), db, key):
+        if await may_have_unprojected_edits(buffer, db, key):
             return
         content = (
             await db.execute(
@@ -114,8 +121,8 @@ async def _reconcile(
             return
         await reconcile_inline_attachments(
             db,
-            cast(ObjectStorage, ctx[OBJECT_STORAGE_CTX_KEY]),
-            cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY]),
+            storage,
+            search_indexer,
             organization_id=item.organization_id,
             content_type=kind,
             content_id=item.content_id,

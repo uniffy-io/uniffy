@@ -28,7 +28,7 @@ from uniffy.core.realtime.buffer_keys import AdmissionStatus
 from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentType, RecurrencePattern
-from uniffy.domains.agents.tools.builtin.calendar import _execute_read_event
+from uniffy.domains.agents.tools.builtin.calendar import read_event
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.scheduling.calendar.realtime import EventRealtimeAdapter
 from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
@@ -387,22 +387,16 @@ async def test_agent_read_shows_accepted_text_that_the_stored_description_lacks(
                 session=db,
                 user_id=live_event.owner,
                 organization_id=live_event.org,
+                buffer=live_event.buffer,
                 user_timezone="UTC",
             )
-            result = await _execute_read_event(context, {"event_id": str(live_event.key[1])})
+            result = await read_event.executor(context, {"event_id": str(live_event.key[1])})
         assert result.success
         return result.data.splitlines()
 
     await live_event.admit("u-human", typed(live_event.base, suffix=" human"))
+    assert "Description: base human" in await read()
     await live_event.checkpointed()
-    # The agent reads through the process buffer namespace, so leave it no epoch to consult.
-    async with open_session() as db:
-        await db.execute(
-            update(RealtimeYjsSnapshot)
-            .where(RealtimeYjsSnapshot.content_id == live_event.key[1])
-            .values(buffer_epoch=None, valkey_run_id=None)
-        )
-        await db.commit()
 
     assert "Description: base human" in await read()
     assert (await event_row(live_event)).description == "base"
@@ -419,9 +413,10 @@ async def test_agent_read_keeps_the_stored_description_while_live_edits_cannot_b
                 session=db,
                 user_id=live_event.owner,
                 organization_id=live_event.org,
+                buffer=live_event.buffer,
                 user_timezone="UTC",
             )
-            result = await _execute_read_event(context, {"event_id": str(live_event.key[1])})
+            result = await read_event.executor(context, {"event_id": str(live_event.key[1])})
 
     # The stored text is what the agent sees; a later description merge keeps Alice's edit.
     assert result.success

@@ -8,6 +8,7 @@ from uniffy.core.models.files.file import ExtractionStatus, File, ThumbnailStatu
 from uniffy.core.models.files.file_version import FileVersion
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.files.multipart_upload import MultipartUpload
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
@@ -169,6 +170,8 @@ class FileOperations(FileSearchOperations):
         filename: str | None = None,
         tag_ids: list[UUID] | None = None,
         description: str | None = None,
+        *,
+        buffer: UpdateBuffer,
     ) -> File:
         return await self.items.update(
             user_id,
@@ -177,6 +180,7 @@ class FileOperations(FileSearchOperations):
             filename,
             tag_ids,
             description,
+            buffer=buffer,
         )
 
     async def move_file(

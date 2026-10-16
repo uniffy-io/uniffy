@@ -11,10 +11,6 @@ from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.auth.permissions.defaults import (
-    resolve_content_defaults,
-    resolve_effective_policy,
-)
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
@@ -27,7 +23,7 @@ from uniffy.core.realtime.live import AfterCommit
 from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.indexer import build_content_urn
-from uniffy.core.types import AccessMode, ContentType, NodeType
+from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.notes import queries
 from uniffy.domains.permissions.access import ResourceAudienceResolver
@@ -45,12 +41,12 @@ class NoteHierarchy:
     def __init__(
         self,
         operations: NoteOperations,
-        buffer: UpdateBuffer | None = None,
+        buffer: UpdateBuffer,
         enqueue: Enqueue = enqueue_core,
     ) -> None:
         self.operations = operations
         # Accepted realtime edits that trash keeps and deletion retires.
-        self.buffer = buffer or UpdateBuffer()
+        self.buffer = buffer
         self.enqueue = enqueue
 
     async def require_moveable_under(
@@ -216,11 +212,7 @@ class NoteHierarchy:
     async def _audiences(
         self, organization_id: UUID, note_ids: list[UUID]
     ) -> dict[UUID, list[UUID] | None]:
-        """Who can open each note; None sends an OPEN_TO_ORG note org-wide, a private id never."""
         session = self.operations.session
-        default_mode, default_baseline = await resolve_content_defaults(
-            session, organization_id, ContentType.NOTE
-        )
         rows = (
             await session.execute(
                 select(Note.id, Note.owner_id, Note.access_mode, Note.baseline_role).where(
@@ -229,24 +221,17 @@ class NoteHierarchy:
             )
         ).all()
         resolver = ResourceAudienceResolver(session)
-        audiences: dict[UUID, list[UUID] | None] = {}
-        for note_id, owner_id, access_mode, baseline_role in rows:
-            mode, _ = resolve_effective_policy(
-                access_mode, baseline_role, default_mode, default_baseline
+        return {
+            note_id: await resolver.fanout_audience(
+                organization_id=organization_id,
+                content_type=ContentType.NOTE,
+                content_id=note_id,
+                owner_id=owner_id,
+                access_mode=access_mode,
+                baseline_role=baseline_role,
             )
-            audiences[note_id] = (
-                None
-                if mode == AccessMode.OPEN_TO_ORG
-                else await resolver.standard_audience(
-                    organization_id=organization_id,
-                    content_type=ContentType.NOTE,
-                    content_id=note_id,
-                    owner_id=owner_id,
-                    access_mode=access_mode,
-                    baseline_role=baseline_role,
-                )
-            )
-        return audiences
+            for note_id, owner_id, access_mode, baseline_role in rows
+        }
 
     async def _publish_access(
         self,

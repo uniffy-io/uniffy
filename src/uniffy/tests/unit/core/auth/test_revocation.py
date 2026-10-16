@@ -13,14 +13,17 @@ from uniffy.core.realtime import reauth, ws_routes
 from uniffy.core.realtime.state import WSSession
 from uniffy.core.types import generate_id
 from uniffy.domains.auth.interceptors import AuthenticationInterceptor
+from uniffy.transport.rpc import code_for_domain_error
 
 
 async def test_database_failure_cannot_become_an_allow(monkeypatch):
     monkeypatch.setattr(
         revocation, "open_session", MagicMock(side_effect=ConnectionError("database unavailable"))
     )
-    with pytest.raises(revocation.RevocationUnavailableError):
+    with pytest.raises(revocation.RevocationUnavailableError) as outage:
         await revocation.token_revocation(generate_id(), 1, generate_id())
+    # A caller that does not handle the outage still answers retryably, never internal.
+    assert code_for_domain_error(outage.value) == Code.UNAVAILABLE
 
 
 async def test_cancellation_is_not_swallowed(monkeypatch):

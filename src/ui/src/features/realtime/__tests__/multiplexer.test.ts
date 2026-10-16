@@ -4,6 +4,15 @@ import { Awareness } from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
+import { create, toBinary } from "@bufbuild/protobuf";
+import { configureStore } from "@reduxjs/toolkit";
+import type { Store } from "@reduxjs/toolkit";
+import { RefreshTokenResponseSchema } from "@uniffy/proto/auth/v1/auth_pb";
+import type { RootState } from "@/app/store";
+import { setStoreRef } from "@/app/storeRef";
+import { setMemoryAccessToken } from "@/config/api";
+import { authReducer, setCredentials } from "@/features/auth/store/authSlice";
+import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import {
   realtimeMultiplexer,
   type DocSubscription,
@@ -13,6 +22,7 @@ import {
 } from "@/features/realtime/multiplexer";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
+  MESSAGE_UPDATE,
   encodeAcceptedReceipt,
   encodeCheckpointProgress,
   encodeCommitted,
@@ -23,14 +33,56 @@ import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
 import { resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
 import { encodeCorpusFrame, fromHex, wireCorpus } from "@/features/realtime/__tests__/wireCorpus";
 
-const auth = vi.hoisted(() => ({ refresh: vi.fn(), org: "org-1" }));
-vi.mock("@/config/api", () => ({
-  getAccessToken: () => "test-token",
-  refreshAccessToken: auth.refresh,
-}));
-vi.mock("@/features/auth/store/credentialStorage", () => ({
-  readStoredAuth: () => ({ currentOrganizationId: auth.org }),
-}));
+const authStore = configureStore({
+  reducer: { auth: authReducer },
+  middleware: (getDefault) => getDefault().concat(credentialMiddleware),
+});
+
+/** Signs the tab into a workspace the way login and organization switches do. */
+function signIn(organizationId: string): void {
+  authStore.dispatch(
+    setCredentials({
+      user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
+      accessToken: "test-token",
+      refreshToken: authStore.getState().auth.refreshToken ?? "refresh",
+      organizationId,
+      sessionId: "session",
+    }),
+  );
+}
+
+/** The auth server behind the refresh endpoint: each request takes the next answer. */
+const refreshServer = {
+  requests: 0,
+  answers: [] as ("rejected" | "issued")[],
+  fallback: "issued" as "rejected" | "issued",
+};
+
+async function answerRefresh(): Promise<Response> {
+  refreshServer.requests += 1;
+  const answer = refreshServer.answers.shift() ?? refreshServer.fallback;
+  if (answer === "rejected")
+    return new Response(JSON.stringify({ code: "unauthenticated", message: "expired" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  const issued = create(RefreshTokenResponseSchema, {
+    accessToken: `fresh-${refreshServer.requests}`,
+    refreshToken: `refresh-${refreshServer.requests}`,
+    organizationId: authStore.getState().auth.currentOrganizationId ?? "",
+    sessionId: "session",
+  });
+  return new Response(toBinary(RefreshTokenResponseSchema, issued), {
+    status: 200,
+    headers: { "Content-Type": "application/proto" },
+  });
+}
+
+function refreshAnswers(answers: ("rejected" | "issued")[], fallback: "rejected" | "issued"): void {
+  refreshServer.requests = 0;
+  refreshServer.answers = answers;
+  refreshServer.fallback = fallback;
+}
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AUTH = 2;
@@ -160,16 +212,13 @@ function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc
     const { docName: name, payloadOffset } = peekVarString(bytes);
     if (name !== docName) continue;
     const payload = bytes.subarray(payloadOffset);
-    if (payload[0] !== 6) continue;
+    if (payload[0] !== MESSAGE_UPDATE) continue;
     const decoder = decoding.createDecoder(payload);
     decoding.readVarUint(decoder);
     decoding.readVarString(decoder);
     const id = decoding.readVarString(decoder);
     Y.applyUpdate(serverDoc, decoding.readVarUint8Array(decoder));
-    const ack = encoding.createEncoder();
-    encoding.writeVarUint(ack, 7);
-    encoding.writeVarString(ack, id);
-    ws.receive(encodeDocFrame(docName, encoding.toUint8Array(ack)));
+    ws.receive(encodeDocFrame(docName, encodeCommitted(id)));
   }
 }
 
@@ -230,13 +279,22 @@ beforeAll(() => {
     removeEventListener: () => {},
     visibilityState: "visible",
   });
+  const storage = new Map<string, string>();
   vi.stubGlobal("localStorage", {
-    getItem: (key: string) =>
-      key === "persist:root"
-        ? JSON.stringify({ auth: JSON.stringify({ currentOrganizationId: "org-1" }) })
-        : null,
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, value: string) => void storage.set(key, value),
+    removeItem: (key: string) => void storage.delete(key),
   });
+  vi.stubGlobal("navigator", {
+    onLine: true,
+    locks: { request: (_name: string, work: () => Promise<unknown>) => work() },
+  });
+  vi.stubGlobal("fetch", answerRefresh);
+  setStoreRef(authStore as unknown as Store<RootState>);
+  signIn("org-1");
 });
+
+beforeEach(() => setMemoryAccessToken("test-token"));
 
 it("delivers and revokes fragment seed roles per doc and resets them on disconnect", () => {
   const first = attachDoc("first");
@@ -392,7 +450,7 @@ describe("handshake replies", () => {
   });
 });
 
-describe("outbound pending tracking", () => {
+describe("transport pending", () => {
   it("retains pending edits until committed acknowledgment after reconnect", () => {
     const doc = attachDoc("offline-edit");
     const pendingStates: boolean[] = [];
@@ -409,9 +467,11 @@ describe("outbound pending tracking", () => {
     const serverDoc = new Y.Doc();
     currentWs().receive(serverSyncStep1Frame(doc.docName, serverDoc));
 
-    expect(currentWs().sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(
-      true,
-    );
+    expect(
+      currentWs().sent.some(
+        (frame) => frame[peekVarString(frame).payloadOffset] === MESSAGE_UPDATE,
+      ),
+    ).toBe(true);
     expect(isTransportPending(doc)).toBe(true);
     expect(pendingStates).toEqual([true]);
 
@@ -421,7 +481,7 @@ describe("outbound pending tracking", () => {
     unsubscribe();
   });
 
-  it("stays pending after socket drain until a durable acknowledgment", () => {
+  it("stays pending after the socket drains until the server answers the update", () => {
     vi.useFakeTimers();
     const doc = attachDoc("buffered-edit");
     const ws = currentWs();
@@ -431,7 +491,9 @@ describe("outbound pending tracking", () => {
     doc.ydoc.getText("markdown").insert(0, "buffered");
     expect(isTransportPending(doc)).toBe(true);
     vi.advanceTimersByTime(50);
-    expect(ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === 6)).toBe(true);
+    expect(
+      ws.sent.some((frame) => frame[peekVarString(frame).payloadOffset] === MESSAGE_UPDATE),
+    ).toBe(true);
 
     ws.bufferedAmount = 0;
     vi.advanceTimersByTime(300);
@@ -468,10 +530,7 @@ it("requires a matching acknowledgment for deletion-only updates", () => {
   const vector = Y.encodeStateVector(doc.ydoc);
   doc.ydoc.getText("markdown").delete(0, 9);
   expect(Y.encodeStateVector(doc.ydoc)).toEqual(vector);
-  const ack = encoding.createEncoder();
-  encoding.writeVarUint(ack, 7);
-  encoding.writeVarString(ack, "unrelated");
-  ws.receive(encodeDocFrame(doc.docName, encoding.toUint8Array(ack)));
+  ws.receive(encodeDocFrame(doc.docName, encodeCommitted("unrelated")));
   expect(isTransportPending(doc)).toBe(true);
   applyClientFramesToServer(ws, doc.docName, server);
   expect(server.getText("markdown").toString()).toBe("");
@@ -559,19 +618,20 @@ it("retries a blocked connection immediately without dropping attached content",
 
 it("retries token refresh without opening unauthenticated sockets or dropping edits", async () => {
   vi.useFakeTimers();
-  auth.refresh.mockReset().mockResolvedValueOnce(null).mockResolvedValueOnce("fresh");
+  refreshAnswers(["rejected", "issued"], "issued");
   const doc = attachDoc("refresh-retry");
   const first = currentWs();
   first.open();
   doc.ydoc.getText("markdown").insert(0, "pending during expiry");
   first.serverClose(4409);
   await vi.advanceTimersByTimeAsync(500);
-  expect(auth.refresh).toHaveBeenCalledTimes(1);
+  expect(refreshServer.requests).toBe(1);
   expect(FakeWebSocket.instances).toHaveLength(1);
   await vi.advanceTimersByTimeAsync(750);
-  expect(auth.refresh).toHaveBeenCalledTimes(2);
+  expect(refreshServer.requests).toBe(2);
   const second = currentWs();
   expect(second).not.toBe(first);
+  expect(second.protocols).toContain("bearer.fresh-2");
   second.open();
   const server = new Y.Doc();
   applyClientFramesToServer(second, doc.docName, server);
@@ -581,17 +641,17 @@ it("retries token refresh without opening unauthenticated sockets or dropping ed
 
 it("bounds invalid-token retries and explicit Retry restarts refresh", async () => {
   vi.useFakeTimers();
-  auth.refresh.mockReset().mockResolvedValue(null);
+  refreshAnswers([], "rejected");
   const doc = attachDoc("invalid-token");
   const first = currentWs();
   first.open();
   doc.ydoc.getText("markdown").insert(0, "retained");
   first.serverClose(4401);
   await vi.advanceTimersByTimeAsync(120_000);
-  expect(auth.refresh).toHaveBeenCalledTimes(5);
+  expect(refreshServer.requests).toBe(5);
   expect(FakeWebSocket.instances).toHaveLength(1);
   expect(isTransportPending(doc)).toBe(true);
-  auth.refresh.mockResolvedValue("valid");
+  refreshServer.fallback = "issued";
   realtimeMultiplexer.retryConnection();
   await vi.advanceTimersByTimeAsync(0);
   expect(FakeWebSocket.instances).toHaveLength(2);
@@ -606,12 +666,11 @@ it("closes an idle old-org socket before attaching in another workspace", () => 
   attached = attached.filter((item) => item !== firstDoc);
   firstDoc.awareness.destroy();
   firstDoc.ydoc.destroy();
-  auth.org = "org-2";
-  window.dispatchEvent(new Event("uniffy:auth:refreshed"));
+  signIn("org-2");
   attachDoc("new-org");
   expect(first.readyState).toBe(FakeWebSocket.CLOSED);
   expect(currentWs().url).toContain("org_id=org-2");
-  auth.org = "org-1";
+  signIn("org-1");
 });
 
 it("keeps seed proposals separate from pending user updates and settles rejection", async () => {
@@ -657,7 +716,7 @@ it("rejects an oversized local update without disconnecting another document", (
   server.destroy();
 });
 
-it("sends observer-generated projection in the same durable frame", () => {
+it("sends observer-generated projection in the same update frame", () => {
   const doc = attachDoc("atomic");
   const ws = currentWs();
   ws.open();
@@ -665,7 +724,9 @@ it("sends observer-generated projection in the same durable frame", () => {
   source.observe(() => doc.ydoc.getText("markdown").insert(0, "projected"));
   source.insert(0, "rich");
   vi.advanceTimersByTime(50);
-  const updates = ws.sent.filter((frame) => frame[peekVarString(frame).payloadOffset] === 6);
+  const updates = ws.sent.filter(
+    (frame) => frame[peekVarString(frame).payloadOffset] === MESSAGE_UPDATE,
+  );
   expect(updates).toHaveLength(1);
   const server = new Y.Doc();
   applyClientFramesToServer(ws, doc.docName, server);
@@ -682,10 +743,10 @@ it("reconnects a socket whose initial sync never receives a reply", async () => 
   expect(FakeWebSocket.instances).toHaveLength(2);
 });
 
-function durableFrames(ws: FakeWebSocket, docName: string): Uint8Array[] {
+function updateFrames(ws: FakeWebSocket, docName: string): Uint8Array[] {
   return ws.sent.filter((frame) => {
     const prefix = peekVarString(frame);
-    return prefix.docName === docName && frame[prefix.payloadOffset] === 6;
+    return prefix.docName === docName && frame[prefix.payloadOffset] === MESSAGE_UPDATE;
   });
 }
 
@@ -696,10 +757,7 @@ function acknowledgeFrame(ws: FakeWebSocket, frame: Uint8Array): Uint8Array {
   decoding.readVarString(decoder);
   const id = decoding.readVarString(decoder);
   const update = decoding.readVarUint8Array(decoder);
-  const ack = encoding.createEncoder();
-  encoding.writeVarUint(ack, 7);
-  encoding.writeVarString(ack, id);
-  ws.receive(encodeDocFrame(docName, encoding.toUint8Array(ack)));
+  ws.receive(encodeDocFrame(docName, encodeCommitted(id)));
   return update;
 }
 
@@ -712,9 +770,9 @@ it("sends one frame per 50 ms window of sustained typing", () => {
     doc.ydoc.getText("markdown").insert(i, "x");
     expect(isTransportPending(doc)).toBe(true);
     vi.advanceTimersByTime(10);
-    expect(durableFrames(ws, doc.docName)).toHaveLength(Math.floor((i + 1) / 5));
+    expect(updateFrames(ws, doc.docName)).toHaveLength(Math.floor((i + 1) / 5));
   }
-  for (const frame of durableFrames(ws, doc.docName)) {
+  for (const frame of updateFrames(ws, doc.docName)) {
     Y.applyUpdate(server, acknowledgeFrame(ws, frame));
   }
   expect(server.getText("markdown").toString()).toBe("x".repeat(20));
@@ -731,12 +789,12 @@ it("keeps a buffered deletion pending when the preceding insertion is acknowledg
   vi.advanceTimersByTime(50);
   text.delete(0, text.length);
   const server = new Y.Doc();
-  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[0]));
+  Y.applyUpdate(server, acknowledgeFrame(ws, updateFrames(ws, doc.docName)[0]));
   expect(isTransportPending(doc)).toBe(true);
   vi.advanceTimersByTime(49);
-  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(1);
   vi.advanceTimersByTime(1);
-  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[1]));
+  Y.applyUpdate(server, acknowledgeFrame(ws, updateFrames(ws, doc.docName)[1]));
   expect(server.getText("markdown").toString()).toBe("");
   expect(isTransportPending(doc)).toBe(false);
   server.destroy();
@@ -747,12 +805,12 @@ it.each(["detach", "pagehide"])("flushes buffered typing on %s and cancels its t
   const ws = currentWs();
   ws.open();
   doc.ydoc.getText("markdown").insert(0, "last edit");
-  expect(durableFrames(ws, doc.docName)).toHaveLength(0);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(0);
   if (event === "detach") doc.subscription.destroy();
   else window.dispatchEvent(new Event("pagehide"));
-  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(1);
   vi.advanceTimersByTime(500);
-  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(1);
 });
 
 it.each(["permission", "generation"])("does not send a buffered batch after %s loss", (reason) => {
@@ -764,7 +822,7 @@ it.each(["permission", "generation"])("does not send a buffered batch after %s l
   if (reason === "permission") ws.receive(serverAuthDeniedFrame(doc.docName, "revoked"));
   else ws.receive(serverGenerationFrame(doc.docName, "new"));
   vi.advanceTimersByTime(500);
-  expect(durableFrames(ws, doc.docName)).toHaveLength(0);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(0);
   expect(isTransportPending(doc)).toBe(true);
   expect(doc.ydoc.getText("markdown").toString()).toBe("recover me");
 });
@@ -776,10 +834,10 @@ it("combines buffered edits with sync recovery without a later duplicate send", 
   doc.ydoc.getText("markdown").insert(0, "recover");
   const server = new Y.Doc();
   ws.receive(serverSyncStep1Frame(doc.docName, server));
-  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
-  Y.applyUpdate(server, acknowledgeFrame(ws, durableFrames(ws, doc.docName)[0]));
+  expect(updateFrames(ws, doc.docName)).toHaveLength(1);
+  Y.applyUpdate(server, acknowledgeFrame(ws, updateFrames(ws, doc.docName)[0]));
   vi.advanceTimersByTime(500);
-  expect(durableFrames(ws, doc.docName)).toHaveLength(1);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(1);
   expect(server.getText("markdown").toString()).toBe("recover");
   expect(isTransportPending(doc)).toBe(false);
   server.destroy();
@@ -793,7 +851,7 @@ it("sends a large transaction separately instead of rejecting a combined oversiz
   doc.ydoc.getText("first").insert(0, "x".repeat(32 * 1024));
   doc.ydoc.getText("second").insert(0, "y".repeat(1024 * 1024 - 8192));
   expect(denied).not.toHaveBeenCalled();
-  expect(durableFrames(ws, doc.docName)).toHaveLength(2);
+  expect(updateFrames(ws, doc.docName)).toHaveLength(2);
   const server = new Y.Doc();
   applyClientFramesToServer(ws, doc.docName, server);
   expect(server.getText("first").length).toBe(32 * 1024);
@@ -811,16 +869,16 @@ it("keeps a second document on its own batching deadline", () => {
   vi.advanceTimersByTime(30);
   second.ydoc.getText("markdown").insert(0, "second");
   vi.advanceTimersByTime(20);
-  expect(durableFrames(ws, first.docName)).toHaveLength(1);
-  expect(durableFrames(ws, second.docName)).toHaveLength(0);
+  expect(updateFrames(ws, first.docName)).toHaveLength(1);
+  expect(updateFrames(ws, second.docName)).toHaveLength(0);
   vi.advanceTimersByTime(30);
-  expect(durableFrames(ws, second.docName)).toHaveLength(1);
+  expect(updateFrames(ws, second.docName)).toHaveLength(1);
 });
 
 describe("checkpoint coverage", () => {
   const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
 
-  function readDurable(frame: Uint8Array): { id: string; update: Uint8Array } {
+  function readUpdate(frame: Uint8Array): { id: string; update: Uint8Array } {
     const decoder = decoding.createDecoder(frame.subarray(peekVarString(frame).payloadOffset));
     decoding.readVarUint(decoder);
     decoding.readVarString(decoder);
@@ -831,11 +889,11 @@ describe("checkpoint coverage", () => {
   function edit(doc: AttachedDoc, ws: FakeWebSocket, text: string) {
     doc.ydoc.getText("markdown").insert(0, text);
     vi.advanceTimersByTime(50);
-    return readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    return readUpdate(updateFrames(ws, doc.docName).at(-1)!);
   }
 
-  function durableIds(ws: FakeWebSocket, doc: AttachedDoc): string[] {
-    return durableFrames(ws, doc.docName).map((frame) => readDurable(frame).id);
+  function updateIds(ws: FakeWebSocket, doc: AttachedDoc): string[] {
+    return updateFrames(ws, doc.docName).map((frame) => readUpdate(frame).id);
   }
 
   function sessionState(doc: AttachedDoc, epoch: string, head: number, checkpoint: number) {
@@ -941,7 +999,7 @@ describe("checkpoint coverage", () => {
       coverageKnown: true,
     });
     vi.advanceTimersByTime(50);
-    const { id } = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    const { id } = readUpdate(updateFrames(ws, doc.docName).at(-1)!);
 
     ws.receive(receipt(doc, id, "E1", 1));
     expect(isTransportPending(doc)).toBe(false);
@@ -1008,12 +1066,12 @@ describe("checkpoint coverage", () => {
     doc.ydoc.getText("markdown").delete(0, "delete me".length);
     vi.advanceTimersByTime(50);
     expect(Y.encodeStateVector(doc.ydoc)).toEqual(vector);
-    const deletion = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    const deletion = readUpdate(updateFrames(ws, doc.docName).at(-1)!);
     ws.receive(receipt(doc, deletion.id, "E1", 2));
     expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: true });
 
     ws.receive(sessionState(doc, "E2", 0, 0));
-    const replay = readDurable(durableFrames(ws, doc.docName).at(-1)!);
+    const replay = readUpdate(updateFrames(ws, doc.docName).at(-1)!);
     expect(replay).toEqual(deletion);
     Y.applyUpdate(server, replay.update);
     expect(server.getText("markdown").toString()).toBe("");
@@ -1021,9 +1079,9 @@ describe("checkpoint coverage", () => {
     ws.receive(receipt(doc, deletion.id, "E2", 1));
     ws.receive(progress(doc, "E2", 1));
     expect(pendingFlags(doc)).toEqual({ transportPending: false, checkpointPending: false });
-    const sent = durableFrames(ws, doc.docName).length;
+    const sent = updateFrames(ws, doc.docName).length;
     ws.receive(sessionState(doc, "E3", 0, 0));
-    expect(durableFrames(ws, doc.docName)).toHaveLength(sent);
+    expect(updateFrames(ws, doc.docName)).toHaveLength(sent);
     server.destroy();
   });
 
@@ -1040,9 +1098,9 @@ describe("checkpoint coverage", () => {
     const replacement = currentWs();
     expect(replacement).not.toBe(ws);
     replacement.open(GENERATION);
-    expect(durableIds(replacement, doc)).toEqual([local.id]);
+    expect(updateIds(replacement, doc)).toEqual([local.id]);
     replacement.receive(sessionState(doc, "E1", 1, 0));
-    expect(durableIds(replacement, doc)).toEqual([local.id]);
+    expect(updateIds(replacement, doc)).toEqual([local.id]);
     expect(pendingFlags(doc)).toEqual({ transportPending: true, checkpointPending: true });
   });
 
@@ -1056,10 +1114,10 @@ describe("checkpoint coverage", () => {
     const second = edit(doc, ws, "second");
     ws.receive(receipt(doc, first.id, "E1", 1));
     ws.receive(receipt(doc, second.id, "E1", 2));
-    const before = durableFrames(ws, doc.docName).length;
+    const before = updateFrames(ws, doc.docName).length;
 
     ws.receive(sessionState(doc, "E2", 0, 0));
-    const replays = durableFrames(ws, doc.docName).slice(before).map(readDurable);
+    const replays = updateFrames(ws, doc.docName).slice(before).map(readUpdate);
     expect(replays).toEqual([first, second]);
     expect(events.slice(-2)).toEqual([
       { updateId: first.id, coverage: "local", editedAt: expect.any(Number), update: first.update },
@@ -1083,10 +1141,10 @@ describe("checkpoint coverage", () => {
     ws.open(GENERATION);
     ws.receive(sessionState(doc, "E1", 0, 0));
     const inFlight = edit(doc, ws, "sent before the reset");
-    expect(durableIds(ws, doc)).toEqual([inFlight.id]);
+    expect(updateIds(ws, doc)).toEqual([inFlight.id]);
 
     ws.receive(sessionState(doc, "E2", 0, 0));
-    expect(durableFrames(ws, doc.docName).map(readDurable)).toEqual([inFlight, inFlight]);
+    expect(updateFrames(ws, doc.docName).map(readUpdate)).toEqual([inFlight, inFlight]);
     ws.receive(receipt(doc, inFlight.id, "E1", 1));
     expect(pendingFlags(doc)).toEqual({ transportPending: true, checkpointPending: true });
     ws.receive(receipt(doc, inFlight.id, "E2", 1));
@@ -1101,7 +1159,7 @@ describe("checkpoint coverage", () => {
     ws.receive(sessionState(doc, "E1", 0, 0));
     const inFlight = edit(doc, ws, "sent once");
     ws.receive(sessionState(doc, "E1", 0, 0));
-    expect(durableIds(ws, doc)).toEqual([inFlight.id]);
+    expect(updateIds(ws, doc)).toEqual([inFlight.id]);
   });
 
   it("keeps refused updates local and resends them under the same ids after five seconds", () => {
@@ -1121,11 +1179,11 @@ describe("checkpoint coverage", () => {
     expect(realtimeMultiplexer.isDocReadOnly(doc.docName)).toBe(false);
 
     edit(doc, ws, "sent after the refusal");
-    const sent = durableFrames(ws, doc.docName).length;
+    const sent = updateFrames(ws, doc.docName).length;
     vi.advanceTimersByTime(4_949);
-    expect(durableFrames(ws, doc.docName)).toHaveLength(sent);
+    expect(updateFrames(ws, doc.docName)).toHaveLength(sent);
     vi.advanceTimersByTime(1);
-    const resent = durableFrames(ws, doc.docName).slice(sent).map(readDurable);
+    const resent = updateFrames(ws, doc.docName).slice(sent).map(readUpdate);
     expect(resent).toEqual([first, second]);
   });
 
@@ -1148,7 +1206,7 @@ describe("checkpoint coverage", () => {
       savingUnavailable: false,
     });
     vi.advanceTimersByTime(5_000);
-    expect(durableIds(ws, doc).at(-1)).toBe(refused.id);
+    expect(updateIds(ws, doc).at(-1)).toBe(refused.id);
   });
 
   it("rejects only the conflicting update and keeps syncing the others", () => {
@@ -1165,7 +1223,7 @@ describe("checkpoint coverage", () => {
     expect(statuses.at(-1)).toBe("update_rejected");
 
     vi.advanceTimersByTime(5_000);
-    expect(durableIds(ws, doc)).toEqual([conflicting.id, other.id, other.id]);
+    expect(updateIds(ws, doc)).toEqual([conflicting.id, other.id, other.id]);
     ws.receive(receipt(doc, other.id, "E1", 1));
     ws.receive(progress(doc, "E1", 1));
     expect(
@@ -1177,7 +1235,7 @@ describe("checkpoint coverage", () => {
     window.dispatchEvent(new Event("online"));
     const replacement = currentWs();
     replacement.open(GENERATION);
-    expect(durableIds(replacement, doc)).toEqual([]);
+    expect(updateIds(replacement, doc)).toEqual([]);
     expect(statuses.at(-1)).toBe("update_rejected");
   });
 });

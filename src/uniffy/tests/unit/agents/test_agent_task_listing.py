@@ -8,6 +8,7 @@ from uniffy_proto.projects.v1.projects_pb import (
     TaskPseudoField,
 )
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.tools.builtin.projects import _execute_list_tasks, _execute_read_task
 from uniffy.domains.agents.tools.definitions import ToolContext
@@ -40,6 +41,7 @@ def _context() -> ToolContext:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         user_timezone="Europe/Sofia",
     )
 

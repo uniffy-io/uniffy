@@ -8,18 +8,18 @@ from typing import Any
 from uniffy.core.json_codec import loads
 from uniffy.core.realtime.wire import (
     MESSAGE_ACCEPTED_RECEIPT,
-    MESSAGE_ACK,
     MESSAGE_CHECKPOINT_PROGRESS,
+    MESSAGE_COMMITTED,
     MESSAGE_GENERATION,
     MESSAGE_SESSION_STATE,
     create_accepted_receipt_message,
-    create_ack_message,
     create_checkpoint_progress_message,
+    create_committed_message,
     create_generation_message,
     create_session_state_message,
     parse_accepted_receipt_message,
-    parse_ack_message,
     parse_checkpoint_progress_message,
+    parse_committed_message,
     parse_generation_message,
     parse_session_state_message,
 )
@@ -63,7 +63,10 @@ _CODECS: dict[int, tuple[Callable[..., bytes], Callable[[bytes], dict[str, Any]]
         create_generation_message,
         lambda frame: {"generation": parse_generation_message(frame)},
     ),
-    MESSAGE_ACK: (create_ack_message, lambda frame: {"update_id": parse_ack_message(frame)}),
+    MESSAGE_COMMITTED: (
+        create_committed_message,
+        lambda frame: {"update_id": parse_committed_message(frame)},
+    ),
     MESSAGE_ACCEPTED_RECEIPT: (
         create_accepted_receipt_message,
         lambda frame: asdict(parse_accepted_receipt_message(frame)),

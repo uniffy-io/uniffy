@@ -15,8 +15,6 @@ _BEARER_PREFIX = "bearer."
 WS_CLOSE_UNSUPPORTED_TYPE = 4400
 WS_CLOSE_UNAUTHENTICATED = 4401
 WS_CLOSE_FORBIDDEN = 4403
-WS_CLOSE_NOT_FOUND = 4404
-WS_CLOSE_IDLE = 4408
 # The socket reached the lifetime of the token that opened it. The client is
 # expected to refresh and reconnect, so this must stay distinct from 4410.
 WS_CLOSE_REAUTH_REQUIRED = 4409

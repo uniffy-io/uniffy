@@ -35,7 +35,7 @@ async def close_queue(name: QueueName) -> None:
     pool = _pools[name]
     if pool is None:
         return
-    await pool.close(close_connection_pool=True)
+    await pool.aclose(close_connection_pool=True)
     _pools[name] = None
     logger.info(f"Queue pool closed: name={name}")
 

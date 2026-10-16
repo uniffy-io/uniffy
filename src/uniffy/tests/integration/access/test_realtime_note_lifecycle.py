@@ -29,7 +29,6 @@ from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliati
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.buffer_keys import AdmissionStatus
 from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document, stage_recovered
 from uniffy.core.realtime.epoch import ensure_epoch
@@ -38,8 +37,7 @@ from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.core.realtime.publisher import perm_channel
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_seed
-from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
-from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY
+from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -49,8 +47,7 @@ from uniffy.core.types import (
     generate_id,
 )
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
-from uniffy.domains.files.jobs.attachments import INLINE_UPLOAD_GRACE, _reconcile
-from uniffy.domains.notes.content.updates import NoteUpdates
+from uniffy.domains.files.jobs.attachments import INLINE_UPLOAD_GRACE, reconcile_inline_item
 from uniffy.domains.notes.hierarchy.operations import NoteHierarchy
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.infrastructure.database.session import open_session
@@ -73,18 +70,16 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 RETIRED = {"stream": [], "control": 0, "receipts": [], "due": None}
 
 
-def hierarchy(
-    db: AsyncSession, note: BufferedDocument, buffer: UpdateBuffer | None = None
-) -> NoteHierarchy:
-    operations = NoteOperations(db, AsyncMock(), MagicMock(spec=SearchIndexer))
-    return NoteHierarchy(operations, buffer or note.buffer, note.jobs)
+def hierarchy(db: AsyncSession, note: BufferedDocument) -> NoteHierarchy:
+    operations = NoteOperations(db, AsyncMock(), MagicMock(spec=SearchIndexer), note.buffer)
+    return NoteHierarchy(operations, note.buffer, note.jobs)
 
 
 def projection_job(note: BufferedDocument, revision: int) -> tuple[str, str, tuple[str, ...]]:
     return (
         SAVE_REALTIME_SNAPSHOT.name,
         f"{note.namespace}projection:{ContentType.NOTE.value}:{note.key[1]}:{revision}",
-        (ContentType.NOTE.value, str(note.key[1]), str(note.org), "", ""),
+        (ContentType.NOTE.value, str(note.key[1]), str(note.org)),
     )
 
 
@@ -249,7 +244,7 @@ async def test_trash_keeps_a_buffered_edit_off_the_note_until_restore_projects_i
     assert (trashed.checkpoint_seq, trashed.actor_id) == (1, live_note.peer)
     assert trashed.revision > trashed.rendered_revision
     assert (await live_note.buffer_state())["stream"] == []
-    outcome = await persist_snapshot(*live_note.key, live_note.org, b"", b"")
+    outcome = await persist_snapshot(*live_note.key, live_note.org)
     assert outcome is SnapshotOutcome.SNAPSHOT_ONLY
     note = await note_row(live_note)
     assert note is not None and (note.is_deleted, note.content) == (True, "base")
@@ -259,7 +254,7 @@ async def test_trash_keeps_a_buffered_edit_off_the_note_until_restore_projects_i
         await hierarchy(db, live_note).restore(live_note.owner, live_note.org, live_note.key[1])
 
     assert live_note.jobs.jobs == [projection_job(live_note, trashed.revision)]
-    outcome = await persist_snapshot(*live_note.key, live_note.org, b"", b"")
+    outcome = await persist_snapshot(*live_note.key, live_note.org)
     assert outcome is SnapshotOutcome.RENDERED
     note = await note_row(live_note)
     assert note is not None and (note.is_deleted, note.content) == (False, "base Alice")
@@ -285,7 +280,7 @@ async def test_trash_fails_retryably_while_buffered_edits_cannot_be_verified(
 
     async with open_session() as db:
         with pytest.raises(LiveStateUnavailable):
-            await hierarchy(db, live_note, unreachable_buffer).delete(
+            await hierarchy(db, dataclasses.replace(live_note, buffer=unreachable_buffer)).delete(
                 live_note.owner, live_note.org, live_note.key[1]
             )
 
@@ -543,10 +538,7 @@ async def test_inline_cleanup_keeps_an_upload_only_a_buffered_edit_references(
     item = InlineAttachmentReconciliation(
         content_type=key[0], content_id=key[1], organization_id=live_note.org
     )
-    ctx = {
-        OBJECT_STORAGE_CTX_KEY: AsyncMock(),
-        SEARCH_INDEXER_CTX_KEY: MagicMock(spec=SearchIndexer),
-    }
+    storage, indexer = AsyncMock(), MagicMock(spec=SearchIndexer)
 
     async def remaining() -> tuple[bool, bool]:
         async with open_session() as db:
@@ -563,18 +555,24 @@ async def test_inline_cleanup_keeps_an_upload_only_a_buffered_edit_references(
             .where(InlineAttachmentReconciliation.content_id == live_note.key[1])
             .with_for_update()
         )
-        await _reconcile(ctx, item, live_note.buffer)
+        await reconcile_inline_item(
+            item, buffer=live_note.buffer, storage=storage, search_indexer=indexer
+        )
         assert await remaining() == (True, True)
-        await _reconcile(ctx, item, unreachable_buffer)
+        await reconcile_inline_item(
+            item, buffer=unreachable_buffer, storage=storage, search_indexer=indexer
+        )
         assert await remaining() == (True, True)
 
     result = await checkpoint_document(
         live_note.buffer, live_note.head.scope, enqueue=live_note.jobs
     )
     assert result.status is CheckpointStatus.COMMITTED
-    outcome = await persist_snapshot(*live_note.key, live_note.org, b"", b"")
+    outcome = await persist_snapshot(*live_note.key, live_note.org)
     assert outcome is SnapshotOutcome.RENDERED
-    await _reconcile(ctx, item, live_note.buffer)
+    await reconcile_inline_item(
+        item, buffer=live_note.buffer, storage=storage, search_indexer=indexer
+    )
 
     assert await remaining() == (True, False)
     note = await note_row(live_note)
@@ -589,10 +587,7 @@ async def test_content_write_leaves_inline_cleanup_to_a_sweep_that_sees_later_ta
     item = InlineAttachmentReconciliation(
         content_type=key[0], content_id=key[1], organization_id=live_note.org
     )
-    ctx = {
-        OBJECT_STORAGE_CTX_KEY: AsyncMock(),
-        SEARCH_INDEXER_CTX_KEY: MagicMock(spec=SearchIndexer),
-    }
+    storage, indexer = AsyncMock(), MagicMock(spec=SearchIndexer)
 
     async def remaining() -> tuple[bool, bool]:
         async with open_session() as db:
@@ -602,8 +597,10 @@ async def test_content_write_leaves_inline_cleanup_to_a_sweep_that_sees_later_ta
 
     async with open_session() as guard:
         async with open_session() as db:
-            operations = NoteOperations(db, AsyncMock(), MagicMock(spec=SearchIndexer))
-            written = await NoteUpdates(operations, live_note.buffer).update(
+            operations = NoteOperations(
+                db, AsyncMock(), MagicMock(spec=SearchIndexer), live_note.buffer
+            )
+            written = await operations.update(
                 live_note.owner,
                 live_note.org,
                 live_note.key[1],
@@ -623,5 +620,7 @@ async def test_content_write_leaves_inline_cleanup_to_a_sweep_that_sees_later_ta
         reference = f"![image](/api/files/{live_note.org}/{upload})"
         merged = (await stored(live_note.key)).updates
         await live_note.admit("u-image", typed(merged, suffix=f" {reference}"), live_note.peer)
-        await _reconcile(ctx, item, live_note.buffer)
+        await reconcile_inline_item(
+            item, buffer=live_note.buffer, storage=storage, search_indexer=indexer
+        )
         assert await remaining() == (True, True)

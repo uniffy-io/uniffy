@@ -24,6 +24,7 @@ from uniffy.core.types import AccessMode, NodeType, generate_id
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notes.projection import NoteProjectionOperations
 from uniffy.infrastructure.database.session import open_session
+from uniffy.tests.integration.access.realtime_live import unreachable
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -157,8 +158,11 @@ async def test_render_equal_to_a_later_plain_write_still_lands(note: Note) -> No
 
 
 async def test_metadata_write_gives_up_after_three_lost_version_races(note: Note) -> None:
-    async with open_session() as db:
-        operations = NoteOperations(db, MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer))
+    # Metadata writes never read live state, so an unreachable buffer cannot stop them.
+    async with open_session() as db, unreachable(f"test:{generate_id().hex}:") as buffer:
+        operations = NoteOperations(
+            db, MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer), buffer
+        )
         with contended(db, note.id, 3), pytest.raises(ConflictError):
             await operations.update(note.owner_id, note.organization_id, note.id, title="Renamed")
 
@@ -172,9 +176,9 @@ async def test_moving_a_note_records_its_previous_and_new_parent(note: Note, acc
         db.add(folder)
         await db.commit()
     try:
-        async with open_session() as db:
+        async with open_session() as db, unreachable(f"test:{generate_id().hex}:") as buffer:
             operations = NoteOperations(
-                db, MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer)
+                db, MagicMock(spec=ObjectStorage), AsyncMock(spec=SearchIndexer), buffer
             )
             await operations.update(
                 note.owner_id, note.organization_id, note.id, parent_id=folder.id

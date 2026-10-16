@@ -15,7 +15,7 @@ import {
   beforeUnloadPrevented,
   closeSockets,
   currentSocket,
-  durableWrites,
+  updateWrites,
   eventually,
   installBrowser,
   openEditor,
@@ -126,9 +126,7 @@ describe("checkpoint coverage in local recovery", () => {
     server.attach(ws);
     await restarted.hydrated;
     expect(events.find((event) => event.updateId === deletion.id)?.coverage).toBe("local");
-    const replays = durableWrites(ws, restarted.docName).filter(
-      (write) => write.id === deletion.id,
-    );
+    const replays = updateWrites(ws, restarted.docName).filter((write) => write.id === deletion.id);
     expect(replays.at(-1)?.update).toEqual(deletion.update);
     vi.advanceTimersByTime(BATCH_MS);
     server.accept(ws);
@@ -139,7 +137,7 @@ describe("checkpoint coverage in local recovery", () => {
     expect(await discoverStoredPendingDocs("alice")).toBe(true);
     server.checkpoint([ws]);
     expect(pending(restarted).checkpointPending).toBe(false);
-    await restarted.persistence.acknowledge();
+    await restarted.persistence.markCheckpointed();
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
     await restarted.close();
   });
@@ -178,7 +176,7 @@ describe("checkpoint coverage in local recovery", () => {
     await reloaded.close();
   });
 
-  it("retires only the entries a checkpoint covers, even when the close claims a clean acknowledgment", async () => {
+  it("retires only the entries a checkpoint covers, even when the close claims a checkpoint", async () => {
     const { server, editor, ws } = await connect("covered");
     for (const word of ["one", " two", " three"]) {
       editor.type(word);
@@ -187,7 +185,7 @@ describe("checkpoint coverage in local recovery", () => {
     const [, , three] = server.accept(ws);
     server.checkpoint([ws], 2);
     await editor.persistence.flush();
-    await editor.close({ acknowledged: true, discard: true });
+    await editor.close({ checkpointed: true, discard: true });
 
     const restarted = openEditor("covered");
     const events = recordCoverage(restarted.docName);
@@ -197,7 +195,7 @@ describe("checkpoint coverage in local recovery", () => {
       [three.id, "accepted"],
     ]);
     // The buffer still holds it, so nothing is resent.
-    expect(durableWrites(ws, restarted.docName).filter((write) => write.id === three.id)).toEqual([
+    expect(updateWrites(ws, restarted.docName).filter((write) => write.id === three.id)).toEqual([
       three,
     ]);
     server.checkpoint([ws]);
@@ -230,7 +228,7 @@ describe("checkpoint coverage in local recovery", () => {
     await restarted.hydrated;
     expect(events.find((event) => event.updateId === lost.id)?.coverage).toBe("local");
     expect(
-      durableWrites(ws, restarted.docName)
+      updateWrites(ws, restarted.docName)
         .filter((write) => write.id === lost.id)
         .at(-1)?.update,
     ).toEqual(lost.update);
@@ -249,20 +247,20 @@ describe("checkpoint coverage in local recovery", () => {
     const [accepted] = server.accept(ws);
     editor.type(" unanswered");
     vi.advanceTimersByTime(BATCH_MS);
-    const unanswered = durableWrites(ws, editor.docName).at(-1)!;
+    const unanswered = updateWrites(ws, editor.docName).at(-1)!;
     await editor.persistence.flush();
     const replacement = new FakeRealtimeServer(editor.docName, "G2", "replacement");
     replacement.attach(ws);
 
     // The session hook reopens on the new generation while the old session is still closing.
-    const closing = editor.close({ acknowledged: false, discard: false });
+    const closing = editor.close({ checkpointed: false, discard: false });
     const reopened = openEditor("replaced");
-    const writesBefore = durableWrites(ws, reopened.docName).length;
+    const writesBefore = updateWrites(ws, reopened.docName).length;
     replacement.attach(ws);
     await reopened.hydrated;
     await closing;
     vi.advanceTimersByTime(BATCH_MS);
-    const resent = durableWrites(ws, reopened.docName).slice(writesBefore);
+    const resent = updateWrites(ws, reopened.docName).slice(writesBefore);
     expect(resent.map((write) => write.id)).not.toContain(accepted.id);
     expect(resent.map((write) => write.id)).not.toContain(unanswered.id);
     expect(pending(reopened)).toEqual({ transportPending: false, checkpointPending: false });
@@ -276,7 +274,7 @@ describe("checkpoint coverage in local recovery", () => {
     const { server, editor, ws } = await connect("unaccepted", "base");
     editor.type(" offline tail");
     vi.advanceTimersByTime(BATCH_MS);
-    const [unsent] = durableWrites(ws, editor.docName);
+    const [unsent] = updateWrites(ws, editor.docName);
     ws.serverClose(1006);
     await editor.persistence.flush();
     await editor.close();
@@ -287,7 +285,7 @@ describe("checkpoint coverage in local recovery", () => {
     replacement.open();
     server.attach(replacement);
     await restarted.hydrated;
-    expect(durableWrites(replacement, restarted.docName)).toContainEqual(unsent);
+    expect(updateWrites(replacement, restarted.docName)).toContainEqual(unsent);
     vi.advanceTimersByTime(BATCH_MS);
     server.accept(replacement);
     server.checkpoint([replacement]);
@@ -403,10 +401,10 @@ describe("edit access removed", () => {
     server.removeEditAccess(ws);
     server.checkpoint([ws]);
     expect(pending(editor)).toEqual({ transportPending: false, checkpointPending: false });
-    await editor.persistence.acknowledge();
+    await editor.persistence.markCheckpointed();
     expect(await readRecoveredDrafts(editor.ydoc)).toEqual([]);
     expect(await discoverStoredPendingDocs("alice")).toBe(false);
-    await editor.close({ acknowledged: false, discard: false });
+    await editor.close({ checkpointed: false, discard: false });
 
     const reopened = openEditor("revoked");
     server.attach(ws);
@@ -435,7 +433,7 @@ describe("edit access removed", () => {
     await reopened.hydrated;
     expect(reopened.ydoc.getText("markdown").toString()).toBe("Shared note. Typed offline.");
     vi.advanceTimersByTime(BATCH_MS);
-    expect(durableWrites(replacement, reopened.docName)).toEqual([]);
+    expect(updateWrites(replacement, reopened.docName)).toEqual([]);
     await eventually(async () =>
       expect((await readRecoveredDrafts(reopened.ydoc)).map((draft) => draft.text)).toEqual([
         "Shared note. Typed offline.",
@@ -463,7 +461,7 @@ describe("edit access removed", () => {
         "Shared note. Typed as access went.",
       ]),
     );
-    expect(durableWrites(ws, editor.docName)).toEqual([]);
+    expect(updateWrites(ws, editor.docName)).toEqual([]);
     await editor.close();
   });
 });
