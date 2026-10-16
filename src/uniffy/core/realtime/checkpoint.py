@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Sequen
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
+from uuid import UUID
 
 import pycrdt
 import valkey.asyncio as aioredis
@@ -153,6 +154,20 @@ async def stage_recovered(
     row.updates, row.state_vector = compact_checkpoint(row.updates, updates)
     row.revision += 1
     row.actor_id = updates[-1].actor_id
+    row.updated_at = datetime.now(UTC)
+
+
+def stage_checkpoint(
+    row: RealtimeYjsSnapshot, updates: bytes, *, covered: int, actor_id: UUID | None
+) -> None:
+    """Write live bytes and the sequence they cover into the caller's transaction.
+
+    Raises ``ValueError`` on undecodable bytes. Covered records are trimmed only after the commit.
+    """
+    row.updates, row.state_vector = compact_checkpoint(updates, ())
+    row.checkpoint_seq = covered
+    row.revision += 1
+    row.actor_id = actor_id
     row.updated_at = datetime.now(UTC)
 
 
@@ -369,29 +384,40 @@ async def clean_checkpoint(buffer: UpdateBuffer, scope: BufferScope) -> TrimResu
         return await buffer.trim_committed(scope, watermark)
 
 
-async def _announce(buffer: UpdateBuffer, result: CheckpointResult, enqueue: Enqueue) -> None:
-    scope = result.scope
-    REALTIME_CHECKPOINT_AGE.observe(max(0.0, time.time() - result.accepted_at_ms / 1000))
+async def publish_progress(scope: BufferScope, covered: int, revision: int) -> None:
+    """Announce a committed watermark; a lost message is repaired by resynchronization."""
     try:
         await publish_checkpoint_progress(
             scope.content_type,
             scope.content_id,
             generation=scope.generation,
             epoch=scope.epoch,
-            covered_sequence=result.covered,
-            checkpoint_revision=result.revision,
+            covered_sequence=covered,
+            checkpoint_revision=revision,
         )
     except Exception:
         logger.opt(exception=True).warning("Checkpoint progress was not published")
+
+
+async def enqueue_projection(
+    buffer: UpdateBuffer, key: DocKey, organization_id: UUID, revision: int, enqueue: Enqueue
+) -> None:
+    """One projection job per committed revision; projection recovery covers a lost one."""
     try:
         await enqueue(
             SAVE_REALTIME_SNAPSHOT,
-            f"{buffer.namespace}projection:{scope.content_type.value}:{scope.content_id}:"
-            f"{result.revision}",
-            (scope.content_type.value, str(scope.content_id), str(scope.organization_id), "", ""),
+            f"{buffer.namespace}projection:{key[0].value}:{key[1]}:{revision}",
+            (key[0].value, str(key[1]), str(organization_id), "", ""),
         )
     except Exception:
         logger.opt(exception=True).warning("Projection not enqueued; projection recovery repairs it")
+
+
+async def _announce(buffer: UpdateBuffer, result: CheckpointResult, enqueue: Enqueue) -> None:
+    scope = result.scope
+    REALTIME_CHECKPOINT_AGE.observe(max(0.0, time.time() - result.accepted_at_ms / 1000))
+    await publish_progress(scope, result.covered, result.revision)
+    await enqueue_projection(buffer, _key(scope), scope.organization_id, result.revision, enqueue)
 
 
 async def _settle(buffer: UpdateBuffer, result: CheckpointResult, enqueue: Enqueue) -> None:

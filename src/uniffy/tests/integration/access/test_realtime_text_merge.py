@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete
+from sqlalchemy import delete, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import StaleContentVersionError, ValidationError
@@ -19,6 +20,13 @@ from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 -
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.checkpoint import CheckpointStatus, checkpoint_document
+from uniffy.core.realtime.live import (
+    TextMerge,
+    has_unprojected_content,
+    load_live_document,
+    stage_text_merge,
+)
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.storage import (
@@ -44,6 +52,20 @@ from uniffy.domains.projects.tasks.mutations import TaskMutationOperations
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
 from uniffy.domains.scheduling.calendar.realtime import EventRealtimeAdapter
 from uniffy.infrastructure.database import open_session
+from uniffy.tests.integration.access.realtime_live import (
+    BufferedDocument,
+    doc_messages,  # noqa: F401 - fixture
+    doc_subscription,
+    establish,
+    live_note,  # noqa: F401 - fixture
+    published_progress,
+    published_replacements,
+    stored,
+    text_of,
+    typed,
+    unreachable_buffer,  # noqa: F401 - fixture
+    valkey,
+)
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -195,97 +217,34 @@ async def note_document(session: AsyncSession, access: SimpleNamespace):
     await session.commit()
 
 
-@pytest.mark.parametrize("projected", [False, True])
-async def test_task_description_write_merges_into_live_generation(
-    session: AsyncSession, access: SimpleNamespace, task_document: SimpleNamespace, projected: bool
-) -> None:
-    client = await _type_live(task_document, access)
-    if projected:
-        await _project(task_document, access)
-    content = TaskContentOperations(session, search_indexer=AsyncMock())
-    with (
-        patch.object(content, "_index_for_search", new_callable=AsyncMock) as index,
-        patch(
-            "uniffy.domains.projects.tasks.mutations.publish_content_replace",
-            new_callable=AsyncMock,
-        ) as publish,
-    ):
-        task, _ = await TaskMutationOperations(session, content).update(
-            access.member_id,
-            access.org_id,
-            task_document.row.id,
-            description="base agent",
-            base_description="base",
-        )
-    assert task.description == MERGED
-    assert index.await_args.args[0].description == MERGED
-    publish.assert_awaited_once_with(*task_document.key, MERGED)
-    await _assert_merged_snapshot(task_document, access.member_id)
-    await _assert_same_generation_update_accepted(task_document, access, client)
+async def _column(document: SimpleNamespace) -> str | None:
+    """The domain column a plain write stored, read outside the writer's session."""
+    kind, content_id = document.key
+    model = {ContentType.TASK: Task, ContentType.CALENDAR_EVENT: CalendarEvent}.get(kind)
+    async with open_session() as db:
+        if model is None:
+            return await db.scalar(select(Note.content).where(Note.id == content_id))
+        return await db.scalar(select(model.description).where(model.id == content_id))
 
 
 @pytest.mark.parametrize("projected", [False, True])
-async def test_event_description_write_merges_into_live_generation(
-    session: AsyncSession, access: SimpleNamespace, event_document: SimpleNamespace, projected: bool
+async def test_plain_write_merges_into_live_generation_and_tells_resident_replicas(
+    session: AsyncSession, access: SimpleNamespace, document: SimpleNamespace, projected: bool
 ) -> None:
-    client = await _type_live(event_document, access)
+    client = await _type_live(document, access)
     if projected:
-        await _project(event_document, access)
-    operations = CalendarEventOperations(session, MagicMock())
-    with (
-        patch.object(operations, "_index_for_search", new_callable=AsyncMock) as index,
-        patch(
-            "uniffy.domains.scheduling.calendar.events.updates.publish_content_replace",
-            new_callable=AsyncMock,
-        ) as publish,
-    ):
-        event = await operations.update(
-            access.member_id,
-            access.org_id,
-            event_document.row.id,
-            description="base agent",
-            base_description="base",
-            call_lifecycle=MagicMock(),
-        )
-    assert event.description == MERGED
-    assert index.await_args.args[0].description == MERGED
-    publish.assert_awaited_once_with(*event_document.key, MERGED)
-    await _assert_merged_snapshot(event_document, access.member_id)
-    await _assert_same_generation_update_accepted(event_document, access, client)
+        await _project(document, access)
 
+    async with doc_subscription(document.key) as messages:
+        with patch("uniffy.domains.notes.content.updates.emit_notification", new_callable=AsyncMock):
+            row = await _write(session, access, document, **_fields(document, "base agent"))
+        replacements = await published_replacements(messages)
 
-@pytest.mark.parametrize("projected", [False, True])
-async def test_note_content_write_without_version_merges_into_live_generation(
-    session: AsyncSession, access: SimpleNamespace, note_document: SimpleNamespace, projected: bool
-) -> None:
-    client = await _type_live(note_document, access)
-    if projected:
-        await _project(note_document, access)
-    operations = NoteOperations(session, MagicMock(), AsyncMock())
-    with (
-        patch.object(operations, "_index_for_search", new_callable=AsyncMock) as index,
-        patch(
-            "uniffy.domains.notes.content.updates.publish_content_replace",
-            new_callable=AsyncMock,
-        ) as publish,
-        patch(
-            "uniffy.domains.notes.content.updates.reconcile_inline_attachments",
-            new_callable=AsyncMock,
-        ),
-        patch("uniffy.domains.notes.content.updates.emit_notification", new_callable=AsyncMock),
-    ):
-        note = await operations.update(
-            access.member_id,
-            access.org_id,
-            note_document.row.id,
-            content="base agent",
-            base_content="base",
-        )
-    assert note.content == MERGED
-    assert index.await_args.args[0].content == MERGED
-    publish.assert_awaited_once_with(*note_document.key, MERGED)
-    await _assert_merged_snapshot(note_document, access.member_id)
-    await _assert_same_generation_update_accepted(note_document, access, client)
+    assert getattr(row, next(iter(_fields(document, "")))) == MERGED
+    assert await _column(document) == MERGED
+    assert replacements == [MERGED]
+    await _assert_merged_snapshot(document, access.member_id)
+    await _assert_same_generation_update_accepted(document, access, client)
 
 
 async def test_note_content_write_with_version_still_rejects_unprojected_edits(
@@ -405,3 +364,254 @@ async def test_scoped_event_copy_preserves_unprojected_text(
     assert row.id != event_document.key[1]
     snapshot = await load_snapshot(session, event_document.key)
     assert str(markdown_text(decode_snapshot(snapshot))) == LIVE
+
+
+async def _merge(note: BufferedDocument, *, base: str, incoming: str) -> TextMerge:
+    async with open_session() as db:
+        await lock_document(db, note.key, note.org)
+        merge = await stage_text_merge(
+            note.buffer,
+            db,
+            note.key,
+            note.org,
+            note.owner,
+            base=base,
+            stored=base,
+            incoming=incoming,
+        )
+        await db.commit()
+    await merge.after_commit()
+    return merge
+
+
+async def test_stale_base_write_merges_with_buffered_edits_and_covers_them(
+    live_note: BufferedDocument, doc_messages
+) -> None:
+    alice = typed(live_note.base, suffix=" Alice")
+    await live_note.admit("u-alice", alice)
+    await live_note.admit("u-bob", typed(live_note.base, alice, suffix=" Bob"), live_note.peer)
+    before = await stored(live_note.key)
+
+    async with open_session() as db:
+        await lock_document(db, live_note.key, live_note.org)
+        merge = await stage_text_merge(
+            live_note.buffer,
+            db,
+            live_note.key,
+            live_note.org,
+            live_note.owner,
+            base="base",
+            stored="base",
+            incoming="base agent",
+        )
+        await db.commit()
+    uncleaned = await live_note.stream_ids()
+    await merge.after_commit()
+
+    assert merge.text == "base Alice Bob agent"
+    assert uncleaned == [b"1-0", b"2-0"]
+    row = await stored(live_note.key)
+    assert text_of(row.updates) == merge.text
+    assert (row.checkpoint_seq, row.revision, row.rendered_revision, row.actor_id) == (
+        2,
+        before.revision + 1,
+        before.revision + 1,
+        live_note.owner,
+    )
+    assert (row.generation, row.buffer_epoch) == (live_note.generation, live_note.head.scope.epoch)
+    assert await live_note.buffer_state() == {
+        "stream": [],
+        "control": 1,
+        "receipts": [],
+        "due": None,
+    }
+    assert await published_progress(doc_messages) == [
+        {
+            "generation": live_note.generation,
+            "epoch": live_note.head.scope.epoch,
+            "covered_sequence": 2,
+            "checkpoint_revision": row.revision,
+        }
+    ]
+
+
+async def test_append_arriving_during_a_merge_survives_its_cleanup(
+    live_note: BufferedDocument,
+) -> None:
+    alice = typed(live_note.base, suffix=" Alice")
+    await live_note.admit("u-alice", alice)
+
+    async with open_session() as db:
+        await lock_document(db, live_note.key, live_note.org)
+        merge = await stage_text_merge(
+            live_note.buffer,
+            db,
+            live_note.key,
+            live_note.org,
+            live_note.owner,
+            base="base",
+            stored="base",
+            incoming="base agent",
+        )
+        # Another process appends while this transaction still holds the staged checkpoint.
+        await live_note.admit("u-carol", typed(live_note.base, alice, suffix=" Carol"))
+        await db.commit()
+    await merge.after_commit()
+
+    row = await stored(live_note.key)
+    assert row.checkpoint_seq == 1
+    assert text_of(row.updates) == "base Alice agent"
+    state = await live_note.buffer_state()
+    assert (state["stream"], state["receipts"]) == ([b"2-0"], [b"u-carol"])
+    assert state["due"] is not None
+    async with open_session() as db:
+        live = await load_live_document(live_note.buffer, db, live_note.key)
+    assert live is not None
+    assert live.text() in {"base Alice agent Carol", "base Alice Carol agent"}
+
+    result = await checkpoint_document(
+        live_note.buffer, live_note.head.scope, enqueue=live_note.jobs
+    )
+    assert (result.status, result.covered) == (CheckpointStatus.COMMITTED, 2)
+    assert await live_note.stream_ids() == []
+
+
+async def test_failed_write_after_a_staged_merge_leaves_row_and_buffer_intact(
+    live_note: BufferedDocument,
+) -> None:
+    alice = typed(live_note.base, suffix=" Alice")
+    await live_note.admit("u-alice", alice)
+    await live_note.admit("u-bob", typed(live_note.base, alice, suffix=" Bob"), live_note.peer)
+    before = await stored(live_note.key)
+    buffered = await live_note.buffer_state()
+
+    async with open_session() as db:
+        await lock_document(db, live_note.key, live_note.org)
+        await stage_text_merge(
+            live_note.buffer,
+            db,
+            live_note.key,
+            live_note.org,
+            live_note.owner,
+            base="base",
+            stored="base",
+            incoming="base agent",
+        )
+        # A later domain write in the same transaction fails, so nothing of it may commit.
+        db.add(
+            Note(
+                organization_id=generate_id(),
+                owner_id=live_note.owner,
+                title="Orphan",
+                slug=f"orphan-{generate_id().hex}",
+            )
+        )
+        with pytest.raises(IntegrityError):
+            await db.commit()
+        await db.rollback()
+
+    row = await stored(live_note.key)
+    assert (row.updates, row.revision, row.rendered_revision, row.checkpoint_seq) == (
+        before.updates,
+        before.revision,
+        before.rendered_revision,
+        before.checkpoint_seq,
+    )
+    assert await live_note.buffer_state() == buffered
+    async with open_session() as db:
+        live = await load_live_document(live_note.buffer, db, live_note.key)
+    assert live is not None and live.text() == "base Alice Bob"
+
+
+async def test_expected_version_counts_a_buffered_tail_on_a_projected_row(
+    live_note: BufferedDocument,
+) -> None:
+    async def unprojected() -> bool:
+        async with open_session() as db:
+            await lock_document(db, live_note.key, live_note.org)
+            return await has_unprojected_content(live_note.buffer, db, live_note.key)
+
+    assert not await unprojected()
+    await live_note.admit("u-alice", typed(live_note.base, suffix=" Alice"))
+    row = await stored(live_note.key)
+
+    assert row.revision == row.rendered_revision
+    assert await unprojected()
+    # A write that changes nothing still commits the tail, so the column catches up.
+    assert (await _merge(live_note, base="base", incoming="base")).text == "base Alice"
+    assert not await unprojected()
+
+
+@pytest.mark.parametrize("loss", ["control_record", "instance_restart"])
+async def test_merge_after_buffer_loss_moves_surviving_edits_to_a_fresh_epoch(
+    live_note: BufferedDocument, doc_messages, loss: str
+) -> None:
+    alice = typed(live_note.base, suffix=" Alice")
+    await live_note.admit("u-alice", alice)
+    await live_note.admit("u-bob", typed(live_note.base, alice, suffix=" Bob"), live_note.peer)
+    if loss == "control_record":
+        await valkey().delete(live_note.keys.control)
+    else:
+        # The epoch was issued by an instance that has since restarted with its keys intact.
+        async with open_session() as db:
+            await db.execute(
+                update(RealtimeYjsSnapshot)
+                .where(RealtimeYjsSnapshot.content_id == live_note.key[1])
+                .values(valkey_run_id="0" * 40)
+            )
+            await db.commit()
+
+    merge = await _merge(live_note, base="base", incoming="base agent")
+
+    row = await stored(live_note.key)
+    assert merge.text == text_of(row.updates) == "base Alice Bob agent"
+    assert row.generation == live_note.generation
+    assert row.buffer_epoch not in (None, live_note.head.scope.epoch)
+    assert row.checkpoint_seq == 0
+    assert await live_note.buffer_state() == {
+        "stream": [],
+        "control": 0,
+        "receipts": [],
+        "due": None,
+    }
+    assert await published_progress(doc_messages) == [
+        {
+            "generation": live_note.generation,
+            "epoch": row.buffer_epoch,
+            "covered_sequence": 0,
+            "checkpoint_revision": row.revision,
+        }
+    ]
+    fresh = await establish(live_note.buffer, live_note.key, live_note.org)
+    assert (fresh.scope.epoch, fresh.head_seq) == (row.buffer_epoch, 0)
+
+
+async def test_document_without_a_buffer_epoch_merges_while_valkey_is_unreachable(
+    live_note: BufferedDocument, unreachable_buffer
+) -> None:
+    async with open_session() as db:
+        await db.execute(
+            update(RealtimeYjsSnapshot)
+            .where(RealtimeYjsSnapshot.content_id == live_note.key[1])
+            .values(buffer_epoch=None, valkey_run_id=None)
+        )
+        await db.commit()
+
+    async with open_session() as db:
+        await lock_document(db, live_note.key, live_note.org)
+        merge = await stage_text_merge(
+            unreachable_buffer,
+            db,
+            live_note.key,
+            live_note.org,
+            live_note.owner,
+            base="base",
+            stored="base",
+            incoming="base agent",
+        )
+        await db.commit()
+    await merge.after_commit()
+
+    row = await stored(live_note.key)
+    assert merge.text == text_of(row.updates) == "base agent"
+    assert (row.buffer_epoch, row.rendered_revision) == (None, row.revision)

@@ -17,6 +17,7 @@ from uniffy.core.errors import (
 )
 from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.core.types import ContentRole, ContentType
 
 logger = logger.bind(component="notes.rpc.support")
@@ -90,5 +91,8 @@ def map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
     if isinstance(exc, ConflictError):
         return ConnectError(Code.ABORTED, str(exc))
+    if isinstance(exc, LiveStateUnavailable):
+        # Nothing was written; the caller keeps its submission and retries.
+        return ConnectError(Code.UNAVAILABLE, "Live edits cannot be verified right now; retry")
     logger.exception("Notes RPC failed", operation=operation)
     return ConnectError(Code.INTERNAL, "Internal server error")

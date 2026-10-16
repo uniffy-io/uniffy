@@ -6,6 +6,9 @@ from zoneinfo import ZoneInfo
 
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.live import LiveStateUnavailable, load_live_document
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.runtime.output_format import OutputSurface
@@ -257,8 +260,19 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     result = await _format_event_result("Event", event, ctx=ctx)
 
-    if event.description:
-        result += f"\nDescription: {event.description}"
+    description = event.description
+    key = (ContentType.CALENDAR_EVENT, event.id)
+    await lock_document(ctx.session, key, ctx.organization_id)
+    try:
+        live = await load_live_document(UpdateBuffer(), ctx.session, key)
+    except LiveStateUnavailable:
+        # The stored text is still a safe base: a description merge keeps live-only edits.
+        live = None
+    if live is not None and live.unprojected:
+        # Editors are ahead of the stored text; a description edit must start from theirs.
+        description = live.text()
+    if description:
+        result += f"\nDescription: {description}"
 
     if attendees:
         att_lines = []
@@ -889,7 +903,8 @@ update_event = ToolDefinition(
             "base_description": {
                 "type": "string",
                 "description": (
-                    "Exact original description read before editing. Required with description."
+                    "Exact description from calendar.read_event before editing. "
+                    "Required with description."
                 ),
             },
             "start_time": {

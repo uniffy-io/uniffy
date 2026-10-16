@@ -19,6 +19,7 @@ from uniffy_proto.cal.v1.calendar_pb import (
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import timestamp_to_datetime
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, RecurrencePattern
 from uniffy.domains.scheduling.calendar import queries
@@ -46,6 +47,9 @@ from uniffy.infrastructure.database import open_session
 
 
 class EventMutationHandlers:
+    # Accepted realtime edits that description writes merge with and checkpoint.
+    buffer: UpdateBuffer = UpdateBuffer()
+
     async def create_event(
         self,
         request: CreateEventRequest,
@@ -239,7 +243,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                operations = CalendarEventOperations(session, self.search_indexer)
+                operations = CalendarEventOperations(session, self.search_indexer, self.buffer)
                 event = await operations.update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -288,7 +292,7 @@ class EventMutationHandlers:
 
         try:
             async with open_session() as session:
-                await CalendarEventOperations(session, self.search_indexer).delete(
+                await CalendarEventOperations(session, self.search_indexer, self.buffer).delete(
                     user_id=user_id,
                     organization_id=organization_id,
                     event_id=event_id,

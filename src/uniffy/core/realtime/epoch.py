@@ -124,6 +124,44 @@ async def _settle(
     return None
 
 
+async def surviving_prefix(
+    buffer: UpdateBuffer, row: RealtimeYjsSnapshot
+) -> tuple[tuple[BufferedUpdate, ...], int]:
+    """The provable contiguous tail of the row's epoch and the sequence its retirement covers."""
+    previous = row_scope(row)
+    head_seq = await buffer.control_head(previous)
+    recovered: tuple[BufferedUpdate, ...] = ()
+    if head_seq is None or head_seq > row.checkpoint_seq:
+        recovered, _ = await buffer.read_prefix(
+            previous, row.checkpoint_seq, head_seq, MAX_PENDING_DOCUMENT_RECORDS
+        )
+    return recovered, recovered[-1].seq if recovered else row.checkpoint_seq
+
+
+async def start_epoch(
+    buffer: UpdateBuffer,
+    row: RealtimeYjsSnapshot,
+    organization_id: UUID,
+    identity: ValkeyIdentity,
+) -> BufferScope:
+    """Bind the staged row to a fresh epoch at the revision it is about to commit.
+
+    The control record exists before the commit releases the document lock, so a caller queued
+    on that lock finds a healthy epoch instead of replacing it again.
+    """
+    if row.generation is None:
+        raise LookupError(f"{row.content_type.value}:{row.content_id} has no Yjs generation")
+    fresh = BufferScope(
+        organization_id, row.content_type, row.content_id, row.generation, str(uuid4())
+    )
+    await buffer.initialize(fresh, row.revision)
+    row.organization_id = organization_id
+    row.buffer_epoch = fresh.epoch
+    row.valkey_run_id = identity.run_id
+    row.checkpoint_seq = 0
+    return fresh
+
+
 async def _reset(
     buffer: UpdateBuffer,
     db: AsyncSession,
@@ -135,28 +173,13 @@ async def _reset(
 ) -> None:
     previous = None if row.buffer_epoch is None else row_scope(row)
     recovered: tuple[BufferedUpdate, ...] = ()
+    retire_through = row.checkpoint_seq
     if previous is not None:
-        head_seq = await buffer.control_head(previous)
-        if head_seq is None or head_seq > row.checkpoint_seq:
-            recovered, _ = await buffer.read_prefix(
-                previous, row.checkpoint_seq, head_seq, MAX_PENDING_DOCUMENT_RECORDS
-            )
-    retire_through = recovered[-1].seq if recovered else row.checkpoint_seq
-    if row.generation is None:
-        raise LookupError(f"{row.content_type.value}:{row.content_id} has no Yjs generation")
-    fresh = BufferScope(
-        organization_id, row.content_type, row.content_id, row.generation, str(uuid4())
-    )
-    # The control record exists before the commit releases the document lock, so a caller
-    # queued on that lock finds a healthy epoch instead of replacing it again.
-    await buffer.initialize(fresh, row.revision)
+        recovered, retire_through = await surviving_prefix(buffer, row)
+    if recovered:
+        await stage_recovered(db, row, recovered)
+    fresh = await start_epoch(buffer, row, organization_id, identity)
     try:
-        if recovered:
-            await stage_recovered(db, row, recovered)
-        row.organization_id = organization_id
-        row.buffer_epoch = fresh.epoch
-        row.valkey_run_id = identity.run_id
-        row.checkpoint_seq = 0
         db.add(row)
         await db.commit()
     except BaseException:

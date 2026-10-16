@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 from uniffy.core.errors import RateLimitExceededError
+from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
@@ -172,3 +173,15 @@ async def test_sensitive_exception_is_genericized() -> None:
         "Internal error executing t.leaky. The operation could not be completed."
     )
     assert "SELECT" not in result.error
+
+
+async def test_unverifiable_live_edits_tell_the_agent_nothing_changed_and_to_retry() -> None:
+    async def _exec(_ctx: ToolContext, _args: dict) -> ToolResult:
+        raise LiveStateUnavailable("Pending realtime edits cannot be verified; retry")
+
+    tool = ToolDefinition(name="t.writer", description="", executor=_exec, read_only=True)
+    result = await _executor_for(tool).execute(_call("t.writer"))
+    assert not result.success
+    assert result.error is not None
+    assert "No content was changed" in result.error
+    assert "retry the same call" in result.error

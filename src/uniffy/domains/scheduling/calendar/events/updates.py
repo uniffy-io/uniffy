@@ -22,9 +22,9 @@ from uniffy.core.events.realtime import ContentAccessAction, publish_content_cha
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.realtime.limits import validate_document_size
+from uniffy.core.realtime.live import TextMerge, stage_text_merge
 from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
-from uniffy.core.realtime.storage import lock_document, stage_text_merge
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -190,11 +190,14 @@ class EventUpdateOperations:
 
         old_references = list(event.outgoing_references) if event.outgoing_references else None
 
-        if title is not None:
-            event.title = title
+        if base_description is not None and description == base_description:
+            # An unchanged description is a metadata save; it must not checkpoint live edits.
+            description = None
+        merge: TextMerge | None = None
         if description is not None:
-            validate_document_size(description)
-            merged = await stage_text_merge(
+            # Merged before any row changes, so a retryable live-state failure leaves none behind.
+            merge = await stage_text_merge(
+                self.events.buffer,
                 self.events.session,
                 (ContentType.CALENDAR_EVENT, event_id),
                 organization_id,
@@ -203,10 +206,12 @@ class EventUpdateOperations:
                 stored=event.description or "",
                 incoming=description,
             )
-            event.description = merged
+            event.description = merge.text
             event.outgoing_references = (
                 extract_all_outgoing_references(event.description, organization_id) or None
             )
+        if title is not None:
+            event.title = title
         if start_time is not None:
             event.start_time = start_time
         if end_time is not None:
@@ -388,17 +393,17 @@ class EventUpdateOperations:
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
-        if description is not None:
-            validate_document_size(description)
+        if merge is not None:
             await stage_inline_reconciliation(
                 self.events.session, ContentType.CALENDAR_EVENT, event.id, organization_id
             )
         await self.events.session.commit()
+        if merge is not None:
+            await merge.after_commit()
         await self.events.session.refresh(event)
         if visibility is not None or attendee_ids is not None:
             await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
-        if description is not None:
-            validate_document_size(description)
+        if merge is not None:
             await publish_content_changed(ContentType.CALENDAR_EVENT, event.id, organization_id)
             await publish_content_replace(
                 ContentType.CALENDAR_EVENT, event.id, event.description or ""
@@ -462,8 +467,7 @@ class EventUpdateOperations:
         if became_cancelled:
             await self.events._emit_cancellation_notification(event, user_id, organization_id)
 
-        if description is not None:
-            validate_document_size(description)
+        if merge is not None:
             if attendee_ids is not None:
                 current_attendee_ids = set(attendee_ids)
             else:

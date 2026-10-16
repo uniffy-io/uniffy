@@ -57,12 +57,13 @@ from uniffy.core.realtime.dispatch import (
 )
 from uniffy.core.realtime.epoch import ensure_epoch
 from uniffy.core.realtime.job_contracts import CHECKPOINT_REALTIME_DOCUMENT, SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.live import stage_text_merge
 from uniffy.core.realtime.maintenance import REPAIR_ROTATION_MS, MaintenanceAction, maintain_buffer
 from uniffy.core.realtime.markdown import DOC_GENERATION_KEY, DOC_META_FIELD, markdown_text
 from uniffy.core.realtime.publisher import doc_channel
 from uniffy.core.realtime.snapshot import SnapshotOutcome, persist_snapshot
 from uniffy.core.realtime.state import DocKey
-from uniffy.core.realtime.storage import load_snapshot, lock_document, stage_text_merge
+from uniffy.core.realtime.storage import load_snapshot, lock_document
 from uniffy.core.types import ContentType
 from uniffy.domains.notes.adapter import NoteRealtimeAdapter
 from uniffy.infrastructure.database.session import open_session
@@ -329,29 +330,57 @@ async def test_cleanup_after_a_commit_keeps_the_append_that_arrived_after_captur
     assert await env.buffer.bucket_usage(head.scope.bucket) == PendingUsage(0, 0)
 
 
-async def test_commit_over_a_stale_capture_retries_from_the_newer_row(env) -> None:
+async def rpc_merge(env: SimpleNamespace, incoming: str) -> RealtimeYjsSnapshot:
+    """An ordinary text write committing over live state, cleanup included."""
+    async with open_session() as db:
+        await lock_document(db, env.key, env.org)
+        merge = await stage_text_merge(
+            env.buffer,
+            db,
+            env.key,
+            env.org,
+            env.carol,
+            base="base",
+            stored="base",
+            incoming=incoming,
+        )
+        await db.commit()
+    await merge.after_commit()
+    return await stored_row(env.key)
+
+
+@pytest.mark.parametrize("appended", [False, True], ids=["covered", "carol-appends"])
+async def test_commit_over_a_stale_capture_retries_from_the_newer_row(env, appended) -> None:
     head = await establish(env)
     await admit(env, head, "u-alice", edit(env.base, " Alice"))
     await admit(env, head, "u-bob", edit(env.base, " Bob"), actor=env.bob)
 
     capture = await capture_checkpoint(env.buffer, head.scope)
-    async with open_session() as db:
-        await lock_document(db, env.key, env.org)
-        await stage_text_merge(
-            db, env.key, env.org, env.carol, base="base", stored="base", incoming="RPC base"
-        )
-        await db.commit()
-    rpc = await stored_row(env.key)
+    rpc = await rpc_merge(env, "RPC base")
+    if appended:
+        await admit(env, head, "u-carol", edit(rpc.updates, " Carol"), actor=env.carol)
     result = await commit_checkpoint(env.buffer, capture)
 
     assert isinstance(capture, CheckpointCapture)
     assert capture.revision == head.checkpoint_revision < rpc.revision
-    assert (result.status, result.retries, result.covered) == (CheckpointStatus.COMMITTED, 1, 2)
+    assert rpc.checkpoint_seq == 2
     row = await stored_row(env.key)
-    assert (row.revision, row.checkpoint_seq) == (rpc.revision + 1, 2)
     assert (row.generation, row.buffer_epoch) == (head.scope.generation, head.scope.epoch)
+    if appended:
+        # The recapture finds only Carol's append past the write's watermark.
+        assert (result.status, result.retries, result.covered) == (
+            CheckpointStatus.COMMITTED,
+            1,
+            3,
+        )
+        assert (row.revision, row.checkpoint_seq) == (rpc.revision + 1, 3)
+    else:
+        assert (result.status, result.retries, result.covered) == (CheckpointStatus.CLEAN, 1, 2)
+        assert (row.revision, row.checkpoint_seq) == (rpc.revision, 2)
     merged = text_of(row.updates)
     assert all(word in merged for word in ("RPC", "Alice", "Bob"))
+    assert ("Carol" in merged) is appended
+    assert await stream_ids(head, env.namespace) == ([b"3-0"] if appended else [])
 
 
 async def test_cleanup_rerun_after_a_lost_trim_removes_only_the_committed_prefix(env) -> None:
@@ -818,9 +847,7 @@ async def test_maintenance_recounts_one_bucket_per_period_from_its_streams(env) 
         mapping={"bytes": drifted.bytes, "records": drifted.records},
     )
 
-    await maintain_buffer(
-        env.buffer, now_ms=(bucket + 1) % BUCKET_COUNT * REPAIR_ROTATION_MS
-    )
+    await maintain_buffer(env.buffer, now_ms=(bucket + 1) % BUCKET_COUNT * REPAIR_ROTATION_MS)
     elsewhere = await env.buffer.bucket_usage(bucket)
     await maintain_buffer(env.buffer, now_ms=bucket * REPAIR_ROTATION_MS)
 

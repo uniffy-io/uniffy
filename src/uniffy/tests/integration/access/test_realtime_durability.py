@@ -20,6 +20,10 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.job_contracts import SAVE_REALTIME_SNAPSHOT
+from uniffy.core.realtime.lifecycle import stage_replacement
 from uniffy.core.realtime.markdown import markdown_text
 from uniffy.core.realtime.rename import stage_mention_rename
 from uniffy.core.realtime.snapshot import persist_snapshot
@@ -33,10 +37,10 @@ from uniffy.core.realtime.storage import (
     decode_snapshot,
     load_snapshot,
     lock_document,
-    stage_replacement,
     stage_seed,
 )
 from uniffy.core.realtime.ydoc_manager import YDocManager
+from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AccessMode,
     ContentRole,
@@ -53,8 +57,8 @@ from uniffy.domains.notifications.delivery.app import InAppAdapter
 from uniffy.domains.notifications.jobs.events import deliver_notification_outbox
 from uniffy.domains.projects.realtime import TaskRealtimeAdapter
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
-from uniffy.domains.search.rename import propagate_rename
 from uniffy.infrastructure.database.session import open_session
+from uniffy.tests.integration.access.realtime_live import Recorder
 
 emit_mentions = TaskNotifications.emit_mention_notifications
 
@@ -82,25 +86,19 @@ async def document(session, access):
     )
     session.add(task)
     await session.commit()
-    adapter = TaskRealtimeAdapter(MagicMock())
+    indexer = AsyncMock(spec=SearchIndexer)
+    adapter = TaskRealtimeAdapter(indexer)
+    register_realtime_adapter(adapter)
     key = ContentType.TASK, task.id
-    with (
-        patch("uniffy.core.realtime.storage.get_realtime_adapter", return_value=adapter),
-        patch("uniffy.core.realtime.snapshot.get_realtime_adapter", return_value=adapter),
-        patch(
-            "uniffy.domains.projects.tasks.realtime.TaskContentOperations._index_for_search",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "uniffy.domains.projects.tasks.realtime.TaskNotifications.emit_mention_notifications",
-            new_callable=AsyncMock,
-        ),
+    with patch(
+        "uniffy.domains.projects.tasks.realtime.TaskNotifications.emit_mention_notifications",
+        new_callable=AsyncMock,
     ):
         async with open_session() as db:
             await lock_document(db, key)
             seed = await stage_seed(db, key, access.org_id)
             await db.commit()
-        yield SimpleNamespace(key=key, seed=seed, access=access, adapter=adapter)
+        yield SimpleNamespace(key=key, seed=seed, access=access, adapter=adapter, indexer=indexer)
     await session.rollback()
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == task.id)
@@ -171,8 +169,11 @@ async def test_external_replacement_fences_resident_and_queued_state(document):
         await lock_document(db, document.key)
         task = await db.get(Task, document.key[1])
         task.description = "external replacement"
-        await stage_replacement(db, document.key, document.access.org_id)
+        after_commit = await stage_replacement(
+            UpdateBuffer(), db, document.key, document.access.org_id
+        )
         await db.commit()
+    await after_commit()
     with pytest.raises(GenerationConflict):
         await accepted(document, stale)
     await persist_snapshot(
@@ -272,7 +273,7 @@ async def test_failed_external_replacement_rolls_back_domain_and_generation(docu
         await lock_document(db, document.key)
         task = await db.get(Task, document.key[1])
         task.description = "never committed"
-        await stage_replacement(db, document.key, document.access.org_id)
+        await stage_replacement(UpdateBuffer(), db, document.key, document.access.org_id)
         await db.rollback()
     async with open_session() as db:
         task = await db.get(Task, document.key[1])
@@ -547,15 +548,11 @@ async def test_projection_failure_retains_original_mentions_and_retries_search(d
     mention = f" [[[Peer|urn:uniffy:content:USER:{document.access.peer_id}]]]"
     markdown_text(doc).insert(4, mention)
     await accepted(document, doc)
-    with (
-        patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions),
-        patch(
-            "uniffy.domains.projects.tasks.realtime.TaskContentOperations._index_for_search",
-            AsyncMock(side_effect=OSError("search down")),
-        ),
-    ):
+    document.indexer.index.side_effect = OSError("search down")
+    with patch.object(TaskNotifications, "emit_mention_notifications", new=emit_mentions):
         with pytest.raises(OSError, match="search down"):
             await project(document)
+    document.indexer.index.side_effect = None
     async with open_session() as db:
         snapshot = await load_snapshot(db, document.key)
         assert snapshot.effects_pending
@@ -610,18 +607,27 @@ async def test_projection_failure_retains_original_mentions_and_retries_search(d
         await db.commit()
 
 
-async def test_rename_grafts_live_text_and_survives_late_typing(document):
+async def rename(document, urn: str) -> Recorder:
+    jobs = Recorder()
+    async with open_session() as db:
+        await lock_document(db, document.key)
+        after_commit = await stage_mention_rename(
+            UpdateBuffer(), db, document.key, document.access.org_id, urn, "Renamed", enqueue=jobs
+        )
+        assert after_commit is not None
+        await db.commit()
+    await after_commit()
+    return jobs
+
+
+async def test_rename_grafts_unprojected_text_and_survives_late_typing(document):
     urn = f"urn:uniffy:content:USER:{document.access.peer_id}"
     doc = decode_snapshot(document.seed)
     markdown_text(doc).insert(4, f" [[[Old|{urn}]]] human")
     await accepted(document, doc)
-    # Column references have not projected yet; rename must still discover this document.
-    async with open_session() as db:
-        with (
-            patch("uniffy.domains.search.rename.enqueue_job", AsyncMock()),
-            patch("uniffy.domains.search.rename.publish_content_replace", AsyncMock()),
-        ):
-            assert await propagate_rename(db, document.access.org_id, urn, "Renamed") == 1
+    # The column has not projected the mention yet; the rename lands in the live state.
+    jobs = await rename(document, urn)
+    assert [job[0] for job in jobs.jobs] == [SAVE_REALTIME_SNAPSHOT.name]
     markdown_text(doc).insert(len(markdown_text(doc)), " offline")
     snapshot = await accepted(document, doc)
     assert snapshot.generation == document.seed.generation
@@ -756,10 +762,7 @@ async def test_canvas_rename_keeps_other_fields_and_concurrent_text(document):
         "x": 22,
     })
     await accepted(document, doc)
-    async with open_session() as db:
-        await lock_document(db, document.key)
-        assert await stage_mention_rename(db, document.key, document.access.org_id, urn, "Renamed")
-        await db.commit()
+    await rename(document, urn)
     node = doc.get("nodes", type=pycrdt.Map)["node"]
     node["data"]["content"].insert(len(node["data"]["content"]), " peer")
     snapshot = await accepted(document, doc)

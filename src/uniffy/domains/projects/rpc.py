@@ -7,6 +7,7 @@ from connectrpc.errors import ConnectError
 from loguru import logger
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.realtime.live import LiveStateUnavailable
 
 logger = logger.bind(component="projects.rpc")
 
@@ -25,5 +26,8 @@ def map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    if isinstance(exc, LiveStateUnavailable):
+        # Nothing was written; the caller keeps its submission and retries.
+        return ConnectError(Code.UNAVAILABLE, "Live edits cannot be verified right now; retry")
     logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")

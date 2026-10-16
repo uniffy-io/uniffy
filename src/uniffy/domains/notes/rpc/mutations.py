@@ -27,7 +27,9 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import NodeType
+from uniffy.domains.notes.content.updates import NoteUpdates
 from uniffy.domains.notes.converters import node_type_from_proto, note_to_proto
 from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.notes.rpc.support import (
@@ -69,6 +71,9 @@ async def _note_proto(
 
 
 class NoteMutationHandlers:
+    # Accepted realtime edits that content writes merge with and checkpoint.
+    buffer: UpdateBuffer = UpdateBuffer()
+
     async def create_note(
         self,
         request: CreateNoteRequest,
@@ -153,10 +158,9 @@ class NoteMutationHandlers:
 
         try:
             async with open_session() as session:
-                note = await NoteOperations(
-                    session,
-                    self.storage,
-                    self.search_indexer,
+                note = await NoteUpdates(
+                    NoteOperations(session, self.storage, self.search_indexer),
+                    self.buffer,
                 ).update(
                     user_id=user_id,
                     organization_id=organization_id,

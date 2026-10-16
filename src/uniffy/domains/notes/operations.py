@@ -172,8 +172,5 @@ class NoteOperations(NoteProjectionOperations):
     ) -> None:
         await NoteHierarchy(self).require_moveable_under(note_id, parent_id, organization_id)
 
-    async def _collect_descendant_ids(self, note: Note) -> list[UUID]:
-        return await NoteHierarchy(self).collect_descendant_ids(note)
-
 
 __all__ = ["NoteOperations"]

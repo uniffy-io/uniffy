@@ -9,6 +9,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditActorKind
+from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.metrics import AGENT_TOOL_CALLS_TOTAL, AGENT_TOOL_DURATION
 from uniffy.domains.agents.providers.base import ToolCall
@@ -26,7 +27,13 @@ MAX_TOOL_RESULT_CHARS = 100_000
 
 # Metric label values stay bounded: the typed failure reasons pass through,
 # every other exception collapses to "error".
-_METRIC_STATUSES = {"timeout", "not_found", "permission_denied", "validation_error"}
+_METRIC_STATUSES = {
+    "timeout",
+    "not_found",
+    "permission_denied",
+    "validation_error",
+    "unavailable",
+}
 
 
 def _metric_status(result: ToolResult, error_reason: str | None) -> str:
@@ -189,6 +196,18 @@ class ToolExecutor:
                 success=False,
                 data="",
                 error=f"Validation error: {exc}",
+            )
+        except LiveStateUnavailable:
+            # Content writes refuse before committing while accepted live edits are unverifiable.
+            logger.warning("Tool deferred: live edits cannot be verified", tool=tool_call.name)
+            error_reason = "unavailable"
+            result = ToolResult(
+                success=False,
+                data="",
+                error=(
+                    "Live edits on this content cannot be verified right now. "
+                    "No content was changed. Wait a moment, then retry the same call."
+                ),
             )
         except Exception as exc:
             logger.exception("Tool execution failed", tool=tool_call.name, error=str(exc))

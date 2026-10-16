@@ -14,9 +14,9 @@ from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.realtime.limits import validate_document_size
-from uniffy.core.realtime.markdown import markdown_text
+from uniffy.core.realtime.live import load_live_document
 from uniffy.core.realtime.merge import merge_plain_text
-from uniffy.core.realtime.storage import decode_snapshot, load_snapshot, lock_document
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
     AttendeeStatus,
     ContentType,
@@ -54,12 +54,11 @@ class RecurrenceMutationOperations:
     async def _description(
         self, master: CalendarEvent, base: str | None, updates: dict[str, object]
     ) -> str:
-        snapshot = await load_snapshot(self.session, (ContentType.CALENDAR_EVENT, master.id))
-        live = (
-            str(markdown_text(decode_snapshot(snapshot)))
-            if snapshot is not None
-            else master.description or ""
+        """Copies start from the master's live text, buffered edits included; the master stays."""
+        document = await load_live_document(
+            self.events.buffer, self.session, (ContentType.CALENDAR_EVENT, master.id)
         )
+        live = document.text() if document is not None else master.description or ""
         incoming = updates.get("description")
         if incoming is None:
             return live

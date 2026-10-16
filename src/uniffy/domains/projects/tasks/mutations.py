@@ -19,9 +19,11 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.lifecycle import stage_hard_delete
+from uniffy.core.realtime.live import TextMerge, stage_text_merge
 from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
-from uniffy.core.realtime.storage import lock_document, stage_text_merge
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
@@ -44,9 +46,15 @@ logger = logger.bind(component="projects.tasks.mutations")
 
 
 class TaskMutationOperations:
-    def __init__(self, session: AsyncSession, content: TaskContentOperations) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        content: TaskContentOperations,
+        buffer: UpdateBuffer | None = None,
+    ) -> None:
         self.session = session
         self.content = content
+        self.buffer = buffer or UpdateBuffer()
 
     async def update(
         self,
@@ -113,8 +121,27 @@ class TaskMutationOperations:
                 task_type=effective_type,
             )
 
+        if base_description is not None and kwargs.get("description") == base_description:
+            # An unchanged description is a metadata save; it must not checkpoint live edits.
+            del kwargs["description"]
+        merge: TextMerge | None = None
+        if "description" in kwargs:  # noqa: PLR2004
+            # Merged before any row changes, so a retryable live-state failure leaves none behind.
+            incoming = kwargs["description"] or ""
+            merge = await stage_text_merge(
+                self.buffer,
+                self.session,
+                (ContentType.TASK, task_id),
+                organization_id,
+                user_id,
+                base=base_description,
+                stored=task.description or "",
+                incoming=incoming,
+            )
+            if merge.text != incoming:
+                kwargs["description"] = merge.text
+
         old_references = list(task.outgoing_references) if task.outgoing_references else None
-        stored_description = task.description or ""
 
         title_changed = "title" in kwargs and kwargs["title"] != task.title  # noqa: PLR2004
         old_status = task.status
@@ -200,18 +227,7 @@ class TaskMutationOperations:
                     new_value=",".join(value) if value else None,
                 )
 
-        if "description" in kwargs:  # noqa: PLR2004
-            merged = await stage_text_merge(
-                self.session,
-                (ContentType.TASK, task_id),
-                organization_id,
-                user_id,
-                base=base_description,
-                stored=stored_description,
-                incoming=task.description or "",
-            )
-            if merged != (task.description or ""):
-                task.description = merged
+        if merge is not None:
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 
         task.version += 1
@@ -242,13 +258,14 @@ class TaskMutationOperations:
                         member_ids, organization_id, task.id
                     )
 
-        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
+        if merge is not None:
             await stage_inline_reconciliation(
                 self.session, ContentType.TASK, task_id, organization_id
             )
         await self.session.commit()
         await self.session.refresh(task)
-        if "description" in kwargs:  # noqa: PLR2004 - update keyword name
+        if merge is not None:
+            await merge.after_commit()
             await publish_content_changed(ContentType.TASK, task_id, organization_id)
             await publish_content_replace(ContentType.TASK, task_id, task.description or "")
 
@@ -390,14 +407,11 @@ class TaskMutationOperations:
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        await lock_document(self.session, (ContentType.TASK, task_id), organization_id)
+        key = (ContentType.TASK, task_id)
+        await lock_document(self.session, key, organization_id)
         task = await self.content.get_for_delete(user_id, organization_id, task_id)
-        await self.session.execute(
-            delete(RealtimeYjsSnapshot).where(
-                RealtimeYjsSnapshot.content_type == ContentType.TASK,
-                RealtimeYjsSnapshot.content_id == task_id,
-            )
-        )
+        # Tasks have no restore path, so trash removes the live document as well.
+        retire = await stage_hard_delete(self.buffer, self.session, key)
 
         staged_tags = None
         if permanent:
@@ -434,6 +448,7 @@ class TaskMutationOperations:
         )
 
         await self.session.commit()
+        await retire()
         if staged_tags is not None:
             await tag_ops.finish_unassign_all_after_commit(staged_tags)
         await publish_perm_change(ContentType.TASK, task_id, None, None)

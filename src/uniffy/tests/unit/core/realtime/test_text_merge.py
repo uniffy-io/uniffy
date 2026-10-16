@@ -1,13 +1,8 @@
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pycrdt
 import pytest
 
 from uniffy.core.errors import ValidationError
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
 from uniffy.core.realtime.markdown import (
-    DOC_GENERATION_KEY,
-    DOC_META_FIELD,
     MARKDOWN_MIRROR_FIELD,
     MIRROR_ACTIVE_KEY,
     markdown_text,
@@ -15,8 +10,6 @@ from uniffy.core.realtime.markdown import (
     seed_markdown,
 )
 from uniffy.core.realtime.merge import TEXT_MERGE_LIMIT, merge_plain_text, text_edits
-from uniffy.core.realtime.storage import stage_text_merge
-from uniffy.core.types import ContentType, generate_id
 
 
 class TestMergePlainText:
@@ -125,103 +118,3 @@ class TestGraft:
         doc.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)[MIRROR_ACTIVE_KEY] = True
         assert not replace_external_markdown(doc, "same")
         assert doc.get(MARKDOWN_MIRROR_FIELD, type=pycrdt.Map)[MIRROR_ACTIVE_KEY] is True
-
-
-def _snapshot(text: str) -> RealtimeYjsSnapshot:
-    doc = pycrdt.Doc()
-    seed_markdown(doc, text)
-    doc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] = "gen-1"
-    return RealtimeYjsSnapshot(
-        content_type=ContentType.TASK,
-        content_id=generate_id(),
-        organization_id=generate_id(),
-        generation="gen-1",
-        revision=1,
-        rendered_revision=0,
-        updates=doc.get_update(),
-        state_vector=doc.get_state(),
-    )
-
-
-def _text_of(update: bytes) -> str:
-    doc = pycrdt.Doc()
-    doc.apply_update(update)
-    return str(markdown_text(doc))
-
-
-class TestStageTextMerge:
-    async def test_merges_into_live_generation_and_marks_projected(self) -> None:
-        snapshot = _snapshot("base human")
-        db, actor = MagicMock(), generate_id()
-        with patch("uniffy.core.realtime.storage.load_snapshot", AsyncMock(return_value=snapshot)):
-            merged = await stage_text_merge(
-                db,
-                (ContentType.TASK, snapshot.content_id),
-                snapshot.organization_id,
-                actor,
-                base="base",
-                stored="base human",
-                incoming="base agent",
-            )
-        assert merged == "base human agent"
-        assert _text_of(snapshot.updates) == merged
-        doc = pycrdt.Doc()
-        doc.apply_update(snapshot.updates)
-        assert doc.get(DOC_META_FIELD, type=pycrdt.Map)[DOC_GENERATION_KEY] == "gen-1"
-        assert snapshot.generation == "gen-1"
-        assert snapshot.revision == 2
-        assert snapshot.rendered_revision == 2
-        assert snapshot.actor_id == actor
-        db.add.assert_called_once_with(snapshot)
-
-    async def test_stale_same_generation_client_update_still_merges(self) -> None:
-        snapshot = _snapshot("base human")
-        client = pycrdt.Doc()
-        client.apply_update(snapshot.updates)
-        with patch("uniffy.core.realtime.storage.load_snapshot", AsyncMock(return_value=snapshot)):
-            await stage_text_merge(
-                MagicMock(),
-                (ContentType.TASK, snapshot.content_id),
-                snapshot.organization_id,
-                generate_id(),
-                base="base",
-                stored="base human",
-                incoming="base agent",
-            )
-        before = client.get_state()
-        markdown_text(client).insert(4, " more")
-        text = _text_of(pycrdt.merge_updates(snapshot.updates, client.get_update(before)))
-        assert text == "base more human agent"
-
-    async def test_without_snapshot_merges_against_stored_text(self) -> None:
-        db = MagicMock()
-        with patch("uniffy.core.realtime.storage.load_snapshot", AsyncMock(return_value=None)):
-            merged = await stage_text_merge(
-                db,
-                (ContentType.TASK, generate_id()),
-                generate_id(),
-                generate_id(),
-                base="base",
-                stored="base human",
-                incoming="base agent",
-            )
-        assert merged == "base human agent"
-        db.add.assert_not_called()
-
-    async def test_unchanged_text_marks_projected_without_new_bytes(self) -> None:
-        snapshot = _snapshot("base human")
-        original = snapshot.updates
-        with patch("uniffy.core.realtime.storage.load_snapshot", AsyncMock(return_value=snapshot)):
-            merged = await stage_text_merge(
-                MagicMock(),
-                (ContentType.TASK, snapshot.content_id),
-                snapshot.organization_id,
-                generate_id(),
-                base="base",
-                stored="base human",
-                incoming="base",
-            )
-        assert merged == "base human"
-        assert snapshot.updates == original
-        assert snapshot.revision == 1
-        assert snapshot.rendered_revision == 1

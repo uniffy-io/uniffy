@@ -32,6 +32,8 @@ from uniffy.core.realtime.buffer_keys import (
     TrimResult,
     accounting_key,
     buffer_keys,
+    due_key,
+    parse_member,
     parse_record,
     scope_of_stream,
     stream_pattern,
@@ -368,6 +370,25 @@ class UpdateBuffer:
 
     def forget(self, key: DocKey) -> None:
         _latest_cache.discard((self.namespace, key))
+
+    async def pending_documents(self, organization_id: UUID) -> set[DocKey]:
+        """Documents of one organization whose buffered edits wait for a checkpoint."""
+        await ensure_buffer_ready()
+        found: set[DocKey] = set()
+        async with self._valkey_call():
+            client = self._valkey()
+            for bucket in range(BUCKET_COUNT):
+                async for member, _ in client.zscan_iter(
+                    due_key(bucket, self.namespace),
+                    match=f"{organization_id}:*",
+                    count=_SCAN_COUNT,
+                ):
+                    try:
+                        scope = parse_member(member)
+                    except ValueError:
+                        continue
+                    found.add((scope.content_type, scope.content_id))
+        return found
 
     async def bucket_usage(self, bucket: int) -> PendingUsage:
         await ensure_buffer_ready()

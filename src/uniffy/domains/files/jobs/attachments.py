@@ -12,8 +12,10 @@ from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.files.reconciliation import InlineAttachmentReconciliation
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.task import Task
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.live import may_have_unprojected_edits
 from uniffy.core.realtime.metrics import REALTIME_BACKLOG_DEPTH
-from uniffy.core.realtime.storage import load_snapshot, lock_document
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer
 from uniffy.core.storage import OBJECT_STORAGE_CTX_KEY, ObjectStorage
 from uniffy.core.types import ContentType
@@ -26,6 +28,7 @@ INLINE_UPLOAD_GRACE = timedelta(hours=24)
 
 
 async def reconcile_pending_inline_attachments(ctx: dict[str, Any]) -> None:
+    buffer = UpdateBuffer()
     async with open_session() as db:
         depth = await db.scalar(select(func.count()).select_from(InlineAttachmentReconciliation))
         REALTIME_BACKLOG_DEPTH.labels(kind="inline_attachments").set(depth or 0)
@@ -46,15 +49,20 @@ async def reconcile_pending_inline_attachments(ctx: dict[str, Any]) -> None:
         await db.commit()
     for item in pending:
         try:
-            await _reconcile(ctx, item)
+            await _reconcile(ctx, item, buffer)
         except Exception:
             logger.exception(
                 "Inline attachment reconciliation failed", content_id=str(item.content_id)
             )
 
 
-async def _reconcile(ctx: dict[str, Any], item: InlineAttachmentReconciliation) -> None:
+async def _reconcile(
+    ctx: dict[str, Any],
+    item: InlineAttachmentReconciliation,
+    buffer: UpdateBuffer | None = None,
+) -> None:
     kind = ContentType(item.content_type)
+    key = (kind, item.content_id)
     models = {
         ContentType.NOTE: Note,
         ContentType.TASK: Task,
@@ -62,12 +70,12 @@ async def _reconcile(ctx: dict[str, Any], item: InlineAttachmentReconciliation) 
     }
     model = models[kind]
     async with open_session() as db:
-        await lock_document(db, (kind, item.content_id), item.organization_id)
+        await lock_document(db, key, item.organization_id)
         pending = await db.get(InlineAttachmentReconciliation, (item.content_type, item.content_id))
         if pending is None:
             return
-        snapshot = await load_snapshot(db, (kind, item.content_id))
-        if snapshot is not None and snapshot.revision > snapshot.rendered_revision:
+        # Accepted edits the columns do not show yet may still reference an upload.
+        if await may_have_unprojected_edits(buffer or UpdateBuffer(), db, key):
             return
         content = (
             await db.execute(

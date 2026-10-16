@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AttendeeRole,
@@ -47,8 +48,11 @@ class CalendarEventOperations(CalendarEventReader):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer | None = None,
     ) -> None:
         super().__init__(session, _search_indexer=search_indexer)
+        # Accepted realtime edits that description writes and occurrence copies include.
+        self.buffer = buffer or UpdateBuffer()
 
     async def create(
         self,

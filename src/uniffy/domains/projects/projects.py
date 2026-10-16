@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -19,6 +19,8 @@ from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ProjectViewVisibility
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.lifecycle import stage_hard_delete
 from uniffy.core.realtime.publisher import publish_perm_change
 from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.engine import SearchTerm, all_of
@@ -348,7 +350,10 @@ class ProjectOperations(BaseContentOperations[Project]):
         organization_id: UUID,
         project_id: UUID,
         permanent: bool = False,
+        *,
+        buffer: UpdateBuffer | None = None,
     ) -> bool:
+        buffer = buffer or UpdateBuffer()
         await lock_document(self.session, (ContentType.PROJECT, project_id))
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_delete(user_id, organization_id, project)
@@ -358,13 +363,18 @@ class ProjectOperations(BaseContentOperations[Project]):
         )
         task_ids = list((await self.session.scalars(task_ids_query)).all())
         await lock_documents(self.session, [(ContentType.TASK, task_id) for task_id in task_ids])
-        staged_tags = []
-        await self.session.execute(
-            delete(RealtimeYjsSnapshot).where(
+        described = await self.session.scalars(
+            select(RealtimeYjsSnapshot.content_id).where(
                 RealtimeYjsSnapshot.content_type == ContentType.TASK,
                 RealtimeYjsSnapshot.content_id.in_(task_ids_query),
             )
         )
+        # Tasks have no restore path, so trash removes their live documents as well.
+        retirements = [
+            await stage_hard_delete(buffer, self.session, (ContentType.TASK, task_id))
+            for task_id in described.all()
+        ]
+        staged_tags = []
         if permanent:
             tag_ops = TagOperations(self.session, self.search_indexer)
             project_urn = build_content_urn(self.content_type, project_id)
@@ -422,6 +432,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         )
 
         await self.session.commit()
+        for retire in retirements:
+            await retire()
         for staged in staged_tags:
             await tag_ops.finish_unassign_all_after_commit(staged)
         await publish_perm_change(ContentType.PROJECT, project_id, None, None)
