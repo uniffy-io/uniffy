@@ -55,6 +55,7 @@ def rpc_context(token: str) -> RequestContext:
 
 
 async def test_unavailable_database_denies_with_retryable_transport_errors(monkeypatch):
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes-long-value")
     user_id, org_id, sid = generate_id(), generate_id(), generate_id()
     token = create_access_token(user_id, org_id, token_version=1, session_id=sid)
     monkeypatch.setattr(
