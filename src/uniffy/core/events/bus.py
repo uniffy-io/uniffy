@@ -1,17 +1,37 @@
-"""Fire-and-forget notification event bus over ARQ; never raises on a missing queue."""
+"""Notification events support transactional staging or best-effort queue delivery."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import cast, select
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.job_contracts import PROCESS_NOTIFICATION_EVENT
 from uniffy.core.events.types import NotificationEvent
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str, loads
+from uniffy.core.models.notifications.notification import Notification
+from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.types import ContentType, NotificationType, generate_id
 
 logger = logger.bind(component="events.bus")
+_staging_session: ContextVar[AsyncSession | None] = ContextVar("notification_staging", default=None)
+
+
+@contextmanager
+def stage_notification_events(session: AsyncSession) -> Iterator[None]:
+    """Preserve original recipient deltas in the content owner's transaction."""
+    token = _staging_session.set(session)
+    try:
+        yield
+    finally:
+        _staging_session.reset(token)
 
 
 def _event_to_json(event: NotificationEvent) -> str:
@@ -70,7 +90,44 @@ def event_from_json(json_str: str) -> NotificationEvent:
 
 
 async def emit_notification(event: NotificationEvent) -> None:
-    """Enqueue an ARQ job; never raises."""
+    """Stage within an owner transaction, otherwise enqueue without raising on queue failure."""
+    staging = _staging_session.get()
+    if staging is not None:
+        if event.notification_type == NotificationType.CONTENT_EDITED:
+            cutoff = datetime.now(UTC) - timedelta(minutes=10)
+            recent = await staging.scalar(
+                select(Notification.id)
+                .where(
+                    Notification.organization_id == event.organization_id,
+                    Notification.source_urn == event.source_urn,
+                    Notification.actor_id == event.actor_id,
+                    Notification.notification_type == NotificationType.CONTENT_EDITED,
+                    Notification.created_at >= cutoff,
+                )
+                .limit(1)
+            )
+            payload = cast(NotificationOutbox.payload, JSONB)
+            pending = await staging.scalar(
+                select(NotificationOutbox.event_id)
+                .where(
+                    NotificationOutbox.organization_id == event.organization_id,
+                    NotificationOutbox.attempted_at >= cutoff,
+                    payload["notification_type"].astext == NotificationType.CONTENT_EDITED.value,
+                    payload["source_urn"].astext == event.source_urn,
+                    payload["actor_id"].astext == str(event.actor_id),
+                )
+                .limit(1)
+            )
+            if recent is not None or pending is not None:
+                return
+        staging.add(
+            NotificationOutbox(
+                event_id=event.event_id,
+                organization_id=event.organization_id,
+                payload=_event_to_json(event),
+            )
+        )
+        return
     try:
         event_json = _event_to_json(event)
         await enqueue_job(PROCESS_NOTIFICATION_EVENT, event_json)

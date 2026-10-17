@@ -1,5 +1,7 @@
 """Files service wrapper for ConnectRPC mounting."""
 
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.files.attachments.handlers import AttachmentsHandlersMixin
 from uniffy.domains.files.filters import SavedFilterHandlersMixin
@@ -13,9 +15,9 @@ class FilesServiceImpl(
     SavedFilterHandlersMixin,
     AttachmentsHandlersMixin,
 ):
-    def __init__(self, storage: ObjectStorage, search_indexer: SearchIndexer) -> None:
+    def __init__(
+        self, storage: ObjectStorage, search_indexer: SearchIndexer, buffer: UpdateBuffer
+    ) -> None:
         self.storage = storage
         self.search_indexer = search_indexer
-
-
-from uniffy.core.search import SearchIndexer
+        self.buffer = buffer

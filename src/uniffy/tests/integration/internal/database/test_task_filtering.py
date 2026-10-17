@@ -4,7 +4,6 @@ import csv
 import io
 from datetime import datetime
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
 from uuid import UUID
 
 import pytest
@@ -341,15 +340,14 @@ async def test_the_current_user_in_a_shared_view_is_each_caller(session, env, se
             )
         ],
     )
-    with patch("uniffy.domains.projects.audience.publish_content_access_changed", AsyncMock()):
-        view = await ProjectViewOperations(session).create(
-            env.admin_id,
-            env.org_id,
-            seeded.project_id,
-            name="My tasks",
-            definition=ViewDefinition(layout=Oneof(field="table", value=TableLayout()), filter=mine),
-            visibility=ProjectViewVisibility.SHARED,
-        )
+    view = await ProjectViewOperations(session).create(
+        env.admin_id,
+        env.org_id,
+        seeded.project_id,
+        name="My tasks",
+        definition=ViewDefinition(layout=Oneof(field="table", value=TableLayout()), filter=mine),
+        visibility=ProjectViewVisibility.SHARED,
+    )
 
     # Named by id for one caller and by name, in any case, for the other.
     for user_id, named, expected in (
@@ -390,17 +388,16 @@ async def test_a_view_on_a_deleted_field_keeps_what_the_web_keeps(session, env, 
     by_size = TaskSort(
         field=TaskFieldRef(ref=Oneof(field="field_id", value="size")), direction=SortDirection.DESC
     )
-    with patch("uniffy.domains.projects.audience.publish_content_access_changed", AsyncMock()):
-        await ProjectViewOperations(session).create(
-            env.admin_id,
-            env.org_id,
-            seeded.project_id,
-            name="Sized",
-            definition=ViewDefinition(
-                layout=Oneof(field="table", value=TableLayout()), filter=either, sort=[by_size]
-            ),
-            visibility=ProjectViewVisibility.SHARED,
-        )
+    await ProjectViewOperations(session).create(
+        env.admin_id,
+        env.org_id,
+        seeded.project_id,
+        name="Sized",
+        definition=ViewDefinition(
+            layout=Oneof(field="table", value=TableLayout()), filter=either, sort=[by_size]
+        ),
+        visibility=ProjectViewVisibility.SHARED,
+    )
     await session.execute(
         delete(FieldDefinition).where(
             FieldDefinition.project_id == seeded.project_id, FieldDefinition.id == "size"

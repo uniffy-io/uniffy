@@ -1,6 +1,7 @@
 """Tool executor for agent runtime."""
 
 import asyncio
+import contextlib
 import time
 
 from loguru import logger
@@ -9,6 +10,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import tool_call_action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditActorKind
+from uniffy.core.realtime.live import LiveStateUnavailable
 from uniffy.domains.agents.cache import fetch_agent_row
 from uniffy.domains.agents.metrics import AGENT_TOOL_CALLS_TOTAL, AGENT_TOOL_DURATION
 from uniffy.domains.agents.providers.base import ToolCall
@@ -26,7 +28,13 @@ MAX_TOOL_RESULT_CHARS = 100_000
 
 # Metric label values stay bounded: the typed failure reasons pass through,
 # every other exception collapses to "error".
-_METRIC_STATUSES = {"timeout", "not_found", "permission_denied", "validation_error"}
+_METRIC_STATUSES = {
+    "timeout",
+    "not_found",
+    "permission_denied",
+    "validation_error",
+    "unavailable",
+}
 
 
 def _metric_status(result: ToolResult, error_reason: str | None) -> str:
@@ -190,6 +198,18 @@ class ToolExecutor:
                 data="",
                 error=f"Validation error: {exc}",
             )
+        except LiveStateUnavailable:
+            # Content writes refuse before committing while accepted live edits are unverifiable.
+            logger.warning("Tool deferred: live edits cannot be verified", tool=tool_call.name)
+            error_reason = "unavailable"
+            result = ToolResult(
+                success=False,
+                data="",
+                error=(
+                    "Live edits on this content cannot be verified right now. "
+                    "No content was changed. Wait a moment, then retry the same call."
+                ),
+            )
         except Exception as exc:
             logger.exception("Tool execution failed", tool=tool_call.name, error=str(exc))
             error_reason = type(exc).__name__
@@ -205,9 +225,28 @@ class ToolExecutor:
         ).inc()
 
         if not tool_def.read_only:
+            if error_reason is not None:
+                await self._discard_failed_write(tool_def)
             await self._emit_tool_call_audit(tool_def, result, error_reason)
 
         return result
+
+    async def _discard_failed_write(self, tool_def: ToolDefinition) -> None:
+        """End the transaction a raising write left open on the shared runtime session.
+
+        Its staged rows and transaction locks, document advisory locks included, would
+        otherwise last until the runtime's next commit.
+        """
+        session = self._context.session
+        try:
+            await session.rollback()
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Rollback after a failed write tool failed; dropping its connection",
+                tool=tool_def.name,
+            )
+            with contextlib.suppress(Exception):
+                await session.invalidate()
 
     async def _emit_tool_call_audit(
         self,

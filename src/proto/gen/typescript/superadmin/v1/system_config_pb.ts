@@ -2,15 +2,15 @@
 // @generated from file superadmin/v1/system_config.proto (package superadmin.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file superadmin/v1/system_config.proto.
  */
 export const file_superadmin_v1_system_config: GenFile = /*@__PURE__*/
-  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJGCgxTeXN0ZW1Db25maWcSNgoTcHVibGljX3JlZ2lzdHJhdGlvbhgBIAEoCzIZLnN1cGVyYWRtaW4udjEuU3lzdGVtRmxhZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIvCglNZmFQb2xpY3kSIgoacmVxdWlyZWRfZm9yX3N5c3RlbV9hZG1pbnMYASABKAgiFQoTR2V0TWZhUG9saWN5UmVxdWVzdCJAChRHZXRNZmFQb2xpY3lSZXNwb25zZRIoCgZwb2xpY3kYASABKAsyGC5zdXBlcmFkbWluLnYxLk1mYVBvbGljeSI5ChNTZXRNZmFQb2xpY3lSZXF1ZXN0EiIKGnJlcXVpcmVkX2Zvcl9zeXN0ZW1fYWRtaW5zGAEgASgIIkAKFFNldE1mYVBvbGljeVJlc3BvbnNlEigKBnBvbGljeRgBIAEoCzIYLnN1cGVyYWRtaW4udjEuTWZhUG9saWN5MqUDChNTeXN0ZW1Db25maWdTZXJ2aWNlEmIKD0dldFN5c3RlbUNvbmZpZxIlLnN1cGVyYWRtaW4udjEuR2V0U3lzdGVtQ29uZmlnUmVxdWVzdBomLnN1cGVyYWRtaW4udjEuR2V0U3lzdGVtQ29uZmlnUmVzcG9uc2UiABJ0ChVTZXRQdWJsaWNSZWdpc3RyYXRpb24SKy5zdXBlcmFkbWluLnYxLlNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QaLC5zdXBlcmFkbWluLnYxLlNldFB1YmxpY1JlZ2lzdHJhdGlvblJlc3BvbnNlIgASWQoMR2V0TWZhUG9saWN5EiIuc3VwZXJhZG1pbi52MS5HZXRNZmFQb2xpY3lSZXF1ZXN0GiMuc3VwZXJhZG1pbi52MS5HZXRNZmFQb2xpY3lSZXNwb25zZSIAElkKDFNldE1mYVBvbGljeRIiLnN1cGVyYWRtaW4udjEuU2V0TWZhUG9saWN5UmVxdWVzdBojLnN1cGVyYWRtaW4udjEuU2V0TWZhUG9saWN5UmVzcG9uc2UiAEJBWj9naXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vc3VwZXJhZG1pbi92MTtzdXBlcmFkbWludjFiBnByb3RvMw");
+  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJGCgxTeXN0ZW1Db25maWcSNgoTcHVibGljX3JlZ2lzdHJhdGlvbhgBIAEoCzIZLnN1cGVyYWRtaW4udjEuU3lzdGVtRmxhZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIvCglNZmFQb2xpY3kSIgoacmVxdWlyZWRfZm9yX3N5c3RlbV9hZG1pbnMYASABKAgiFQoTR2V0TWZhUG9saWN5UmVxdWVzdCJAChRHZXRNZmFQb2xpY3lSZXNwb25zZRIoCgZwb2xpY3kYASABKAsyGC5zdXBlcmFkbWluLnYxLk1mYVBvbGljeSI5ChNTZXRNZmFQb2xpY3lSZXF1ZXN0EiIKGnJlcXVpcmVkX2Zvcl9zeXN0ZW1fYWRtaW5zGAEgASgIIkAKFFNldE1mYVBvbGljeVJlc3BvbnNlEigKBnBvbGljeRgBIAEoCzIYLnN1cGVyYWRtaW4udjEuTWZhUG9saWN5ItQCChdSZWFsdGltZUJ1ZmZlclByZWZsaWdodBIcCg9ldmljdGlvbl9wb2xpY3kYASABKAlIAIgBARIcCg9tYXhtZW1vcnlfYnl0ZXMYAiABKANIAYgBARIYCgthb2ZfZW5hYmxlZBgDIAEoCEgCiAEBEiUKGHJkYl9zbmFwc2hvdHNfY29uZmlndXJlZBgEIAEoCEgDiAEBEhMKC2xvc3Nfd2luZG93GAUgASgJEhYKDnZhbGtleV92ZXJzaW9uGAYgASgJEhwKFHZhbGtleV9ydW5faWRfcHJlZml4GAcgASgJEhwKFHBlbmRpbmdfYnVkZ2V0X2J5dGVzGAggASgDQhIKEF9ldmljdGlvbl9wb2xpY3lCEgoQX21heG1lbW9yeV9ieXRlc0IOCgxfYW9mX2VuYWJsZWRCGwoZX3JkYl9zbmFwc2hvdHNfY29uZmlndXJlZCKBAQoUUmVhbHRpbWVCdWZmZXJUb3RhbHMSFQoNcGVuZGluZ19ieXRlcxgBIAEoAxIXCg9wZW5kaW5nX3JlY29yZHMYAiABKAMSGQoRcGVuZGluZ19kb2N1bWVudHMYAyABKAMSHgoWb2xkZXN0X3BlbmRpbmdfc2Vjb25kcxgEIAEoASKOBAoUUmVhbHRpbWVCdWZmZXJTdGF0dXMSNQoHdmVyZGljdBgBIAEoDjIkLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJWZXJkaWN0EhYKDnByZWZsaWdodF9tb2RlGAIgASgJEh8KF3BlbmRpbmdfYnVkZ2V0X2Zyb21fZW52GAMgASgIEjkKCXByZWZsaWdodBgEIAEoCzImLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJQcmVmbGlnaHQSMwoGdG90YWxzGAUgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclRvdGFscxJKCgxlcG9jaF9yZXNldHMYBiADKAsyNC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLkVwb2NoUmVzZXRzRW50cnkSWgoUcG9pc29uZWRfY2hlY2twb2ludHMYByADKAsyPC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLlBvaXNvbmVkQ2hlY2twb2ludHNFbnRyeRoyChBFcG9jaFJlc2V0c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEaOgoYUG9pc29uZWRDaGVja3BvaW50c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEiIAoeR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXNSZXF1ZXN0IlYKH0dldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVzcG9uc2USMwoGc3RhdHVzGAEgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclN0YXR1cyrVAQoVUmVhbHRpbWVCdWZmZXJWZXJkaWN0EicKI1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOU1BFQ0lGSUVEEAASIwofUkVBTFRJTUVfQlVGRkVSX1ZFUkRJQ1RfTk9UX1JVThABEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX0VOQUJMRUQQAhIkCiBSRUFMVElNRV9CVUZGRVJfVkVSRElDVF9ESVNBQkxFRBADEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOS05PV04QBDKhBAoTU3lzdGVtQ29uZmlnU2VydmljZRJiCg9HZXRTeXN0ZW1Db25maWcSJS5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlIgASdAoVU2V0UHVibGljUmVnaXN0cmF0aW9uEisuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXF1ZXN0Giwuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZSIAElkKDEdldE1mYVBvbGljeRIiLnN1cGVyYWRtaW4udjEuR2V0TWZhUG9saWN5UmVxdWVzdBojLnN1cGVyYWRtaW4udjEuR2V0TWZhUG9saWN5UmVzcG9uc2UiABJZCgxTZXRNZmFQb2xpY3kSIi5zdXBlcmFkbWluLnYxLlNldE1mYVBvbGljeVJlcXVlc3QaIy5zdXBlcmFkbWluLnYxLlNldE1mYVBvbGljeVJlc3BvbnNlIgASegoXR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXMSLS5zdXBlcmFkbWluLnYxLkdldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVxdWVzdBouLnN1cGVyYWRtaW4udjEuR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXNSZXNwb25zZSIAQkFaP2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9zdXBlcmFkbWluL3YxO3N1cGVyYWRtaW52MWIGcHJvdG8z");
 
 /**
  * One configuration flag's effective state.
@@ -207,12 +207,255 @@ export const SetMfaPolicyResponseSchema: GenMessage<SetMfaPolicyResponse> = /*@_
   messageDesc(file_superadmin_v1_system_config, 10);
 
 /**
+ * Facts the deployment preflight read from the serving Valkey instance.
+ *
+ * @generated from message superadmin.v1.RealtimeBufferPreflight
+ */
+export type RealtimeBufferPreflight = Message<"superadmin.v1.RealtimeBufferPreflight"> & {
+  /**
+   * maxmemory-policy; unset when CONFIG is renamed or denied.
+   *
+   * @generated from field: optional string eviction_policy = 1;
+   */
+  evictionPolicy?: string | undefined;
+
+  /**
+   * maxmemory in bytes, 0 when unlimited; unset when unreadable.
+   *
+   * @generated from field: optional int64 maxmemory_bytes = 2;
+   */
+  maxmemoryBytes?: bigint | undefined;
+
+  /**
+   * Unset when INFO persistence does not report it.
+   *
+   * @generated from field: optional bool aof_enabled = 3;
+   */
+  aofEnabled?: boolean | undefined;
+
+  /**
+   * Whether RDB snapshots are scheduled; unset when unreadable.
+   *
+   * @generated from field: optional bool rdb_snapshots_configured = 4;
+   */
+  rdbSnapshotsConfigured?: boolean | undefined;
+
+  /**
+   * What a Valkey crash or restart loses, in the words the preflight logs.
+   *
+   * @generated from field: string loss_window = 5;
+   */
+  lossWindow: string;
+
+  /**
+   * @generated from field: string valkey_version = 6;
+   */
+  valkeyVersion: string;
+
+  /**
+   * Leading characters of the instance run id; a change marks a restart or failover.
+   *
+   * @generated from field: string valkey_run_id_prefix = 7;
+   */
+  valkeyRunIdPrefix: string;
+
+  /**
+   * Stored bytes every pending edit together may hold, split evenly across buckets.
+   *
+   * @generated from field: int64 pending_budget_bytes = 8;
+   */
+  pendingBudgetBytes: bigint;
+};
+
+/**
+ * Describes the message superadmin.v1.RealtimeBufferPreflight.
+ * Use `create(RealtimeBufferPreflightSchema)` to create a new message.
+ */
+export const RealtimeBufferPreflightSchema: GenMessage<RealtimeBufferPreflight> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 11);
+
+/**
+ * Edits accepted across the deployment and not yet checkpointed.
+ *
+ * @generated from message superadmin.v1.RealtimeBufferTotals
+ */
+export type RealtimeBufferTotals = Message<"superadmin.v1.RealtimeBufferTotals"> & {
+  /**
+   * Stored bytes as the budget counts them: update, id and per-record overhead.
+   *
+   * @generated from field: int64 pending_bytes = 1;
+   */
+  pendingBytes: bigint;
+
+  /**
+   * @generated from field: int64 pending_records = 2;
+   */
+  pendingRecords: bigint;
+
+  /**
+   * @generated from field: int64 pending_documents = 3;
+   */
+  pendingDocuments: bigint;
+
+  /**
+   * Age of the oldest pending edit, 0 when none waits. A document backing off
+   * after a failed checkpoint counts from its retry.
+   *
+   * @generated from field: double oldest_pending_seconds = 4;
+   */
+  oldestPendingSeconds: number;
+};
+
+/**
+ * Describes the message superadmin.v1.RealtimeBufferTotals.
+ * Use `create(RealtimeBufferTotalsSchema)` to create a new message.
+ */
+export const RealtimeBufferTotalsSchema: GenMessage<RealtimeBufferTotals> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 12);
+
+/**
+ * @generated from message superadmin.v1.RealtimeBufferStatus
+ */
+export type RealtimeBufferStatus = Message<"superadmin.v1.RealtimeBufferStatus"> & {
+  /**
+   * @generated from field: superadmin.v1.RealtimeBufferVerdict verdict = 1;
+   */
+  verdict: RealtimeBufferVerdict;
+
+  /**
+   * REALTIME_VALKEY_PREFLIGHT: "strict" or "warn".
+   *
+   * @generated from field: string preflight_mode = 2;
+   */
+  preflightMode: string;
+
+  /**
+   * True when REALTIME_PENDING_BUDGET_BYTES sets the budget instead of maxmemory.
+   *
+   * @generated from field: bool pending_budget_from_env = 3;
+   */
+  pendingBudgetFromEnv: boolean;
+
+  /**
+   * Unset until the answering backend has read the serving Valkey instance.
+   *
+   * @generated from field: superadmin.v1.RealtimeBufferPreflight preflight = 4;
+   */
+  preflight?: RealtimeBufferPreflight | undefined;
+
+  /**
+   * Unset when Valkey could not be read for this request.
+   *
+   * @generated from field: superadmin.v1.RealtimeBufferTotals totals = 5;
+   */
+  totals?: RealtimeBufferTotals | undefined;
+
+  /**
+   * Epoch resets by reason, counted by the answering backend process since
+   * it started. Workers count their own on their metrics endpoint.
+   *
+   * @generated from field: map<string, int64> epoch_resets = 6;
+   */
+  epochResets: { [key: string]: bigint };
+
+  /**
+   * Checkpoint passes stopped by an unreadable stored edit, by reason,
+   * counted the same way as epoch_resets.
+   *
+   * @generated from field: map<string, int64> poisoned_checkpoints = 7;
+   */
+  poisonedCheckpoints: { [key: string]: bigint };
+};
+
+/**
+ * Describes the message superadmin.v1.RealtimeBufferStatus.
+ * Use `create(RealtimeBufferStatusSchema)` to create a new message.
+ */
+export const RealtimeBufferStatusSchema: GenMessage<RealtimeBufferStatus> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 13);
+
+/**
+ * @generated from message superadmin.v1.GetRealtimeBufferStatusRequest
+ */
+export type GetRealtimeBufferStatusRequest = Message<"superadmin.v1.GetRealtimeBufferStatusRequest"> & {
+};
+
+/**
+ * Describes the message superadmin.v1.GetRealtimeBufferStatusRequest.
+ * Use `create(GetRealtimeBufferStatusRequestSchema)` to create a new message.
+ */
+export const GetRealtimeBufferStatusRequestSchema: GenMessage<GetRealtimeBufferStatusRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 14);
+
+/**
+ * @generated from message superadmin.v1.GetRealtimeBufferStatusResponse
+ */
+export type GetRealtimeBufferStatusResponse = Message<"superadmin.v1.GetRealtimeBufferStatusResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.RealtimeBufferStatus status = 1;
+   */
+  status?: RealtimeBufferStatus | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.GetRealtimeBufferStatusResponse.
+ * Use `create(GetRealtimeBufferStatusResponseSchema)` to create a new message.
+ */
+export const GetRealtimeBufferStatusResponseSchema: GenMessage<GetRealtimeBufferStatusResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 15);
+
+/**
+ * Whether the serving Valkey instance may hold accepted realtime edits.
+ *
+ * @generated from enum superadmin.v1.RealtimeBufferVerdict
+ */
+export enum RealtimeBufferVerdict {
+  /**
+   * @generated from enum value: REALTIME_BUFFER_VERDICT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * The answering backend has not read the serving Valkey instance yet.
+   *
+   * @generated from enum value: REALTIME_BUFFER_VERDICT_NOT_RUN = 1;
+   */
+  NOT_RUN = 1,
+
+  /**
+   * @generated from enum value: REALTIME_BUFFER_VERDICT_ENABLED = 2;
+   */
+  ENABLED = 2,
+
+  /**
+   * A confirmed allkeys-* eviction policy in strict mode; edits are refused.
+   *
+   * @generated from enum value: REALTIME_BUFFER_VERDICT_DISABLED = 3;
+   */
+  DISABLED = 3,
+
+  /**
+   * CONFIG is renamed or denied; edits are accepted and the requirement is logged.
+   *
+   * @generated from enum value: REALTIME_BUFFER_VERDICT_UNKNOWN = 4;
+   */
+  UNKNOWN = 4,
+}
+
+/**
+ * Describes the enum superadmin.v1.RealtimeBufferVerdict.
+ */
+export const RealtimeBufferVerdictSchema: GenEnum<RealtimeBufferVerdict> = /*@__PURE__*/
+  enumDesc(file_superadmin_v1_system_config, 0);
+
+/**
  * Deployment-wide configuration flags surfaced to the platform admin
  * surface. Every flag follows the same resolution: ``deployment_settings``
  * row (operator-edited) > env default (set at deploy time) > coded default.
  * The first call without an env value or DB row returns the coded default;
  * the operator's first edit creates the DB row, after which env becomes
- * irrelevant.
+ * irrelevant. Env-only deployment facts that operators cannot edit here are
+ * surfaced read-only.
  *
  * All RPCs require ``User.is_system_admin=true``.
  *
@@ -261,6 +504,19 @@ export const SystemConfigService: GenService<{
     methodKind: "unary";
     input: typeof SetMfaPolicyRequestSchema;
     output: typeof SetMfaPolicyResponseSchema;
+  },
+  /**
+   * Read the Valkey buffer that holds accepted realtime edits until their
+   * PostgreSQL checkpoint: the preflight the answering backend recorded and
+   * deployment-wide pending totals. Carries no document, organization or
+   * credential detail, so it is safe to poll.
+   *
+   * @generated from rpc superadmin.v1.SystemConfigService.GetRealtimeBufferStatus
+   */
+  getRealtimeBufferStatus: {
+    methodKind: "unary";
+    input: typeof GetRealtimeBufferStatusRequestSchema;
+    output: typeof GetRealtimeBufferStatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_superadmin_v1_system_config, 0);

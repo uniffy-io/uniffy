@@ -14,6 +14,7 @@ from uniffy.core.audit.request_context import (
     audit_ip_var,
     audit_user_agent_var,
 )
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
@@ -56,6 +57,7 @@ async def test_gather_fan_out_inherits_audit_ip_and_user_agent() -> None:
         session=session,
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         allowed_tools=frozenset({tool.name}),
     )

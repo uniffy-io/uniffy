@@ -15,6 +15,7 @@ from uniffy.core.auth.tokens import decode_event_response_token
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.shared import AttendeeStatus
 from uniffy.core.rate_limit import check_rate_limit
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.domains.scheduling.calendar.ical.feed import (
     FEED_SUFFIX,
@@ -81,6 +82,7 @@ class RespondResponse(BaseModel):
 
 async def respond_from_mail(
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     payload: Annotated[RespondRequest, Body()],
 ) -> RespondResponse:
     """Record an attendee's response to an invitation they received by mail.
@@ -120,7 +122,7 @@ async def respond_from_mail(
 
     try:
         async with open_session() as session:
-            await CalendarEventOperations(session, search_indexer).update_attendee_status(
+            await CalendarEventOperations(session, search_indexer, buffer).update_attendee_status(
                 user_id=user_id,
                 organization_id=organization_id,
                 event_id=event_id,
@@ -196,11 +198,11 @@ async def serve_feed(
     )
 
 
-def create_calendar_router(search_indexer: SearchIndexer) -> APIRouter:
+def create_calendar_router(search_indexer: SearchIndexer, buffer: UpdateBuffer) -> APIRouter:
     router = APIRouter(prefix="/calendar", tags=["calendar"])
     router.add_api_route(
         RESPOND_PATH,
-        partial(respond_from_mail, search_indexer),
+        partial(respond_from_mail, search_indexer, buffer),
         methods=["POST"],
         response_model=RespondResponse,
     )

@@ -15,6 +15,7 @@ import {
   emitContentAccessChanged,
   type ContentAccessAction,
 } from "@/features/notifications/contentAccessEmitter";
+import { emitContentChanged } from "@/features/notifications/contentChangedEmitter";
 import { notificationsApi } from "@/features/notifications/api/notificationsApi";
 import {
   addRealtimeNotification,
@@ -107,8 +108,19 @@ export function useNotificationStream() {
 
           backoff = INITIAL_BACKOFF_MS;
 
+          let received = false;
           for await (const event of stream) {
             if (!mounted) break;
+            if (!received) {
+              received = true;
+              emitContentChanged(null);
+            }
+            if (
+              event.eventType === StreamNotificationsResponse_EventType.CONTENT_CHANGED &&
+              event.contentChanged
+            ) {
+              emitContentChanged(event.contentChanged);
+            }
 
             if (
               event.eventType === StreamNotificationsResponse_EventType.NEW_NOTIFICATION &&

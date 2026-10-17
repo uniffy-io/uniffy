@@ -11,7 +11,10 @@ from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 
 from uniffy.core.auth.principal import current_principal
+from uniffy.core.auth.revocation import TokenRevocation
 from uniffy.core.auth.tokens import create_access_token, create_refresh_token, decode_access_token
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
@@ -96,10 +99,13 @@ async def test_malformed_tokens_are_denied(bearer: str) -> None:
 
 def test_every_mounted_service_authenticates_before_parsing() -> None:
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
+    buffer = UpdateBuffer()
     dispatcher = _create_api_dispatcher(
         MagicMock(spec=ObjectStorage),
         search,
         SearchIndexer(search),
+        buffer,
+        YDocManager(buffer=buffer),
     )
 
     unguarded: list[str] = []
@@ -152,12 +158,8 @@ async def test_private_request_publishes_one_decoded_principal(monkeypatch) -> N
 
     with (
         patch(
-            "uniffy.domains.auth.interceptors.is_access_token_revoked",
-            AsyncMock(return_value=False),
-        ),
-        patch(
-            "uniffy.domains.auth.interceptors.is_session_revoked",
-            AsyncMock(return_value=False),
+            "uniffy.domains.auth.interceptors.token_revocation",
+            AsyncMock(return_value=None),
         ),
         patch(
             "uniffy.core.auth.principal.decode_access_token",
@@ -187,8 +189,8 @@ async def test_public_wrong_kind_token_still_obeys_revocation(monkeypatch) -> No
 
     with (
         patch(
-            "uniffy.domains.auth.interceptors.is_access_token_revoked",
-            AsyncMock(return_value=True),
+            "uniffy.domains.auth.interceptors.token_revocation",
+            AsyncMock(return_value=TokenRevocation.TOKEN),
         ),
         pytest.raises(ConnectError) as exc_info,
     ):
@@ -205,12 +207,8 @@ async def test_revoked_session_never_publishes_a_principal(monkeypatch) -> None:
 
     with (
         patch(
-            "uniffy.domains.auth.interceptors.is_access_token_revoked",
-            AsyncMock(return_value=False),
-        ),
-        patch(
-            "uniffy.domains.auth.interceptors.is_session_revoked",
-            AsyncMock(return_value=True),
+            "uniffy.domains.auth.interceptors.token_revocation",
+            AsyncMock(return_value=TokenRevocation.SESSION),
         ),
         pytest.raises(ConnectError) as exc_info,
     ):
@@ -232,12 +230,8 @@ async def test_public_enrollment_rpc_accepts_an_access_principal(monkeypatch) ->
 
     with (
         patch(
-            "uniffy.domains.auth.interceptors.is_access_token_revoked",
-            AsyncMock(return_value=False),
-        ),
-        patch(
-            "uniffy.domains.auth.interceptors.is_session_revoked",
-            AsyncMock(return_value=False),
+            "uniffy.domains.auth.interceptors.token_revocation",
+            AsyncMock(return_value=None),
         ),
     ):
         reset_token = await interceptor.on_start(ctx)

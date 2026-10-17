@@ -164,7 +164,7 @@ class TestStampRunLogs:
 
         session, captured = _capture_session()
         session_id = generate_id()
-        task = NS(id=generate_id(), execution_user_id=generate_id())
+        task = NS(task_id=generate_id(), execution_user_id=generate_id())
         since = datetime.now(UTC)
         stamped = await _stamp_run_logs(session, task, session_id, since)
         return captured[0], task, session_id, since, stamped
@@ -206,7 +206,7 @@ class TestStampRunLogs:
     async def test_stamp_sets_cron_task_and_kind(self) -> None:
         stmt, task, _, _, _ = await self._stamp()
         params = stmt.compile().params
-        assert params["cron_task_id"] == task.id
+        assert params["cron_task_id"] == task.task_id
         assert params["kind"] == "cron"
 
 

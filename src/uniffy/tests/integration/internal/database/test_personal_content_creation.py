@@ -17,6 +17,7 @@ from uniffy.core.models.permissions.org_permission_defaults import OrganizationP
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.view_config import ViewConfig
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType, generate_id
@@ -34,6 +35,7 @@ async def _create_content(
     session: AsyncSession,
     env: SimpleNamespace,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     content_type: ContentType,
     access_mode: AccessMode | None,
 ) -> Content:
@@ -42,7 +44,7 @@ async def _create_content(
     storage.create_multipart_upload = AsyncMock(return_value=str(generate_id()))
     name = f"Personal creation {generate_id().hex[:10]}"
     if content_type == ContentType.NOTE:
-        return await NoteOperations(session, storage, search_indexer).create(
+        return await NoteOperations(session, storage, search_indexer, buffer).create(
             user_id=env.member_id,
             organization_id=env.org_id,
             title=name,
@@ -155,6 +157,7 @@ async def test_creation_permissions_remain_scoped_when_org_defaults_change(
     session: AsyncSession,
     env: SimpleNamespace,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     content_type: ContentType,
     access_mode: AccessMode | None,
 ) -> None:
@@ -168,7 +171,9 @@ async def test_creation_permissions_remain_scoped_when_org_defaults_change(
     session.add(defaults)
     await session.commit()
     try:
-        content = await _create_content(session, env, search_indexer, content_type, access_mode)
+        content = await _create_content(
+            session, env, search_indexer, buffer, content_type, access_mode
+        )
         await session.refresh(content)
         assert content.access_mode == (access_mode or AccessMode.OWNER_ONLY)
         assert content.baseline_role is None

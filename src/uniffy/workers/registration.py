@@ -62,6 +62,8 @@ class ScheduledJobRegistration:
     keep_result: Seconds | None = 0
     keep_result_forever: bool | None = False
     max_tries: int | None = 1
+    # Logs each successful run at DEBUG; for schedules that fire every second.
+    quiet: bool = False
 
     def to_arq(self) -> CronJob:
         return cron(
@@ -81,6 +83,7 @@ class ScheduledJobRegistration:
             keep_result=self.keep_result,
             keep_result_forever=self.keep_result_forever,
             max_tries=self.max_tries,
+            quiet=self.quiet,
         )
 
 

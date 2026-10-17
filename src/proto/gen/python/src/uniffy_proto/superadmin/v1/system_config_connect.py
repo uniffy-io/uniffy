@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import system_config_pb
-from .system_config_pb import GetMfaPolicyRequest, GetMfaPolicyResponse, GetSystemConfigRequest, GetSystemConfigResponse, SetMfaPolicyRequest, SetMfaPolicyResponse, SetPublicRegistrationRequest, SetPublicRegistrationResponse
+from .system_config_pb import GetMfaPolicyRequest, GetMfaPolicyResponse, GetRealtimeBufferStatusRequest, GetRealtimeBufferStatusResponse, GetSystemConfigRequest, GetSystemConfigResponse, SetMfaPolicyRequest, SetMfaPolicyResponse, SetPublicRegistrationRequest, SetPublicRegistrationResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -34,7 +34,8 @@ class SystemConfigService(Protocol):
     row (operator-edited) > env default (set at deploy time) > coded default.
     The first call without an env value or DB row returns the coded default;
     the operator's first edit creates the DB row, after which env becomes
-    irrelevant.
+    irrelevant. Env-only deployment facts that operators cannot edit here are
+    surfaced read-only.
 
     All RPCs require ``User.is_system_admin=true``.
     """
@@ -62,6 +63,15 @@ class SystemConfigService(Protocol):
         """
         Partial update to the MFA policy. Only fields explicitly set in
         the request are written. Audits as ``auth.mfa_policy_changed``.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_realtime_buffer_status(self, request: GetRealtimeBufferStatusRequest, ctx: RequestContext[GetRealtimeBufferStatusRequest, GetRealtimeBufferStatusResponse], /) -> GetRealtimeBufferStatusResponse:
+        """
+        Read the Valkey buffer that holds accepted realtime edits until their
+        PostgreSQL checkpoint: the preflight the answering backend recorded and
+        deployment-wide pending totals. Carries no document, organization or
+        credential detail, so it is safe to poll.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -123,6 +133,16 @@ class SystemConfigServiceASGIApplication(ConnectASGIApplication[SystemConfigServ
                     ),
                     function=svc.set_mfa_policy,
                 ),
+                "/superadmin.v1.SystemConfigService/GetRealtimeBufferStatus": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetRealtimeBufferStatus",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=GetRealtimeBufferStatusRequest,
+                        output=GetRealtimeBufferStatusResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_realtime_buffer_status,
+                ),
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
@@ -143,7 +163,8 @@ class SystemConfigServiceClient(ConnectClient):
     row (operator-edited) > env default (set at deploy time) > coded default.
     The first call without an env value or DB row returns the coded default;
     the operator's first edit creates the DB row, after which env becomes
-    irrelevant.
+    irrelevant. Env-only deployment facts that operators cannot edit here are
+    surfaced read-only.
 
     All RPCs require ``User.is_system_admin=true``.
     """
@@ -242,6 +263,32 @@ class SystemConfigServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_realtime_buffer_status(
+        self,
+        request: GetRealtimeBufferStatusRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetRealtimeBufferStatusResponse:
+        """
+        Read the Valkey buffer that holds accepted realtime edits until their
+        PostgreSQL checkpoint: the preflight the answering backend recorded and
+        deployment-wide pending totals. Carries no document, organization or
+        credential detail, so it is safe to poll.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetRealtimeBufferStatus",
+                service_name="superadmin.v1.SystemConfigService",
+                input=GetRealtimeBufferStatusRequest,
+                output=GetRealtimeBufferStatusResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class SystemConfigServiceSync(Protocol):
     """
     Deployment-wide configuration flags surfaced to the platform admin
@@ -249,7 +296,8 @@ class SystemConfigServiceSync(Protocol):
     row (operator-edited) > env default (set at deploy time) > coded default.
     The first call without an env value or DB row returns the coded default;
     the operator's first edit creates the DB row, after which env becomes
-    irrelevant.
+    irrelevant. Env-only deployment facts that operators cannot edit here are
+    surfaced read-only.
 
     All RPCs require ``User.is_system_admin=true``.
     """
@@ -277,6 +325,15 @@ class SystemConfigServiceSync(Protocol):
         """
         Partial update to the MFA policy. Only fields explicitly set in
         the request are written. Audits as ``auth.mfa_policy_changed``.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_realtime_buffer_status(self, request: GetRealtimeBufferStatusRequest, ctx: RequestContext[GetRealtimeBufferStatusRequest, GetRealtimeBufferStatusResponse], /) -> GetRealtimeBufferStatusResponse:
+        """
+        Read the Valkey buffer that holds accepted realtime edits until their
+        PostgreSQL checkpoint: the preflight the answering backend recorded and
+        deployment-wide pending totals. Carries no document, organization or
+        credential detail, so it is safe to poll.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -336,6 +393,16 @@ class SystemConfigServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.set_mfa_policy,
                 ),
+                "/superadmin.v1.SystemConfigService/GetRealtimeBufferStatus": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetRealtimeBufferStatus",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=GetRealtimeBufferStatusRequest,
+                        output=GetRealtimeBufferStatusResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_realtime_buffer_status,
+                ),
             },
             interceptors=interceptors,
             read_max_bytes=read_max_bytes,
@@ -356,7 +423,8 @@ class SystemConfigServiceClientSync(ConnectClientSync):
     row (operator-edited) > env default (set at deploy time) > coded default.
     The first call without an env value or DB row returns the coded default;
     the operator's first edit creates the DB row, after which env becomes
-    irrelevant.
+    irrelevant. Env-only deployment facts that operators cannot edit here are
+    surfaced read-only.
 
     All RPCs require ``User.is_system_admin=true``.
     """
@@ -446,6 +514,31 @@ class SystemConfigServiceClientSync(ConnectClientSync):
                 service_name="superadmin.v1.SystemConfigService",
                 input=SetMfaPolicyRequest,
                 output=SetMfaPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_realtime_buffer_status(
+        self,
+        request: GetRealtimeBufferStatusRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetRealtimeBufferStatusResponse:
+        """
+        Read the Valkey buffer that holds accepted realtime edits until their
+        PostgreSQL checkpoint: the preflight the answering backend recorded and
+        deployment-wide pending totals. Carries no document, organization or
+        credential detail, so it is safe to poll.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetRealtimeBufferStatus",
+                service_name="superadmin.v1.SystemConfigService",
+                input=GetRealtimeBufferStatusRequest,
+                output=GetRealtimeBufferStatusResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

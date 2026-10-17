@@ -61,6 +61,7 @@ class ToolContext:
     session: AsyncSession       # shared DB session
     user_id: UUID               # the HUMAN user's ID from the JWT
     organization_id: UUID       # org scope
+    buffer: UpdateBuffer        # accepted realtime edits content tools read and merge with
     agent_id: UUID | None       # used by memory tools
     is_test_session: bool       # memory write tools refuse when True
 ```
@@ -82,6 +83,19 @@ Tool executors call domain `*Operations` classes directly in-process (no RPC hop
   and retry. Title-only edits do not need the guard because they never replace the body. The mutable
   observation map is deliberately shared by the fresh read-tool contexts created with
   `dataclasses.replace` and the sequential write context.
+- Content tools see live realtime state. `ToolContext.buffer` is required, and the note, task,
+  calendar, project and file write operations a tool builds take it, so writes three-way merge with
+  edits people typed but no checkpoint holds yet (`notes-realtime.md`). Accepted edits that have not
+  reached the note column count as unprojected, so `notes.update_note` answers stale until the
+  checkpoint and projection land; `notes.read_note` returns the column text. `calendar.read_event`
+  returns the live description when editors are ahead of the column. When live edits cannot be
+  verified, operations raise `LiveStateUnavailable`; the executor counts `status="unavailable"` and
+  tells the model that no content changed and to retry the same call after a moment. Any write tool
+  that fails ends the shared runtime session's transaction: the executor rolls it back, which drops
+  what the call staged, releases its document locks and expires every row loaded through that
+  session. Both tool loops therefore commit after each write tool (the streaming loop through its
+  writer), so a later failure cannot drop an earlier tool's rows or audit fact, and callers never
+  hold ORM rows of the runtime session across a run; cron bookkeeping runs on its own session.
 - Destructive tools (`destructive=True`: the four `*.delete_*` tools) require user approval in streaming mode via `ApprovalStore` - an in-process `asyncio.Event` store with TTL sweep. It does NOT survive restarts or span processes; durability is not part of the contract.
 - **Big tool sets are advertised lazily** (`tools/deferral.py`). Above `DEFERRAL_THRESHOLD` (16) advertisable schemas, only `CORE_GROUPS` (Memory, Search, People, System) plus internal tools ship in the provider `tools` param; every other group renders as a names-only index in the system prompt and the runtime advertises `tools.load_group` (internal runtime plumbing). A load appends that group's schemas before the next loop iteration - append-only in stable order, so the prompt cache is invalidated once per load, never per turn - and persists on the destination (`agents_sessions.loaded_tool_groups`; upserted `agents_channel_bindings.loaded_tool_groups`) so later turns start pre-loaded. Deferral is routing, not authorization: a load can only advertise from the agent's enabled set. The partition runs AFTER `apply_image_tool_schema` and `filter_integration_tool_schemas`, so a loaded group re-advertises exactly what a small agent would see up front; the external-content note keys off the FULL filtered set because a deferred integration group can surface mid-run. Load-only turns don't consume `MAX_TOOL_ITERATIONS` (own `MAX_LOAD_ONLY_ITERATIONS` cap). Advertised tools are NEVER prose-listed in the system prompt - the tools param is the single description channel.
 

@@ -282,6 +282,7 @@ export const updateNote = createAsyncThunk<
     noteId: string;
     title?: string;
     content?: string;
+    baseContent?: string;
     tagIds?: string[];
     parentId?: string;
   },
@@ -294,6 +295,7 @@ export const updateNote = createAsyncThunk<
       organizationId,
       title: params.title,
       content: params.content,
+      baseContent: params.baseContent,
       tagIds: params.tagIds !== undefined ? { ids: params.tagIds } : undefined,
       parentId: params.parentId,
     });

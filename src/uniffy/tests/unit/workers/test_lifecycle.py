@@ -2,25 +2,26 @@ from contextlib import AsyncExitStack
 from dataclasses import replace
 from unittest.mock import AsyncMock, MagicMock
 
+from prometheus_client import REGISTRY
+
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY, WORKSPACE_SEARCH_CTX_KEY
 from uniffy.core.jobs import QueueName
 from uniffy.domains.files.jobs.slots import MEDIA_SLOTS_CTX_KEY
 from uniffy.domains.files.jobs import slots as slots_mod
 from uniffy.domains.notifications.delivery import DELIVERY_ADAPTERS_CTX_KEY
-from uniffy.workers.metrics import (
-    WORKER_JOB_START_DELAY,
-    WORKER_JOB_REJECTED_TOTAL,
-    WORKER_JOBS_COMPLETED_TOTAL,
-    WORKER_JOBS_IN_PROGRESS,
-    WORKER_JOBS_STARTED_TOTAL,
-    WORKER_LAST_HEARTBEAT_TIMESTAMP,
-    WORKER_QUEUE_DEPTH,
-    WORKER_READY,
-)
 from uniffy.vendor.arq.constants import job_start_delay_ctx_key
 from uniffy.vendor.arq.typing import JobRejectionReason
 from uniffy.workers import lifecycle
+
+
+def sample(name: str, labels: dict[str, str]) -> float:
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
+def ready(queue: QueueName) -> float:
+    return sample("uniffy_worker_ready", {"queue": queue})
 
 
 def _patch_shared_resources(monkeypatch):
@@ -71,11 +72,12 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     ctx = {}
 
     await lifecycle.core_on_startup(ctx)
-    assert WORKER_READY.labels(queue=QueueName.CORE)._value.get() == 1
+    assert isinstance(ctx[UPDATE_BUFFER_CTX_KEY], UpdateBuffer)
+    assert ready(QueueName.CORE) == 1
     await lifecycle.core_on_shutdown(ctx)
 
     assert ctx["queue"] is QueueName.CORE
-    assert WORKER_READY.labels(queue=QueueName.CORE)._value.get() == 0
+    assert ready(QueueName.CORE) == 0
     resources["init_db"].assert_awaited_once_with(
         skip_migrations=True,
         application_name="uniffy-worker-core",
@@ -89,6 +91,7 @@ async def test_core_lifecycle_opens_and_closes_its_runtime_resources(monkeypatch
     assert WORKSPACE_SEARCH_CTX_KEY not in ctx
     assert SEARCH_INDEXER_CTX_KEY not in ctx
     assert SESSION_FACTORY_CTX_KEY not in ctx
+    assert UPDATE_BUFFER_CTX_KEY not in ctx
     assert DELIVERY_ADAPTERS_CTX_KEY not in ctx
     register_realtime.assert_called_once()
     resources["init_queue"].assert_awaited_once_with(QueueName.CORE)
@@ -114,11 +117,11 @@ async def test_egress_lifecycle_owns_provider_and_integration_subscribers(monkey
     ctx = {}
 
     await lifecycle.egress_on_startup(ctx)
-    assert WORKER_READY.labels(queue=QueueName.EGRESS)._value.get() == 1
+    assert ready(QueueName.EGRESS) == 1
     await lifecycle.egress_on_shutdown(ctx)
 
     assert ctx["queue"] is QueueName.EGRESS
-    assert WORKER_READY.labels(queue=QueueName.EGRESS)._value.get() == 0
+    assert ready(QueueName.EGRESS) == 0
     resources["init_db"].assert_awaited_once_with(
         skip_migrations=True,
         application_name="uniffy-worker-egress",
@@ -140,10 +143,10 @@ async def test_media_lifecycle_owns_its_queue_without_delivery_or_provider_subsc
     ctx = {}
 
     await lifecycle.media_on_startup(ctx)
-    assert WORKER_READY.labels(queue=QueueName.MEDIA)._value.get() == 1
+    assert ready(QueueName.MEDIA) == 1
     await lifecycle.media_on_shutdown(ctx)
 
-    assert WORKER_READY.labels(queue=QueueName.MEDIA)._value.get() == 0
+    assert ready(QueueName.MEDIA) == 0
     resources["init_db"].assert_awaited_once_with(
         skip_migrations=True, application_name="uniffy-worker-media"
     )
@@ -185,14 +188,11 @@ async def test_media_workers_start_with_independent_encode_capacity(monkeypatch)
 
 async def test_job_lifecycle_records_attempt_state_and_start_delay() -> None:
     labels = {"queue": QueueName.CORE, "job_name": "test_worker_telemetry"}
-    started = WORKER_JOBS_STARTED_TOTAL.labels(**labels)
-    completed = WORKER_JOBS_COMPLETED_TOTAL.labels(**labels, status="success")
-    in_progress = WORKER_JOBS_IN_PROGRESS.labels(**labels)
-    start_delay = WORKER_JOB_START_DELAY.labels(**labels)
-    before_started = started._value.get()
-    before_completed = completed._value.get()
-    before_in_progress = in_progress._value.get()
-    before_delay = start_delay._sum.get()
+    completed = {**labels, "status": "success"}
+    before_started = sample("uniffy_worker_jobs_started_total", labels)
+    before_completed = sample("uniffy_worker_jobs_completed_total", completed)
+    before_in_progress = sample("uniffy_worker_jobs_in_progress", labels)
+    before_delay = sample("uniffy_worker_job_start_delay_seconds_sum", labels)
     ctx = {
         "queue": QueueName.CORE,
         "job_name": labels["job_name"],
@@ -202,14 +202,14 @@ async def test_job_lifecycle_records_attempt_state_and_start_delay() -> None:
 
     await lifecycle.on_job_start(ctx)
 
-    assert started._value.get() == before_started + 1
-    assert in_progress._value.get() == before_in_progress + 1
-    assert start_delay._sum.get() == before_delay + 0.25
+    assert sample("uniffy_worker_jobs_started_total", labels) == before_started + 1
+    assert sample("uniffy_worker_jobs_in_progress", labels) == before_in_progress + 1
+    assert sample("uniffy_worker_job_start_delay_seconds_sum", labels) == before_delay + 0.25
 
     await lifecycle.on_job_end(ctx)
 
-    assert completed._value.get() == before_completed + 1
-    assert in_progress._value.get() == before_in_progress
+    assert sample("uniffy_worker_jobs_completed_total", completed) == before_completed + 1
+    assert sample("uniffy_worker_jobs_in_progress", labels) == before_in_progress
 
 
 async def test_health_check_records_depth_and_success_timestamp() -> None:
@@ -219,22 +219,17 @@ async def test_health_check_records_depth_and_success_timestamp() -> None:
         heartbeat_timestamp=1_788_000_000.5,
     )
 
-    assert WORKER_QUEUE_DEPTH.labels(queue=QueueName.EGRESS)._value.get() == 17
-    assert (
-        WORKER_LAST_HEARTBEAT_TIMESTAMP.labels(queue=QueueName.EGRESS)._value.get()
-        == 1_788_000_000.5
-    )
+    egress = {"queue": QueueName.EGRESS}
+    assert sample("uniffy_worker_queue_depth", egress) == 17
+    assert sample("uniffy_worker_last_heartbeat_timestamp_seconds", egress) == 1_788_000_000.5
 
 
 async def test_rejected_job_is_counted_without_changing_in_progress() -> None:
     reason = JobRejectionReason.FUNCTION_NOT_FOUND
-    rejected = WORKER_JOB_REJECTED_TOTAL.labels(queue=QueueName.CORE, reason=reason)
-    in_progress = WORKER_JOBS_IN_PROGRESS.labels(
-        queue=QueueName.CORE,
-        job_name="missing_handler",
-    )
-    before_rejected = rejected._value.get()
-    before_in_progress = in_progress._value.get()
+    rejected = {"queue": QueueName.CORE, "reason": reason}
+    in_progress = {"queue": QueueName.CORE, "job_name": "missing_handler"}
+    before_rejected = sample("uniffy_worker_job_rejected_total", rejected)
+    before_in_progress = sample("uniffy_worker_jobs_in_progress", in_progress)
 
     await lifecycle.on_job_rejected(
         {
@@ -244,5 +239,5 @@ async def test_rejected_job_is_counted_without_changing_in_progress() -> None:
         reason=reason,
     )
 
-    assert rejected._value.get() == before_rejected + 1
-    assert in_progress._value.get() == before_in_progress
+    assert sample("uniffy_worker_job_rejected_total", rejected) == before_rejected + 1
+    assert sample("uniffy_worker_jobs_in_progress", in_progress) == before_in_progress

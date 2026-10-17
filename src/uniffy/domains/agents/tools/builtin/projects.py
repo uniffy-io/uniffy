@@ -113,6 +113,7 @@ async def _execute_update_project(ctx: ToolContext, args: dict) -> ToolResult:
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         project_id=project_id,
+        buffer=ctx.buffer,
         **kwargs,
     )
 
@@ -141,6 +142,7 @@ async def _execute_delete_project(ctx: ToolContext, args: dict) -> ToolResult:
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
         project_id=project_id,
+        buffer=ctx.buffer,
     )
 
     return ToolResult(success=True, data="Project deleted successfully.")
@@ -274,6 +276,19 @@ def _format_task_result(prefix: str, task) -> str:
     return "\n".join(parts)
 
 
+async def _execute_read_task(ctx: ToolContext, args: dict) -> ToolResult:
+    from uniffy.domains.projects.operations import TaskReader
+
+    task_id, err = _parse_uuid(args.get("task_id", ""), "task_id")
+    if err:
+        return ToolResult(success=False, data="", error=err)
+    task = await TaskReader(ctx.session).get_by_id(ctx.user_id, ctx.organization_id, task_id)
+    return ToolResult(
+        success=True,
+        data=_format_task_result("Task", task) + f"\nDescription: {task.description or ''}",
+    )
+
+
 async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
     """Create a new task in a project."""
     from uniffy.domains.projects.operations import TaskOperations
@@ -337,7 +352,7 @@ async def _execute_create_task(ctx: ToolContext, args: dict) -> ToolResult:
             return ToolResult(success=False, data="", error=err)
         kwargs["sprint_id"] = sprint_id
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if "description" in kwargs:  # noqa: PLR2004
         kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task = await ops.create(
@@ -370,6 +385,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
     _UPDATE_STRING_FIELDS = (
         "title",
         "description",
+        "base_description",
         "status",
         "priority",
         "due_date",
@@ -432,7 +448,7 @@ async def _execute_update_task(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if "description" in kwargs:  # noqa: PLR2004
         kwargs["description"] = markdown_body(ctx, kwargs["description"], OutputSurface.TASK)
     task, _ = await ops.update(
@@ -461,7 +477,7 @@ async def _execute_delete_task(ctx: ToolContext, args: dict) -> ToolResult:
     except ValueError:
         return ToolResult(success=False, data="", error=f"Invalid task_id: {task_id_str}")
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -579,7 +595,7 @@ async def _execute_move_task(ctx: ToolContext, args: dict) -> ToolResult:
     # sort_order defaults to appending at the end of the target column
     sort_order = args.get("sort_order", 0)
 
-    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = TaskOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     task, _ = await ops.move(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -742,6 +758,24 @@ create_task = ToolDefinition(
     executor=_execute_create_task,
 )
 
+read_task = ToolDefinition(
+    name="tasks.read_task",
+    display_name="Read Task",
+    group="Tasks",
+    description=(
+        "Read a task and its full description before editing. "
+        "Pass the exact description as base_description when saving edits."
+    ),
+    parameter_schema={
+        "type": "object",
+        "properties": {"task_id": {"type": "string", "description": "UUID of the task."}},
+        "required": ["task_id"],
+    },
+    executor=_execute_read_task,
+    read_only=True,
+)
+
+
 update_task = ToolDefinition(
     name="tasks.update_task",
     display_name="Edit Task",
@@ -749,7 +783,8 @@ update_task = ToolDefinition(
     description=(
         "Update any task field: status, priority, type, assignees, dates, subtask parent, "
         "dependencies (blocked_by), sprint assignment, milestone flag, and more. "
-        "Pass empty values to clear optional fields."
+        "Pass empty values to clear optional fields. Description edits require base_description "
+        "containing the exact description from tasks.read_task before editing."
     ),
     parameter_schema={
         "type": "object",
@@ -757,6 +792,13 @@ update_task = ToolDefinition(
             "task_id": {"type": "string", "description": "UUID of the task."},
             "title": {"type": "string", "description": "New task title."},
             "description": {"type": "string", "description": MARKDOWN_CONTENT_DOC},
+            "base_description": {
+                "type": "string",
+                "description": (
+                    "Exact original description. Required with description; "
+                    "empty for an empty original."
+                ),
+            },
             "status": {
                 "type": "string",
                 "description": (
@@ -911,6 +953,7 @@ PROJECT_TOOLS: list[ToolDefinition] = [
 ]
 
 TASK_TOOLS: list[ToolDefinition] = [
+    read_task,
     create_task,
     update_task,
     delete_task,

@@ -15,6 +15,8 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.jobs import QueueName
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.domains.chat.limits import (
     CHANNEL_CREATE,
@@ -25,6 +27,7 @@ from uniffy.domains.chat.limits import (
 from uniffy.infrastructure.database.session import init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.binary import close_binary_client
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
 from uniffy.infrastructure.valkey.queue import close_queue, init_queue
@@ -130,6 +133,7 @@ async def main() -> None:
             storage=storage,
             search=search,
             search_indexer=search_indexer,
+            buffer=UpdateBuffer(),
             content_dir=args.content_dir,
             org_slug=args.org_slug,
             actor_email=args.actor_email,
@@ -244,6 +248,9 @@ async def _init_valkey() -> None:
             await start()
         except Exception as exc:  # noqa: BLE001
             logger.warning(f"Valkey {name} not available, seeding continues without it: {exc}")
+    # Rewriting a description that holds live edits reads the realtime buffer. A failed start
+    # logs its own warning and is retried by the first buffer call.
+    await ensure_buffer_ready()
 
 
 async def _close_valkey() -> None:
@@ -251,6 +258,7 @@ async def _close_valkey() -> None:
         *(partial(close_queue, queue) for queue in QueueName),
         close_pubsub,
         close_ops_client,
+        close_binary_client,
     ):
         try:
             await close()

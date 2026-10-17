@@ -399,7 +399,7 @@ async def _execute_create_note(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -453,7 +453,7 @@ async def _execute_create_folder(ctx: ToolContext, args: dict) -> ToolResult:
         if err:
             return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     if parent_id is not None:
         parent = await ops.get_by_id(ctx.user_id, ctx.organization_id, parent_id)
         access_mode, err = await resolve_parent_access_mode(
@@ -536,7 +536,7 @@ async def _execute_update_note(ctx: ToolContext, args: dict) -> ToolResult:
             ),
         )
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     try:
         note = await ops.update(
             user_id=ctx.user_id,
@@ -590,7 +590,7 @@ async def _execute_move_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     note = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -621,7 +621,7 @@ async def _execute_delete_note(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search)
+    ops = NoteOperations(ctx.session, ctx.required_storage, ctx.required_search, ctx.buffer)
     note = await ops.get_by_id(ctx.user_id, ctx.organization_id, note_id)  # type: ignore[arg-type]
     is_folder = note.node_type == NodeType.FOLDER
 

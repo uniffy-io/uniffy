@@ -5,11 +5,11 @@ from uniffy.core.realtime.adapter import (
     get_realtime_adapter,
     register_realtime_adapter,
 )
-from uniffy.core.realtime.ws_routes import router as realtime_router
+from uniffy.core.realtime.ws_routes import create_realtime_router
 
 __all__ = [
     "RealtimeContentAdapter",
+    "create_realtime_router",
     "get_realtime_adapter",
-    "realtime_router",
     "register_realtime_adapter",
 ]

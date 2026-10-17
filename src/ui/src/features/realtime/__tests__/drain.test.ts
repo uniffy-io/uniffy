@@ -1,0 +1,618 @@
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { openDB } from "idb";
+import * as Y from "yjs";
+import * as encoding from "lib0/encoding";
+import {
+  FakeRealtimeServer,
+  FakeWebSocket,
+  closeSockets,
+  currentSocket,
+  updateWrites,
+  eventually,
+  installBrowser,
+  openEditor,
+  signInDevice,
+  storedRowKeys,
+} from "@/features/realtime/persistence/__tests__/browser";
+import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
+import { AUTH_REFRESHED_EVENT } from "@/features/realtime/protocol";
+import { realtimeMultiplexer } from "@/features/realtime/multiplexer";
+import {
+  attachEncryptedPersistence,
+  discoverStoredPendingDocs,
+  readRecoveredDrafts,
+  REMOTE_ORIGIN,
+} from "@/features/realtime/persistence/encryptedYjsPersistence";
+import {
+  clearPendingDocsFor,
+  hasPendingDoc,
+  listPendingDocs,
+  recordPendingDoc,
+  subscribePendingDocs,
+  type PendingDoc,
+} from "@/features/realtime/pendingDocs";
+import {
+  DRAIN_BACKOFF_MS,
+  DRAIN_TIMEOUT_MS,
+  abortDrain,
+  drainDoc,
+  resumeDrains,
+  runRealtimeDrain,
+} from "@/features/realtime/drain";
+import { holdOpenDocument, whenDocumentFree } from "@/features/realtime/documentLocks";
+import { installWebLocks } from "@/features/realtime/__tests__/webLocks";
+import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
+import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
+
+const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
+const BATCH_MS = 50;
+const scope = { userId: "alice", organizationId: "org-1" };
+
+beforeAll(() => installBrowser());
+
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  await signInDevice("alice");
+  clearPendingDocsFor("alice");
+  clearPendingDocsFor("bob");
+  resumeDrains();
+});
+
+afterEach(() => {
+  closeSockets();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
+
+afterAll(() => teardownStorageEncryption());
+
+function entryFor(contentId: string, overrides: Partial<PendingDoc> = {}): PendingDoc {
+  return { contentType: "TASK", contentId, ...scope, discardOnClean: true, ...overrides };
+}
+
+// A device copy holding text no update id carries, as a crash between a snapshot and the batch
+// that would have sent it leaves behind.
+async function strandRows(server: FakeRealtimeServer, contentId: string, text: string) {
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, Y.encodeStateAsUpdate(server.doc), REMOTE_ORIGIN);
+  const persistence = attachEncryptedPersistence({
+    contentType: "TASK",
+    contentId,
+    ydoc: doc,
+    scope: entryFor(contentId),
+  });
+  await persistence.hydrate({ serverGeneration: server.generation });
+  doc.transact(() => doc.getText("markdown").insert(0, text), "session-id");
+  await persistence.destroy();
+  doc.destroy();
+}
+
+/** A NOTE editor that typed and closed before any checkpoint: `accepted` edits got receipts,
+ * `unsent` ones were typed after the socket dropped. Its close hands the doc to the registry. */
+async function closeEditor(
+  server: FakeRealtimeServer,
+  contentId: string,
+  edits: { accepted: string[]; unsent?: string[] },
+) {
+  const editor = openEditor(contentId, { discardOnClean: false });
+  const ws = await openSocket();
+  server.attach(ws);
+  await editor.hydrated;
+  for (const text of edits.accepted) {
+    editor.type(text);
+    vi.advanceTimersByTime(BATCH_MS);
+  }
+  server.accept(ws);
+  if (edits.unsent?.length) {
+    ws.serverClose(1006);
+    for (const text of edits.unsent) {
+      editor.type(text);
+      vi.advanceTimersByTime(BATCH_MS);
+    }
+  }
+  await editor.persistence.flush();
+  await editor.close();
+}
+
+function noteEntry(contentId: string): PendingDoc {
+  return entryFor(contentId, { contentType: "NOTE", discardOnClean: false });
+}
+
+/** The live socket, opened as the server would accept it. */
+async function openSocket(): Promise<FakeWebSocket> {
+  const ws = currentSocket();
+  if (ws.readyState !== WebSocket.OPEN) ws.open();
+  return ws;
+}
+
+/** The socket a drain attached on, once its device copy is read and it attached. */
+async function attachedSocket(docName: string): Promise<FakeWebSocket> {
+  await eventually(() => expect(realtimeMultiplexer.isAttached(docName)).toBe(true));
+  return openSocket();
+}
+
+function deniedFrame(docName: string, reason: string): Uint8Array {
+  const encoder = encoding.createEncoder();
+  encoding.writeVarUint(encoder, 2);
+  encoding.writeVarUint(encoder, 0);
+  encoding.writeVarString(encoder, reason);
+  return encodeDocFrame(docName, encoding.toUint8Array(encoder));
+}
+
+// What a later editor of the document would offer as recovered drafts.
+async function offeredDrafts(
+  server: FakeRealtimeServer,
+  contentId: string,
+  contentType = "TASK",
+): Promise<string[]> {
+  const doc = new Y.Doc();
+  Y.applyUpdate(doc, Y.encodeStateAsUpdate(server.doc), REMOTE_ORIGIN);
+  const persistence = attachEncryptedPersistence({ contentType, contentId, ydoc: doc });
+  const drafts = await readRecoveredDrafts(doc);
+  await persistence.destroy();
+  doc.destroy();
+  return drafts.map(({ text }) => text);
+}
+
+// Starts a drain and answers its attach; resolves once the replay has been sent.
+async function startDrain(server: FakeRealtimeServer, entry: PendingDoc) {
+  const outcome = drainDoc(entry);
+  const ws = await attachedSocket(server.docName);
+  server.attach(ws);
+  await eventually(() =>
+    expect(realtimeMultiplexer.getDocState(server.docName).checkpointPending).toBe(true),
+  );
+  vi.advanceTimersByTime(BATCH_MS);
+  return { outcome, ws };
+}
+
+describe("pending doc registry", () => {
+  it("records a doc once per name and exposes a stable snapshot", () => {
+    recordPendingDoc(entryFor("a"));
+    recordPendingDoc(entryFor("a"));
+    const snapshot = listPendingDocs();
+    expect(snapshot).toHaveLength(1);
+    expect(listPendingDocs()).toBe(snapshot);
+    expect(hasPendingDoc("TASK", "a")).toBe(true);
+  });
+});
+
+describe("realtime drain", () => {
+  it("yields to an editor without dropping its stored pending update", async () => {
+    const server = new FakeRealtimeServer("TASK:handoff", GENERATION);
+    await strandRows(server, "handoff", "pending during reopen");
+    recordPendingDoc(entryFor("handoff"));
+    runRealtimeDrain(scope);
+    abortDrain("TASK:handoff");
+    const doc = new Y.Doc();
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "handoff",
+      ydoc: doc,
+    });
+    await persistence.hydrate({ serverGeneration: GENERATION });
+    expect(doc.getText("markdown").toString()).toBe("pending during reopen");
+    expect(hasPendingDoc("TASK", "handoff")).toBe(true);
+    await persistence.destroy();
+    doc.destroy();
+  });
+
+  it("sends text only its device copy holds when the server asks for it, and keeps the entry until a checkpoint, not a receipt, covers it", async () => {
+    const server = new FakeRealtimeServer("TASK:drained", GENERATION);
+    await strandRows(server, "drained", "typed offline");
+    recordPendingDoc(entryFor("drained"));
+    const { outcome, ws } = await startDrain(server, entryFor("drained"));
+    server.accept(ws);
+    expect(server.text).toBe("typed offline");
+    await eventually(async () => expect(await discoverStoredPendingDocs("alice")).toBe(true));
+    expect(hasPendingDoc("TASK", "drained")).toBe(true);
+    expect(realtimeMultiplexer.isAttached(server.docName)).toBe(true);
+
+    server.checkpoint([ws]);
+    expect(await outcome).toBe("drained");
+    expect(hasPendingDoc("TASK", "drained")).toBe(false);
+    expect(realtimeMultiplexer.isAttached(server.docName)).toBe(false);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+  });
+
+  it("drains on a committed acknowledgment from a server that commits every write", async () => {
+    const server = new FakeRealtimeServer("TASK:committed", GENERATION);
+    await strandRows(server, "committed", "typed offline");
+    recordPendingDoc(entryFor("committed"));
+    const { outcome, ws } = await startDrain(server, entryFor("committed"));
+    server.commit(ws);
+    expect(await outcome).toBe("drained");
+    expect(server.text).toBe("typed offline");
+    expect(hasPendingDoc("TASK", "committed")).toBe(false);
+  });
+
+  it("keeps the entry and every row when no checkpoint arrives in time, then settles on a later run", async () => {
+    const server = new FakeRealtimeServer("TASK:slow", GENERATION);
+    await strandRows(server, "slow", "typed offline");
+    recordPendingDoc(entryFor("slow"));
+    const first = await startDrain(server, entryFor("slow"));
+    const [write] = server.accept(first.ws);
+    vi.advanceTimersByTime(DRAIN_TIMEOUT_MS);
+    expect(await first.outcome).toBe("retry");
+    expect(hasPendingDoc("TASK", "slow")).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+
+    const second = drainDoc(entryFor("slow"));
+    const ws = await attachedSocket(server.docName);
+    const before = updateWrites(ws, server.docName).length;
+    server.attach(ws);
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState(server.docName).checkpointPending).toBe(true),
+    );
+    vi.advanceTimersByTime(BATCH_MS);
+    // Its receipt is still in the buffer and the server holds its text, so nothing is resent.
+    expect(updateWrites(ws, server.docName).slice(before)).toEqual([]);
+    expect(write.id).toBeTruthy();
+    server.checkpoint([ws]);
+    expect(await second).toBe("drained");
+    expect(hasPendingDoc("TASK", "slow")).toBe(false);
+  });
+
+  it("keeps the entry and every row while the server forbids the connection, then drains with new credentials", async () => {
+    const server = new FakeRealtimeServer("TASK:forbidden", GENERATION);
+    await strandRows(server, "forbidden", "typed offline");
+    recordPendingDoc(entryFor("forbidden"));
+    const { outcome, ws } = await startDrain(server, entryFor("forbidden"));
+    ws.serverClose(4403);
+    expect(await outcome).toBe("retry");
+    expect(hasPendingDoc("TASK", "forbidden")).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+
+    // The same credentials would be refused again, so a later drain opens no socket.
+    const opened = FakeWebSocket.instances.length;
+    const second = drainDoc(entryFor("forbidden"));
+    await eventually(() => expect(realtimeMultiplexer.isAttached(server.docName)).toBe(true));
+    expect(FakeWebSocket.instances).toHaveLength(opened);
+
+    window.dispatchEvent(new Event(AUTH_REFRESHED_EVENT));
+    const fresh = currentSocket();
+    expect(fresh).not.toBe(ws);
+    fresh.open();
+    server.attach(fresh);
+    // Local recovery has handed back every stored row, including the update the refused socket
+    // carried.
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState(server.docName).coverageKnown).toBe(true),
+    );
+    vi.advanceTimersByTime(BATCH_MS);
+    server.commit(fresh);
+    expect(await second).toBe("drained");
+    expect(server.text).toBe("typed offline");
+    expect(hasPendingDoc("TASK", "forbidden")).toBe(false);
+  });
+
+  it("hands a closed editor's accepted edits to the drain and holds sign-out until the checkpoint", async () => {
+    // The authenticated shell drains whenever the registry changes.
+    const unsubscribe = subscribePendingDocs(() => runRealtimeDrain(scope));
+    const server = new FakeRealtimeServer("NOTE:closed", GENERATION);
+    const editor = openEditor("closed", { discardOnClean: true });
+    const ws = await openSocket();
+    server.attach(ws);
+    await editor.hydrated;
+    editor.type("accepted before Done");
+    vi.advanceTimersByTime(BATCH_MS);
+    const [write] = server.accept(ws);
+    await editor.persistence.flush();
+    await editor.close();
+
+    await eventually(() => expect(realtimeMultiplexer.isAttached("NOTE:closed")).toBe(true));
+    expect(hasPendingDoc("NOTE", "closed")).toBe(true);
+    expect(hasUnsyncedEdits("alice")).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    server.attach(ws);
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState("NOTE:closed")).toMatchObject({
+        transportPending: false,
+        checkpointPending: true,
+      }),
+    );
+    expect(updateWrites(ws, "NOTE:closed").map(({ id }) => id)).toEqual([write.id]);
+    expect(hasUnsyncedEdits("alice")).toBe(true);
+
+    server.checkpoint([ws]);
+    await eventually(() => expect(realtimeMultiplexer.isAttached("NOTE:closed")).toBe(false));
+    expect(hasUnsyncedEdits("alice")).toBe(false);
+    await eventually(async () => expect(await discoverStoredPendingDocs("alice")).toBe(false));
+    unsubscribe();
+  });
+
+  it("offers edits the server never accepted as a recovered draft and drops the entry when a viewer's drain hears read only", async () => {
+    const server = new FakeRealtimeServer("NOTE:viewer", GENERATION, "Shared note.");
+    await closeEditor(server, "viewer", { accepted: [], unsent: [" Typed offline."] });
+    const outcome = drainDoc(noteEntry("viewer"));
+    const ws = await attachedSocket(server.docName);
+    server.attach(ws, { viewer: true });
+    expect(await outcome).toBe("retained");
+    expect(hasPendingDoc("NOTE", "viewer")).toBe(false);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(await offeredDrafts(server, "viewer", "NOTE")).toEqual(["Shared note. Typed offline."]);
+  });
+
+  it("sends nothing and keeps unaccepted edits as a recovered draft when writes are denied before the handshake", async () => {
+    const server = new FakeRealtimeServer("NOTE:denied-first", GENERATION, "Shared note.");
+    await closeEditor(server, "denied-first", { accepted: [], unsent: [" Typed offline."] });
+    const outcome = drainDoc(noteEntry("denied-first"));
+    const ws = await attachedSocket(server.docName);
+    ws.receive(deniedFrame(server.docName, "read only"));
+    const before = updateWrites(ws, server.docName).length;
+    server.attach(ws);
+    expect(await outcome).toBe("retained");
+    expect(updateWrites(ws, server.docName).slice(before)).toEqual([]);
+    expect(hasPendingDoc("NOTE", "denied-first")).toBe(false);
+    expect(await offeredDrafts(server, "denied-first", "NOTE")).toEqual([
+      "Shared note. Typed offline.",
+    ]);
+  });
+
+  it("drops accepted rows and the entry once the document answers no view access", async () => {
+    const server = new FakeRealtimeServer("NOTE:deleted", GENERATION, "Shared note.");
+    await closeEditor(server, "deleted", { accepted: [" Accepted one.", " Accepted two."] });
+    const stored = await storedRowKeys("NOTE", "deleted");
+    expect(stored.filter((key) => key[3].startsWith("pending:"))).toHaveLength(2);
+    expect(hasPendingDoc("NOTE", "deleted")).toBe(true);
+
+    const outcome = drainDoc(noteEntry("deleted"));
+    const ws = await attachedSocket(server.docName);
+    const before = updateWrites(ws, server.docName).length;
+    server.denyView(ws);
+    expect(await outcome).toBe("retained");
+    expect(updateWrites(ws, server.docName).slice(before)).toEqual([]);
+    expect(await storedRowKeys("NOTE", "deleted")).toEqual([]);
+    expect(hasPendingDoc("NOTE", "deleted")).toBe(false);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+    expect(hasPendingDoc("NOTE", "deleted")).toBe(false);
+    expect(await offeredDrafts(server, "deleted", "NOTE")).toEqual([]);
+  });
+
+  it("keeps only edits the server never accepted, as a recovered draft, once the document answers no view access", async () => {
+    const server = new FakeRealtimeServer("NOTE:unshared", GENERATION, "Shared note.");
+    await closeEditor(server, "unshared", {
+      accepted: [" Accepted."],
+      unsent: [" Typed offline."],
+    });
+
+    const outcome = drainDoc(noteEntry("unshared"));
+    const ws = await attachedSocket(server.docName);
+    server.denyView(ws, "access revoked");
+    expect(await outcome).toBe("retained");
+    const stored = await storedRowKeys("NOTE", "unshared");
+    expect(stored.length).toBeGreaterThan(0);
+    for (const key of stored) expect(key[2]).toMatch(/^recovery:/);
+    expect(await offeredDrafts(server, "unshared", "NOTE")).toEqual([
+      "Shared note. Accepted. Typed offline.",
+    ]);
+    // The draft blocks a silent sign-out but never wakes the drain again.
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
+    expect(hasPendingDoc("NOTE", "unshared")).toBe(false);
+  });
+
+  it("attaches without presence and never asks peers to announce theirs", async () => {
+    const server = new FakeRealtimeServer("TASK:headless", GENERATION);
+    await strandRows(server, "headless", "typed offline");
+    recordPendingDoc(entryFor("headless"));
+    const { outcome, ws } = await startDrain(server, entryFor("headless"));
+    const messageTypes = ws.sent.flatMap((frame) => {
+      const { docName, payloadOffset } = peekVarString(frame);
+      return docName === server.docName ? [frame[payloadOffset]] : [];
+    });
+    expect(messageTypes[0]).toBe(0);
+    expect(messageTypes).not.toContain(1);
+    expect(messageTypes).not.toContain(3);
+    server.accept(ws);
+    server.checkpoint([ws]);
+    expect(await outcome).toBe("drained");
+  });
+
+  it("keeps the rows as a draft when the server generation moved on", async () => {
+    const stale = new FakeRealtimeServer("TASK:moved", "G");
+    await strandRows(stale, "moved", "typed offline");
+    recordPendingDoc(entryFor("moved"));
+    const replaced = new FakeRealtimeServer("TASK:moved", "H");
+    const outcome = drainDoc(entryFor("moved"));
+    const ws = await attachedSocket("TASK:moved");
+    replaced.attach(ws);
+    await outcome;
+    expect(realtimeMultiplexer.isAttached("TASK:moved")).toBe(false);
+    expect(hasPendingDoc("TASK", "moved")).toBe(false);
+    expect(updateWrites(ws, "TASK:moved")).toEqual([]);
+
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, Y.encodeStateAsUpdate(replaced.doc), REMOTE_ORIGIN);
+    const persistence = attachEncryptedPersistence({
+      contentType: "TASK",
+      contentId: "moved",
+      ydoc: doc,
+    });
+    expect(
+      (await readRecoveredDrafts(doc)).map(({ generation, text }) => [generation, text]),
+    ).toEqual([["G", "typed offline"]]);
+    await persistence.destroy();
+    doc.destroy();
+  });
+
+  it("never sends a replaced generation's updates whose rows name no generation in their content", async () => {
+    const stale = new FakeRealtimeServer("NOTE:no-snapshot", "G", "Old base.");
+    const editor = openEditor("no-snapshot");
+    const ws = await openSocket();
+    stale.attach(ws);
+    await editor.hydrated;
+    ws.serverClose(1006);
+    editor.type(" Typed offline.");
+    vi.advanceTimersByTime(BATCH_MS);
+    await editor.persistence.flush();
+    await editor.close();
+    // The full copies are gone, as after a crash before the first one landed.
+    const db = await openDB("uniffy-realtime-yjs", 4);
+    for (const key of await storedRowKeys("NOTE", "no-snapshot"))
+      if (!key[3].startsWith("pending:")) await db.delete("updates", key);
+    db.close();
+    expect(await storedRowKeys("NOTE", "no-snapshot")).toHaveLength(1);
+
+    const replaced = new FakeRealtimeServer("NOTE:no-snapshot", "H", "Replacement.");
+    const outcome = drainDoc(noteEntry("no-snapshot"));
+    const fresh = await attachedSocket("NOTE:no-snapshot");
+    const before = updateWrites(fresh, "NOTE:no-snapshot").length;
+    replaced.attach(fresh);
+    expect(await outcome).toBe("retained");
+    expect(updateWrites(fresh, "NOTE:no-snapshot").slice(before)).toEqual([]);
+  });
+
+  it("skips a doc an open editor holds and docs of other users or organizations", async () => {
+    const editor = openEditor("held");
+    recordPendingDoc(entryFor("held", { contentType: "NOTE" }));
+    recordPendingDoc(entryFor("other-user", { userId: "bob" }));
+    recordPendingDoc(entryFor("other-org", { organizationId: "org-2" }));
+    recordPendingDoc(entryFor("mine"));
+    const started = runRealtimeDrain(scope);
+    expect([...started.keys()]).toEqual(["TASK:mine"]);
+    await eventually(() => expect(realtimeMultiplexer.isAttached("TASK:mine")).toBe(true));
+    expect(realtimeMultiplexer.isAttached("TASK:other-user")).toBe(false);
+    expect(realtimeMultiplexer.isAttached("TASK:other-org")).toBe(false);
+    abortDrain("TASK:mine");
+    expect(await started.get("TASK:mine")).toBe("retry");
+    expect(
+      listPendingDocs()
+        .map(({ contentId }) => contentId)
+        .sort(),
+    ).toEqual(["held", "mine", "other-org", "other-user"]);
+    await editor.close();
+  });
+});
+
+describe("stuck drains", () => {
+  /** Number of structs in the latest SyncStep2 the server sent. */
+  function downloadedStructs(server: FakeRealtimeServer): number {
+    return Y.decodeUpdate(server.downloads.at(-1)!).structs.length;
+  }
+
+  it("re-attach a stuck document only after a doubling backoff and download only what changed", async () => {
+    const server = new FakeRealtimeServer("NOTE:stuck", GENERATION, "Shared note.");
+    await closeEditor(server, "stuck", { accepted: [" Accepted, never checkpointed."] });
+    const full = Y.decodeUpdate(Y.encodeStateAsUpdate(server.doc)).structs.length;
+    expect(full).toBeGreaterThan(0);
+
+    const attempt = async (expected: "retry" | "drained") => {
+      const started = runRealtimeDrain(scope);
+      expect([...started.keys()]).toEqual(["NOTE:stuck"]);
+      const ws = await attachedSocket("NOTE:stuck");
+      server.attach(ws);
+      // The attaching SyncStep1 carried the device copy, so the answer holds no struct it has.
+      expect(downloadedStructs(server)).toBe(0);
+      if (expected === "retry") vi.advanceTimersByTime(DRAIN_TIMEOUT_MS);
+      else server.checkpoint([ws]);
+      expect(await started.get("NOTE:stuck")).toBe(expected);
+    };
+
+    await attempt("retry");
+    expect(runRealtimeDrain(scope).size).toBe(0);
+    vi.advanceTimersByTime(DRAIN_BACKOFF_MS - 1);
+    expect(runRealtimeDrain(scope).size).toBe(0);
+    vi.advanceTimersByTime(1);
+
+    await attempt("retry");
+    vi.advanceTimersByTime(DRAIN_BACKOFF_MS);
+    expect(runRealtimeDrain(scope).size).toBe(0);
+    vi.advanceTimersByTime(DRAIN_BACKOFF_MS);
+
+    await attempt("drained");
+    expect(hasPendingDoc("NOTE", "stuck")).toBe(false);
+    expect(await storedRowKeys("NOTE", "stuck")).toHaveLength(1);
+    expect(await discoverStoredPendingDocs("alice")).toBe(false);
+  });
+
+  it("let returning connectivity and an editor's hand-off start a waiting drain at once", async () => {
+    const server = new FakeRealtimeServer("NOTE:waiting", GENERATION, "Shared note.");
+    await closeEditor(server, "waiting", { accepted: [" Accepted."] });
+    const first = drainDoc(noteEntry("waiting"));
+    server.attach(await attachedSocket("NOTE:waiting"));
+    vi.advanceTimersByTime(DRAIN_TIMEOUT_MS);
+    expect(await first).toBe("retry");
+    expect(runRealtimeDrain(scope).size).toBe(0);
+
+    resumeDrains();
+    const resumed = runRealtimeDrain(scope);
+    expect([...resumed.keys()]).toEqual(["NOTE:waiting"]);
+    await eventually(() => expect(realtimeMultiplexer.isAttached("NOTE:waiting")).toBe(true));
+    vi.advanceTimersByTime(DRAIN_TIMEOUT_MS);
+    expect(await resumed.get("NOTE:waiting")).toBe("retry");
+    expect(runRealtimeDrain(scope).size).toBe(0);
+
+    // Opening an editor cancels the wait, so the drain its close hands off to starts now.
+    abortDrain("NOTE:waiting");
+    const handedOff = runRealtimeDrain(scope);
+    expect([...handedOff.keys()]).toEqual(["NOTE:waiting"]);
+    abortDrain("NOTE:waiting");
+    expect(await handedOff.get("NOTE:waiting")).toBe("retry");
+  });
+});
+
+describe("drains across tabs of one origin", () => {
+  let uninstallWebLocks = () => {};
+  beforeEach(() => {
+    uninstallWebLocks = installWebLocks();
+  });
+  afterEach(() => uninstallWebLocks());
+
+  it("leave a document alone while an editor in another tab holds it, then drain it once it closes", async () => {
+    const server = new FakeRealtimeServer("TASK:elsewhere", GENERATION);
+    await strandRows(server, "elsewhere", "typed in another tab");
+    recordPendingDoc(entryFor("elsewhere"));
+    const sockets = FakeWebSocket.instances.length;
+    const releaseEditor = holdOpenDocument("TASK:elsewhere");
+
+    expect(await runRealtimeDrain(scope).get("TASK:elsewhere")).toBe("held");
+    expect(FakeWebSocket.instances).toHaveLength(sockets);
+    expect(realtimeMultiplexer.isAttached("TASK:elsewhere")).toBe(false);
+    expect(hasPendingDoc("TASK", "elsewhere")).toBe(true);
+
+    releaseEditor();
+    // The lock goes a few turns after the editor's close settles.
+    await new Promise((resolve) => setImmediate(resolve));
+    const outcome = runRealtimeDrain(scope).get("TASK:elsewhere");
+    const ws = await attachedSocket(server.docName);
+    server.attach(ws);
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState(server.docName).checkpointPending).toBe(true),
+    );
+    vi.advanceTimersByTime(BATCH_MS);
+    server.accept(ws);
+    server.checkpoint([ws]);
+    expect(await outcome).toBe("drained");
+    expect(server.text).toBe("typed in another tab");
+  });
+
+  it("run one drain per document when two tabs kick at once", async () => {
+    const server = new FakeRealtimeServer("TASK:twice", GENERATION);
+    await strandRows(server, "twice", "typed once");
+    recordPendingDoc(entryFor("twice"));
+    let finishOtherTab!: () => void;
+    const otherTab = whenDocumentFree(
+      "TASK:twice",
+      () => new Promise<void>((resolve) => (finishOtherTab = resolve)),
+    );
+    await eventually(() => expect(finishOtherTab).toBeDefined());
+
+    expect(await runRealtimeDrain(scope).get("TASK:twice")).toBe("held");
+    expect(realtimeMultiplexer.isAttached("TASK:twice")).toBe(false);
+    finishOtherTab();
+    await otherTab;
+  });
+
+  it("let an editor opening in this tab cancel a drain still waiting for its lock", async () => {
+    const server = new FakeRealtimeServer("TASK:opened", GENERATION);
+    await strandRows(server, "opened", "kept for the editor");
+    recordPendingDoc(entryFor("opened"));
+    const outcome = runRealtimeDrain(scope).get("TASK:opened");
+    abortDrain("TASK:opened");
+
+    expect(await outcome).toBe("retry");
+    expect(realtimeMultiplexer.isAttached("TASK:opened")).toBe(false);
+    expect(hasPendingDoc("TASK", "opened")).toBe(true);
+  });
+});

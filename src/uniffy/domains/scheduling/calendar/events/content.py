@@ -7,6 +7,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
@@ -33,8 +34,10 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer | None = None,
+        *,
+        permission_checker: PermissionChecker | None = None,
     ) -> None:
-        super().__init__(session, search_indexer)
+        super().__init__(session, search_indexer, permission_checker=permission_checker)
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         # Tag slugs land in the dedicated `tags` array via

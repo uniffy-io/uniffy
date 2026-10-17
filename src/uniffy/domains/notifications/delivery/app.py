@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.realtime import publish_notification
@@ -37,9 +38,10 @@ class InAppAdapter(DeliveryAdapter):
         session: AsyncSession,
         user_id: UUID,
         event: NotificationEvent,
-    ) -> Notification:
+    ) -> Notification | None:
         """Stage a ``Notification`` row on ``session``; ID is set after commit."""
         notification = Notification(
+            event_id=event.event_id,
             organization_id=event.organization_id,
             user_id=user_id,
             notification_type=event.notification_type,
@@ -49,8 +51,13 @@ class InAppAdapter(DeliveryAdapter):
             actor_id=event.actor_id,
             notification_metadata=event.metadata,
         )
-        session.add(notification)
-        return notification
+        statement = (
+            insert(Notification)
+            .values(**notification.model_dump())
+            .on_conflict_do_nothing(constraint="uq_notification_event_user")
+            .returning(Notification)
+        )
+        return (await session.execute(statement)).scalar_one_or_none()
 
     async def publish_realtime(
         self,

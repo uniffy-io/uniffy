@@ -2,10 +2,30 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ArrowsOut, Check, PencilSimple } from "@phosphor-icons/react";
 import { CrepeEditor } from "@/components/editor/CrepeEditor";
+import { EditorHandleContext, type EditorHandle } from "@/components/editor/EditorHandle";
+import { EditorFormattingToolbar } from "@/components/editor/toolbar/EditorFormattingToolbar";
+import { FloatingFormattingToolbar } from "@/components/editor/toolbar/FloatingFormattingToolbar";
+import { Button } from "@/components/ui/button";
 import { dialogShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
+import { RealtimeConnectionNotice } from "@/features/realtime/components/RealtimeConnectionNotice";
+import { serializeEditorMarkdown } from "@/features/realtime/markdown";
+import {
+  docContentTypeName,
+  RealtimeSessionStatus,
+  RealtimeStatusBadge,
+  useCheckpointPending,
+  useDeviceStorage,
+  useDocSaveState,
+  useMarkdownDocSession,
+  usePendingDocSync,
+  useSessionReleasable,
+} from "@/features/realtime";
+
+// Reopening inside this window resumes the same session instead of re-hydrating.
+const SESSION_CLOSE_GRACE_MS = 1000;
 
 interface ExpandableEditorProps {
   contentType: ContentType;
@@ -14,7 +34,8 @@ interface ExpandableEditorProps {
   /** Fires on every keystroke. Hosts that only want one write per edit can skip it and use `onDone`. */
   onChange?: (markdown: string) => void;
   /** Fires once when the overlay closes, carrying the final markdown. */
-  onDone?: (markdown: string) => void;
+  onDone?: (markdown: string, meta: { realtimeOwned: boolean; baseContent: string }) => void;
+  realtime?: boolean;
   placeholder?: string;
   /** Defaults to true when `contentId` is provided. */
   enableUpload?: boolean;
@@ -38,6 +59,7 @@ export function ExpandableEditor({
   placeholder = "Click to add a description...",
   enableUpload = !!contentId,
   readonly = false,
+  realtime = false,
   label = "Description",
   onFileUploaded,
   fullPreview = false,
@@ -49,9 +71,79 @@ export function ExpandableEditor({
   const [editorKey, setEditorKey] = useState(0);
   const [draftInitial, setDraftInitial] = useState(value);
   const latestMarkdownRef = useRef(value);
+  const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [editWithoutLive, setEditWithoutLive] = useState(false);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  // The cold-start seed is elected after sync; the read-only preview stays up until then.
+  const [seeded, setSeeded] = useState(false);
+  const [syncedSessionId, setSyncedSessionId] = useState<string | null>(null);
+  // Set when the server replaced the document mid-session; "draft" when this session typed.
+  const [replacedNotice, setReplacedNotice] = useState<"plain" | "draft" | null>(null);
+  const realtimeConfigured = Boolean(realtime && contentId);
+  const realtimeActive = realtimeConfigured && !editWithoutLive;
+  const realtimeContentType = docContentTypeName(contentType);
+  const { binding, status, docName } = useMarkdownDocSession({
+    contentType: realtimeContentType,
+    contentId,
+    enabled: realtimeActive && sessionOpen,
+    canEdit: !readonly,
+    // Descriptions have many plain writers (mobile, agents, API); a cache kept past a
+    // clean close would replay over their later writes on the next open.
+    discardLocalOnCleanClose: true,
+    onGenerationReset: (info) => setReplacedNotice(info.hasLocalEdits ? "draft" : "plain"),
+  });
+  const whenSynced = binding?.whenSynced;
+  const sessionId = binding?.sessionId;
+  const realtimeOwned = Boolean(sessionId && syncedSessionId === sessionId);
+  useEffect(() => {
+    if (!whenSynced || !sessionId) return;
+    // eslint-disable-next-line react/react-compiler -- reset editor readiness with document identity
+    setSeeded(false);
+    let cancelled = false;
+    void whenSynced.then(() => {
+      if (!cancelled) setSyncedSessionId(sessionId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [whenSynced, sessionId]);
+
+  // Follows whichever attachment holds the doc: this session, then the drain after Done. Each value
+  // changes rarely, so typing does not re-render the editor tree on every batch and receipt.
+  const checkpointPending = useCheckpointPending(realtimeActive ? docName : null);
+  const saveState = useDocSaveState(realtimeActive && !readonly ? docName : null);
+  const storage = useDeviceStorage(realtimeActive ? docName : null);
+  const strandedSync = usePendingDocSync(realtimeContentType, realtimeActive ? contentId : null);
+  const transportDown = status === "disconnected" || status === "offline";
+  // Unaccepted edits only reach the server through this attached doc, so Done holds the session
+  // for them, and for accepted ones this device has not stored. Other accepted edits wait for
+  // their checkpoint in the drain; a parent unmount still falls back to IDB.
+  const releasable = useSessionReleasable(realtimeActive && closing ? docName : null, status);
+  useEffect(() => {
+    if (!closing || !releasable) return;
+    const timer = setTimeout(() => {
+      setSessionOpen(false);
+      setClosing(false);
+    }, SESSION_CLOSE_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [closing, releasable]);
+  useEffect(
+    () => () => {
+      if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    },
+    [],
+  );
+  const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
 
   const handleOpen = useCallback(() => {
     if (readonly) return;
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    setClosing(false);
+    setSessionOpen(true);
+    setEditWithoutLive(false);
+    setSeeded(false);
+    setReplacedNotice(null);
     setDraftInitial(value);
     latestMarkdownRef.current = value;
     setEditorReady(false);
@@ -59,7 +151,7 @@ export function ExpandableEditor({
     setIsExpanded(true);
 
     // Defer editor mount so the overlay can animate in first.
-    setTimeout(() => {
+    openTimerRef.current = setTimeout(() => {
       setEditorReady(true);
     }, 50);
   }, [readonly, value]);
@@ -67,8 +159,35 @@ export function ExpandableEditor({
   const handleClose = useCallback(() => {
     setIsExpanded(false);
     setEditorReady(false);
-    onDone?.(latestMarkdownRef.current);
-  }, [onDone]);
+    if (openTimerRef.current) clearTimeout(openTimerRef.current);
+    setClosing(true);
+    if (editWithoutLive) setSessionOpen(false);
+    // Before the seed lands the editor holds nothing of the user's; reporting it would blank
+    // the host's description.
+    if (realtimeActive && !seeded) return;
+    if (
+      realtimeActive &&
+      ["access_lost", "permission_lost", "token_revoked", "update_rejected"].includes(status)
+    )
+      return;
+    editorHandle?.flushMarkdownMirror?.();
+    const markdown = editorHandle?.run(serializeEditorMarkdown) ?? latestMarkdownRef.current;
+    onDone?.(markdown, {
+      realtimeOwned: realtimeActive && realtimeOwned,
+      baseContent: draftInitial,
+    });
+  }, [
+    onDone,
+    editorHandle,
+    realtimeOwned,
+    realtimeActive,
+    seeded,
+    editWithoutLive,
+    status,
+    draftInitial,
+  ]);
+
+  const handleRealtimeSeeded = useCallback(() => setSeeded(true), []);
 
   const handleEditorChange = useCallback(
     (markdown: string) => {
@@ -78,20 +197,69 @@ export function ExpandableEditor({
     [onChange],
   );
 
-  const editorPanelRef = useRef<HTMLDivElement>(null);
+  // The editor reports its handle once the ProseMirror view exists and clears it on unmount.
+  const handleEditorReady = useCallback((handle: EditorHandle | null) => {
+    setEditorHandle(handle);
+  }, []);
+
   useEffect(() => {
-    if (!isExpanded || !editorReady) return;
-    // Wait for CrepeEditor to mount and attach its ProseMirror DOM.
-    const timer = setTimeout(() => {
-      const pm = editorPanelRef.current?.querySelector(".ProseMirror") as HTMLElement | null;
-      pm?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [isExpanded, editorReady]);
+    if (!isExpanded || !editorHandle) return;
+    if (realtimeActive && !seeded) return;
+    editorHandle.focus();
+  }, [isExpanded, editorHandle, realtimeActive, seeded]);
 
   useOverlayEscape(handleClose, isExpanded);
 
   const hasContent = value && value.trim().length > 0;
+  const waitingForNetwork =
+    transportDown || (typeof navigator !== "undefined" && navigator.onLine === false);
+  // After Done the chip follows the held session, then the drain; a registry entry with nothing
+  // attached is still waiting to be sent.
+  const afterDoneChip = !isExpanded && (checkpointPending || strandedSync) && (
+    <RealtimeStatusBadge
+      status={waitingForNetwork ? "offline" : sessionOpen ? status : "idle"}
+      save={checkpointPending ? saveState : "syncing"}
+      storage={storage}
+    />
+  );
+
+  const connectingPreview = (
+    <div className="h-full overflow-y-auto p-6">
+      <RealtimeConnectionNotice
+        key={editorKey}
+        waiting
+        status={status}
+        onEditWithoutLive={
+          !readonly && !realtimeOwned && !replacedNotice && !checkpointPending && !strandedSync
+            ? () => setEditWithoutLive(true)
+            : undefined
+        }
+      />
+      <CrepeEditor
+        contentType={contentType}
+        contentId={contentId}
+        value={draftInitial}
+        readonly
+        enableUpload={false}
+        floatingToolbar={false}
+      />
+    </div>
+  );
+  // After a generation change the open-time text is stale; the new session lands in a moment,
+  // so the gap stays blank rather than flashing old content under "Connecting...".
+  const waitingBody = replacedNotice ? (
+    <RealtimeConnectionNotice key={editorKey} waiting status={status} />
+  ) : (
+    connectingPreview
+  );
+  const notices = [
+    replacedNotice === "draft"
+      ? `This ${label.toLowerCase()} was changed elsewhere. Your unsaved text is under Recovered draft.`
+      : replacedNotice === "plain"
+        ? `This ${label.toLowerCase()} was changed elsewhere.`
+        : null,
+    editWithoutLive ? "Live updates unavailable. Done saves changes." : null,
+  ].filter((notice): notice is string => notice !== null);
 
   return (
     <>
@@ -100,16 +268,19 @@ export function ExpandableEditor({
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {label}
           </h3>
-          {!readonly && hasContent && (
-            <button
-              type="button"
-              onClick={handleOpen}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <PencilSimple size={12} />
-              Edit
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {afterDoneChip}
+            {!readonly && hasContent && (
+              <button
+                type="button"
+                onClick={handleOpen}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <PencilSimple size={12} />
+                Edit
+              </button>
+            )}
+          </div>
         </div>
       )}
       {/* Collapsed preview - clickable area with rendered content */}
@@ -148,15 +319,20 @@ export function ExpandableEditor({
           )}
 
           {/* Edit button - floats at top-right only when the host did not opt into showHeader; otherwise the header renders it next to the label so it never sits over the preview scrollbar */}
-          {!showHeader && !readonly && hasContent && (
-            <button
-              type="button"
-              onClick={handleOpen}
-              className="absolute top-0 right-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <PencilSimple size={12} />
-              Edit
-            </button>
+          {!showHeader && (
+            <div className="absolute top-0 right-0 flex items-center gap-3">
+              {afterDoneChip}
+              {!readonly && hasContent && (
+                <button
+                  type="button"
+                  onClick={handleOpen}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <PencilSimple size={12} />
+                  Edit
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : (
@@ -196,7 +372,8 @@ export function ExpandableEditor({
 
           {/* Expand icon */}
           {!readonly && (
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 flex items-center gap-3">
+              {afterDoneChip}
               <ArrowsOut size={16} weight="bold" className="text-muted-foreground" />
             </div>
           )}
@@ -211,45 +388,102 @@ export function ExpandableEditor({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
             {/* Editor panel */}
-            <div
-              className={cn(
-                dialogShellClass,
-                "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
-              )}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-                <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
-                >
-                  <Check size={16} weight="bold" />
-                  Done
-                </button>
-              </div>
-
-              {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
-              <div ref={editorPanelRef} className="flex-1 min-h-0">
-                {editorReady ? (
-                  <CrepeEditor
-                    key={editorKey}
+            <EditorHandleContext.Provider value={editorHandle}>
+              <div
+                className={cn(
+                  dialogShellClass,
+                  "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
+                )}
+              >
+                <div className="shrink-0 rounded-t-xl overflow-hidden">
+                  <EditorFormattingToolbar
                     contentType={contentType}
                     contentId={contentId}
-                    value={draftInitial}
-                    onChange={handleEditorChange}
-                    placeholder={placeholder}
                     enableUpload={enableUpload}
                     onFileUploaded={onFileUploaded}
+                    trailing={
+                      <>
+                        {/* Phones show these under the bar, so the chip and Done keep their row. */}
+                        {notices.map((notice) => (
+                          <span
+                            key={notice}
+                            className="hidden text-xs text-muted-foreground sm:inline"
+                            role="status"
+                          >
+                            {notice}
+                          </span>
+                        ))}
+                        <RealtimeSessionStatus
+                          status={status}
+                          awareness={binding?.awareness ?? null}
+                          docName={docName}
+                          readOnly={readonly}
+                          whenSynced={binding?.whenSynced}
+                        />
+                        <Button type="button" size="md" onClick={handleClose}>
+                          <Check size={14} weight="bold" />
+                          Done
+                        </Button>
+                      </>
+                    }
                   />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                  </div>
-                )}
+                  {notices.length > 0 && (
+                    <p
+                      className="border-b border-border/50 px-3 py-1.5 text-xs text-muted-foreground sm:hidden"
+                      role="status"
+                    >
+                      {notices.join(" ")}
+                    </p>
+                  )}
+                </div>
+
+                {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
+                <div className="flex-1 min-h-0 relative">
+                  {editorReady && (!realtimeActive || (binding && realtimeOwned)) ? (
+                    <>
+                      <div
+                        className={cn(
+                          "h-full",
+                          realtimeActive && !seeded && "invisible absolute inset-0",
+                        )}
+                      >
+                        <CrepeEditor
+                          key={`${editorKey}:${sessionId ?? "local"}`}
+                          contentType={contentType}
+                          contentId={contentId}
+                          value={draftInitial}
+                          realtime={realtimeActive ? (binding ?? undefined) : undefined}
+                          readonly={
+                            readonly ||
+                            status === "permission_lost" ||
+                            status === "access_lost" ||
+                            status === "update_rejected" ||
+                            status === "token_revoked"
+                          }
+                          onChange={handleEditorChange}
+                          onEditorReady={handleEditorReady}
+                          onRealtimeSeeded={handleRealtimeSeeded}
+                          placeholder={placeholder}
+                          enableUpload={enableUpload}
+                          onFileUploaded={onFileUploaded}
+                          floatingToolbar={false}
+                          className="pt-6"
+                        />
+                      </div>
+                      {realtimeActive && !seeded && waitingBody}
+                    </>
+                  ) : realtimeActive ? (
+                    waitingBody
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+              {/* Pinned bar above covers selection formatting; the floating one stays reachable via context menu. */}
+              <FloatingFormattingToolbar showOnSelection={false} />
+            </EditorHandleContext.Provider>
           </div>,
           document.body,
         )}

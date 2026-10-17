@@ -51,7 +51,7 @@ export const tagNode = $node("tag", () => ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     runner: (state: any, node: Node) => {
       const attrs = node.attrs as { name: string };
-      // Export as custom 'tag' MDAST node — handler added via tagRemarkPlugin stringify
+      // The remark handler preserves the canonical tag marker.
       state.addNode("tag", undefined, undefined, {
         name: attrs.name,
       });
@@ -62,9 +62,6 @@ export const tagNode = $node("tag", () => ({
 // Persisted canonical form.
 const TAG_BRACKET_REGEX = /\[\[\[tag\|([^\]]+)\]\]\]/g;
 
-// Shorthand: `#name` preceded by start-of-string or whitespace; name starts with a letter.
-const TAG_HASH_REGEX = /#([a-zA-Z][a-zA-Z0-9_-]*)/g;
-
 interface TagAstNode extends UnistNode {
   type: "tag";
   name: string;
@@ -74,7 +71,6 @@ function splitTextByTagPattern(
   value: string,
   regex: RegExp,
   captureGroupIndex: number,
-  validateMatch?: (match: RegExpExecArray, value: string) => boolean,
 ): (UnistNode | TagAstNode)[] | null {
   regex.lastIndex = 0;
   if (!regex.test(value)) return null;
@@ -85,8 +81,6 @@ function splitTextByTagPattern(
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(value)) !== null) {
-    if (validateMatch && !validateMatch(match, value)) continue;
-
     if (match.index > lastIndex) {
       newNodes.push({
         type: "text",
@@ -127,7 +121,6 @@ export const tagRemarkPlugin = $remark("tagRemarkPlugin", () => {
     this.data("toMarkdownExtensions", [...existing, toMarkdownExtension]);
 
     return (tree: Parent) => {
-      // Canonical `[[[tag|...]]]` first; shorthand `#name` second.
       visit(
         tree,
         "text",
@@ -142,34 +135,11 @@ export const tagRemarkPlugin = $remark("tagRemarkPlugin", () => {
           }
         },
       );
-
-      visit(
-        tree,
-        "text",
-        (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
-          if (!parent || index === undefined) return;
-          const value = (node as { type: "text"; value: string }).value;
-
-          const newNodes = splitTextByTagPattern(value, TAG_HASH_REGEX, 1, (match, val) => {
-            // Anchor to start-of-string or whitespace so we don't match mid-word `foo#bar` or URL fragments.
-            if (match.index > 0) {
-              const prevChar = val[match.index - 1];
-              if (prevChar !== " " && prevChar !== "\t" && prevChar !== "\n") return false;
-            }
-            return true;
-          });
-
-          if (newNodes) {
-            parent.children.splice(index, 1, ...newNodes);
-            return [SKIP, index + newNodes.length];
-          }
-        },
-      );
     };
   };
 });
 
-// `(^|\s)#name<space>` — anchor prevents mid-word matches, leading letter prevents `#123`.
+// The input rule converts deliberate rich-editor typing, not imported peer text.
 export const tagInputRule = $inputRule(() => {
   const regex = /(^|\s)#([a-zA-Z][a-zA-Z0-9_-]*) $/;
 
@@ -214,7 +184,7 @@ class TagNodeView implements NodeView {
     this.dom.style.display = "inline-block";
     this.dom.contentEditable = "false";
 
-    // Handle click navigation — use mousedown to catch before ProseMirror selection
+    // Mousedown handles navigation before ProseMirror changes selection.
     this.dom.addEventListener(
       "mousedown",
       (e: MouseEvent) => {

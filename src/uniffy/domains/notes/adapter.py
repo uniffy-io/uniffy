@@ -1,21 +1,22 @@
 """``RealtimeContentAdapter`` for ``ContentType.NOTE``: markdown + canvas."""
 
+from collections.abc import Awaitable, Callable, Collection
 from typing import Any
 from uuid import UUID
 
 import pycrdt
-from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import bindparam, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.notes.note import Note
-from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.adapter import DeferredProjection, register_realtime_adapter
+from uniffy.core.realtime.markdown import markdown_text, seed_markdown
+from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, NodeType
+from uniffy.domains.notes.content.realtime import NoteRealtimePersistence
 from uniffy.domains.notes.projection import NoteProjectionOperations
-
-LOGGER_COMPONENT = "realtime.notes_adapter"
 
 # Per-node text fields stored as ``Y.Text``; mirrors ``NODE_TEXT_FIELDS``
 # in the frontend ``canvasBinding.ts`` and must stay in lockstep.
@@ -24,6 +25,12 @@ _NODE_TEXT_FIELDS: dict[str, str] = {
     "shape": "label",
     "mindmap": "label",
 }
+
+_POLICY_STATEMENT = select(Note.owner_id, Note.access_mode, Note.baseline_role).where(
+    Note.id == bindparam("content_id"),
+    Note.organization_id == bindparam("organization_id"),
+    Note.is_deleted.is_(False),
+)
 
 
 class NoteRealtimeAdapter:
@@ -34,29 +41,59 @@ class NoteRealtimeAdapter:
     def __init__(self, search_indexer: SearchIndexer) -> None:
         self.search_indexer = search_indexer
 
+    async def policy_key(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> DocKey | None:
+        return None
+
     async def authorize(
         self,
         session: AsyncSession,
         user_id: UUID,
         organization_id: UUID,
         content_id: UUID,
+        *,
+        checker: PermissionChecker | None = None,
     ) -> ContentRole | None:
         note = (
             await session.execute(
-                select(Note).where(
-                    Note.id == content_id,
-                    Note.organization_id == organization_id,
-                )
+                _POLICY_STATEMENT,
+                {"content_id": content_id, "organization_id": organization_id},
             )
-        ).scalar_one_or_none()
-        if note is None or note.is_deleted:
+        ).one_or_none()
+        if note is None:
             return None
 
-        return await PermissionChecker(session).effective_role(
+        return await (checker or PermissionChecker(session)).effective_role(
             user_id=user_id,
             organization_id=organization_id,
             content_type=ContentType.NOTE,
             content_id=content_id,
+            owner_id=note.owner_id,
+            access_mode=note.access_mode,
+            baseline_role=note.baseline_role,
+        )
+
+    async def authorize_many(
+        self,
+        session: AsyncSession,
+        user_ids: Collection[UUID],
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> dict[UUID, ContentRole | None]:
+        note = (
+            await session.execute(
+                _POLICY_STATEMENT,
+                {"content_id": content_id, "organization_id": organization_id},
+            )
+        ).one_or_none()
+        if note is None:
+            return dict.fromkeys(user_ids)
+        return await PermissionChecker(session).effective_roles(
+            user_ids,
+            organization_id,
+            ContentType.NOTE,
+            content_id,
             owner_id=note.owner_id,
             access_mode=note.access_mode,
             baseline_role=note.baseline_role,
@@ -71,10 +108,12 @@ class NoteRealtimeAdapter:
     ) -> None:
         note = (
             await session.execute(
-                select(Note).where(
+                select(Note)
+                .where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
                 )
+                .execution_options(populate_existing=True)
             )
         ).scalar_one_or_none()
         if note is None:
@@ -83,65 +122,48 @@ class NoteRealtimeAdapter:
         if note.node_type == NodeType.CANVAS:
             _seed_canvas_ydoc(ydoc, note.canvas_content)
         else:
-            ydoc["markdown"] = pycrdt.Text(note.content or "")
+            seed_markdown(ydoc, note.content or "")
 
-    async def render_and_persist(
+    async def stage_render(
         self,
         session: AsyncSession,
         ydoc: pycrdt.Doc,
         content_id: UUID,
         organization_id: UUID,
-    ) -> bool:
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | DeferredProjection | None:
         note = (
             await session.execute(
                 select(Note).where(
                     Note.id == content_id,
                     Note.organization_id == organization_id,
-                    Note.is_deleted == False,  # noqa: E712
                 )
             )
         ).scalar_one_or_none()
         if note is None:
-            logger.debug(
-                f"snapshot for missing or soft-deleted note {content_id}; skipping render",
-                component=LOGGER_COMPONENT,
-            )
-            return False
-
-        if note.node_type == NodeType.CANVAS:
-            content = ""
-            canvas_content = _render_canvas_content(ydoc)
-            # ``None`` here would NULL ``canvas_content`` on disk; skip the write.
-            if canvas_content is None:
-                logger.debug(
-                    f"skipping canvas render for {content_id}: empty YDoc",
-                    component=LOGGER_COMPONENT,
-                )
-                return True
-        else:
-            content = _render_markdown(ydoc)
-            canvas_content = None
-
-        saved = await NoteProjectionOperations(session, self.search_indexer).realtime_save(
-            organization_id=organization_id,
-            note_id=content_id,
-            content=content,
-            canvas_content=canvas_content,
+            return None
+        if note.is_deleted:
+            return DeferredProjection.SOFT_DELETED
+        canvas = _render_canvas_content(ydoc) if note.node_type == NodeType.CANVAS else None
+        content = "" if note.node_type == NodeType.CANVAS else _render_markdown(ydoc)
+        staged = await NoteRealtimePersistence(
+            NoteProjectionOperations(session, self.search_indexer)
+        ).stage_save(
+            organization_id,
+            content_id,
+            content,
+            canvas,
+            actor_id=actor_id,
         )
-        return saved is not None
+        return staged[1] if staged is not None else None
 
-    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        """Replace ``Y.Text("markdown")`` with a column write from the legacy
-        ``UpdateNote`` path. Markdown docs only; canvas writes never publish
-        a content replace.
-        """
-        ytext = ydoc.get("markdown", type=pycrdt.Text)
-        if str(ytext) == content:
-            return False
-        with ydoc.transaction():
-            del ytext[:]
-            ytext += content
-        return True
+    async def after_projection(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> None:
+        await NoteRealtimePersistence(
+            NoteProjectionOperations(session, self.search_indexer)
+        ).after_projection(organization_id, content_id)
 
 
 def register_note_realtime_adapter(search_indexer: SearchIndexer) -> None:
@@ -208,10 +230,7 @@ def _build_node_map(node: dict[str, Any]) -> pycrdt.Map:
 
 
 def _render_markdown(ydoc: pycrdt.Doc) -> str:
-    # ``get(..., type=...)`` declares + retrieves so roots seeded purely via
-    # ``apply_update`` are read correctly.
-    ytext = ydoc.get("markdown", type=pycrdt.Text)
-    return str(ytext)
+    return str(markdown_text(ydoc))
 
 
 def _render_canvas_content(ydoc: pycrdt.Doc) -> dict[str, Any] | None:

@@ -17,6 +17,7 @@ from connectrpc.errors import ConnectError
 from connectrpc.method import IdempotencyLevel, MethodInfo
 from connectrpc.request import Headers, RequestContext
 from uniffy_proto.notifications.v1.notifications_pb import (
+    ContentChangedPayload,
     StreamNotificationsRequest,
     StreamNotificationsResponse,
 )
@@ -35,6 +36,9 @@ ORG_B = generate_id()
 def _jwt_secret(monkeypatch):
     # The unit tier signs its own token: it must not depend on a developer's .env.
     monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
+    monkeypatch.setattr(
+        "uniffy.domains.auth.interceptors.token_revocation", AsyncMock(return_value=None)
+    )
 
 
 def _token(organization_id=None) -> str:
@@ -263,3 +267,30 @@ async def test_every_mention_state_event_passes_the_recipient_gate() -> None:
 
     assert responses == []
     relay.allows_mention_state.assert_awaited_once_with(payload)
+
+
+@pytest.mark.parametrize("allowed", [True, False])
+async def test_content_change_hints_pass_recipient_gate(allowed: bool) -> None:
+    payload = {
+        "_type": NotificationPayloadType.CONTENT_CHANGED,
+        "content_type": 8,
+        "content_id": str(generate_id()),
+    }
+    fake, _calls = _fake_subscription([payload])
+    projected = ContentChangedPayload(content_type=8, content_id=payload["content_id"])
+    gate = AsyncMock(return_value=projected if allowed else None)
+    with (
+        patch(
+            "uniffy.domains.notifications.handlers.is_active_member", AsyncMock(return_value=True)
+        ),
+        patch("uniffy.domains.notifications.handlers.subscribe_channels", fake),
+        patch("uniffy.domains.notifications.handlers.project_content_change", gate),
+    ):
+        responses = await _consume(
+            _stream(StreamNotificationsRequest(organization_id=str(ORG_A)), _token(ORG_A))
+        )
+    assert len(responses) == int(allowed)
+    gate.assert_awaited_once()
+    if allowed:
+        assert responses[0].event_type == StreamNotificationsResponse.EventType.CONTENT_CHANGED
+        assert responses[0].content_changed.content_id == payload["content_id"]

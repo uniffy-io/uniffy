@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions import resolve_effective_policy
 from uniffy.core.auth.permissions.checker import PermissionChecker
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, UNIFFYError, ValidationError
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
@@ -78,11 +78,14 @@ async def resolve_template_effective_policy(
 
 
 def map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Calendar-specific codes; any other domain error propagates to the transport's mapping."""
     if isinstance(exc, NotFoundError):
         return ConnectError(Code.NOT_FOUND, str(exc) or "Not found")
     if isinstance(exc, ValidationError):
         return ConnectError(Code.INVALID_ARGUMENT, str(exc))
     if isinstance(exc, PermissionDeniedError):
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
+    if isinstance(exc, UNIFFYError):
+        raise exc
     logger.exception(f"Error in {operation}: {exc}")
     return ConnectError(Code.INTERNAL, "Internal server error")

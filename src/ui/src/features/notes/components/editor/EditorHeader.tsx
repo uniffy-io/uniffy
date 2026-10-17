@@ -18,14 +18,18 @@ import {
   toggleMetadataPanel,
   toggleToolbarPin,
 } from "@/features/notes/store/editorSlice";
-import { RealtimeStatusBadge } from "@/features/notes/realtime/RealtimeStatusBadge";
-import { RealtimePresence, type RealtimeStatus } from "@/features/realtime";
+import {
+  docContentTypeName,
+  docNameFor,
+  RealtimeSessionStatus,
+  type RealtimeStatus,
+} from "@/features/realtime";
 import type { Awareness } from "y-protocols/awareness";
 import { buildBreadcrumbPath } from "@/features/notes/utils/notesTreeUtils";
 import { NoteBreadcrumbs } from "@/features/notes/components/NoteBreadcrumbs";
 import type { EditorMode } from "@/features/notes/store/editorSlice";
 import { MarkdownModeBar } from "@/features/notes/components/editor/MarkdownModeBar";
-import { EditorFormattingToolbar } from "@/features/notes/components/editor/EditorFormattingToolbar";
+import { EditorFormattingToolbar } from "@/components/editor/toolbar/EditorFormattingToolbar";
 
 function CollapsibleToolbarSlot({ children }: { children: React.ReactNode }) {
   const pinned = useAppSelector((s) => s.editor.settings.toolbarPinned ?? true);
@@ -52,6 +56,7 @@ interface EditorHeaderProps {
   isCanvas?: boolean;
   realtimeStatus?: RealtimeStatus;
   realtimeAwareness?: Awareness | null;
+  realtimeWhenSynced?: Promise<void>;
 }
 
 export function EditorHeader({
@@ -61,11 +66,11 @@ export function EditorHeader({
   isCanvas = false,
   realtimeStatus = "idle",
   realtimeAwareness = null,
+  realtimeWhenSynced,
 }: EditorHeaderProps) {
   const dispatch = useAppDispatch();
   const editorState = useAppSelector((state) => state.editor);
   const allNotes = useAppSelector((state) => state.notes.notes);
-  const currentUser = useAppSelector((s) => s.auth.user);
   const settings = editorState?.settings;
   const editorMode = settings?.editorMode || "crepe";
   const isMetadataPanelOpen = editorState?.isMetadataPanelOpen ?? false;
@@ -105,17 +110,14 @@ export function EditorHeader({
             noteOwnerId={note.ownerId}
           />
 
-          <div className="hidden sm:flex items-center gap-2 ml-2 md:ml-4">
-            <RealtimeStatusBadge status={realtimeStatus} />
-            {realtimeAwareness && (
-              <RealtimePresence
-                awareness={realtimeAwareness}
-                localUserId={currentUser?.id ?? null}
-                localUserName={currentUser?.fullName || currentUser?.username || null}
-                localHasAvatar={Boolean(currentUser?.hasAvatar)}
-              />
-            )}
-          </div>
+          <RealtimeSessionStatus
+            status={realtimeStatus}
+            awareness={realtimeAwareness}
+            docName={docNameFor(docContentTypeName(ContentType.NOTE), note.id)}
+            readOnly={!canEdit}
+            whenSynced={realtimeWhenSynced}
+            className="flex shrink-0 ml-2 md:ml-4"
+          />
         </div>
 
         <div className="flex items-center gap-1">
@@ -206,7 +208,7 @@ export function EditorHeader({
       {!isCanvas && editorMode === "markdown" && <MarkdownModeBar />}
       {!isCanvas && editorMode === "crepe" && canEdit && (
         <CollapsibleToolbarSlot>
-          <EditorFormattingToolbar noteId={note.id} />
+          <EditorFormattingToolbar contentType={ContentType.NOTE} contentId={note.id} />
         </CollapsibleToolbarSlot>
       )}
     </div>

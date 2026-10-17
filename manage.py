@@ -979,6 +979,23 @@ def db_migrate(stack):
     )
 
 
+@cli.group()
+def realtime():
+    """Realtime edit buffer operations."""
+
+
+@realtime.command("checkpoint-now")
+@stack_option
+def realtime_checkpoint_now(stack):
+    """Save every buffered live edit to PostgreSQL before Valkey maintenance.
+
+    Exits non-zero when a buffered stream could not be read; its edits stay in Valkey.
+    """
+    workspace_cmd(
+        "backend", stack, ["run", "python", "-m", "uniffy", "--realtime-checkpoint-now"]
+    )
+
+
 @cli.group("cli")
 def unictl():
     """unictl Go CLI."""

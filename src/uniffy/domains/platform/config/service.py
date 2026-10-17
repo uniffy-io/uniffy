@@ -2,6 +2,8 @@ from connectrpc.request import RequestContext
 from uniffy_proto.superadmin.v1.system_config_pb import (
     GetMfaPolicyRequest,
     GetMfaPolicyResponse,
+    GetRealtimeBufferStatusRequest,
+    GetRealtimeBufferStatusResponse,
     GetSystemConfigRequest,
     GetSystemConfigResponse,
     SetMfaPolicyRequest,
@@ -10,12 +12,13 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
     SetPublicRegistrationResponse,
 )
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.domains.platform.config.handlers import SystemConfigHandlers
 
 
 class SystemConfigServiceImpl:
-    def __init__(self) -> None:
-        self._handlers = SystemConfigHandlers()
+    def __init__(self, buffer: UpdateBuffer) -> None:
+        self._handlers = SystemConfigHandlers(buffer)
 
     async def get_system_config(
         self,
@@ -44,3 +47,10 @@ class SystemConfigServiceImpl:
         ctx: RequestContext,
     ) -> SetMfaPolicyResponse:
         return await self._handlers.set_mfa_policy(request, ctx)
+
+    async def get_realtime_buffer_status(
+        self,
+        request: GetRealtimeBufferStatusRequest,
+        ctx: RequestContext,
+    ) -> GetRealtimeBufferStatusResponse:
+        return await self._handlers.get_realtime_buffer_status(request, ctx)

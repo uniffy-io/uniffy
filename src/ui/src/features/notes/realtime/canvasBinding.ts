@@ -1,5 +1,5 @@
 import * as Y from "yjs";
-import { diffStrings } from "@/features/notes/realtime/textDiff";
+import { diffStrings } from "@/features/realtime/textDiff";
 import type {
   CanvasDefaults,
   CanvasEdge,

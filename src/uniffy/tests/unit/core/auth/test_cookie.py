@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated
 from uuid import UUID
+from unittest.mock import AsyncMock
 
 import jwt
 import pytest
@@ -124,6 +125,7 @@ def _asset_route_client() -> TestClient:
 
 
 def test_cookie_authenticates_an_asset_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("uniffy.core.auth.http.token_revocation", AsyncMock(return_value=None))
     monkeypatch.setenv("ASSET_COOKIE_SECURE", "false")
     user_id = generate_id()
     client = _asset_route_client()
@@ -134,7 +136,8 @@ def test_cookie_authenticates_an_asset_route(monkeypatch: pytest.MonkeyPatch) ->
     assert resp.json()["user_id"] == str(user_id)
 
 
-def test_bearer_still_authenticates_an_asset_route() -> None:
+def test_bearer_still_authenticates_an_asset_route(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("uniffy.core.auth.http.token_revocation", AsyncMock(return_value=None))
     user_id = generate_id()
     client = _asset_route_client()
 

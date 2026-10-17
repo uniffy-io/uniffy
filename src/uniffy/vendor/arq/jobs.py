@@ -79,6 +79,9 @@ class Job:
         self.job_id = job_id
         self._redis = redis
         self._queue_name = _queue_name
+        # A handle built by hand reads with the codec its pool writes, not with pickle.
+        if _deserializer is None:
+            _deserializer = getattr(redis, 'job_deserializer', None)
         self._deserializer = _deserializer
 
     async def result(

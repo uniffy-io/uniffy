@@ -1,3 +1,4 @@
+import type { MarkdownRecoveryActions } from "@/components/editor/EditorHandle";
 import { useRef, useEffect, useCallback, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { sanitizeMentionLabel } from "@/shared/utils/mentionUtils";
@@ -17,13 +18,19 @@ import type { SearchResultItem } from "@uniffy/proto/search/v1/search_pb";
 import { useTheme } from "@/config/theme/themeContext";
 import { createMarkdownEditorTheme } from "@/features/notes/components/editor/markdownEditorTheme";
 import { useRealtimeMarkdownContent } from "@/features/notes/realtime/useMarkdownContent";
-import { replaceMarkdownYText } from "@/features/notes/realtime/markdown";
+import { MARKDOWN_TEXT_FIELD } from "@/features/realtime/markdown";
+import {
+  applyCodeMirrorMarkdown,
+  bindCodeMirrorMarkdown,
+  remoteMarkdownChange,
+} from "@/features/realtime/codeMirrorBinding";
 
 interface MarkdownSplitEditorProps {
   note: SerializedNote;
   titleSlot?: ReactNode;
   // Both panes share Y.Text("markdown") so editor + preview cannot drift.
   realtime?: CrepeRealtimeBinding;
+  onRecoveryReady?: (actions: MarkdownRecoveryActions | null) => void;
 }
 
 const MIN_PANE_WIDTH = 200;
@@ -37,7 +44,12 @@ const defaultSettings = {
   spellCheck: true,
 };
 
-export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplitEditorProps) {
+export function MarkdownSplitEditor({
+  note,
+  titleSlot,
+  realtime,
+  onRecoveryReady,
+}: MarkdownSplitEditorProps) {
   const editorState = useAppSelector((state) => state.editor);
   const settings = editorState?.settings ?? defaultSettings;
   const showMarkdownPreview = settings.showMarkdownPreview ?? true;
@@ -48,9 +60,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
 
   // Preview rebuilds Milkdown per value change - debounce so a typing peer does not thrash it.
   const whenSynced = realtime?.whenSynced ?? null;
-  const content = useRealtimeMarkdownContent(realtime?.ydoc ?? null, note.content, {
-    whenSynced,
-  });
   const previewContent = useRealtimeMarkdownContent(realtime?.ydoc ?? null, note.content, {
     whenSynced,
     debounceMs: 300,
@@ -76,15 +85,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
   const mentionPopupRef = useRef(mentionPopup);
   mentionPopupRef.current = mentionPopup;
 
-  const realtimeRef = useRef(realtime);
-  realtimeRef.current = realtime;
   /* eslint-enable react/react-compiler */
-
-  const handleContentChange = useCallback((newContent: string) => {
-    const rt = realtimeRef.current;
-    if (!rt) return;
-    replaceMarkdownYText(rt.ydoc, newContent, rt.sessionId);
-  }, []);
 
   const handleMentionSelect = useCallback((result: SearchResultItem) => {
     const popup = mentionPopupRef.current;
@@ -159,10 +160,16 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       codemirrorViewRef.current = null;
     }
 
+    const editable = new Compartment();
+    let ready = false;
+    let disposed = false;
+    let unbind: (() => void) | undefined;
+    const text = realtime?.ydoc.getText(MARKDOWN_TEXT_FIELD);
     const state = EditorState.create({
-      doc: content,
+      doc: note.content,
       extensions: [
         basicSetup,
+        editable.of(EditorView.editable.of(false)),
         markdown({ codeLanguages: languages }),
         keymap.of(defaultKeymap),
         themeCompartmentRef.current.of(
@@ -175,12 +182,15 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
           }),
         ),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newContent = update.state.doc.toString();
-            handleContentChange(newContent);
+          if (ready && text && realtime) {
+            applyCodeMirrorMarkdown(update, text, realtime.sessionId);
           }
           // After-change detection avoids races with beforeinput.
-          if (update.docChanged && !mentionPopupRef.current) {
+          if (
+            update.docChanged &&
+            !update.transactions.some((tr) => tr.annotation(remoteMarkdownChange)) &&
+            !mentionPopupRef.current
+          ) {
             update.changes.iterChanges((_fromA, _toA, fromB, _toB, inserted) => {
               if (inserted.length !== 1 || inserted.sliceString(0) !== "@") return;
               const doc = update.state.doc;
@@ -198,12 +208,44 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       ],
     });
 
-    codemirrorViewRef.current = new EditorView({
+    const view = new EditorView({
       state,
       parent: editorContainerRef.current,
     });
+    codemirrorViewRef.current = view;
+    if (realtime && text) {
+      void realtime.whenSynced.then(() => {
+        if (disposed) return;
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: text.toString() },
+          annotations: remoteMarkdownChange.of(true),
+          effects: editable.reconfigure(EditorView.editable.of(true)),
+        });
+        unbind = bindCodeMirrorMarkdown(view, text, realtime.sessionId);
+        ready = true;
+        const apply = (recovered: string, replace: boolean) => {
+          if (disposed || !view.state.facet(EditorView.editable))
+            throw new Error("Editor is not editable");
+          const selection = view.state.selection.main;
+          const from = replace ? 0 : selection.from;
+          const to = replace ? view.state.doc.length : selection.to;
+          view.dispatch({
+            changes: { from, to, insert: recovered },
+            selection: { anchor: from + recovered.length },
+          });
+          view.focus();
+        };
+        onRecoveryReady?.({
+          insert: (recovered) => apply(recovered, false),
+          replace: (recovered) => apply(recovered, true),
+        });
+      });
+    }
 
     return () => {
+      disposed = true;
+      onRecoveryReady?.(null);
+      unbind?.();
       if (codemirrorViewRef.current) {
         codemirrorViewRef.current.destroy();
         codemirrorViewRef.current = null;
@@ -211,7 +253,7 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
     };
     // Re-init only on note swap; theme + sizing live in a Compartment.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [note.id]);
+  }, [note.id, realtime?.ydoc]);
 
   useEffect(() => {
     const view = codemirrorViewRef.current;
@@ -228,21 +270,6 @@ export function MarkdownSplitEditor({ note, titleSlot, realtime }: MarkdownSplit
       ),
     });
   }, [resolvedTheme, settings?.fontSize, settings?.lineHeight, showLineNumbers, isMobile]);
-
-  useEffect(() => {
-    if (!codemirrorViewRef.current) return;
-
-    const currentContent = codemirrorViewRef.current.state.doc.toString();
-    if (currentContent !== content) {
-      codemirrorViewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: currentContent.length,
-          insert: content,
-        },
-      });
-    }
-  }, [content]);
 
   return (
     <div className="flex flex-col h-full">

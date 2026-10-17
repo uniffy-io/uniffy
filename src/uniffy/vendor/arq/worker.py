@@ -10,7 +10,7 @@ from signal import Signals
 from time import time
 from typing import TYPE_CHECKING, Any, Callable, Final, Optional, Union, cast
 
-from valkey.exceptions import ResponseError, WatchError
+from valkey.exceptions import ResponseError, ValkeyError, WatchError
 
 from .cron import CronJob
 from .jobs import Deserializer, JobResult, SerializationError, Serializer, deserialize_job_raw, serialize_result
@@ -87,6 +87,7 @@ class Function:
     keep_result_s: Optional[float]
     keep_result_forever: Optional[bool]
     max_tries: Optional[int]
+    quiet: bool
 
 
 def func(
@@ -97,6 +98,7 @@ def func(
     timeout: Optional['SecondsTimedelta'] = None,
     keep_result_forever: Optional[bool] = None,
     max_tries: Optional[int] = None,
+    quiet: bool = False,
 ) -> Function:
     """
     Wrapper for a job function which lets you configure more settings.
@@ -107,6 +109,7 @@ def func(
     :param keep_result_forever: whether to keep results forever, if None use Worker default, wins over ``keep_result``
     :param timeout: maximum time the job should take
     :param max_tries: maximum number of tries allowed for the function, use 1 to prevent retrying
+    :param quiet: log a successful start and finish at DEBUG, for jobs that run every second
     """
     if isinstance(coroutine, Function):
         return coroutine
@@ -122,7 +125,9 @@ def func(
     timeout = to_seconds(timeout)
     keep_result = to_seconds(keep_result)
 
-    return Function(name or coroutine_.__qualname__, coroutine_, timeout, keep_result, keep_result_forever, max_tries)
+    return Function(
+        name or coroutine_.__qualname__, coroutine_, timeout, keep_result, keep_result_forever, max_tries, quiet
+    )
 
 
 class Retry(RuntimeError):
@@ -677,7 +682,14 @@ class Worker:
                 job_id=job_id,
                 serializer=self.job_serializer,
             )
-            return await asyncio.shield(self.finish_failed_job(job_id, result_data))
+            return await asyncio.shield(
+                self.finish_failed_job(
+                    job_id,
+                    result_data,
+                    keep_result_s=function.keep_result_s,
+                    keep_result_forever=function.keep_result_forever,
+                )
+            )
 
         result = no_result
         exc_extra = None
@@ -695,8 +707,10 @@ class Worker:
 
         success = False
         job_status = _JOB_STATUS_FAILED
+        # A quiet job runs every second; its routine start and finish would drown the worker log.
+        log_run = logger.debug if function.quiet else logger.info
         try:
-            logger.info(
+            log_run(
                 'Started job %s',
                 function_name,
                 extra=_job_log_fields(
@@ -793,7 +807,7 @@ class Worker:
             success = True
             job_status = _JOB_STATUS_SUCCESS
             finished_ms = timestamp_ms()
-            logger.info(
+            log_run(
                 'Finished job %s',
                 function_name,
                 extra=_job_log_fields(
@@ -885,7 +899,19 @@ class Worker:
                 tr.delete(*delete_keys)
             await tr.execute()
 
-    async def finish_failed_job(self, job_id: str, result_data: Optional[bytes]) -> None:
+    async def finish_failed_job(
+        self,
+        job_id: str,
+        result_data: Optional[bytes],
+        *,
+        keep_result_s: Optional[float] = None,
+        keep_result_forever: Optional[bool] = None,
+    ) -> None:
+        # A function's own retention wins, so keep_result=0 leaves no result to dedupe its job id.
+        if keep_result_forever is None:
+            keep_result_forever = self.keep_result_forever
+        if keep_result_s is None:
+            keep_result_s = self.keep_result_s
         async with self.pool.pipeline(transaction=True) as tr:
             tr.delete(
                 retry_key_prefix + job_id,
@@ -895,9 +921,9 @@ class Worker:
             tr.zrem(abort_jobs_ss, job_id)
             tr.zrem(self.queue_name, job_id)
             # result_data would only be None if serializing the result fails
-            keep_result = self.keep_result_forever or self.keep_result_s > 0
+            keep_result = keep_result_forever or keep_result_s > 0
             if result_data is not None and keep_result:  # pragma: no branch
-                expire = 0 if self.keep_result_forever else self.keep_result_s
+                expire = None if keep_result_forever else keep_result_s
                 tr.set(result_key_prefix + job_id, result_data, px=to_ms(expire))
             await tr.execute()
 
@@ -1064,12 +1090,22 @@ class Worker:
             self.handle_sig(signal.SIGUSR1)
         if not self._pool:
             return
-        await asyncio.gather(*self.tasks.values())
-        await self.pool.delete(self.health_check_key)
-        if self.on_shutdown:
-            await self.on_shutdown(self.ctx)
-        await self.pool.close(close_connection_pool=True)
-        self._pool = None
+        # A worker stopping because Valkey went away still runs on_shutdown and closes its pool, so
+        # clients on_startup bound to this loop never survive into an in-process restart.
+        try:
+            for outcome in await asyncio.gather(*self.tasks.values(), return_exceptions=True):
+                if isinstance(outcome, Exception):
+                    logger.warning('Job task failed while the worker closed: %r', outcome)
+            try:
+                await self.pool.delete(self.health_check_key)
+            except (ValkeyError, OSError) as exc:
+                logger.warning('Health check key not cleared while closing: %r', exc)
+            if self.on_shutdown:
+                await self.on_shutdown(self.ctx)
+        finally:
+            with contextlib.suppress(ValkeyError, OSError):
+                await self.pool.close(close_connection_pool=True)
+            self._pool = None
 
     def __repr__(self) -> str:
         return (

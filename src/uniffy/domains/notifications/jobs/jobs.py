@@ -75,6 +75,7 @@ async def process_notification_event(
             push_title = event.title
 
         push_event = NotificationEvent(
+            event_id=event.event_id,
             notification_type=event.notification_type,
             organization_id=event.organization_id,
             actor_id=event.actor_id,
@@ -118,7 +119,8 @@ async def process_notification_event(
 
             if NotificationChannel.IN_APP in channels and isinstance(in_app_adapter, InAppAdapter):
                 notification = await in_app_adapter.deliver_with_session(session, user_id, event)
-                pending_notifications.append(notification)
+                if notification is not None:
+                    pending_notifications.append(notification)
                 NOTIFICATION_DELIVERIES_TOTAL.labels(channel="in_app").inc()
 
             if NotificationChannel.BROWSER in channels:

@@ -464,6 +464,7 @@ export const updateEvent = createAsyncThunk<
     eventId: string;
     title?: string;
     description?: string;
+    baseDescription?: string;
     startTime?: string;
     endTime?: string;
     isAllDay?: boolean;
@@ -509,6 +510,7 @@ export const updateEvent = createAsyncThunk<
       organizationId,
       title: params.title,
       description: params.description,
+      baseDescription: params.baseDescription,
       startTime: params.startTime ? isoToTimestamp(params.startTime) : undefined,
       endTime: params.endTime ? isoToTimestamp(params.endTime) : undefined,
       isAllDay: params.isAllDay,

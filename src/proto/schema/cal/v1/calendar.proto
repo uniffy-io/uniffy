@@ -490,6 +490,8 @@ message UpdateEventRequest {
   // Remove every reminder. Otherwise an empty `reminders` list leaves them
   // untouched, since proto3 cannot tell an empty repeated apart from an unset one.
   bool clear_reminders = 30;
+  // Original description read by the caller. Required when description is set.
+  optional string base_description = 31;
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from

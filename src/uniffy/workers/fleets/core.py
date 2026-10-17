@@ -4,6 +4,7 @@ import os
 from datetime import UTC
 
 from uniffy.core.jobs import QueueName
+from uniffy.core.jobs.codec import deserialize_job_payload, serialize_job_payload
 from uniffy.infrastructure.valkey.config import ValkeyConfig
 from uniffy.workers.lifecycle import (
     CORE_RESOURCE_PROFILE,
@@ -39,6 +40,8 @@ class CoreWorkerSettings:
     on_job_rejected = on_job_rejected
     on_health_check = on_health_check
     valkey_settings = _valkey_settings
+    job_serializer = serialize_job_payload
+    job_deserializer = deserialize_job_payload
     max_jobs = int(os.getenv("CORE_WORKER_MAX_JOBS", "10"))
     job_timeout = _job_timeout
     keep_result = _keep_result

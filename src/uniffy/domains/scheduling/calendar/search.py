@@ -6,7 +6,7 @@ from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import EventVisibility
-from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.operations import CalendarEventReader
 
 
 async def refresh_event_search_projection(
@@ -14,7 +14,7 @@ async def refresh_event_search_projection(
     event: CalendarEvent,
     search_indexer: SearchIndexer,
 ) -> None:
-    operations = CalendarEventOperations(session, search_indexer=search_indexer)
+    operations = CalendarEventReader(session, _search_indexer=search_indexer)
     metadata = await operations._index_for_search(event) or {}
     if event.visibility == EventVisibility.PRIVATE:
         return
@@ -38,7 +38,7 @@ class CalendarEventProjection:
     """
 
     def __init__(self, session: AsyncSession, search_indexer: SearchIndexer) -> None:
-        self._operations = CalendarEventOperations(session, search_indexer=search_indexer)
+        self._operations = CalendarEventReader(session, _search_indexer=search_indexer)
 
     async def index(self, event: CalendarEvent) -> None:
         await self._operations._index_for_search(event, skip_member_lookup=True)

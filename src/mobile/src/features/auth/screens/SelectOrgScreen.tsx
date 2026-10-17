@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Buildings, SignOut } from "phosphor-react-native";
 import { useAuth } from "@core/providers/AuthContext";
 import { authApi } from "@core/auth/authApi";
+import { useSignOut } from "@features/auth/useSignOut";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
@@ -41,7 +42,8 @@ function getOrgInitials(name: string): string {
 export function SelectOrgScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const { user, selectOrganization, logout } = useAuth();
+  const { user, selectOrganization } = useAuth();
+  const { signOut, signingOut } = useSignOut();
 
   const [orgs, setOrgs] = useState<Omit<MyOrganization, "$typeName">[]>([]);
   const [loading, setLoading] = useState(true);
@@ -176,11 +178,12 @@ export function SelectOrgScreen() {
           styles.logoutButton,
           { borderColor: "#FA525240", marginBottom: insets.bottom + 16 },
         ]}
-        onPress={logout}
+        onPress={() => void signOut()}
+        disabled={signingOut}
         activeOpacity={0.7}
       >
         <SignOut size={15} color="#FA5252" weight="bold" />
-        <Text style={styles.logoutText}>Sign out</Text>
+        <Text style={styles.logoutText}>{signingOut ? "Signing out..." : "Sign out"}</Text>
       </TouchableOpacity>
     </Animated.View>
   );

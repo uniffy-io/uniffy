@@ -12,7 +12,8 @@ import {
   createTransform,
 } from "redux-persist";
 import type { PersistedState, MigrationManifest } from "redux-persist";
-import storage from "redux-persist/lib/storage";
+import { credentialSafeStorage } from "@/features/auth/store/credentialStorage";
+import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { authReducer } from "@/features/auth/store/authSlice";
 import { instantDayKey } from "@/features/calendar/utils";
 import { QUICK_ACCESS_FILTERS } from "@/features/calendar/types/calendar";
@@ -300,7 +301,7 @@ type RootReducerState = ReturnType<typeof rootReducer>;
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: "root",
   version: 5,
-  storage,
+  storage: credentialSafeStorage,
   whitelist: [
     "auth",
     "theme",
@@ -336,7 +337,7 @@ export const store = configureStore({
       },
     })
       .prepend(sessionScopeMiddleware)
-      .concat(errorToastMiddleware, contentAccessMiddleware),
+      .concat(credentialMiddleware, errorToastMiddleware, contentAccessMiddleware),
 });
 
 setStoreRef(store);

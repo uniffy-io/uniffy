@@ -1,12 +1,15 @@
 """Reindex inheriting content after organization permission-default changes."""
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, or_, select
 
-from uniffy.core.auth.permissions.defaults import resolve_effective_policy
+from uniffy.core.auth.permissions.defaults import (
+    resolve_content_defaults,
+    resolve_effective_policy,
+)
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -15,34 +18,29 @@ from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.notes.note import Note
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.rooms.room import Room
-from uniffy.core.search.indexer import build_content_urn
+from uniffy.core.search.indexer import SEARCH_INDEXER_CTX_KEY, SearchIndexer, build_content_urn
 from uniffy.core.types import AccessMode, ContentRole, ContentType
-from uniffy.domains.agents.agents.operations import AgentOperations
-from uniffy.domains.files.operations import FileOperations, FolderOperations
-from uniffy.domains.notes.operations import NoteOperations
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
-from uniffy.domains.projects.operations import ProjectOperations
 from uniffy.domains.projects.search.access import (
     enqueue_project_search_acl_refresh,
     record_project_search_acl_refresh,
 )
-from uniffy.domains.scheduling.calendar.operations import CalendarEventOperations
-from uniffy.domains.scheduling.rooms.lifecycle import RoomOperations
 from uniffy.infrastructure.database import open_session
 from uniffy.vendor.arq import Retry
 
 logger = logger.bind(component="permissions.jobs.jobs")
 
-_BATCH_SIZE = 500
+REINDEX_BATCH_SIZE = 500
 
-_DOMAINS: dict[ContentType, tuple[type, type]] = {
-    ContentType.NOTE: (NoteOperations, Note),
-    ContentType.FILE: (FileOperations, File),
-    ContentType.FOLDER: (FolderOperations, Folder),
-    ContentType.PROJECT: (ProjectOperations, Project),
-    ContentType.CALENDAR_EVENT: (CalendarEventOperations, CalendarEvent),
-    ContentType.AGENT: (AgentOperations, Agent),
-    ContentType.ROOM: (RoomOperations, Room),
+# Tasks follow their project: a project page refreshes its tasks' search policy.
+_MODELS: dict[ContentType, Any] = {
+    ContentType.NOTE: Note,
+    ContentType.FILE: File,
+    ContentType.FOLDER: Folder,
+    ContentType.PROJECT: Project,
+    ContentType.CALENDAR_EVENT: CalendarEvent,
+    ContentType.AGENT: Agent,
+    ContentType.ROOM: Room,
 }
 
 
@@ -59,10 +57,11 @@ async def reindex_org_content_for_defaults(
     except ValueError:
         return {"status": "skipped", "reason": f"unknown content type {content_type_value}"}
 
-    ops_cls, model_cls = _domain_for(content_type)
-    if ops_cls is None or model_cls is None:
+    model_cls = _MODELS.get(content_type)
+    if model_cls is None:
         return {"status": "skipped", "reason": "no_indexer_for_type"}
 
+    search_indexer = cast(SearchIndexer, ctx[SEARCH_INDEXER_CTX_KEY])
     cursor = UUID(after_id) if after_id else None
     project_refresh_ids: list[UUID] = []
     async with open_session() as session:
@@ -72,10 +71,8 @@ async def reindex_org_content_for_defaults(
         if not rows:
             return {"status": "complete", "processed": 0, "succeeded": 0, "failed": 0}
 
-        operations = ops_cls(session)
-        default_mode, default_baseline = await operations.permission_checker.get_org_defaults(
-            org_id,
-            content_type,
+        default_mode, default_baseline = await resolve_content_defaults(
+            session, org_id, content_type
         )
 
         items: list[tuple[str, AccessMode, ContentRole | None]] = []
@@ -92,7 +89,7 @@ async def reindex_org_content_for_defaults(
                 project_refresh_ids.append(row.id)
 
         try:
-            await operations.search_indexer.update_access_policy_bulk(org_id, items)
+            await search_indexer.update_access_policy_bulk(org_id, items)
         except Exception:
             await session.rollback()
             logger.opt(exception=True).warning(
@@ -104,7 +101,7 @@ async def reindex_org_content_for_defaults(
     for project_id in project_refresh_ids:
         await enqueue_project_search_acl_refresh(project_id)
 
-    has_more = len(rows) == _BATCH_SIZE
+    has_more = len(rows) == REINDEX_BATCH_SIZE
     if has_more:
         next_cursor = rows[-1].id
         chain_id = run_id or str(ctx.get("job_id", "unversioned"))
@@ -152,8 +149,4 @@ def _keyset_query(model_cls: Any, organization_id: UUID, after_id: UUID | None):
     ]
     if after_id is not None:
         predicates.append(model_cls.id > after_id)
-    return select(model_cls).where(*predicates).order_by(model_cls.id).limit(_BATCH_SIZE)
-
-
-def _domain_for(content_type: ContentType) -> tuple[type | None, type | None]:
-    return _DOMAINS.get(content_type, (None, None))
+    return select(model_cls).where(*predicates).order_by(model_cls.id).limit(REINDEX_BATCH_SIZE)

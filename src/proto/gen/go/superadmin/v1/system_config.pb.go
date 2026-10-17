@@ -21,6 +21,65 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Whether the serving Valkey instance may hold accepted realtime edits.
+type RealtimeBufferVerdict int32
+
+const (
+	RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_UNSPECIFIED RealtimeBufferVerdict = 0
+	// The answering backend has not read the serving Valkey instance yet.
+	RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_NOT_RUN RealtimeBufferVerdict = 1
+	RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_ENABLED RealtimeBufferVerdict = 2
+	// A confirmed allkeys-* eviction policy in strict mode; edits are refused.
+	RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_DISABLED RealtimeBufferVerdict = 3
+	// CONFIG is renamed or denied; edits are accepted and the requirement is logged.
+	RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_UNKNOWN RealtimeBufferVerdict = 4
+)
+
+// Enum value maps for RealtimeBufferVerdict.
+var (
+	RealtimeBufferVerdict_name = map[int32]string{
+		0: "REALTIME_BUFFER_VERDICT_UNSPECIFIED",
+		1: "REALTIME_BUFFER_VERDICT_NOT_RUN",
+		2: "REALTIME_BUFFER_VERDICT_ENABLED",
+		3: "REALTIME_BUFFER_VERDICT_DISABLED",
+		4: "REALTIME_BUFFER_VERDICT_UNKNOWN",
+	}
+	RealtimeBufferVerdict_value = map[string]int32{
+		"REALTIME_BUFFER_VERDICT_UNSPECIFIED": 0,
+		"REALTIME_BUFFER_VERDICT_NOT_RUN":     1,
+		"REALTIME_BUFFER_VERDICT_ENABLED":     2,
+		"REALTIME_BUFFER_VERDICT_DISABLED":    3,
+		"REALTIME_BUFFER_VERDICT_UNKNOWN":     4,
+	}
+)
+
+func (x RealtimeBufferVerdict) Enum() *RealtimeBufferVerdict {
+	p := new(RealtimeBufferVerdict)
+	*p = x
+	return p
+}
+
+func (x RealtimeBufferVerdict) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RealtimeBufferVerdict) Descriptor() protoreflect.EnumDescriptor {
+	return file_superadmin_v1_system_config_proto_enumTypes[0].Descriptor()
+}
+
+func (RealtimeBufferVerdict) Type() protoreflect.EnumType {
+	return &file_superadmin_v1_system_config_proto_enumTypes[0]
+}
+
+func (x RealtimeBufferVerdict) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RealtimeBufferVerdict.Descriptor instead.
+func (RealtimeBufferVerdict) EnumDescriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{0}
+}
+
 // One configuration flag's effective state.
 type SystemFlag struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
@@ -503,6 +562,366 @@ func (x *SetMfaPolicyResponse) GetPolicy() *MfaPolicy {
 	return nil
 }
 
+// Facts the deployment preflight read from the serving Valkey instance.
+type RealtimeBufferPreflight struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// maxmemory-policy; unset when CONFIG is renamed or denied.
+	EvictionPolicy *string `protobuf:"bytes,1,opt,name=eviction_policy,json=evictionPolicy,proto3,oneof" json:"eviction_policy,omitempty"`
+	// maxmemory in bytes, 0 when unlimited; unset when unreadable.
+	MaxmemoryBytes *int64 `protobuf:"varint,2,opt,name=maxmemory_bytes,json=maxmemoryBytes,proto3,oneof" json:"maxmemory_bytes,omitempty"`
+	// Unset when INFO persistence does not report it.
+	AofEnabled *bool `protobuf:"varint,3,opt,name=aof_enabled,json=aofEnabled,proto3,oneof" json:"aof_enabled,omitempty"`
+	// Whether RDB snapshots are scheduled; unset when unreadable.
+	RdbSnapshotsConfigured *bool `protobuf:"varint,4,opt,name=rdb_snapshots_configured,json=rdbSnapshotsConfigured,proto3,oneof" json:"rdb_snapshots_configured,omitempty"`
+	// What a Valkey crash or restart loses, in the words the preflight logs.
+	LossWindow    string `protobuf:"bytes,5,opt,name=loss_window,json=lossWindow,proto3" json:"loss_window,omitempty"`
+	ValkeyVersion string `protobuf:"bytes,6,opt,name=valkey_version,json=valkeyVersion,proto3" json:"valkey_version,omitempty"`
+	// Leading characters of the instance run id; a change marks a restart or failover.
+	ValkeyRunIdPrefix string `protobuf:"bytes,7,opt,name=valkey_run_id_prefix,json=valkeyRunIdPrefix,proto3" json:"valkey_run_id_prefix,omitempty"`
+	// Stored bytes every pending edit together may hold, split evenly across buckets.
+	PendingBudgetBytes int64 `protobuf:"varint,8,opt,name=pending_budget_bytes,json=pendingBudgetBytes,proto3" json:"pending_budget_bytes,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *RealtimeBufferPreflight) Reset() {
+	*x = RealtimeBufferPreflight{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RealtimeBufferPreflight) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RealtimeBufferPreflight) ProtoMessage() {}
+
+func (x *RealtimeBufferPreflight) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RealtimeBufferPreflight.ProtoReflect.Descriptor instead.
+func (*RealtimeBufferPreflight) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RealtimeBufferPreflight) GetEvictionPolicy() string {
+	if x != nil && x.EvictionPolicy != nil {
+		return *x.EvictionPolicy
+	}
+	return ""
+}
+
+func (x *RealtimeBufferPreflight) GetMaxmemoryBytes() int64 {
+	if x != nil && x.MaxmemoryBytes != nil {
+		return *x.MaxmemoryBytes
+	}
+	return 0
+}
+
+func (x *RealtimeBufferPreflight) GetAofEnabled() bool {
+	if x != nil && x.AofEnabled != nil {
+		return *x.AofEnabled
+	}
+	return false
+}
+
+func (x *RealtimeBufferPreflight) GetRdbSnapshotsConfigured() bool {
+	if x != nil && x.RdbSnapshotsConfigured != nil {
+		return *x.RdbSnapshotsConfigured
+	}
+	return false
+}
+
+func (x *RealtimeBufferPreflight) GetLossWindow() string {
+	if x != nil {
+		return x.LossWindow
+	}
+	return ""
+}
+
+func (x *RealtimeBufferPreflight) GetValkeyVersion() string {
+	if x != nil {
+		return x.ValkeyVersion
+	}
+	return ""
+}
+
+func (x *RealtimeBufferPreflight) GetValkeyRunIdPrefix() string {
+	if x != nil {
+		return x.ValkeyRunIdPrefix
+	}
+	return ""
+}
+
+func (x *RealtimeBufferPreflight) GetPendingBudgetBytes() int64 {
+	if x != nil {
+		return x.PendingBudgetBytes
+	}
+	return 0
+}
+
+// Edits accepted across the deployment and not yet checkpointed.
+type RealtimeBufferTotals struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Stored bytes as the budget counts them: update, id and per-record overhead.
+	PendingBytes     int64 `protobuf:"varint,1,opt,name=pending_bytes,json=pendingBytes,proto3" json:"pending_bytes,omitempty"`
+	PendingRecords   int64 `protobuf:"varint,2,opt,name=pending_records,json=pendingRecords,proto3" json:"pending_records,omitempty"`
+	PendingDocuments int64 `protobuf:"varint,3,opt,name=pending_documents,json=pendingDocuments,proto3" json:"pending_documents,omitempty"`
+	// Age of the oldest pending edit, 0 when none waits. A document backing off
+	// after a failed checkpoint counts from its retry.
+	OldestPendingSeconds float64 `protobuf:"fixed64,4,opt,name=oldest_pending_seconds,json=oldestPendingSeconds,proto3" json:"oldest_pending_seconds,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *RealtimeBufferTotals) Reset() {
+	*x = RealtimeBufferTotals{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RealtimeBufferTotals) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RealtimeBufferTotals) ProtoMessage() {}
+
+func (x *RealtimeBufferTotals) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RealtimeBufferTotals.ProtoReflect.Descriptor instead.
+func (*RealtimeBufferTotals) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RealtimeBufferTotals) GetPendingBytes() int64 {
+	if x != nil {
+		return x.PendingBytes
+	}
+	return 0
+}
+
+func (x *RealtimeBufferTotals) GetPendingRecords() int64 {
+	if x != nil {
+		return x.PendingRecords
+	}
+	return 0
+}
+
+func (x *RealtimeBufferTotals) GetPendingDocuments() int64 {
+	if x != nil {
+		return x.PendingDocuments
+	}
+	return 0
+}
+
+func (x *RealtimeBufferTotals) GetOldestPendingSeconds() float64 {
+	if x != nil {
+		return x.OldestPendingSeconds
+	}
+	return 0
+}
+
+type RealtimeBufferStatus struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Verdict RealtimeBufferVerdict  `protobuf:"varint,1,opt,name=verdict,proto3,enum=superadmin.v1.RealtimeBufferVerdict" json:"verdict,omitempty"`
+	// REALTIME_VALKEY_PREFLIGHT: "strict" or "warn".
+	PreflightMode string `protobuf:"bytes,2,opt,name=preflight_mode,json=preflightMode,proto3" json:"preflight_mode,omitempty"`
+	// True when REALTIME_PENDING_BUDGET_BYTES sets the budget instead of maxmemory.
+	PendingBudgetFromEnv bool `protobuf:"varint,3,opt,name=pending_budget_from_env,json=pendingBudgetFromEnv,proto3" json:"pending_budget_from_env,omitempty"`
+	// Unset until the answering backend has read the serving Valkey instance.
+	Preflight *RealtimeBufferPreflight `protobuf:"bytes,4,opt,name=preflight,proto3" json:"preflight,omitempty"`
+	// Unset when Valkey could not be read for this request.
+	Totals *RealtimeBufferTotals `protobuf:"bytes,5,opt,name=totals,proto3" json:"totals,omitempty"`
+	// Epoch resets by reason, counted by the answering backend process since
+	// it started. Workers count their own on their metrics endpoint.
+	EpochResets map[string]int64 `protobuf:"bytes,6,rep,name=epoch_resets,json=epochResets,proto3" json:"epoch_resets,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Checkpoint passes stopped by an unreadable stored edit, by reason,
+	// counted the same way as epoch_resets.
+	PoisonedCheckpoints map[string]int64 `protobuf:"bytes,7,rep,name=poisoned_checkpoints,json=poisonedCheckpoints,proto3" json:"poisoned_checkpoints,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RealtimeBufferStatus) Reset() {
+	*x = RealtimeBufferStatus{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RealtimeBufferStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RealtimeBufferStatus) ProtoMessage() {}
+
+func (x *RealtimeBufferStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RealtimeBufferStatus.ProtoReflect.Descriptor instead.
+func (*RealtimeBufferStatus) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RealtimeBufferStatus) GetVerdict() RealtimeBufferVerdict {
+	if x != nil {
+		return x.Verdict
+	}
+	return RealtimeBufferVerdict_REALTIME_BUFFER_VERDICT_UNSPECIFIED
+}
+
+func (x *RealtimeBufferStatus) GetPreflightMode() string {
+	if x != nil {
+		return x.PreflightMode
+	}
+	return ""
+}
+
+func (x *RealtimeBufferStatus) GetPendingBudgetFromEnv() bool {
+	if x != nil {
+		return x.PendingBudgetFromEnv
+	}
+	return false
+}
+
+func (x *RealtimeBufferStatus) GetPreflight() *RealtimeBufferPreflight {
+	if x != nil {
+		return x.Preflight
+	}
+	return nil
+}
+
+func (x *RealtimeBufferStatus) GetTotals() *RealtimeBufferTotals {
+	if x != nil {
+		return x.Totals
+	}
+	return nil
+}
+
+func (x *RealtimeBufferStatus) GetEpochResets() map[string]int64 {
+	if x != nil {
+		return x.EpochResets
+	}
+	return nil
+}
+
+func (x *RealtimeBufferStatus) GetPoisonedCheckpoints() map[string]int64 {
+	if x != nil {
+		return x.PoisonedCheckpoints
+	}
+	return nil
+}
+
+type GetRealtimeBufferStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRealtimeBufferStatusRequest) Reset() {
+	*x = GetRealtimeBufferStatusRequest{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRealtimeBufferStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRealtimeBufferStatusRequest) ProtoMessage() {}
+
+func (x *GetRealtimeBufferStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRealtimeBufferStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetRealtimeBufferStatusRequest) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{14}
+}
+
+type GetRealtimeBufferStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        *RealtimeBufferStatus  `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRealtimeBufferStatusResponse) Reset() {
+	*x = GetRealtimeBufferStatusResponse{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRealtimeBufferStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRealtimeBufferStatusResponse) ProtoMessage() {}
+
+func (x *GetRealtimeBufferStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRealtimeBufferStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetRealtimeBufferStatusResponse) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetRealtimeBufferStatusResponse) GetStatus() *RealtimeBufferStatus {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 var File_superadmin_v1_system_config_proto protoreflect.FileDescriptor
 
 const file_superadmin_v1_system_config_proto_rawDesc = "" +
@@ -529,12 +948,56 @@ const file_superadmin_v1_system_config_proto_rawDesc = "" +
 	"\x13SetMfaPolicyRequest\x12;\n" +
 	"\x1arequired_for_system_admins\x18\x01 \x01(\bR\x17requiredForSystemAdmins\"H\n" +
 	"\x14SetMfaPolicyResponse\x120\n" +
-	"\x06policy\x18\x01 \x01(\v2\x18.superadmin.v1.MfaPolicyR\x06policy2\xa5\x03\n" +
+	"\x06policy\x18\x01 \x01(\v2\x18.superadmin.v1.MfaPolicyR\x06policy\"\xda\x03\n" +
+	"\x17RealtimeBufferPreflight\x12,\n" +
+	"\x0feviction_policy\x18\x01 \x01(\tH\x00R\x0eevictionPolicy\x88\x01\x01\x12,\n" +
+	"\x0fmaxmemory_bytes\x18\x02 \x01(\x03H\x01R\x0emaxmemoryBytes\x88\x01\x01\x12$\n" +
+	"\vaof_enabled\x18\x03 \x01(\bH\x02R\n" +
+	"aofEnabled\x88\x01\x01\x12=\n" +
+	"\x18rdb_snapshots_configured\x18\x04 \x01(\bH\x03R\x16rdbSnapshotsConfigured\x88\x01\x01\x12\x1f\n" +
+	"\vloss_window\x18\x05 \x01(\tR\n" +
+	"lossWindow\x12%\n" +
+	"\x0evalkey_version\x18\x06 \x01(\tR\rvalkeyVersion\x12/\n" +
+	"\x14valkey_run_id_prefix\x18\a \x01(\tR\x11valkeyRunIdPrefix\x120\n" +
+	"\x14pending_budget_bytes\x18\b \x01(\x03R\x12pendingBudgetBytesB\x12\n" +
+	"\x10_eviction_policyB\x12\n" +
+	"\x10_maxmemory_bytesB\x0e\n" +
+	"\f_aof_enabledB\x1b\n" +
+	"\x19_rdb_snapshots_configured\"\xc7\x01\n" +
+	"\x14RealtimeBufferTotals\x12#\n" +
+	"\rpending_bytes\x18\x01 \x01(\x03R\fpendingBytes\x12'\n" +
+	"\x0fpending_records\x18\x02 \x01(\x03R\x0ependingRecords\x12+\n" +
+	"\x11pending_documents\x18\x03 \x01(\x03R\x10pendingDocuments\x124\n" +
+	"\x16oldest_pending_seconds\x18\x04 \x01(\x01R\x14oldestPendingSeconds\"\x89\x05\n" +
+	"\x14RealtimeBufferStatus\x12>\n" +
+	"\averdict\x18\x01 \x01(\x0e2$.superadmin.v1.RealtimeBufferVerdictR\averdict\x12%\n" +
+	"\x0epreflight_mode\x18\x02 \x01(\tR\rpreflightMode\x125\n" +
+	"\x17pending_budget_from_env\x18\x03 \x01(\bR\x14pendingBudgetFromEnv\x12D\n" +
+	"\tpreflight\x18\x04 \x01(\v2&.superadmin.v1.RealtimeBufferPreflightR\tpreflight\x12;\n" +
+	"\x06totals\x18\x05 \x01(\v2#.superadmin.v1.RealtimeBufferTotalsR\x06totals\x12W\n" +
+	"\fepoch_resets\x18\x06 \x03(\v24.superadmin.v1.RealtimeBufferStatus.EpochResetsEntryR\vepochResets\x12o\n" +
+	"\x14poisoned_checkpoints\x18\a \x03(\v2<.superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntryR\x13poisonedCheckpoints\x1a>\n" +
+	"\x10EpochResetsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\x1aF\n" +
+	"\x18PoisonedCheckpointsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\" \n" +
+	"\x1eGetRealtimeBufferStatusRequest\"^\n" +
+	"\x1fGetRealtimeBufferStatusResponse\x12;\n" +
+	"\x06status\x18\x01 \x01(\v2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xd5\x01\n" +
+	"\x15RealtimeBufferVerdict\x12'\n" +
+	"#REALTIME_BUFFER_VERDICT_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fREALTIME_BUFFER_VERDICT_NOT_RUN\x10\x01\x12#\n" +
+	"\x1fREALTIME_BUFFER_VERDICT_ENABLED\x10\x02\x12$\n" +
+	" REALTIME_BUFFER_VERDICT_DISABLED\x10\x03\x12#\n" +
+	"\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\xa1\x04\n" +
 	"\x13SystemConfigService\x12b\n" +
 	"\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n" +
 	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12Y\n" +
 	"\fGetMfaPolicy\x12\".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse\"\x00\x12Y\n" +
-	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
+	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00\x12z\n" +
+	"\x17GetRealtimeBufferStatus\x12-.superadmin.v1.GetRealtimeBufferStatusRequest\x1a..superadmin.v1.GetRealtimeBufferStatusResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
 
 var (
 	file_superadmin_v1_system_config_proto_rawDescOnce sync.Once
@@ -548,39 +1011,56 @@ func file_superadmin_v1_system_config_proto_rawDescGZIP() []byte {
 	return file_superadmin_v1_system_config_proto_rawDescData
 }
 
-var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_superadmin_v1_system_config_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_superadmin_v1_system_config_proto_goTypes = []any{
-	(*SystemFlag)(nil),                    // 0: superadmin.v1.SystemFlag
-	(*SystemConfig)(nil),                  // 1: superadmin.v1.SystemConfig
-	(*GetSystemConfigRequest)(nil),        // 2: superadmin.v1.GetSystemConfigRequest
-	(*GetSystemConfigResponse)(nil),       // 3: superadmin.v1.GetSystemConfigResponse
-	(*SetPublicRegistrationRequest)(nil),  // 4: superadmin.v1.SetPublicRegistrationRequest
-	(*SetPublicRegistrationResponse)(nil), // 5: superadmin.v1.SetPublicRegistrationResponse
-	(*MfaPolicy)(nil),                     // 6: superadmin.v1.MfaPolicy
-	(*GetMfaPolicyRequest)(nil),           // 7: superadmin.v1.GetMfaPolicyRequest
-	(*GetMfaPolicyResponse)(nil),          // 8: superadmin.v1.GetMfaPolicyResponse
-	(*SetMfaPolicyRequest)(nil),           // 9: superadmin.v1.SetMfaPolicyRequest
-	(*SetMfaPolicyResponse)(nil),          // 10: superadmin.v1.SetMfaPolicyResponse
+	(RealtimeBufferVerdict)(0),              // 0: superadmin.v1.RealtimeBufferVerdict
+	(*SystemFlag)(nil),                      // 1: superadmin.v1.SystemFlag
+	(*SystemConfig)(nil),                    // 2: superadmin.v1.SystemConfig
+	(*GetSystemConfigRequest)(nil),          // 3: superadmin.v1.GetSystemConfigRequest
+	(*GetSystemConfigResponse)(nil),         // 4: superadmin.v1.GetSystemConfigResponse
+	(*SetPublicRegistrationRequest)(nil),    // 5: superadmin.v1.SetPublicRegistrationRequest
+	(*SetPublicRegistrationResponse)(nil),   // 6: superadmin.v1.SetPublicRegistrationResponse
+	(*MfaPolicy)(nil),                       // 7: superadmin.v1.MfaPolicy
+	(*GetMfaPolicyRequest)(nil),             // 8: superadmin.v1.GetMfaPolicyRequest
+	(*GetMfaPolicyResponse)(nil),            // 9: superadmin.v1.GetMfaPolicyResponse
+	(*SetMfaPolicyRequest)(nil),             // 10: superadmin.v1.SetMfaPolicyRequest
+	(*SetMfaPolicyResponse)(nil),            // 11: superadmin.v1.SetMfaPolicyResponse
+	(*RealtimeBufferPreflight)(nil),         // 12: superadmin.v1.RealtimeBufferPreflight
+	(*RealtimeBufferTotals)(nil),            // 13: superadmin.v1.RealtimeBufferTotals
+	(*RealtimeBufferStatus)(nil),            // 14: superadmin.v1.RealtimeBufferStatus
+	(*GetRealtimeBufferStatusRequest)(nil),  // 15: superadmin.v1.GetRealtimeBufferStatusRequest
+	(*GetRealtimeBufferStatusResponse)(nil), // 16: superadmin.v1.GetRealtimeBufferStatusResponse
+	nil,                                     // 17: superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
+	nil,                                     // 18: superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
 }
 var file_superadmin_v1_system_config_proto_depIdxs = []int32{
-	0,  // 0: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
-	1,  // 1: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
-	1,  // 2: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
-	6,  // 3: superadmin.v1.GetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
-	6,  // 4: superadmin.v1.SetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
-	2,  // 5: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
-	4,  // 6: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
-	7,  // 7: superadmin.v1.SystemConfigService.GetMfaPolicy:input_type -> superadmin.v1.GetMfaPolicyRequest
-	9,  // 8: superadmin.v1.SystemConfigService.SetMfaPolicy:input_type -> superadmin.v1.SetMfaPolicyRequest
-	3,  // 9: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
-	5,  // 10: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
-	8,  // 11: superadmin.v1.SystemConfigService.GetMfaPolicy:output_type -> superadmin.v1.GetMfaPolicyResponse
-	10, // 12: superadmin.v1.SystemConfigService.SetMfaPolicy:output_type -> superadmin.v1.SetMfaPolicyResponse
-	9,  // [9:13] is the sub-list for method output_type
-	5,  // [5:9] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	1,  // 0: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
+	2,  // 1: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
+	2,  // 2: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
+	7,  // 3: superadmin.v1.GetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	7,  // 4: superadmin.v1.SetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	0,  // 5: superadmin.v1.RealtimeBufferStatus.verdict:type_name -> superadmin.v1.RealtimeBufferVerdict
+	12, // 6: superadmin.v1.RealtimeBufferStatus.preflight:type_name -> superadmin.v1.RealtimeBufferPreflight
+	13, // 7: superadmin.v1.RealtimeBufferStatus.totals:type_name -> superadmin.v1.RealtimeBufferTotals
+	17, // 8: superadmin.v1.RealtimeBufferStatus.epoch_resets:type_name -> superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
+	18, // 9: superadmin.v1.RealtimeBufferStatus.poisoned_checkpoints:type_name -> superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
+	14, // 10: superadmin.v1.GetRealtimeBufferStatusResponse.status:type_name -> superadmin.v1.RealtimeBufferStatus
+	3,  // 11: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
+	5,  // 12: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
+	8,  // 13: superadmin.v1.SystemConfigService.GetMfaPolicy:input_type -> superadmin.v1.GetMfaPolicyRequest
+	10, // 14: superadmin.v1.SystemConfigService.SetMfaPolicy:input_type -> superadmin.v1.SetMfaPolicyRequest
+	15, // 15: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:input_type -> superadmin.v1.GetRealtimeBufferStatusRequest
+	4,  // 16: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
+	6,  // 17: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
+	9,  // 18: superadmin.v1.SystemConfigService.GetMfaPolicy:output_type -> superadmin.v1.GetMfaPolicyResponse
+	11, // 19: superadmin.v1.SystemConfigService.SetMfaPolicy:output_type -> superadmin.v1.SetMfaPolicyResponse
+	16, // 20: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:output_type -> superadmin.v1.GetRealtimeBufferStatusResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_superadmin_v1_system_config_proto_init() }
@@ -588,18 +1068,20 @@ func file_superadmin_v1_system_config_proto_init() {
 	if File_superadmin_v1_system_config_proto != nil {
 		return
 	}
+	file_superadmin_v1_system_config_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_superadmin_v1_system_config_proto_rawDesc), len(file_superadmin_v1_system_config_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_superadmin_v1_system_config_proto_goTypes,
 		DependencyIndexes: file_superadmin_v1_system_config_proto_depIdxs,
+		EnumInfos:         file_superadmin_v1_system_config_proto_enumTypes,
 		MessageInfos:      file_superadmin_v1_system_config_proto_msgTypes,
 	}.Build()
 	File_superadmin_v1_system_config_proto = out.File

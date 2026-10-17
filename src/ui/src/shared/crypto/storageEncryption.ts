@@ -14,6 +14,7 @@ let encryptionChannel: BroadcastChannel | null = null;
 // DOM events fired alongside BroadcastChannel so consumers (e.g. realtime Yjs IDB adapter) can react without reaching into module state.
 export const ENCRYPTION_REKEY_EVENT = "uniffy:encryption:rekey";
 export const ENCRYPTION_TEARDOWN_EVENT = "uniffy:encryption:teardown";
+export const ENCRYPTION_READY_EVENT = "uniffy:encryption:ready";
 
 function dispatchRekey(): void {
   if (typeof window !== "undefined") {
@@ -24,6 +25,12 @@ function dispatchRekey(): void {
 function dispatchTeardown(): void {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event(ENCRYPTION_TEARDOWN_EVENT));
+  }
+}
+
+function dispatchReady(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ENCRYPTION_READY_EVENT));
   }
 }
 
@@ -189,18 +196,22 @@ export async function initStorageEncryption(
       const wrappedBytes = base64ToArrayBuffer(storedWrapped);
       activeDEK = await unwrapDEK(wrappedBytes, kek);
       initEncryptionChannel();
+      dispatchReady();
       return;
     } catch {
       // Unwrap failed - seed rotated or stored DEK corrupted.
-      await clearAllEncryptedStorage();
       localStorage.removeItem(WRAPPED_DEK_KEY);
     }
   }
 
+  // No usable DEK means no stored row can ever be read again; wiping now keeps
+  // undecryptable rows from accumulating under the fresh key.
+  await clearAllEncryptedStorage();
   activeDEK = await generateDEK();
   const wrapped = await wrapDEK(activeDEK, kek);
   localStorage.setItem(WRAPPED_DEK_KEY, arrayBufferToBase64(wrapped));
   initEncryptionChannel();
+  dispatchReady();
 }
 
 /** Clears all in-memory keys and notifies other tabs. */
@@ -221,13 +232,16 @@ export function isStorageEncryptionReady(): boolean {
 }
 
 /** Returns ArrayBuffer of [12-byte IV | AES-GCM ciphertext]. */
-export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
+export async function encryptBytesForStorage(plaintext: Uint8Array): Promise<ArrayBuffer> {
   if (!activeDEK) {
     throw new Error("Storage encryption not initialized");
   }
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const plaintext = new TextEncoder().encode(JSON.stringify(data));
-  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, activeDEK, plaintext);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    activeDEK,
+    plaintext as Uint8Array<ArrayBuffer>,
+  );
 
   const result = new Uint8Array(iv.length + ciphertext.byteLength);
   result.set(iv);
@@ -236,15 +250,24 @@ export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
 }
 
 /** Expects [12-byte IV | AES-GCM ciphertext]. */
-export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Promise<T> {
+export async function decryptBytesFromStorage(buffer: ArrayBuffer): Promise<Uint8Array> {
   if (!activeDEK) {
     throw new Error("Storage encryption not initialized");
   }
   const data = new Uint8Array(buffer);
   const iv = data.slice(0, 12);
   const ciphertext = data.slice(12);
-  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, activeDEK, ciphertext);
-  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  return new Uint8Array(
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv }, activeDEK, ciphertext),
+  );
+}
+
+export async function encryptForStorage(data: unknown): Promise<ArrayBuffer> {
+  return encryptBytesForStorage(new TextEncoder().encode(JSON.stringify(data)));
+}
+
+export async function decryptFromStorage<T = unknown>(buffer: ArrayBuffer): Promise<T> {
+  return JSON.parse(new TextDecoder().decode(await decryptBytesFromStorage(buffer))) as T;
 }
 
 /** Local-only wipe (no backend call): deletes encrypted IDB stores and generates a fresh DEK. */
@@ -279,24 +302,25 @@ export async function rotateAndClearAll(
 
 // Encrypted IDB databases - new stores must be registered via registerEncryptedDatabase().
 const ENCRYPTED_DB_NAMES: string[] = ["uniffy-realtime-yjs"];
+const databaseClosers = new Map<string, () => Promise<void>>();
 
 async function clearAllEncryptedStorage(): Promise<void> {
+  activeDEK = null;
   for (const dbName of ENCRYPTED_DB_NAMES) {
-    try {
-      const deleteRequest = indexedDB.deleteDatabase(dbName);
-      await new Promise<void>((resolve, reject) => {
-        deleteRequest.onsuccess = () => resolve();
-        deleteRequest.onerror = () => reject(deleteRequest.error);
-        deleteRequest.onblocked = () => resolve();
-      });
-    } catch {
-      console.warn(`Failed to delete IndexedDB: ${dbName}`);
-    }
+    await databaseClosers.get(dbName)?.();
+    const deleteRequest = indexedDB.deleteDatabase(dbName);
+    await new Promise<void>((resolve, reject) => {
+      deleteRequest.onsuccess = () => resolve();
+      deleteRequest.onerror = () => reject(deleteRequest.error);
+      deleteRequest.onblocked = () =>
+        reject(new Error(`Close other tabs before clearing ${dbName}`));
+    });
   }
 }
 
 /** Registered databases get wiped on seed rotation and device clear. */
-export function registerEncryptedDatabase(dbName: string): void {
+export function registerEncryptedDatabase(dbName: string, close?: () => Promise<void>): void {
+  if (close) databaseClosers.set(dbName, close);
   if (!ENCRYPTED_DB_NAMES.includes(dbName)) {
     ENCRYPTED_DB_NAMES.push(dbName);
   }

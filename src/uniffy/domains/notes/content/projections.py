@@ -11,6 +11,7 @@ from sqlalchemy import func, or_, select
 from uniffy.core.auth.permissions import modes_at_least_as_open
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, ContentType, NodeType
 from uniffy.domains.notes.content.fields import extract_canvas_text, strip_markdown
@@ -146,13 +147,14 @@ class NoteProjections:
                     note_id=str(child.id),
                 )
 
-    async def propagate_title(self, organization_id: UUID, note: Note) -> None:
+    async def propagate_title(self, organization_id: UUID, note: Note, buffer: UpdateBuffer) -> None:
         try:
             await propagate_rename(
                 session=self.operations.session,
                 organization_id=organization_id,
                 target_urn=build_content_urn(ContentType.NOTE, note.id),
                 new_label=note.title,
+                buffer=buffer,
             )
         except Exception:
             logger.opt(exception=True).warning(

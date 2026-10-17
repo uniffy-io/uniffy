@@ -13,8 +13,13 @@ from uniffy.core.errors import (
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.realtime.limits import validate_document_size
+from uniffy.core.realtime.live import load_live_document
+from uniffy.core.realtime.merge import merge_plain_text
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.types import (
     AttendeeStatus,
+    ContentType,
     EventStatus,
     RecurrencePattern,
 )
@@ -46,6 +51,23 @@ class RecurrenceMutationOperations:
         self.events = events
         self.session = events.session
 
+    async def _description(
+        self, master: CalendarEvent, base: str | None, updates: dict[str, object]
+    ) -> str:
+        """Copies start from the master's live text, buffered edits included; the master stays."""
+        document = await load_live_document(
+            self.events.buffer, self.session, (ContentType.CALENDAR_EVENT, master.id)
+        )
+        live = document.text() if document is not None else master.description or ""
+        incoming = updates.get("description")
+        if incoming is None:
+            return live
+        if not isinstance(incoming, str):
+            raise ValidationError("description", "Description must be text")
+        merged = merge_plain_text(base=base, live=live, incoming=incoming)
+        validate_document_size(merged)
+        return merged
+
     async def cancel_occurrence(
         self,
         user_id: UUID,
@@ -54,6 +76,7 @@ class RecurrenceMutationOperations:
         occurrence_date: date,
     ) -> None:
         """Cancel a single occurrence of a recurring event."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         event = await get_event_for_update(self.session, event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
@@ -92,14 +115,20 @@ class RecurrenceMutationOperations:
         organization_id: UUID,
         event_id: UUID,
         occurrence_date: date,
+        base_description: str | None = None,
         **updates: object,
     ) -> CalendarEvent:
         """Materialize an override event for a single recurring occurrence."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
 
         await self.events._require_edit(user_id, organization_id, master)
+
+        description = await self._description(master, base_description, updates)
+        if "description" in updates:  # noqa: PLR2004
+            updates["description"] = description
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
@@ -124,7 +153,7 @@ class RecurrenceMutationOperations:
             calendar_id=master.calendar_id,
             category_id=master.category_id,
             title=master.title,
-            description=master.description,
+            description=description,
             start_time=occ_start,
             end_time=occ_end,
             is_all_day=master.is_all_day,
@@ -242,14 +271,20 @@ class RecurrenceMutationOperations:
         organization_id: UUID,
         event_id: UUID,
         occurrence_date: date,
+        base_description: str | None = None,
         **updates: object,
     ) -> CalendarEvent:
         """Split a recurring series at `occurrence_date` and apply updates."""
+        await lock_document(self.session, (ContentType.CALENDAR_EVENT, event_id))
         master = await get_event_for_update(self.session, event_id, organization_id)
         if not master:
             raise NotFoundError("CalendarEvent", event_id)
 
         await self.events._require_edit(user_id, organization_id, master)
+
+        description = await self._description(master, base_description, updates)
+        if "description" in updates:  # noqa: PLR2004
+            updates["description"] = description
 
         if master.recurrence_pattern == RecurrencePattern.NONE:
             raise NotFoundError("Not a recurring event", event_id)
@@ -304,7 +339,7 @@ class RecurrenceMutationOperations:
             calendar_id=master.calendar_id,
             category_id=master.category_id,
             title=master.title,
-            description=master.description,
+            description=description,
             start_time=new_start,
             end_time=new_end,
             is_all_day=master.is_all_day,
@@ -380,7 +415,7 @@ class RecurrenceMutationOperations:
         withdrawn_overrides = []
         if master.status != EventStatus.CANCELLED and new_event.status == EventStatus.CANCELLED:
             withdrawn_overrides = await stage_following_overrides(
-                self.session, master, occurrence_date
+                self.session, master, occurrence_date, self.events.buffer
             )
             await stage_withdrawal_mail(
                 self.session,

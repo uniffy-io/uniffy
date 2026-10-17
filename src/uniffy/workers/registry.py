@@ -9,11 +9,24 @@ from uniffy.core.events.job_contracts import (
 )
 from uniffy.core.jobs import JobRef, QueueName
 from uniffy.core.realtime.job_contracts import (
+    CHECKPOINT_REALTIME_DOCUMENT,
+    DISPATCH_REALTIME_CHECKPOINTS_SCHEDULE,
+    MAINTAIN_REALTIME_BUFFER_SCHEDULE,
+    PROJECT_REALTIME_DOCUMENT,
     REALTIME_JOB_REFS,
     REALTIME_SCHEDULED_JOB_REFS,
-    SAVE_REALTIME_SNAPSHOT,
+    RECOVER_REALTIME_PROJECTIONS_SCHEDULE,
 )
-from uniffy.core.realtime.jobs import save_realtime_snapshot
+from uniffy.core.realtime.jobs import (
+    CHECKPOINT_JOB_TIMEOUT_SECONDS,
+    DISPATCH_JOB_TIMEOUT_SECONDS,
+    MAINTENANCE_JOB_TIMEOUT_SECONDS,
+    checkpoint_realtime_document,
+    dispatch_realtime_checkpoints,
+    maintain_realtime_buffer,
+    project_realtime_document,
+    recover_realtime_projections,
+)
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
     CHAT_INTEGRATION_SCHEDULED_JOB_REFS,
@@ -117,6 +130,7 @@ from uniffy.domains.directory.sync.jobs.jobs import (
     SYNC_IDENTITY_SOURCE_JOB_TIMEOUT_SECONDS,
     sync_identity_source,
 )
+from uniffy.domains.files.jobs.attachments import reconcile_pending_inline_attachments
 from uniffy.domains.files.jobs.content import extract_document_content
 from uniffy.domains.files.jobs.contracts import (
     DELETE_S3_OBJECT,
@@ -132,6 +146,7 @@ from uniffy.domains.files.jobs.contracts import (
     REAP_EXPIRED_MULTIPART_UPLOADS,
     REAP_EXPIRED_MULTIPART_UPLOADS_SCHEDULE,
     RECALCULATE_ALL_STORAGE_USAGE_SCHEDULE,
+    RECONCILE_INLINE_ATTACHMENTS_SCHEDULE,
     RECOVER_PENDING_FILE_PROCESSING_SCHEDULE,
     TRANSCODE_VIDEO_TO_MP4,
 )
@@ -157,11 +172,13 @@ from uniffy.domains.files.jobs.transcode import (
 from uniffy.domains.mail.jobs.contracts import MAIL_JOB_REFS, MAIL_SCHEDULED_JOB_REFS, SEND_EMAIL
 from uniffy.domains.mail.jobs.jobs import send_email
 from uniffy.domains.notifications.jobs.contracts import (
+    DELIVER_NOTIFICATION_OUTBOX,
     DELIVER_PUSH_NOTIFICATION,
     DISPATCH_NOTIFICATION_EMAILS,
     DISPATCH_NOTIFICATION_EMAILS_SCHEDULE,
     NOTIFICATION_JOB_REFS,
     NOTIFICATION_SCHEDULED_JOB_REFS,
+    RECOVER_NOTIFICATION_EVENTS_SCHEDULE,
     SEND_NOTIFICATION_DIGEST,
     SEND_NOTIFICATION_EMAIL,
 )
@@ -169,6 +186,10 @@ from uniffy.domains.notifications.jobs.email import (
     dispatch_notification_emails,
     send_notification_digest,
     send_notification_email,
+)
+from uniffy.domains.notifications.jobs.events import (
+    deliver_notification_outbox,
+    recover_notification_events,
 )
 from uniffy.domains.notifications.jobs.jobs import (
     deliver_push_notification,
@@ -286,6 +307,7 @@ MEDIA_JOB_REGISTRATIONS = (
 CORE_JOB_REGISTRATIONS = (
     _bind(DELETE_S3_OBJECT, delete_s3_object),
     _bind(PROCESS_NOTIFICATION_EVENT, process_notification_event),
+    _bind(DELIVER_NOTIFICATION_OUTBOX, deliver_notification_outbox),
     _bind(DELIVER_PUSH_NOTIFICATION, deliver_push_notification),
     _bind(SEND_EMAIL, send_email),
     _bind(SEND_NOTIFICATION_EMAIL, send_notification_email),
@@ -300,7 +322,15 @@ CORE_JOB_REGISTRATIONS = (
         timeout=REAP_MULTIPART_UPLOADS_JOB_TIMEOUT_SECONDS,
     ),
     _bind(REINDEX_ORG_CONTENT_FOR_DEFAULTS, reindex_org_content_for_defaults),
-    _bind(SAVE_REALTIME_SNAPSHOT, save_realtime_snapshot),
+    _bind(PROJECT_REALTIME_DOCUMENT, project_realtime_document),
+    # Retries come from the dispatcher; a kept result would also dedupe the next pass.
+    _bind(
+        CHECKPOINT_REALTIME_DOCUMENT,
+        checkpoint_realtime_document,
+        timeout=CHECKPOINT_JOB_TIMEOUT_SECONDS,
+        keep_result=0,
+        max_tries=1,
+    ),
     _bind(REINDEX_RENAMED_CONTENT, reindex_renamed_content),
     _bind(
         FLUSH_SEARCH_REMOVALS,
@@ -346,6 +376,26 @@ EGRESS_JOB_REGISTRATIONS = (
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
+    _bind_schedule(RECOVER_REALTIME_PROJECTIONS_SCHEDULE, recover_realtime_projections),
+    _bind_schedule(
+        DISPATCH_REALTIME_CHECKPOINTS_SCHEDULE,
+        dispatch_realtime_checkpoints,
+        second=None,
+        timeout=DISPATCH_JOB_TIMEOUT_SECONDS,
+        quiet=True,
+    ),
+    _bind_schedule(
+        MAINTAIN_REALTIME_BUFFER_SCHEDULE,
+        maintain_realtime_buffer,
+        second=(40,),
+        timeout=MAINTENANCE_JOB_TIMEOUT_SECONDS,
+    ),
+    _bind_schedule(RECONCILE_INLINE_ATTACHMENTS_SCHEDULE, reconcile_pending_inline_attachments),
+    _bind_schedule(
+        RECOVER_NOTIFICATION_EVENTS_SCHEDULE,
+        recover_notification_events,
+        second=(0, 10, 20, 30, 40, 50),
+    ),
     _bind_schedule(EXPIRE_SKILL_EVALUATIONS_SCHEDULE, expire_skill_evaluations),
     _bind_schedule(EXPIRE_SKILL_DRAFT_GENERATIONS_SCHEDULE, expire_skill_draft_generations),
     _bind_schedule(

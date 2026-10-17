@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAppDispatch } from "@/app/hooks";
 import { updateEvent } from "@/features/calendar/store/calendarThunks";
+import { isRecurringEvent } from "@/features/calendar/utils/recurrence";
 import type {
   CalendarEvent,
   EventStatus,
@@ -14,6 +15,7 @@ import type {
 export interface EventPatch {
   title?: string;
   description?: string;
+  baseDescription?: string;
   startTime?: string;
   endTime?: string;
   isAllDay?: boolean;
@@ -44,6 +46,7 @@ export interface EventPatch {
 const OCCURRENCE_SCOPABLE_FIELDS: (keyof EventPatch)[] = [
   "title",
   "description",
+  "baseDescription",
   "startTime",
   "endTime",
   "isAllDay",
@@ -72,9 +75,7 @@ export function useEventCommit(event: CalendarEvent | null) {
   const dispatch = useAppDispatch();
   const [pendingPatch, setPendingPatch] = useState<EventPatch | null>(null);
 
-  const isRecurring =
-    !!event &&
-    (event.isRecurring || (event.recurrence != null && event.recurrence.pattern !== "none"));
+  const isRecurring = !!event && isRecurringEvent(event);
 
   const dispatchPatch = useCallback(
     (patch: EventPatch, scope?: RecurrenceEditScope) => {

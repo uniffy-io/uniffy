@@ -1,53 +1,36 @@
-import base64
-from unittest.mock import AsyncMock, MagicMock, patch
+import pytest
 
-from uniffy.core.realtime.jobs import save_realtime_snapshot
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
+from uniffy.core.realtime.buffer_keys import BufferScope
+from uniffy.core.realtime.jobs import (
+    CHECKPOINT_SLOTS,
+    checkpoint_realtime_document,
+    dispatch_realtime_checkpoints,
+    maintain_realtime_buffer,
+)
 from uniffy.core.types import ContentType, generate_id
+from uniffy.vendor.arq import Retry
 
 
-async def test_save_realtime_snapshot_decodes_payload_and_renders() -> None:
-    content_id = generate_id()
-    organization_id = generate_id()
-    persist = AsyncMock(return_value=True)
-    duration = MagicMock()
+async def test_checkpoint_job_requeues_without_spending_a_try_while_both_slots_are_busy() -> None:
+    scope = BufferScope(generate_id(), ContentType.NOTE, generate_id(), "generation", "epoch")
+    ctx = {UPDATE_BUFFER_CTX_KEY: UpdateBuffer()}
 
-    with (
-        patch("uniffy.core.realtime.jobs.persist_snapshot", persist),
-        patch("uniffy.core.realtime.jobs.REALTIME_SNAPSHOT_TASK_DURATION", duration),
-    ):
-        result = await save_realtime_snapshot(
-            {},
-            ContentType.NOTE.value,
-            str(content_id),
-            str(organization_id),
-            base64.b64encode(b"update").decode("ascii"),
-            base64.b64encode(b"state").decode("ascii"),
-        )
+    async with CHECKPOINT_SLOTS, CHECKPOINT_SLOTS:
+        with pytest.raises(Retry) as deferred:
+            await checkpoint_realtime_document(ctx, scope.member, "claim")
 
-    persist.assert_awaited_once_with(
-        ContentType.NOTE,
-        content_id,
-        organization_id,
-        b"update",
-        b"state",
-    )
-    duration.labels.assert_called_once_with(content_type=ContentType.NOTE.value)
-    duration.labels.return_value.observe.assert_called_once()
-    assert result == {"status": "ok", "content_id": str(content_id)}
+    assert deferred.value.count_attempt is False
+    assert (deferred.value.defer_score or 0) > 0
+    assert not CHECKPOINT_SLOTS.locked()
 
 
-async def test_save_realtime_snapshot_reports_missing_adapter() -> None:
-    content_id = generate_id()
-    persist = AsyncMock(return_value=False)
+async def test_schedules_skip_while_valkey_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Port 1 refuses at once, so neither schedule can reach a live server.
+    monkeypatch.setenv("VALKEY_HOST", "127.0.0.1")
+    monkeypatch.setenv("VALKEY_PORT", "1")
+    ctx = {UPDATE_BUFFER_CTX_KEY: UpdateBuffer()}
 
-    with patch("uniffy.core.realtime.jobs.persist_snapshot", persist):
-        result = await save_realtime_snapshot(
-            {},
-            ContentType.NOTE.value,
-            str(content_id),
-            str(generate_id()),
-            base64.b64encode(b"update").decode("ascii"),
-            base64.b64encode(b"state").decode("ascii"),
-        )
-
-    assert result == {"status": "snapshot_only", "content_id": str(content_id)}
+    assert await dispatch_realtime_checkpoints(ctx) == {"enqueued": 0}
+    assert await dispatch_realtime_checkpoints(ctx) == {"enqueued": 0}
+    assert await maintain_realtime_buffer(ctx) == {"documents": 0}

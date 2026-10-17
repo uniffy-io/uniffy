@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
@@ -41,9 +42,10 @@ async def test_each_tool_turn_uses_producing_model_after_fallback(monkeypatch, s
     registry.register(ToolDefinition(name="notes.write", description="", executor=write))
     monkeypatch.setattr(tools_mod, "get_tool_registry", lambda: registry)
     ctx = ToolContext(
-        session=MagicMock(),
+        session=MagicMock(commit=AsyncMock()),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         allowed_tools=frozenset({"notes.write"}),
     )
     calls = [

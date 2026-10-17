@@ -3,6 +3,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from starlette.types import ASGIApp, Message, Scope
 
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
@@ -14,10 +16,13 @@ from uniffy.factory import ConnectRPCDispatcher, _create_api_dispatcher
 
 def _dispatcher() -> ConnectRPCDispatcher:
     search = WorkspaceSearch(MagicMock(spec=SearchEngine))
+    buffer = UpdateBuffer()
     return _create_api_dispatcher(
         MagicMock(spec=ObjectStorage),
         search,
         SearchIndexer(search),
+        buffer,
+        YDocManager(buffer=buffer),
     )
 
 

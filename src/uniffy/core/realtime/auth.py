@@ -2,9 +2,9 @@
 
 Browsers cannot set ``Authorization`` on ``new WebSocket(...)``, so the JWT
 rides ``Sec-WebSocket-Protocol`` as a ``bearer.<urlencoded-jwt>`` entry
-alongside the canonical ``uniffy.realtime.v1`` value. The server echoes ONLY
-the canonical name back so the bearer never appears in ``WebSocket.protocol``.
-Mobile clients can use the ``Authorization`` header instead.
+alongside the canonical ``uniffy.realtime.v2`` value. The server echoes a
+protocol name, never the bearer entry, so the token never appears in
+``WebSocket.protocol``. Mobile clients can use the ``Authorization`` header instead.
 """
 
 import os
@@ -12,18 +12,20 @@ from urllib.parse import unquote
 
 _BEARER_PREFIX = "bearer."
 
+# Rate limit, socket limit, slow consumer or a temporary authentication outage; reconnect later.
+WS_CLOSE_TRY_AGAIN_LATER = 1013
 WS_CLOSE_UNSUPPORTED_TYPE = 4400
 WS_CLOSE_UNAUTHENTICATED = 4401
 WS_CLOSE_FORBIDDEN = 4403
-WS_CLOSE_NOT_FOUND = 4404
-WS_CLOSE_IDLE = 4408
 # The socket reached the lifetime of the token that opened it. The client is
 # expected to refresh and reconnect, so this must stay distinct from 4410.
 WS_CLOSE_REAUTH_REQUIRED = 4409
 WS_CLOSE_TOKEN_REVOKED = 4410
+# The client speaks a protocol this server no longer serves; it must reload.
+WS_CLOSE_UPGRADE_REQUIRED = 4426
 
 # MUST NOT echo the bearer entry on accept - that would expose the token via JS.
-CANONICAL_SUBPROTOCOL = "uniffy.realtime.v1"
+CANONICAL_SUBPROTOCOL = "uniffy.realtime.v2"
 
 
 def extract_bearer(subprotocol_header: str | None) -> str | None:
@@ -35,6 +37,14 @@ def extract_bearer(subprotocol_header: str | None) -> str | None:
         if entry.startswith(_BEARER_PREFIX):
             return unquote(entry[len(_BEARER_PREFIX) :])
     return None
+
+
+def offered_subprotocols(subprotocol_header: str | None) -> list[str]:
+    """Protocol names the client offered, without its bearer entry."""
+    if not subprotocol_header:
+        return []
+    entries = (entry.strip() for entry in subprotocol_header.split(","))
+    return [entry for entry in entries if entry and not entry.startswith(_BEARER_PREFIX)]
 
 
 def extract_bearer_from_auth_header(authorization: str | None) -> str | None:

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { isUuid } from "@/shared/utils/uuid";
 import {
   CaretDown,
   CaretRight,
@@ -42,13 +43,6 @@ import type { EventModalPrefill } from "@/features/calendar/types/ui";
 import { MeetingChannelPicker } from "@/features/calendar/components/modals/MeetingChannelPicker";
 import type { MeetingMode } from "@/features/calendar/utils/meeting";
 import { useNotificationSettings } from "@/features/settings/hooks/useSettings";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Seed categories carry placeholder ids (`cat-*`); only real UUIDs go to the API. */
-function isValidUuid(value: string): boolean {
-  return UUID_RE.test(value);
-}
 
 function getDateString(date: Date): string {
   const year = date.getFullYear();
@@ -283,7 +277,7 @@ export function QuickEventModal({
         isAllDay: isMultiDay,
         timezone: getEffectiveTimeZone(),
         calendarId: "",
-        categoryId: isValidUuid(selectedCategoryId) ? selectedCategoryId : undefined,
+        categoryId: isUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === "cat-deepwork",
         attendeeIds: attendees.map((a) => a.id),
         attendees: attendees.map((a) => ({ userId: a.id, role: a.role })),

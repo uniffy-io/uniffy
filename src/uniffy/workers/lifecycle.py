@@ -13,6 +13,8 @@ from uniffy.core.crypto import (
 )
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY
 from uniffy.core.jobs import QueueName
+from uniffy.core.realtime.buffer import UPDATE_BUFFER_CTX_KEY, UpdateBuffer
+from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import (
     SEARCH_INDEXER_CTX_KEY,
     WORKSPACE_SEARCH_CTX_KEY,
@@ -41,12 +43,15 @@ from uniffy.domains.notifications.delivery import (
     DELIVERY_ADAPTERS_CTX_KEY,
     build_delivery_adapters,
 )
+from uniffy.domains.projects.realtime import register_task_realtime_adapter
 from uniffy.domains.projects.registration import register_project_content
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.binary import close_binary_client
 from uniffy.infrastructure.valkey.ops import close_ops_client, init_ops_client
 from uniffy.infrastructure.valkey.pubsub import close_pubsub, init_pubsub
 from uniffy.infrastructure.valkey.queue import close_queue, init_queue
@@ -74,6 +79,7 @@ class WorkerResource(StrEnum):
     QUEUE = "queue"
     PUBSUB = "pubsub"
     OPS = "ops"
+    BINARY = "binary"
     DEK_INVALIDATIONS = "dek_invalidations"
     VAPID = "vapid"
     AUDIT_PARTITIONS = "audit_partitions"
@@ -97,6 +103,7 @@ _SHARED_RESOURCES = (
     WorkerResource.QUEUE,
     WorkerResource.PUBSUB,
     WorkerResource.OPS,
+    WorkerResource.BINARY,
     WorkerResource.DEK_INVALIDATIONS,
 )
 CORE_RESOURCE_PROFILE = FleetResourceProfile(
@@ -153,7 +160,10 @@ async def _on_startup_shared(
     search_indexer = SearchIndexer(search)
     ctx[SEARCH_INDEXER_CTX_KEY] = search_indexer
     ctx[CALL_LIFECYCLE_CTX_KEY] = CallsLifecycle(open_session)
+    ctx[UPDATE_BUFFER_CTX_KEY] = UpdateBuffer()
     register_note_realtime_adapter(search_indexer)
+    register_task_realtime_adapter(search_indexer)
+    register_event_realtime_adapter(search_indexer)
     logger.info("Worker: Search engine initialized")
 
     try:
@@ -173,6 +183,9 @@ async def _on_startup_shared(
         logger.info("Worker: Valkey ops client initialized")
     except Exception as e:
         logger.warning(f"Worker: Valkey ops client not available: {e}")
+
+    # A failed start is retried later by the realtime buffer calls themselves.
+    await ensure_buffer_ready()
 
     try:
         await subscribe_dek_invalidations()
@@ -200,6 +213,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
 
     ctx.pop(SEARCH_INDEXER_CTX_KEY, None)
     ctx.pop(CALL_LIFECYCLE_CTX_KEY, None)
+    ctx.pop(UPDATE_BUFFER_CTX_KEY, None)
     ctx.pop(SESSION_FACTORY_CTX_KEY, None)
     search: WorkspaceSearch | None = ctx.pop(WORKSPACE_SEARCH_CTX_KEY, None)
     if search is not None:
@@ -209,6 +223,7 @@ async def _on_shutdown_shared(ctx: dict[str, Any]) -> None:
             logger.warning(f"Failed to close search engine during shutdown: {exc}")
 
     for name, coro in [
+        ("binary_client", close_binary_client()),
         ("ops_client", close_ops_client()),
         ("queue", close_queue(queue_name)),
         ("pubsub", close_pubsub()),

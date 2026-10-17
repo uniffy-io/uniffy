@@ -13,6 +13,7 @@ from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
     PermissionDeniedError,
+    UNIFFYError,
     ValidationError,
 )
 from uniffy.core.json_codec import loads
@@ -82,6 +83,7 @@ def parse_canvas_content(content: str | None) -> dict | None:
 
 
 def map_domain_error(operation: str, exc: Exception) -> ConnectError:
+    """Notes-specific codes; any other domain error propagates to the transport's mapping."""
     if isinstance(exc, NotFoundError):
         return ConnectError(Code.NOT_FOUND, "Note not found")
     if isinstance(exc, ValidationError):
@@ -90,5 +92,7 @@ def map_domain_error(operation: str, exc: Exception) -> ConnectError:
         return ConnectError(Code.PERMISSION_DENIED, str(exc) or "Access denied")
     if isinstance(exc, ConflictError):
         return ConnectError(Code.ABORTED, str(exc))
+    if isinstance(exc, UNIFFYError):
+        raise exc
     logger.exception("Notes RPC failed", operation=operation)
     return ConnectError(Code.INTERNAL, "Internal server error")

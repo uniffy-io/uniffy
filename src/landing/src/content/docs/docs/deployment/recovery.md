@@ -1,6 +1,6 @@
 ---
 title: Account Recovery
-description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged.
+description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged. Also what happens to edits not yet saved when Valkey restarts, and what each live editing close code means.
 sidebar:
   label: Account Recovery
   order: 11
@@ -89,7 +89,7 @@ The command opens a database session, finds the user by email, deletes the two f
 
 The audit row is the forensic record. It carries the target user id, the target email, the reason text you supplied, and a timestamp. The `actor_user_id` field is null on purpose. There is no signed in user when the command runs. The reason field is your accountability.
 
-The token version bump publishes a revocation watermark to Valkey. Within the time it takes to reach Valkey from the backend pod, every access token the user holds is rejected. They are signed out cluster wide. The next sign in is a fresh start.
+The token version bump and the revoked sessions land in the same commit. Every request checks those facts in PostgreSQL, so every access token the user holds is rejected from the next request on. Open live editing connections close with code 4410 within thirty seconds, and the old tokens cannot open new ones. They are signed out cluster wide. The next sign in is a fresh start.
 
 ## After the reset
 
@@ -116,3 +116,60 @@ It will not recover lost notes, lost files, or any other content. Two factor aut
 It will not work if the database is unreachable or the master key is missing. The reset writes to the same database the backend uses, and the audit row goes through the same writer the rest of the app uses. If the backend cannot start, this command cannot run either.
 
 If your last admin has lost their device, your master key is intact, and your database is reachable, this command gets them back in. That is the whole scope.
+
+## Unsaved edits after a Valkey restart
+
+Live edits wait in Valkey for a few seconds before Uniffy saves them to PostgreSQL. A Valkey restart needs no command from you, with or without persistence. This is what happens.
+
+Every restart gives Valkey a new identity, even when persistence kept every key. Uniffy ties each document's waiting edits to the identity that accepted them, so it never mistakes a restarted instance for the old one. On the next touch of a document, Uniffy saves the unbroken run of edits the restarted Valkey still holds and starts a fresh buffer for that document. A touch is an edit, someone opening the document, a write through the API, a save job, or the maintenance pass that runs each minute and works through every document with keys left in Valkey.
+
+Editors notice the fresh buffer and send again every edit the server has not saved. Open editors do it at once. A closed editor does it the next time its author opens Uniffy on that device. While Valkey is down, people keep typing, their chip reads Saving unavailable, and collaborators stop seeing each other's new edits until it is back.
+
+Each backend and worker logs `Valkey instance changed` with the old and new identity, and `uniffy_realtime_buffer_epoch_resets_total` counts the fresh buffers by reason. `uninitialized` is a document starting a fresh buffer and is routine. That happens the first time someone opens or edits it live, on the first touch after an hour without edits freed its buffer, and on the first touch after its content was replaced. `identity_changed` is the restart. `missing_control`, `stale_tail` and `gap` mean keys disappeared or went back in time while Valkey kept running.
+
+### Planned Valkey maintenance
+
+Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data is different. The server's copy of every waiting edit goes with it, so save those edits to PostgreSQL first.
+
+Stop the backend pods so no new edits arrive, and keep the core workers running. Then run the checkpoint command once from a core worker pod. It uses the database and Valkey settings of the pod it runs in.
+
+```bash
+kubectl exec -n uniffy deploy/uniffy-worker-core \
+  -- python -m uniffy --realtime-checkpoint-now
+```
+
+The command saves every document that still has edits waiting in Valkey, including documents the regular save schedule lost track of. It prints how many documents it saved and how many edits that covered. It also counts the waiting buffers of documents that were replaced or deleted since, and clears them. Connection settings and credentials never appear in the report.
+
+The exit status is 0 only when nothing is left behind. Otherwise the report lists every buffer it could not save, named by organization, content type, document id, generation and buffer epoch, with a reason and the records left.
+
+`pending` means edits arrived while it ran. Make sure every backend pod is stopped and run it again.
+
+`gap`, `stale`, `stale_tail`, `missing_control` and `identity_changed` mean Uniffy could not prove that buffer complete. It saved the unbroken run it could prove. The rest stays only for investigation, and maintenance drops it seven days after its newest edit.
+
+`malformed` and `undecodable` mean a stored edit cannot be read. Its bytes stay in Valkey and the document keeps retrying.
+
+Any other reason means the command could not finish that document. Run it again.
+
+Wiping while lines remain removes those records from the server. Editors that never saw those edits saved still hold them on the device and send them again when their authors next open Uniffy.
+
+Confirm on the core worker metrics that `uniffy_realtime_buffer_oldest_pending_seconds` reads 0. That gauge only sees documents on the save schedule, which is why the command comes first. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. The Realtime edit buffer card on the platform overview reads the same counters, with the same limits. Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
+
+Never restore or delete Uniffy's keys inside a running Valkey. Load a different data set only by restarting Valkey, so it gets a new identity. If keys vanish while it keeps running, Uniffy notices on the next touch and starts that document afresh, but edits that lived only in those keys are gone from the server.
+
+## Live editing close codes
+
+When the backend refuses a live editing connection, it completes the WebSocket handshake first and then closes the connection with a code and a short reason. The browser and the mobile app act on the code. You can read it on the `/api/realtime` request in the browser's developer tools, and a proxy log shows the upgrade succeeding before the close.
+
+| Code | Reason | Cause | What the editor does |
+|---|---|---|---|
+| 4401 | `invalid token`, `wrong token type` | The access token did not verify, has expired, or is not an access token | Refreshes its sign in and reconnects. After five failed tries in a row it stops until the network comes back, the user retries, or the mobile app returns to the foreground |
+| 4403 | `origin not allowed`, `org mismatch`, `not a member` | The page's origin is missing from `CORS_ORIGINS`, the token belongs to another organization, or the membership is no longer active | Stops, shows Access lost and keeps edits on the device until the user signs in again, refreshes or switches organization |
+| 4410 | `credentials revoked` | The account's tokens or this session were revoked, for example by the reset above | Stops; the app signs the user out on its next request |
+| 1013 | `authentication temporarily unavailable`, `too many connections` | PostgreSQL could not answer the revocation check, or the user already holds `REALTIME_MAX_SOCKETS_PER_USER` connections on that backend process | Reconnects after a pause that grows to fifteen seconds |
+| 4426 | `upgrade required` | The app does not speak the server's protocol | The browser shows Reload to keep saving; the mobile app shows Update to keep saving |
+
+An open connection closes the same way when a later check fails. After a reset like the one above it closes with 4410 within thirty seconds, and a removed member's connection closes with 4403.
+
+An HTTP 403 on `/api/realtime` means the backend refused the upgrade before it could authenticate it. Two things cause it. The upgrade carried no token, or its `org_id` query parameter is missing or is not a valid id. The apps always send both. So a 403 from the backend usually means a proxy changed the request on the way. Either it dropped the header the token rides in (`Sec-WebSocket-Protocol` from the browser, `Authorization` from the mobile app), or it rewrote or dropped the query string.
+
+`uniffy_realtime_auth_failures_total` counts the refusals by reason, except the two 1013 cases.

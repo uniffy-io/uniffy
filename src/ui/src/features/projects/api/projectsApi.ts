@@ -496,6 +496,7 @@ export const projectsApi = {
       taskId: data.id,
       title: data.title,
       description: data.description,
+      baseDescription: data.baseDescription,
       status: data.status,
       priority: data.priority,
       ...(data.assigneeIds !== undefined ? { assigneeIds: { ids: data.assigneeIds } } : {}),

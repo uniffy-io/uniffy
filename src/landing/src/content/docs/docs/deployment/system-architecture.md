@@ -40,7 +40,7 @@ This page maps Uniffy's services, storage, and traffic. Read it before sizing in
       +-----------------------------------+
 ```
 
-Two things enter from the internet and nothing else: HTTP on the Envoy Gateway, calls media on the STUNner gateway. The **backend** is the control plane. Three **worker fleets** consume queues from Valkey and do background work. Realtime presence and notifications fan out through Valkey pub/sub. Calls media never touches the backend.
+Two things enter from the internet and nothing else: HTTP on the Envoy Gateway, calls media on the STUNner gateway. The **backend** is the control plane. Three **worker fleets** consume queues from Valkey and do background work. Realtime presence, live edits and notifications fan out through Valkey pub/sub, and live edits wait in Valkey for a few seconds before the core workers save them to PostgreSQL. Calls media never touches the backend.
 
 One deployment serves any number of organizations. A new organization is a database row, not new infrastructure.
 
@@ -51,13 +51,13 @@ One deployment serves any number of organizations. A new organization is a datab
 | Envoy Gateway | Operator + managed Envoy pods | TLS termination, HTTP routing, the operator API allowlist. |
 | STUNner | Operator + TURN gateway pods | Relays WebRTC media into the cluster on one UDP/TCP port. |
 | Backend | Granian, 3 pods default | RPC entrypoint. Auth, content, search proxy, realtime streams, migrations on boot. |
-| Core worker | ARQ | Notifications, reminders, storage cleanup and recovery schedules. |
+| Core worker | ARQ | Notifications, reminders, saving live edits to PostgreSQL, storage cleanup and recovery schedules. |
 | Egress worker | ARQ, 3 pods default | Slow or retry heavy jobs: agent runtime, LLM calls, cron, external integrations. |
 | Media worker | ARQ, separate image | Video conversion, thumbnails, metadata and document extraction. Independent CPU, memory and scratch limits. |
 | Frontend | nginx | The browser app as static assets. |
-| PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state. |
+| PostgreSQL 18 | CloudNativePG cluster, or external | Primary data store. All durable state, live edits included once saved. |
 | Meilisearch | Single pod | Typo tolerant index behind universal `@` mention lookup and search. |
-| Valkey | Single pod | Job queue, pub/sub, operational cache. |
+| Valkey | Single pod | Job queue, pub/sub, operational cache, and the edit buffer that holds live edits until they are saved. |
 | Object storage | Yours (S3 compatible) | File bytes. Private network only; browsers never reach it. |
 | LiveKit | Single pod, scales to a cluster | Audio and video calls. Forwards media between participants. |
 
@@ -101,7 +101,7 @@ Core and egress use the backend image. Media uses `ghcr.io/uniffy-io/uniffy-medi
 
 | Fleet | Default concurrency | Default timeout | Typical work |
 |---|---|---|---|
-| Core | 10 jobs per process | 300s | Push notifications, reminder dispatch, storage cleanup and recovery schedules. |
+| Core | 10 jobs per process | 300s | Push notifications, reminder dispatch, live edit saves, storage cleanup and recovery schedules. |
 | Egress | 50 jobs per process | 900s | Agent runtime, long running LLM calls, conversation compaction, cron, webhook delivery. |
 | Media | 2 jobs per process | 300s, longer for video | Video conversion, thumbnails, metadata and document text extraction. |
 
@@ -115,7 +115,7 @@ Media workers need writable disk scratch, not a persistent volume. Video sources
 
 ### PostgreSQL
 
-All durable state. Migrations run on backend startup; the first pod up after an upgrade applies them.
+All durable state. Migrations run on backend startup; the first pod up after an upgrade applies them. Live edits reach it as one transaction per document, about ten seconds after the first unsaved edit, not as one write per keystroke.
 
 Connection budget per pod is `WORKERS * (DB_POOL_SIZE + DB_MAX_OVERFLOW)`. With the defaults (`WORKERS=1`, pool 30, overflow 70) that is 100 connections per backend pod. Worker pods use the same sizing. Size `max_connections` accordingly:
 
@@ -135,7 +135,17 @@ The search index, and nothing but an index. The backend writes to it during norm
 
 ### Valkey
 
-Carries three loads: the job queue, pub/sub fan out for realtime, and a hot cache. Cache reads run under a 150ms deadline, so a slow Valkey degrades into cache misses instead of stalling user requests, and authorization never reads from it; permission decisions come from Postgres every time.
+Carries four loads: the job queue, pub/sub fan out for realtime, a hot cache, and the **edit buffer**. Cache reads run under a 150ms deadline, so a slow Valkey degrades into cache misses instead of stalling user requests, and authorization never reads from it; permission decisions come from Postgres every time.
+
+The edit buffer is where live edits wait for their save. When someone types in a note, a task or an event description, the backend checks their access in Postgres, validates the edit, appends it to a per document stream in Valkey and confirms it. Collaborators on every backend pod see it at once. About ten seconds after the first unsaved edit, a core worker folds what that document collected into Postgres in one transaction and trims what it saved. A large burst is saved sooner. Lists, search and notifications follow the saved state, so they trail the editors by those seconds.
+
+That makes Valkey part of how editing works. A slow or unreachable Valkey pauses saving and collaboration: editors keep typing, keep their edits on the device and show Saving unavailable until it answers again. Losing Valkey data loses the server's copy of the edits it had not saved yet, and editors still holding those edits send them again. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) covers what each persistence setting can lose.
+
+The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup, and again whenever Valkey comes back as a different instance, and backends report the result on `/healthz`; [Configure Uniffy](/docs/deployment/configure/#valkey) has the details.
+
+Live edits in the buffer are encrypted with your organization's key. That holds in memory, in Valkey's persistence files, and on the way from one backend to another. The key never reaches Valkey. Valkey still sees which documents change, who changes them, when, and how much. Queues, caches and the messages backends send each other are not encrypted. So Valkey still belongs in the same trust zone as Postgres.
+
+Every Valkey restart gives the instance a new identity. Uniffy notices on the next touch of each document, saves what survived, and starts that document's buffer afresh. [Account Recovery](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart) walks through what you see.
 
 LiveKit keeps its room registry in a separate Valkey database (db 1) so registry pressure and app caches cannot evict each other.
 
@@ -150,12 +160,12 @@ Storage includes uploaded originals, retained file versions, thumbnails, and com
 | Component | Bottleneck | Scaling pattern |
 |---|---|---|
 | Backend | CPU on RPC handlers, Postgres pool, upload bandwidth | Horizontal. Stateless pods. Watch the connection budget. |
-| Core worker | Local I/O | Horizontal, or raise `CORE_WORKER_MAX_JOBS`. |
+| Core worker | Live edit saves, two at a time per process; local I/O | Horizontal. Add processes when `uniffy_realtime_buffer_oldest_pending_seconds` stays above fifteen seconds; `CORE_WORKER_MAX_JOBS` adds no save slots. |
 | Egress worker | External API latency | Horizontal. Default concurrency of 50 is high on purpose. |
 | Media worker | CPU, memory, scratch capacity and disk I/O | Horizontal. Each pod adds its own encode slots. Size resources and scratch for each pod's concurrency. |
 | PostgreSQL | Connections, write throughput | Vertical first, then read replicas. |
 | Meilisearch | RAM, index size | Vertical. Plan for full rebuild capacity. |
-| Valkey | Memory, network | Vertical first. |
+| Valkey | Memory, network, volume of edits waiting for their save | Vertical first. Watch `uniffy_realtime_buffer_oldest_pending_seconds` and `uniffy_realtime_buffer_pending_bytes`. |
 | Object storage | Provider managed | Your provider's job. |
 | LiveKit | Egress bandwidth, CPU per room | See below; a room lives on one node. |
 
@@ -190,8 +200,8 @@ Cluster internal, never exposed:
 
 1. The platform operators come first: Envoy Gateway, STUNner, CloudNativePG, cert-manager where used. The install pages sequence this.
 2. The data stores come up with their probes: the Postgres cluster, Valkey, Meilisearch.
-3. Backend pods boot, run migrations, then open the listener. A pod answering `GET /healthz` is ready; the chart wires that into the probes, so an unhealthy pod never receives traffic.
-4. Workers connect to Valkey and start consuming. Liveness rides ARQ's built in health check every `WORKER_HEALTH_CHECK_INTERVAL` seconds.
+3. Backend pods boot, run migrations, then open the listener. A pod answering `GET /healthz` is ready; the chart wires that into the probes, so an unhealthy pod never receives traffic. The same response reports the Valkey eviction check as `realtime_buffer`; an `allkeys-*` policy turns live edit saving off but does not fail the probe.
+4. Workers connect to Valkey, run the same eviction check and start consuming. Liveness rides ARQ's built in health check every `WORKER_HEALTH_CHECK_INTERVAL` seconds.
 5. LiveKit is independent of the backend; they share only the Valkey room registry.
 
 ## Stateless vs stateful
@@ -199,7 +209,7 @@ Cluster internal, never exposed:
 | Stateless, replace freely | Stateful, back up |
 |---|---|
 | Backend, worker fleets, frontend, gateway pods, STUNner pods. | PostgreSQL, object storage, `APP_MASTER_KEY`. |
-| | Meilisearch and Valkey sit in between: losing them costs a reindex window and a queue drain, not data. |
+| | Meilisearch and Valkey sit in between. Losing Meilisearch costs a reindex window. Losing Valkey's data costs its queued jobs plus the edits not saved yet that their authors' devices no longer hold; its persistence setting decides when that happens. |
 
 Postgres, the master key, and object storage are the non negotiable three. [Backups and Restore](/docs/deployment/backups/) covers all of them, including the continuous archive that makes Postgres restorable to a point in time.
 

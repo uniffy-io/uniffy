@@ -16,7 +16,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.crypto.cache import get_org_dek_lru
+from uniffy.core.crypto.cache import get_org_dek_lru, invalidate_org_dek_caches
 from uniffy.core.crypto.consumers import CRYPTO_CONSUMERS
 from uniffy.core.crypto.errors import (
     CiphertextFormatError,
@@ -202,7 +202,7 @@ class OrgCipher:
         await self._session.flush()
         await self._session.commit()
 
-        await get_org_dek_lru().invalidate(organization_id)
+        await invalidate_org_dek_caches(organization_id)
         await publish_dek_invalidation(organization_id)
 
         await self._re_encrypt_all_consumers(organization_id)

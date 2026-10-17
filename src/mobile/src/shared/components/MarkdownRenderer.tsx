@@ -5,6 +5,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getServerUrl } from "@core/config/serverUrl";
 import { appPathForLink } from "@shared/lib/appLinks";
+import { markdownDisplayText, normalizeMarkdownListMarker } from "@shared/lib/markdownPresentation";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
 import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { MentionToken, isPeopleTokenUrnType } from "@shared/mentions/MentionToken";
@@ -87,6 +88,7 @@ function parseInlineFormatting(text: string): InlinePart[] {
 }
 
 function parseInlineSpans(text: string): InlinePart[] {
+  text = markdownDisplayText(text);
   const parts: InlinePart[] = [];
   // Order matters: links before emphasis so [a](b) is not eaten by other rules;
   // bold/italic keep the lookarounds that separate ** from a lone *.
@@ -512,6 +514,8 @@ function renderMarkdownLine(
 ): React.ReactNode {
   const render = (content: string, textStyle: any, wrapperStyle?: any) =>
     renderLineContent(content, T, index, textStyle, wrapperStyle, onMentionPress);
+
+  line = normalizeMarkdownListMarker(line);
 
   if (line.startsWith("# ")) {
     return render(line.substring(2), [styles.mdH1, { color: T.textBright }]);

@@ -1,12 +1,24 @@
 """Extension point between generic realtime state and domain persistence."""
 
+from collections.abc import Awaitable, Callable, Collection
+from enum import Enum, auto
 from typing import Protocol
 from uuid import UUID
 
 import pycrdt
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.realtime.state import DocKey
 from uniffy.core.types import ContentRole, ContentType
+
+
+class RealtimeRenderConflict(Exception):
+    """Transient domain contention must preserve the persisted CRDT snapshot."""
+
+
+class DeferredProjection(Enum):
+    SOFT_DELETED = auto()
 
 
 class RealtimeContentAdapter(Protocol):
@@ -14,15 +26,49 @@ class RealtimeContentAdapter(Protocol):
 
     content_type: ContentType
 
+    async def stage_render(
+        self,
+        session: AsyncSession,
+        ydoc: pycrdt.Doc,
+        content_id: UUID,
+        organization_id: UUID,
+        *,
+        actor_id: UUID | None = None,
+    ) -> Callable[[], Awaitable[None]] | DeferredProjection | None: ...
+
+    async def after_projection(
+        self, session: AsyncSession, content_id: UUID, organization_id: UUID
+    ) -> None: ...
+
+    async def policy_key(
+        self,
+        session: AsyncSession,
+        content_id: UUID,
+        organization_id: UUID,
+    ) -> DocKey | None: ...
+
     async def authorize(
         self,
         session: AsyncSession,
         user_id: UUID,
         organization_id: UUID,
         content_id: UUID,
+        *,
+        checker: PermissionChecker | None = None,
     ) -> ContentRole | None:
-        """Effective role on this content item, or ``None`` for no access."""
+        """Effective role on this content item, or ``None`` for no access.
+
+        A fanout passes one ``checker`` so authorization facts load once per user.
+        """
         ...
+
+    async def authorize_many(
+        self,
+        session: AsyncSession,
+        user_ids: Collection[UUID],
+        organization_id: UUID,
+        content_id: UUID,
+    ) -> dict[UUID, ContentRole | None]: ...
 
     async def hydrate_ydoc(
         self,
@@ -32,24 +78,6 @@ class RealtimeContentAdapter(Protocol):
         organization_id: UUID,
     ) -> None:
         """Seed Y types from domain storage on cold start (snapshot row empty)."""
-        ...
-
-    async def render_and_persist(
-        self,
-        session: AsyncSession,
-        ydoc: pycrdt.Doc,
-        content_id: UUID,
-        organization_id: UUID,
-    ) -> bool:
-        """Persist the rendered shape, or return false when the target no longer exists."""
-        ...
-
-    def apply_external_content(self, ydoc: pycrdt.Doc, content: str) -> bool:
-        """Graft a domain column write into the live doc as a CRDT edit.
-
-        Returns ``False`` when the doc already matches (no update to fan out).
-        Caller holds the session lock.
-        """
         ...
 
 

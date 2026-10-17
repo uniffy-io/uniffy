@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
@@ -35,9 +36,12 @@ class NoteOperations(NoteProjectionOperations):
         session: AsyncSession,
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
     ) -> None:
         super().__init__(session, search_indexer)
         self.storage = storage
+        # Accepted realtime edits that content writes merge with and lifecycle changes retire.
+        self.buffer = buffer
 
     async def create(
         self,
@@ -84,8 +88,9 @@ class NoteOperations(NoteProjectionOperations):
         tag_ids: list[UUID] | None = None,
         metadata: dict[str, Any] | None = None,
         expected_content_version: int | None = None,
+        base_content: str | None = None,
     ) -> Note:
-        return await NoteUpdates(self).update(
+        return await NoteUpdates(self, self.buffer).update(
             user_id=user_id,
             organization_id=organization_id,
             note_id=note_id,
@@ -97,6 +102,7 @@ class NoteOperations(NoteProjectionOperations):
             tag_ids=tag_ids,
             metadata=metadata,
             expected_content_version=expected_content_version,
+            base_content=base_content,
         )
 
     async def delete(
@@ -106,7 +112,7 @@ class NoteOperations(NoteProjectionOperations):
         note_id: UUID,
         permanent: bool = False,
     ) -> bool:
-        return await NoteHierarchy(self).delete(
+        return await NoteHierarchy(self, self.buffer).delete(
             user_id,
             organization_id,
             note_id,
@@ -119,7 +125,7 @@ class NoteOperations(NoteProjectionOperations):
         organization_id: UUID,
         note_id: UUID,
     ) -> Note:
-        return await NoteHierarchy(self).restore(user_id, organization_id, note_id)
+        return await NoteHierarchy(self, self.buffer).restore(user_id, organization_id, note_id)
 
     async def move(
         self,
@@ -140,7 +146,7 @@ class NoteOperations(NoteProjectionOperations):
         )
 
     async def empty_trash(self, user_id: UUID, organization_id: UUID) -> int:
-        return await NoteHierarchy(self).empty_trash(user_id, organization_id)
+        return await NoteHierarchy(self, self.buffer).empty_trash(user_id, organization_id)
 
     async def _unique_slug(self, base: str, organization_id: UUID) -> str:
         return await NoteCreation(self).unique_slug(base, organization_id)
@@ -168,10 +174,9 @@ class NoteOperations(NoteProjectionOperations):
         parent_id: UUID,
         organization_id: UUID,
     ) -> None:
-        await NoteHierarchy(self).require_moveable_under(note_id, parent_id, organization_id)
-
-    async def _collect_descendant_ids(self, note: Note) -> list[UUID]:
-        return await NoteHierarchy(self).collect_descendant_ids(note)
+        await NoteHierarchy(self, self.buffer).require_moveable_under(
+            note_id, parent_id, organization_id
+        )
 
 
 __all__ = ["NoteOperations"]

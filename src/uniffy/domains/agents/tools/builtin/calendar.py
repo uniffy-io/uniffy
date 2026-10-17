@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 
 from uniffy.core.content.references import sanitize_mention_label
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.live import LiveStateUnavailable, load_live_document
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, EventStatus, EventTransparency, RecurrencePattern
 from uniffy.domains.agents.runtime.output_format import OutputSurface
@@ -257,8 +259,19 @@ async def _execute_read_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     result = await _format_event_result("Event", event, ctx=ctx)
 
-    if event.description:
-        result += f"\nDescription: {event.description}"
+    description = event.description
+    key = (ContentType.CALENDAR_EVENT, event.id)
+    await lock_document(ctx.session, key, ctx.organization_id)
+    try:
+        live = await load_live_document(ctx.buffer, ctx.session, key)
+    except LiveStateUnavailable:
+        # The stored text is still a safe base: a description merge keeps live-only edits.
+        live = None
+    if live is not None and live.unprojected:
+        # Editors are ahead of the stored text; a description edit must start from theirs.
+        description = live.text()
+    if description:
+        result += f"\nDescription: {description}"
 
     if attendees:
         att_lines = []
@@ -403,7 +416,7 @@ async def _execute_create_event(ctx: ToolContext, args: dict) -> ToolResult:
         ctx.user_id,
     )
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     event = await ops.create(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -433,7 +446,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
 
     kwargs: dict = {}
 
-    for field in ("title", "description", "location", "meeting_url", "timezone"):
+    for field in ("title", "description", "base_description", "location", "meeting_url", "timezone"):
         if field in args:
             kwargs[field] = args[field]
     if "description" in kwargs:  # noqa: PLR2004
@@ -496,7 +509,7 @@ async def _execute_update_event(ctx: ToolContext, args: dict) -> ToolResult:
             error="At least one field to update is required",
         )
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     event = await ops.update(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -522,7 +535,7 @@ async def _execute_delete_event(ctx: ToolContext, args: dict) -> ToolResult:
     if err:
         return ToolResult(success=False, data="", error=err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     await ops.delete(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -570,7 +583,7 @@ async def _execute_add_attendees(ctx: ToolContext, args: dict) -> ToolResult:
             )
         role = AttendeeRole(role_upper)
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     event = await ops.add_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -611,7 +624,7 @@ async def _execute_remove_attendees(ctx: ToolContext, args: dict) -> ToolResult:
     if att_err:
         return ToolResult(success=False, data="", error=att_err)
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     event = await ops.remove_attendees(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -652,7 +665,7 @@ async def _execute_rsvp(ctx: ToolContext, args: dict) -> ToolResult:
             error=f"Invalid status: {raw_status}. Must be one of: {', '.join(_RSVP_VALUES)}",
         )
 
-    ops = CalendarEventOperations(ctx.session, ctx.required_search)
+    ops = CalendarEventOperations(ctx.session, ctx.required_search, ctx.buffer)
     await ops.update_attendee_status(
         user_id=ctx.user_id,
         organization_id=ctx.organization_id,
@@ -885,6 +898,13 @@ update_event = ToolDefinition(
             "description": {
                 "type": "string",
                 "description": MARKDOWN_CONTENT_DOC,
+            },
+            "base_description": {
+                "type": "string",
+                "description": (
+                    "Exact description from calendar.read_event before editing. "
+                    "Required with description."
+                ),
             },
             "start_time": {
                 "type": "string",

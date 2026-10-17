@@ -51,11 +51,12 @@ def write_var_string(value: str) -> bytes:
     return write_var_uint(len(body)) + body
 
 
-def read_var_string(buf: bytes, offset: int = 0) -> tuple[str, int]:
-    """Decode a VarString; rejects bodies longer than :data:`_MAX_DOCNAME_BYTES`."""
+def read_var_string(
+    buf: bytes, offset: int = 0, *, max_bytes: int = _MAX_DOCNAME_BYTES
+) -> tuple[str, int]:
     length, pos = read_var_uint(buf, offset)
-    if length > _MAX_DOCNAME_BYTES:
-        raise ValueError(f"var_string: declared length {length} exceeds cap {_MAX_DOCNAME_BYTES}")
+    if length > max_bytes:
+        raise ValueError(f"var_string: declared length {length} exceeds cap {max_bytes}")
     end = pos + length
     if end > len(buf):
         raise ValueError(

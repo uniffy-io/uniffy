@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.agents.tools.builtin import calendar, notes, projects
 from uniffy.domains.agents.tools.definitions import ToolContext
@@ -22,6 +23,7 @@ def mutations(monkeypatch):
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         storage=MagicMock(),
         search_indexer=MagicMock(),
         call_lifecycle=MagicMock(),
@@ -65,6 +67,8 @@ async def test_body_tools_normalize_before_domain_mutation(mutations, domain, op
         "event": (calendar, event_ops, "description"),
     }[domain]
     args[field] = RAW
+    if domain != "note" and operation == "update":
+        args["base_description"] = " original \n"
     result = await getattr(module, f"_execute_{operation}_{domain}")(ctx, args)
     assert result.success
     stored = getattr(ops, operation).await_args.kwargs
@@ -72,6 +76,8 @@ async def test_body_tools_normalize_before_domain_mutation(mutations, domain, op
     assert stored["user_id"] == ctx.user_id
     assert stored["organization_id"] == ctx.organization_id
     assert args[field] == RAW
+    if domain != "note" and operation == "update":
+        assert stored["base_description"] == " original \n"
     if domain == "note" and operation == "update":
         assert stored["expected_content_version"] == row.version
 
@@ -88,6 +94,8 @@ async def test_updates_preserve_omission_and_explicit_empty_body(mutations, doma
     args = {f"{domain}_id": str(row.id), "title": "Renamed"}
     if body is not None:
         args[field] = body
+        if domain != "note":
+            args["base_description"] = ""
         args["expected_version"] = row.version
     result = await getattr(module, f"_execute_update_{domain}")(ctx, args)
     assert result.success
@@ -96,6 +104,8 @@ async def test_updates_preserve_omission_and_explicit_empty_body(mutations, doma
         assert stored.get(field) is None
     else:
         assert stored[field] == ""
+        if domain != "note":
+            assert stored["base_description"] == ""
 
 
 async def test_note_normalization_does_not_bypass_fresh_read_guard(mutations):

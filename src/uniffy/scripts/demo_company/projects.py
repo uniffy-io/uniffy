@@ -89,7 +89,7 @@ async def _seed_project(ctx: DemoContext, spec: ProjectSpec, tag_ids: dict[str, 
     sprint_ids = await _create_sprints(ctx, project.id, spec.sprints)
     members = await resolve_member_map(ctx.session, ctx.organization_id, _emails(spec))
 
-    task_ops = TaskOperations(ctx.session, ctx.storage, ctx.search_indexer)
+    task_ops = TaskOperations(ctx.session, ctx.storage, ctx.search_indexer, ctx.buffer)
     task_ids: dict[str, UUID] = {}
     for index, task in enumerate(spec.tasks, start=1):
         created = await task_ops.create(

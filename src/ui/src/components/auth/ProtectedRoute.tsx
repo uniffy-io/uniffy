@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { useRealtimeDrain } from "@/features/realtime/hooks/useRealtimeDrain";
 import { fetchEffectiveSettings } from "@/features/settings";
 
 interface ProtectedRouteProps {
@@ -15,6 +16,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const initialized = useAppSelector((state) => state.settings?.initialized ?? false);
   const location = useLocation();
+  // Stranded offline edits replay from here, whichever page the user lands on.
+  useRealtimeDrain();
 
   useEffect(() => {
     if (isAuthenticated && currentOrganizationId && !initialized) {

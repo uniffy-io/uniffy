@@ -39,6 +39,7 @@ class ImageBlockNodeView implements NodeView {
     this.root.render(
       createElement(ResizableImage, {
         src: this.node.attrs.src as string,
+        alt: this.node.attrs.alt as string,
         caption: this.node.attrs.caption as string,
         ratio: this.node.attrs.ratio as number,
         selected: this.selected,

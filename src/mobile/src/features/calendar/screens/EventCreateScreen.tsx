@@ -38,6 +38,7 @@ import { MeetingChannelPicker } from "@features/calendar/components/MeetingChann
 import { router, useLocalSearchParams } from "expo-router";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { useTheme } from "@shared/hooks/useTheme";
+import { descriptionPatch } from "@shared/lib/descriptionPatch";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
@@ -321,7 +322,7 @@ export function CreateEventScreen() {
         await updateEvent.mutateAsync({
           eventId,
           title: title.trim(),
-          description: descriptionRef.current.trim(),
+          ...descriptionPatch(initialDescription ?? "", descriptionRef.current),
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           isAllDay,

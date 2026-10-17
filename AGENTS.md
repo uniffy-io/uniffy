@@ -75,6 +75,7 @@ All project commands go through `./manage.py`, a PEP 723 uv script (click). Ever
 # Database
 ./manage.py db shell                         # psql into postgres
 ./manage.py db migrate                       # alembic upgrade head (also runs automatically on startup)
+./manage.py realtime checkpoint-now          # save every buffered live edit to PostgreSQL (run before wiping Valkey)
 
 # unictl (Go CLI)
 ./manage.py cli build|install|run|lint|test

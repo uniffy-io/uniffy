@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import (
     AttendeeRole,
@@ -47,8 +48,11 @@ class CalendarEventOperations(CalendarEventReader):
         self,
         session: AsyncSession,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
     ) -> None:
         super().__init__(session, _search_indexer=search_indexer)
+        # Accepted realtime edits that description writes and occurrence copies include.
+        self.buffer = buffer
 
     async def create(
         self,
@@ -148,6 +152,7 @@ class CalendarEventOperations(CalendarEventReader):
         is_out_of_office: bool | None = None,
         *,
         call_lifecycle: ChannelCallLifecycle,
+        base_description: str | None = None,
     ) -> CalendarEvent:
         return await EventUpdateOperations(self).update(
             user_id=user_id,
@@ -155,6 +160,7 @@ class CalendarEventOperations(CalendarEventReader):
             event_id=event_id,
             title=title,
             description=description,
+            base_description=base_description,
             start_time=start_time,
             end_time=end_time,
             is_all_day=is_all_day,
@@ -504,19 +510,19 @@ class CalendarEventOperations(CalendarEventReader):
             occurrence_date,
         )
 
-    async def _emit_team_mention_notifications(
+    async def emit_mention_notifications(
         self,
         event: CalendarEvent,
         actor_id: UUID,
         organization_id: UUID,
-        team_ids: list[UUID],
+        old_references: list[str] | None,
         excluded_ids: set[UUID],
     ) -> None:
-        await EventNotifications(self)._emit_team_mention_notifications(
+        await EventNotifications(self).emit_mention_notifications(
             event,
             actor_id,
             organization_id,
-            team_ids,
+            old_references,
             excluded_ids,
         )
 

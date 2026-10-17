@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_content_role,
+    resolve_effective_policy,
 )
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL
 from uniffy.core.models.chat.channel import ChatChannel
@@ -205,6 +206,34 @@ class ResourceAudienceResolver:
             access_mode=access_mode,
             baseline_role=baseline_role,
             candidate_user_ids=candidates,
+        )
+
+    async def fanout_audience(
+        self,
+        *,
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        owner_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> list[UUID] | None:
+        """None sends OPEN_TO_ORG content org-wide; a private id never leaves its audience."""
+        default_mode, default_baseline = await resolve_content_defaults(
+            self.session, organization_id, content_type
+        )
+        mode, _ = resolve_effective_policy(
+            access_mode, baseline_role, default_mode, default_baseline
+        )
+        if mode == AccessMode.OPEN_TO_ORG:
+            return None
+        return await self.standard_audience(
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+            owner_id=owner_id,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
         )
 
     async def active_roles(

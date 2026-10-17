@@ -156,6 +156,7 @@ export function useUpdateEvent() {
       eventId: string;
       title?: string;
       description?: string;
+      baseDescription?: string;
       startTime?: string;
       endTime?: string;
       isAllDay?: boolean;
@@ -188,6 +189,7 @@ export function useUpdateEvent() {
         occurrenceDate: args.recurrenceEditScope ? args.occurrenceDate : undefined,
         title: args.title,
         description: args.description,
+        baseDescription: args.baseDescription,
         startTime: args.startTime ? isoToTimestamp(args.startTime) : undefined,
         endTime: args.endTime ? isoToTimestamp(args.endTime) : undefined,
         isAllDay: args.isAllDay,

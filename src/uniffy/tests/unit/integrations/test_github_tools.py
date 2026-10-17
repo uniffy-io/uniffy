@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.integrations.base import IntegrationAuthError
@@ -30,6 +31,7 @@ def _ctx(**overrides) -> ToolContext:
         session=MagicMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         session_id=generate_id(),
         **overrides,

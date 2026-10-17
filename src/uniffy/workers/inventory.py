@@ -64,7 +64,7 @@ def _trigger(registration: JobRegistration | ScheduledJobRegistration) -> str:
         ("weekday", registration.weekday),
         ("hour", registration.hour),
         ("minute", "*" if registration.minute is None else registration.minute),
-        ("second", registration.second),
+        ("second", "*" if registration.second is None else registration.second),
     )
     return "cron " + " ".join(
         f"{name}={_cron_value(value)}" for name, value in fields if value is not None
@@ -123,7 +123,8 @@ def render_worker_inventory() -> str:
         "trigger",
         "timeout",
         "retries",
-        "PostgreSQL fact",
+        "recovery store",
+        "recovery fact",
         "recovery trigger",
     )
     lines.extend(("", "Worker jobs", "", f"| {' | '.join(headers)} |"))
@@ -139,6 +140,7 @@ def render_worker_inventory() -> str:
             entry.trigger,
             f"{entry.timeout_seconds:g}s",
             entry.max_tries,
+            recovery.store.value if recovery else "-",
             recovery.fact if recovery else "-",
             recovery.trigger if recovery else "-",
         )

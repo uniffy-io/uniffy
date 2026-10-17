@@ -14,6 +14,7 @@ import pytest
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.memories import operations as memory_ops_mod
 from uniffy.domains.agents.memories.operations import (
@@ -279,6 +280,7 @@ class TestTools:
             session=session,
             user_id=USER_ID,
             organization_id=ORG_ID,
+            buffer=UpdateBuffer(),
             agent_id=generate_id(),
             memory_scope=memory_scope,
         )
@@ -375,6 +377,7 @@ class TestSaveAudience:
             session=session,
             user_id=USER_ID,
             organization_id=ORG_ID,
+            buffer=UpdateBuffer(),
             agent_id=generate_id(),
             memory_scope=memory_scope,
         )
@@ -617,6 +620,7 @@ class TestMemoryBridge:
             session=session,
             user_id=USER_ID,
             organization_id=ORG_ID,
+            buffer=UpdateBuffer(),
             agent_id=generate_id(),
             memory_scope=channel_ref,
             memory_bridge_scope=MemoryScopeRef.user(USER_ID),

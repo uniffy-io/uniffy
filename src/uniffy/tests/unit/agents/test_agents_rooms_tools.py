@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import BookingStatus, RoomStatus, RoomType, generate_id
 from uniffy.domains.agents.tools.builtin.rooms import (
     ROOMS_TOOLS,
@@ -26,6 +27,7 @@ def _ctx() -> ToolContext:
         session=session,
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         session_id=generate_id(),
         user_timezone="UTC",
@@ -346,7 +348,7 @@ class TestCalendarRoomAtomicityPrecheck:
         # create() checks the target calendar belongs to the author first.
         session.scalar = AsyncMock(return_value=user_id)
 
-        ops = CalendarEventOperations(session, MagicMock())
+        ops = CalendarEventOperations(session, MagicMock(), UpdateBuffer())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
         ops._expand_group_attendees = AsyncMock(side_effect=lambda ids: ids)
 
@@ -396,7 +398,7 @@ class TestCalendarRoomAtomicityPrecheck:
         session.flush = AsyncMock()
         session.scalar = AsyncMock(return_value=user_id)
 
-        ops = CalendarEventOperations(session, MagicMock())
+        ops = CalendarEventOperations(session, MagicMock(), UpdateBuffer())
         ops._resolve_access_policy = AsyncMock(return_value=(None, None))
         ops._expand_group_attendees = AsyncMock(side_effect=lambda ids: ids)
 

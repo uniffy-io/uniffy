@@ -11,6 +11,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import ValidationError
+from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import (
@@ -18,10 +19,16 @@ from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.lifecycle import stage_hard_delete
+from uniffy.core.realtime.live import TextMerge, stage_text_merge
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.statuses import (
@@ -39,18 +46,27 @@ logger = logger.bind(component="projects.tasks.mutations")
 
 
 class TaskMutationOperations:
-    def __init__(self, session: AsyncSession, content: TaskContentOperations) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        content: TaskContentOperations,
+        buffer: UpdateBuffer,
+    ) -> None:
         self.session = session
         self.content = content
+        self.buffer = buffer
 
     async def update(
         self,
         user_id: UUID,
         organization_id: UUID,
         task_id: UUID,
+        base_description: str | None = None,
         **kwargs,
     ) -> tuple[Task, Task | None]:
+        await lock_document(self.session, (ContentType.TASK, task_id), organization_id)
         task = await self.content.get_for_edit(user_id, organization_id, task_id)
+        await self.session.refresh(task)
 
         tag_ids = kwargs.pop("tag_ids", None)
         status_semantics = await load_task_status_semantics(self.session, task.project_id)
@@ -104,6 +120,26 @@ class TaskMutationOperations:
                 merged_values,
                 task_type=effective_type,
             )
+
+        if base_description is not None and kwargs.get("description") == base_description:
+            # An unchanged description is a metadata save; it must not checkpoint live edits.
+            del kwargs["description"]
+        merge: TextMerge | None = None
+        if "description" in kwargs:  # noqa: PLR2004
+            # Merged before any row changes, so a retryable live-state failure leaves none behind.
+            incoming = kwargs["description"] or ""
+            merge = await stage_text_merge(
+                self.buffer,
+                self.session,
+                (ContentType.TASK, task_id),
+                organization_id,
+                user_id,
+                base=base_description,
+                stored=task.description or "",
+                incoming=incoming,
+            )
+            if merge.text != incoming:
+                kwargs["description"] = merge.text
 
         old_references = list(task.outgoing_references) if task.outgoing_references else None
 
@@ -191,7 +227,7 @@ class TaskMutationOperations:
                     new_value=",".join(value) if value else None,
                 )
 
-        if "description" in kwargs:  # noqa: PLR2004
+        if merge is not None:
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
 
         task.version += 1
@@ -222,8 +258,16 @@ class TaskMutationOperations:
                         member_ids, organization_id, task.id
                     )
 
+        if merge is not None:
+            await stage_inline_reconciliation(
+                self.session, ContentType.TASK, task_id, organization_id
+            )
         await self.session.commit()
         await self.session.refresh(task)
+        if merge is not None:
+            await merge.after_commit()
+            await publish_content_changed(ContentType.TASK, task_id, organization_id)
+            await publish_content_replace(ContentType.TASK, task_id)
 
         await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
 
@@ -262,6 +306,7 @@ class TaskMutationOperations:
                     organization_id=organization_id,
                     target_urn=task_urn,
                     new_label=task.title,
+                    buffer=self.buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(
@@ -352,6 +397,7 @@ class TaskMutationOperations:
                 task,
                 organization_id,
                 status_semantics,
+                buffer=self.buffer,
             )
 
         return task, spawned_task
@@ -363,11 +409,16 @@ class TaskMutationOperations:
         task_id: UUID,
         permanent: bool = False,
     ) -> bool:
+        key = (ContentType.TASK, task_id)
+        await lock_document(self.session, key, organization_id)
         task = await self.content.get_for_delete(user_id, organization_id, task_id)
+        # Tasks have no restore path, so trash removes the live document as well.
+        retire = await stage_hard_delete(self.buffer, self.session, key)
 
+        staged_tags = None
         if permanent:
             tag_ops = TagOperations(self.session, self.content.search_indexer)
-            await tag_ops.unassign_all_for_urn(
+            staged_tags = await tag_ops.stage_unassign_all_for_urn(
                 actor_id=user_id,
                 organization_id=organization_id,
                 content_urn=build_content_urn(self.content.content_type, task_id),
@@ -399,6 +450,10 @@ class TaskMutationOperations:
         )
 
         await self.session.commit()
+        await retire()
+        if staged_tags is not None:
+            await tag_ops.finish_unassign_all_after_commit(staged_tags)
+        await publish_perm_change(ContentType.TASK, task_id, None, None)
         await self.content.search_indexer.remove(
             build_content_urn(self.content.content_type, task_id), organization_id
         )

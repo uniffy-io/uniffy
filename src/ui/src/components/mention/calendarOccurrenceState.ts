@@ -4,9 +4,11 @@ import {
   onMentionStateChange,
 } from "@/components/mention/mentionStateEmitter";
 import { getResolvedUrl, resolveUrnBatched } from "@/components/mention/useBatchedSubjectResolver";
+import { OCCURRENCE_ID_SEPARATOR } from "@/features/calendar/utils/occurrenceIds";
 
-const OCCURRENCE_URN =
-  /^(urn:uniffy:content:CALENDAR_EVENT:[0-9a-f-]{36})__occurrence__\d{4}-\d{2}-\d{2}$/;
+const OCCURRENCE_URN = new RegExp(
+  `^(urn:uniffy:content:CALENDAR_EVENT:[0-9a-f-]{36})${OCCURRENCE_ID_SEPARATOR}\\d{4}-\\d{2}-\\d{2}$`,
+);
 
 /** Series patches need recurrence expansion before their times can reach occurrence cards. */
 export function watchCalendarOccurrence(urn: string, organizationId: string): () => void {

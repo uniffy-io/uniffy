@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Project, Task } from "@/features/projects/types/project";
 import { SYSTEM_FIELD_IDS, type SelectOption } from "@/features/projects/types/fields";
 import {
+  applyLiveDescription,
   optimisticUpdateTask,
   projectsSlice,
   type ProjectsState,
@@ -11,6 +12,7 @@ import {
   deleteTasks,
   fetchProjects,
   fetchProjectTasks,
+  fetchTask,
   updateTask,
 } from "@/features/projects/store/projectsThunks";
 
@@ -199,4 +201,61 @@ describe("task list arriving around the project list", () => {
     state = reducer(state, tasksLoaded([makeTask("a")]));
     expect(state.tasks).toEqual({});
   });
+});
+
+describe("live descriptions", () => {
+  it("keeps the live text when a later server row still carries the old one", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    expect(live.tasks.t1.description).toBe("new");
+    expect(live._pendingTaskSnapshot).toBeUndefined();
+
+    const request = { id: "t1", status: "status_doing" };
+    const settled = reducer(
+      live,
+      updateTask.fulfilled({ task: { ...task, status: "status_doing" } }, "req", request),
+    );
+    expect(settled.tasks.t1).toMatchObject({ status: "status_doing", description: "new" });
+  });
+
+  it("accepts the server description when the request asked to change it", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const request = { id: "t1", description: "typed" };
+    const settled = reducer(
+      live,
+      updateTask.fulfilled({ task: { ...task, description: "typed" } }, "req", request),
+    );
+    expect(settled.tasks.t1.description).toBe("typed");
+    expect(settled.liveDescriptionIds.t1).toBeUndefined();
+  });
+
+  it("does not roll the live text back when an unrelated update fails", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const request = { id: "t1", status: "status_doing" };
+    const rejected = reducer(live, updateTask.rejected(null, "req", request, "blocked"));
+    expect(rejected.tasks.t1.description).toBe("new");
+  });
+
+  it("accepts a later peer description from a task list refetch", () => {
+    const task = makeTask("t1", { description: "old" });
+    const live = reducer(stateWith([task]), applyLiveDescription({ id: "t1", description: "new" }));
+    const refetched = reducer(
+      live,
+      fetchProjectTasks.fulfilled([{ ...task, description: "rendered" }], "req", "proj-1"),
+    );
+    expect(refetched.tasks.t1.description).toBe("rendered");
+    expect(refetched.liveDescriptionIds.t1).toBeUndefined();
+  });
+});
+
+it("updates a collapsed task description after a content-change refetch", () => {
+  const initial = stateWith([makeTask("t1", { description: "before" })]);
+  const next = reducer(
+    initial,
+    fetchTask.fulfilled(makeTask("t1", { description: "peer edit" }), "request", "t1"),
+  );
+  expect(next.tasks.t1.description).toBe("peer edit");
+  expect(next.loading.tasks).toBe(false);
 });

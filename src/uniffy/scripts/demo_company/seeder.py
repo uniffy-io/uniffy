@@ -8,6 +8,7 @@ from pathlib import Path
 
 from loguru import logger
 
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
 from uniffy.infrastructure.database.session import open_session
@@ -60,6 +61,7 @@ async def seed_demo_company(
     storage: ObjectStorage,
     search: WorkspaceSearch,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     content_dir: Path | None = None,
     org_slug: str | None = None,
     actor_email: str | None = None,
@@ -85,6 +87,7 @@ async def seed_demo_company(
             storage=storage,
             search=search,
             search_indexer=search_indexer,
+            buffer=buffer,
             organization_id=organization.id,
             actor_id=actor.id,
             timezone=content.manifest.timezone,

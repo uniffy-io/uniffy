@@ -11,6 +11,7 @@ from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.files.file import File
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.files.folders.operations import FolderOperations
@@ -45,6 +46,8 @@ class FileMutationOperations:
         filename: str | None = None,
         tag_ids: list[UUID] | None = None,
         description: str | None = None,
+        *,
+        buffer: UpdateBuffer,
     ) -> File:
         """Metadata update; tag_ids=None preserves manual tags, [] clears
         them. Members via MembersService.
@@ -100,6 +103,7 @@ class FileMutationOperations:
                     organization_id=organization_id,
                     target_urn=file_urn,
                     new_label=file.filename,
+                    buffer=buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(

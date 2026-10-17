@@ -38,12 +38,3 @@ export function useDocAwareness<T = Record<string, unknown>>(
 
   return peers;
 }
-
-export function setLocalAwareness(
-  awareness: Awareness | null,
-  patch: Record<string, unknown>,
-): void {
-  if (!awareness) return;
-  const current = awareness.getLocalState() ?? {};
-  awareness.setLocalState({ ...current, ...patch });
-}

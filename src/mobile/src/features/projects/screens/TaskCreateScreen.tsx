@@ -33,6 +33,7 @@ import {
   useProjectTasks,
 } from "@features/projects/useProjects";
 import { useCreateTask, useUpdateTask } from "@features/projects/useProjectMutations";
+import { descriptionPatch } from "@shared/lib/descriptionPatch";
 import { getStatusOptions, getPriorityOptions } from "@features/projects/projectsSerializer";
 
 type CreateSheet = "type" | "sprint" | "estimate" | "tags" | null;
@@ -138,7 +139,7 @@ export function CreateTaskScreen() {
           taskId,
           projectId,
           title: title.trim(),
-          description: descriptionRef.current.trim(),
+          ...descriptionPatch(initialDescription ?? "", descriptionRef.current),
           status: selectedStatus || undefined,
           priority: selectedPriority || undefined,
           assigneeIds,

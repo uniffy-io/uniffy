@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { Avatar } from "@shared/components/Avatar";
-import type { DocSession } from "@shared/realtime/useDocSession";
+import type { DocSession } from "@shared/realtime/docSession";
 import type { RealtimeStatus } from "@shared/realtime/protocol";
 
 type PeerIdentity = {
@@ -43,13 +43,13 @@ function readPeers(session: DocSession): PeerIdentity[] {
   return peers;
 }
 
-/** Live/offline dot plus the deduped stack of peers in the same note doc. */
+/** Deduped stack of peers in the same note doc; screens without a persistence chip pass `status` for a live dot. */
 export function RealtimePresence({
   session,
   status,
 }: {
   session: DocSession | null;
-  status: RealtimeStatus;
+  status?: RealtimeStatus;
 }) {
   const T = useTheme();
   const [peers, setPeers] = useState<PeerIdentity[]>(() => (session ? readPeers(session) : []));
@@ -69,10 +69,9 @@ export function RealtimePresence({
     };
   }, [session]);
 
-  if (!session) return null;
+  if (!session || (peers.length === 0 && !status)) return null;
 
-  const live = status === "connected";
-  const dotColor = status === "connecting" ? T.yellow : live ? T.green : T.red;
+  const dotColor = status === "connecting" ? T.yellow : status === "connected" ? T.green : T.red;
   const visible = peers.slice(0, MAX_VISIBLE_PEERS);
 
   return (
@@ -85,7 +84,7 @@ export function RealtimePresence({
           <Avatar name={peer.name} avatarUrl={peer.avatarUrl ?? undefined} size={22} circle />
         </View>
       ))}
-      <View style={[styles.dot, { backgroundColor: dotColor }]} />
+      {status && <View style={[styles.dot, { backgroundColor: dotColor }]} />}
     </View>
   );
 }

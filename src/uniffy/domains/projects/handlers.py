@@ -31,6 +31,7 @@ from uniffy.core.converters.common_proto import (
 )
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.tags.tag import Tag
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
@@ -119,6 +120,8 @@ async def _resolve_project_effective_policy(
 
 
 class ProjectsHandlers:
+    buffer: UpdateBuffer
+
     async def create_project(
         self,
         request: CreateProjectRequest,
@@ -260,7 +263,9 @@ class ProjectsHandlers:
             async with open_session() as session:
                 ops = ProjectOperations(session, self.storage, self.search_indexer)
                 try:
-                    project = await ops.update(user_id, organization_id, project_id, **updates)
+                    project = await ops.update(
+                        user_id, organization_id, project_id, buffer=self.buffer, **updates
+                    )
                 except IntegrityError as exc:
                     raise ConnectError(
                         Code.ALREADY_EXISTS,
@@ -312,7 +317,13 @@ class ProjectsHandlers:
         try:
             async with open_session() as session:
                 ops = ProjectOperations(session, self.storage, self.search_indexer)
-                await ops.delete(user_id, organization_id, project_id, permanent=request.permanent)
+                await ops.delete(
+                    user_id,
+                    organization_id,
+                    project_id,
+                    permanent=request.permanent,
+                    buffer=self.buffer,
+                )
                 return DeleteProjectResponse(success=True, message="Project deleted successfully")
         except ConnectError:
             raise

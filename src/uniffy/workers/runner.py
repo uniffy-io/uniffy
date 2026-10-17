@@ -6,6 +6,8 @@ import time
 
 from loguru import logger
 from valkey.exceptions import ConnectionError as ValkeyConnectionError
+from valkey.exceptions import TimeoutError as ValkeyTimeoutError
+from valkey.exceptions import ValkeyError
 
 from uniffy.core.jobs import QueueName
 from uniffy.infrastructure.observability.config import LoggingConfig
@@ -25,7 +27,7 @@ _STABLE_THRESHOLD = 60.0
 
 
 def _restart_reason(exc: BaseException) -> WorkerRestartReason:
-    if isinstance(exc, ValkeyConnectionError):
+    if isinstance(exc, (ValkeyConnectionError, ValkeyTimeoutError)):
         return WorkerRestartReason.VALKEY_CONNECTION
     if isinstance(exc, ConnectionError):
         return WorkerRestartReason.CONNECTION
@@ -55,13 +57,16 @@ def run_worker_with_restart(
 
     backoff = 1.0
     while True:
-        asyncio.set_event_loop(asyncio.new_event_loop())
-
         started_at = time.monotonic()
         try:
-            run_worker(settings_cls)
+            # The worker binds to the current loop. Closing it after each run cancels what the run
+            # left behind, so a restart opens its clients on a fresh loop.
+            with asyncio.Runner() as runner:
+                runner.get_loop()
+                run_worker(settings_cls)
             break
-        except (ValkeyConnectionError, ConnectionError, OSError, RuntimeError) as exc:
+        # A Valkey stall surfaces as a timeout, which is a ValkeyError but no ConnectionError.
+        except (ValkeyError, ConnectionError, OSError, RuntimeError) as exc:
             uptime = time.monotonic() - started_at
             WORKER_READY.labels(queue=queue).set(0)
             WORKER_RESTARTS_TOTAL.labels(queue=queue, reason=_restart_reason(exc)).inc()

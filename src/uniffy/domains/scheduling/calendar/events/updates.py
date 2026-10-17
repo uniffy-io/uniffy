@@ -17,13 +17,14 @@ from uniffy.core.errors import (
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
-    extract_mentioned_team_ids,
-    extract_mentioned_user_ids,
 )
-from uniffy.core.events.realtime import ContentAccessAction
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.realtime.live import TextMerge, stage_text_merge
+from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
+from uniffy.core.realtime.storage import lock_document
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     AttendeeRole,
@@ -37,6 +38,7 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
+from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -91,6 +93,7 @@ class EventUpdateOperations:
         is_out_of_office: bool | None = None,
         *,
         call_lifecycle: ChannelCallLifecycle,
+        base_description: str | None = None,
     ) -> CalendarEvent:
         """Update an existing event.
 
@@ -156,6 +159,7 @@ class EventUpdateOperations:
                         organization_id,
                         real_event_id,
                         occurrence_date,
+                        base_description=base_description,
                         **updates,
                     )
                 return await self.events.edit_this_and_following(
@@ -163,13 +167,18 @@ class EventUpdateOperations:
                     organization_id,
                     real_event_id,
                     occurrence_date,
+                    base_description=base_description,
                     **updates,
                 )
 
+        await lock_document(
+            self.events.session, (ContentType.CALENDAR_EVENT, event_id), organization_id
+        )
         event = await self.events._fetch_by_id(event_id, organization_id)
         if not event:
             raise NotFoundError("CalendarEvent", event_id)
 
+        await self.events.session.refresh(event)
         await self.events._require_edit(user_id, organization_id, event)
 
         old_title = event.title
@@ -179,19 +188,30 @@ class EventUpdateOperations:
 
         title_changed = title is not None and title != event.title
 
-        old_mentioned: set[UUID] = set()
-        old_mentioned_teams: set[UUID] = set()
-        if description is not None:
-            old_mentioned = extract_mentioned_user_ids(event.outgoing_references)
-            old_mentioned_teams = set(extract_mentioned_team_ids(event.outgoing_references))
+        old_references = list(event.outgoing_references) if event.outgoing_references else None
 
+        if base_description is not None and description == base_description:
+            # An unchanged description is a metadata save; it must not checkpoint live edits.
+            description = None
+        merge: TextMerge | None = None
+        if description is not None:
+            # Merged before any row changes, so a retryable live-state failure leaves none behind.
+            merge = await stage_text_merge(
+                self.events.buffer,
+                self.events.session,
+                (ContentType.CALENDAR_EVENT, event_id),
+                organization_id,
+                user_id,
+                base=base_description,
+                stored=event.description or "",
+                incoming=description,
+            )
+            event.description = merge.text
+            event.outgoing_references = (
+                extract_all_outgoing_references(event.description, organization_id) or None
+            )
         if title is not None:
             event.title = title
-        if description is not None:
-            event.description = description
-            event.outgoing_references = (
-                extract_all_outgoing_references(description, organization_id) or None
-            )
         if start_time is not None:
             event.start_time = start_time
         if end_time is not None:
@@ -373,8 +393,19 @@ class EventUpdateOperations:
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
+        if merge is not None:
+            await stage_inline_reconciliation(
+                self.events.session, ContentType.CALENDAR_EVENT, event.id, organization_id
+            )
         await self.events.session.commit()
+        if merge is not None:
+            await merge.after_commit()
         await self.events.session.refresh(event)
+        if visibility is not None or attendee_ids is not None:
+            await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
+        if merge is not None:
+            await publish_content_changed(ContentType.CALENDAR_EVENT, event.id, organization_id)
+            await publish_content_replace(ContentType.CALENDAR_EVENT, event.id)
 
         if tag_ids is not None:
             tag_ops = TagOperations(
@@ -401,6 +432,7 @@ class EventUpdateOperations:
                     organization_id=organization_id,
                     target_urn=event_urn,
                     new_label=event.title,
+                    buffer=self.events.buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(
@@ -434,41 +466,19 @@ class EventUpdateOperations:
         if became_cancelled:
             await self.events._emit_cancellation_notification(event, user_id, organization_id)
 
-        if description is not None:
+        if merge is not None:
             if attendee_ids is not None:
                 current_attendee_ids = set(attendee_ids)
             else:
                 stmt = select(EventAttendee.user_id).where(EventAttendee.event_id == event.id)
                 result = await self.events.session.execute(stmt)
                 current_attendee_ids = set(result.scalars().all())
-            excluded_from_mentions = {user_id} | current_attendee_ids
-
-            new_mentioned = (
-                extract_mentioned_user_ids(event.outgoing_references) - excluded_from_mentions
-            )
-            newly_mentioned = new_mentioned - old_mentioned
-            if newly_mentioned:
-                await emit_notification(
-                    NotificationEvent(
-                        notification_type=NotificationType.CONTENT_MENTIONED,
-                        organization_id=organization_id,
-                        actor_id=user_id,
-                        title=f"Mentioned you in: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                        target_user_ids=list(newly_mentioned),
-                    )
-                )
-
-            await self.events._emit_team_mention_notifications(
+            await self.events.emit_mention_notifications(
                 event,
                 user_id,
                 organization_id,
-                [
-                    tid
-                    for tid in extract_mentioned_team_ids(event.outgoing_references)
-                    if tid not in old_mentioned_teams
-                ],
-                excluded_from_mentions | newly_mentioned,
+                old_references,
+                {user_id} | current_attendee_ids,
             )
 
         mention_changes: dict[str, str] = {}

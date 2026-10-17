@@ -252,3 +252,6 @@ screenshots/
 
 # Test, benchmark, and SBOM reports written by CI and manage.py
 /reports/
+
+# Local environment overrides
+.env.local

@@ -29,6 +29,10 @@ export {
 
 export { matchesQuickAccess } from "@/features/calendar/utils/quickAccess";
 
+export { masterEventId, OCCURRENCE_ID_SEPARATOR } from "@/features/calendar/utils/occurrenceIds";
+export { isRecurringEvent } from "@/features/calendar/utils/recurrence";
+export { eventSupportsRealtime } from "@/features/calendar/utils/realtimeEligibility";
+
 export {
   findConflicts,
   getPositionedEventsForDay,

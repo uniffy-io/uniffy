@@ -20,7 +20,7 @@ This page documents every variable.
 | `LOG_LEVEL` | `info` | One of `debug`, `info`, `warning`, `error`, `critical`. |
 | `LOG_FORMAT` | `console` | Use `console` for human readable output or `json` for structured logs. |
 | `ENVIRONMENT` | `development` | One of `development`, `staging`, `production`. Controls deployment sensitive safety defaults. |
-| `CORS_ORIGINS` | `*` | Comma separated list of allowed origins, or `*`. Use `*` only in development. |
+| `CORS_ORIGINS` | `*` | Comma separated list of allowed origins, or `*`. Use `*` only in development. Live editing connections from any other origin are closed with code 4403. |
 
 ## PostgreSQL
 
@@ -67,7 +67,7 @@ These settings control the first database seed and whether registration is open.
 
 ## Valkey
 
-Valkey backs the ARQ job queue, pub/sub channels, and the operational cache.
+Valkey backs the ARQ job queue, pub/sub channels, the operational cache, and the buffer of live edits that PostgreSQL does not hold yet.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -75,8 +75,31 @@ Valkey backs the ARQ job queue, pub/sub channels, and the operational cache.
 | `VALKEY_PORT` | `6380` | TCP port. The local compose maps Valkey to 6380 to avoid collision with a host Redis on 6379. |
 | `VALKEY_PASSWORD` | `uniffy-valkey-dev` | Auth password. |
 | `VALKEY_DATABASE` | `0` | Logical DB used by app code. |
+| `VALKEY_BINARY_MAX_CONNECTIONS` | `10` | Connection cap per process for the pool that stores live edits not yet saved. Connections open on demand, and a call that finds them all busy waits up to 50 ms for one. |
+| `REALTIME_VALKEY_PREFLIGHT` | `strict` | Startup check of the eviction policy. `strict` stops accepting live edits into Valkey when the policy is `allkeys-*`. `warn` only logs. |
+| `REALTIME_PENDING_BUDGET_BYTES` | empty | Stored bytes of unsaved live edits Valkey may hold across all documents. Each edit counts its bytes, twice its id and 256 bytes of entry overhead, which is close to the memory Valkey spends on it. Empty means a quarter of `maxmemory` capped at 512 MiB, or 256 MiB when `maxmemory` is 0 or unreadable. |
 
-Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request.
+Queue, pub/sub, and cache connection profiles are set in code. Cache calls have a 150 ms deadline, so a slow Valkey becomes a cache miss instead of stalling the request. Live edit calls have the same deadline but never fall back to PostgreSQL. The edit stays on the editor's device, the chip reads Saving unavailable, and the editor sends it again a few seconds later.
+
+**Eviction requirement.** Valkey's eviction policy must not be one of the `allkeys-*` policies. Under those, Valkey can silently delete edits that are waiting for their save when memory runs low. `noeviction`, the Valkey default, and every `volatile-*` policy are safe. Waiting edits carry no expiry, so caches go first, and a full instance refuses new edits instead of dropping old ones. Editors show that as Saving unavailable and keep the edits on the device.
+
+The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup, and again as soon as they reach a restarted or replaced Valkey. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
+
+Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview, together with the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment, refreshed every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
+
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits, and one organization at most half of it, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
+
+## Realtime editing
+
+Limits for live editing of notes, task descriptions and event descriptions. Each backend process applies them on its own.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `REALTIME_MAX_DOCUMENT_BYTES` | `524288` | Largest rendered text of one document, in UTF-8 bytes. Larger live edits are refused and stay on the editor's device. Content writes through the API use the same cap. |
+| `REALTIME_MAX_SNAPSHOT_BYTES` | `8388608` | Largest stored CRDT state of one live document, in bytes. |
+| `REALTIME_MAX_DOCS_PER_SOCKET` | `32` | Documents one browser tab or mobile app may have open live at once. |
+| `REALTIME_MAX_SOCKETS_PER_USER` | `16` | Live connections one user may hold on each backend process. A connection over the limit is closed with code 1013 and tries again later. |
+| `REALTIME_MAX_MESSAGES_PER_SECOND` | `120` | Messages per second one connection may send, with bursts up to twice that. A client above it is disconnected and reconnects. |
 
 ## Meilisearch
 
@@ -92,13 +115,15 @@ Backs universal `@` mention lookup and full text search.
 
 Uniffy runs three ARQ worker fleets. Each has its own queue and concurrency settings.
 
-The **core worker** handles notifications, reminders, storage cleanup and recovery schedules. The **egress worker** handles agent runtime, conversation compaction, cron and external API integrations.
+The **core worker** handles notifications, reminders, saving live edits to PostgreSQL, storage cleanup and recovery schedules. The **egress worker** handles agent runtime, conversation compaction, cron and external API integrations.
+
+Each core worker process saves at most two documents at a time, whatever `CORE_WORKER_MAX_JOBS` allows. When many documents are edited at once, add core worker processes rather than job slots. `uniffy_realtime_buffer_oldest_pending_seconds` on the core worker metrics stays near ten seconds while saves keep up; when it stays above fifteen, the fleet is too small.
 
 The **media worker** handles video conversion, thumbnails, metadata and document extraction. Its separate `uniffy-media-worker` image contains FFmpeg and ffprobe. PDF and Office parsers also remain in the backend image for agent document reads.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CORE_WORKER_MAX_JOBS` | `10` | Concurrent jobs per core worker. |
+| `CORE_WORKER_MAX_JOBS` | `10` | Concurrent jobs per core worker. Live edit saves stay at two per process regardless. |
 | `CORE_WORKER_POLL_DELAY` | `0.5` | Seconds between queue polls. |
 | `EGRESS_WORKER_MAX_JOBS` | `50` | Concurrent jobs per egress worker. Higher because most jobs are I/O waiting. |
 | `EGRESS_WORKER_POLL_DELAY` | `0.05` | Aggressive polling for low queue latency. |

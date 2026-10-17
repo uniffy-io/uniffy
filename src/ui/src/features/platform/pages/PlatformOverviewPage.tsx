@@ -11,6 +11,11 @@ import {
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { RealtimeBufferCard } from "@/features/platform/components/RealtimeBufferCard";
+import {
+  REALTIME_BUFFER_POLL_MS,
+  useRealtimeBufferStatus,
+} from "@/features/platform/hooks/useRealtimeBufferStatus";
 
 interface OverviewCard {
   title: string;
@@ -66,6 +71,7 @@ const cards: OverviewCard[] = [
 
 export function PlatformOverviewPage() {
   useDocumentTitle("Platform");
+  const realtimeBuffer = useRealtimeBufferStatus();
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl w-full mx-auto">
@@ -100,6 +106,12 @@ export function PlatformOverviewPage() {
           );
         })}
       </div>
+
+      <RealtimeBufferCard
+        status={realtimeBuffer.status}
+        stale={realtimeBuffer.stale}
+        pollSeconds={REALTIME_BUFFER_POLL_MS / 1000}
+      />
     </div>
   );
 }

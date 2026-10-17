@@ -92,6 +92,7 @@ async def seed_files(
                 organization_id=ctx.organization_id,
                 file_id=file.id,
                 description=spec.description,
+                buffer=ctx.buffer,
             )
 
         registry.register(FILE, mention_key, file.id)

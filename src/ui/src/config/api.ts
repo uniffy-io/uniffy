@@ -1,6 +1,12 @@
 import { createConnectTransport } from "@connectrpc/connect-web";
 import type { Interceptor } from "@connectrpc/connect";
 import { ConnectError, Code, createClient } from "@connectrpc/connect";
+import { withAuthLock } from "@/features/auth/authLock";
+import {
+  AUTH_STORAGE_KEY,
+  readStoredAuth,
+  writeStoredAuth,
+} from "@/features/auth/store/credentialStorage";
 import { env } from "@/config/env";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { getStoreRef } from "@/app/storeRef";
@@ -24,44 +30,15 @@ let memoryAccessToken: string | null = null;
 // real access token arrives from ConfirmEnrollment.
 let memoryEnrollmentToken: string | null = null;
 
-function getAuthState(): {
-  accessToken: string | null;
-  refreshToken: string | null;
-  user: unknown;
-  currentOrganizationId: string | null;
-  currentOrganizationSlug: string | null;
-  currentOrganizationRole: string | null;
-} {
-  const accessToken = memoryAccessToken;
-
-  let refreshToken: string | null = null;
-  let user: unknown = null;
-  let currentOrganizationId: string | null = null;
-  let currentOrganizationSlug: string | null = null;
-  let currentOrganizationRole: string | null = null;
-
-  try {
-    const persistedState = localStorage.getItem("persist:root");
-    if (persistedState) {
-      const rootState = JSON.parse(persistedState);
-      const authState = JSON.parse(rootState.auth || "{}");
-      refreshToken = authState.refreshToken || null;
-      user = authState.user || null;
-      currentOrganizationId = authState.currentOrganizationId || null;
-      currentOrganizationSlug = authState.currentOrganizationSlug || null;
-      currentOrganizationRole = authState.currentOrganizationRole || null;
-    }
-  } catch {
-    // Ignore parse errors
-  }
-
+function getAuthState() {
+  const stored = readStoredAuth();
   return {
-    accessToken,
-    refreshToken,
-    user,
-    currentOrganizationId,
-    currentOrganizationSlug,
-    currentOrganizationRole,
+    accessToken: memoryAccessToken,
+    refreshToken: stored?.refreshToken ?? null,
+    user: stored?.user ?? null,
+    currentOrganizationId: stored?.currentOrganizationId ?? null,
+    currentOrganizationSlug: stored?.currentOrganizationSlug ?? null,
+    currentOrganizationRole: stored?.currentOrganizationRole ?? null,
   };
 }
 
@@ -130,7 +107,12 @@ async function clearAuthAndRedirect(): Promise<void> {
   // does not outlive the client cleanup. The Logout RPC tolerates absent
   // or expired tokens, so failure here is non-fatal - we still proceed
   // with local cleanup and the redirect.
-  const { refreshToken } = getAuthState();
+  const local = getStoreRef()?.getState().auth;
+  const stored = readStoredAuth();
+  const refreshToken =
+    stored?.user?.id === local?.user?.id && stored?.currentSessionId === local?.currentSessionId
+      ? stored?.refreshToken
+      : null;
   if (refreshToken) {
     try {
       const transportNoAuth = createConnectTransport({
@@ -159,7 +141,7 @@ async function clearAuthAndRedirect(): Promise<void> {
   if (store) {
     store.dispatch(createLogoutAction());
   } else {
-    localStorage.removeItem("persist:root");
+    writeStoredAuth(null);
   }
   window.location.href = "/auth";
 }
@@ -191,13 +173,28 @@ async function refreshAccessToken(): Promise<string | null> {
     return refreshPromise;
   }
 
-  const { refreshToken, user } = getAuthState();
+  const initial = readStoredAuth();
+  const local = getStoreRef()?.getState().auth;
+  if (
+    local?.user &&
+    (initial?.user?.id !== local.user.id ||
+      initial.currentOrganizationId !== local.currentOrganizationId)
+  )
+    return null;
 
-  if (!refreshToken || !user) {
+  if (!initial?.refreshToken || !initial.user) {
     return null;
   }
 
-  refreshPromise = (async () => {
+  refreshPromise = withAuthLock(async () => {
+    const current = readStoredAuth();
+    if (
+      !current?.refreshToken ||
+      current.user?.id !== initial.user?.id ||
+      current.currentOrganizationId !== initial.currentOrganizationId ||
+      current.currentSessionId !== initial.currentSessionId
+    )
+      return null;
     try {
       // Transport without auth interceptor - would otherwise recurse on 401.
       const refreshTransport = createConnectTransport({
@@ -209,7 +206,8 @@ async function refreshAccessToken(): Promise<string | null> {
       const client = createClient(AuthService, refreshTransport);
       // Refresh stays in whichever org the session is bound to server-side;
       // org switches go through AuthService.SwitchOrganization, not a slug here.
-      const response = await client.refreshToken({ refreshToken });
+      const response = await client.refreshToken({ refreshToken: current.refreshToken });
+      if (readStoredAuth()?.refreshToken !== current.refreshToken) return null;
 
       setMemoryAccessToken(response.accessToken);
 
@@ -225,23 +223,18 @@ async function refreshAccessToken(): Promise<string | null> {
         Array.from(response.domainAdminDomains),
       );
 
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("uniffy:auth:refreshed"));
-      }
-
       return response.accessToken;
     } catch (error) {
       if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
         console.warn("Token refresh failed: authentication required");
-      } else {
-        console.error("Token refresh failed:", error);
+        clearMemoryAccessToken();
+        return null;
       }
-      clearMemoryAccessToken();
-      return null;
-    } finally {
-      refreshPromise = null;
+      throw error;
     }
-  })();
+  }).finally(() => {
+    refreshPromise = null;
+  });
 
   return refreshPromise;
 }
@@ -329,10 +322,8 @@ export async function rehydrateAuth(): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error("Auth rehydration failed:", error);
     clearMemoryAccessToken();
-    store.dispatch(createRehydrateFailedAction());
-    return false;
+    throw error;
   }
 }
 
@@ -420,3 +411,24 @@ export function getAccessToken(): string | null {
 
 export { refreshAccessToken };
 export { initStorageEncryptionFromApi };
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("storage", (event) => {
+    if (event.key !== AUTH_STORAGE_KEY) return;
+    const stored = readStoredAuth();
+    const store = getStoreRef();
+    const current = store?.getState().auth;
+    if (!store || !current?.user) return;
+    if (
+      stored?.user?.id === current.user.id &&
+      stored.currentOrganizationId === current.currentOrganizationId &&
+      stored.currentSessionId === current.currentSessionId
+    ) {
+      store.dispatch({ type: "auth/syncRefreshToken", payload: stored.refreshToken });
+      return;
+    }
+    clearMemoryAccessToken();
+    window.dispatchEvent(new Event("uniffy:auth:revoked"));
+    store.dispatch({ ...createLogoutAction(), meta: { external: true } });
+  });
+}

@@ -29,12 +29,15 @@ from sqlalchemy import select
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.projects.project import Project
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.preflight import ensure_buffer_ready
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.projects.operations import ProjectOperations, TaskOperations
 from uniffy.infrastructure.database.session import init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
+from uniffy.infrastructure.valkey.binary import close_binary_client
 
 ADMIN_EMAIL_DEFAULT = "admin@uniffy.io"
 PROJECT_NAME = "Hierarchy QA"
@@ -62,6 +65,7 @@ async def _resolve_admin(session, email: str) -> tuple[UUID, UUID]:
 async def _delete_existing_project(
     session,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     user_id: UUID,
     organization_id: UUID,
 ) -> None:
@@ -83,7 +87,9 @@ async def _delete_existing_project(
     ops = ProjectOperations(session, search_indexer=search_indexer)
     for proj in existing:
         logger.info(f"Removing existing {PROJECT_NAME!r} project id={proj.id}")
-        await ops.delete(user_id=user_id, organization_id=organization_id, project_id=proj.id)
+        await ops.delete(
+            user_id=user_id, organization_id=organization_id, project_id=proj.id, buffer=buffer
+        )
 
 
 async def _create_task(
@@ -111,11 +117,12 @@ async def _seed_tree(
     session,
     storage: ObjectStorage,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     user_id: UUID,
     organization_id: UUID,
     project_id: UUID,
 ) -> None:
-    ops = TaskOperations(session, storage, search_indexer)
+    ops = TaskOperations(session, storage, search_indexer, buffer)
 
     epic_a = await _create_task(
         ops,
@@ -220,6 +227,7 @@ async def _seed_tree(
 async def _seed(
     storage: ObjectStorage,
     search_indexer: SearchIndexer,
+    buffer: UpdateBuffer,
     email: str,
 ) -> None:
     async with open_session() as session:
@@ -227,6 +235,7 @@ async def _seed(
         await _delete_existing_project(
             session,
             search_indexer,
+            buffer,
             user_id,
             organization_id,
         )
@@ -242,7 +251,9 @@ async def _seed(
         )
         logger.info(f"Created project id={project.id} slug={project.slug}")
 
-        await _seed_tree(session, storage, search_indexer, user_id, organization_id, project.id)
+        await _seed_tree(
+            session, storage, search_indexer, buffer, user_id, organization_id, project.id
+        )
         await session.commit()
 
         logger.info("Seeded hierarchy:")
@@ -267,12 +278,15 @@ async def main() -> None:
     logger.info(f"Seeding {PROJECT_NAME!r} for {email}")
 
     await init_db(skip_migrations=True)
+    # Deleting the previous project retires the buffered edits of its tasks.
+    await ensure_buffer_ready()
     search = WorkspaceSearch(MeiliSearchEngine())
     await search.startup()
     try:
-        await _seed(S3Storage(), SearchIndexer(search), email)
+        await _seed(S3Storage(), SearchIndexer(search), UpdateBuffer(), email)
     finally:
         await search.shutdown()
+        await close_binary_client()
 
 
 if __name__ == "__main__":

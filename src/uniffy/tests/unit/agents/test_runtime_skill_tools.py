@@ -1,12 +1,14 @@
 """Runtime schemas cannot expose model-side skill discovery."""
 
+from unittest.mock import AsyncMock
+
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.runtime.tooling import resolve_tool_schemas
 from uniffy.domains.agents.tools.definitions import ToolContext
 from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import get_tool_registry, to_api_name
-from uniffy.core.types import generate_id
-from unittest.mock import AsyncMock
 
 
 def test_schemas_contain_only_selected_registered_tools() -> None:
@@ -25,6 +27,7 @@ async def test_model_cannot_load_skill_instructions_with_a_tool() -> None:
         session=AsyncMock(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         allowed_tools=frozenset({"skills.view_skill"}),
     )

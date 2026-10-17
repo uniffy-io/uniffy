@@ -8,6 +8,7 @@ from uniffy.core.jobs.types import (
     JobReliability,
     JobWorkload,
     QueueName,
+    RecoveryStore,
 )
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "JobReliability",
     "JobWorkload",
     "QueueName",
+    "RecoveryStore",
     "enqueue_job",
     "enqueue_job_reconnecting",
 ]

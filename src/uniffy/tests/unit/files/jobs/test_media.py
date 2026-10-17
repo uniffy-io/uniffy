@@ -152,7 +152,7 @@ async def test_stderr_retains_tail_and_nonzero_exit_fails(monkeypatch):
 
 
 @pytest.mark.parametrize("executable", ["ffmpeg", "ffprobe"])
-@pytest.mark.parametrize("prefix", [b"", b"x" * 65520])
+@pytest.mark.parametrize("prefix", [b"", b"x" * 65520], ids=["bare", "after-64k-of-output"])
 async def test_native_errors_redact_source_urls_and_tokens(monkeypatch, executable, prefix):
     token = "temporary-media-token_0123456789"
     url = f"http://127.0.0.1:43210/{token}"

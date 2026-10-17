@@ -10,7 +10,7 @@ from uniffy.core.content.references import (
     extract_all_outgoing_references,
     extract_all_outgoing_references_from_canvas,
 )
-from uniffy.core.types import ContentType, NodeType
+from uniffy.core.types import NodeType
 from uniffy.domains.notes import queries
 
 _MENTION_ESCAPED_RE = re.compile(r"\\?\[\\?\[\\?\[([^\[\]|]+)\|[^\]]+\\?\]\\?\]\\?\]")
@@ -35,7 +35,6 @@ _TABLE_SEP_RE = re.compile(
 )
 _HR_RE = re.compile(r"^[-*_]{3,}\s*$", re.MULTILINE)
 _WS_RE = re.compile(r"\s+")
-_FILE_URN_PREFIX = f"urn:uniffy:content:{ContentType.FILE.value}:"
 
 
 @dataclass(frozen=True)
@@ -108,15 +107,3 @@ def extract_content_fields(
     ) or None
     parsed = queries.extract_inline_tags_from_content(content) if content else []
     return NoteContentFields(content, None, outgoing, parsed)
-
-
-def referenced_file_ids(outgoing_references: list[str] | None) -> set[UUID]:
-    ids: set[UUID] = set()
-    for urn in outgoing_references or []:
-        if not urn.startswith(_FILE_URN_PREFIX):
-            continue
-        try:
-            ids.add(UUID(urn[len(_FILE_URN_PREFIX) :]))
-        except ValueError:
-            continue
-    return ids

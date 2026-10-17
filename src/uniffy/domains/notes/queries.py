@@ -4,15 +4,14 @@ import re
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, delete, select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
 from uniffy.core.content.references import CanvasNodeType
 from uniffy.core.json_codec import loads
 from uniffy.core.models.notes.note import Note
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.models.shared import ContentType, NodeType
+from uniffy.core.models.shared import NodeType
 from uniffy.core.types import slugify  # noqa: F401 - re-exported, used via queries.slugify
 
 # Inline-tag syntax in markdown: ``[[[tag|tagname]]]``. The ``tag|`` prefix
@@ -118,8 +117,7 @@ async def soft_delete_recursive(
     note.deleted_at = datetime.now(UTC)
     note.updated_at = datetime.now(UTC)
 
-    await session.commit()
-    await session.refresh(note)
+    await session.flush()
     return note
 
 
@@ -127,21 +125,16 @@ async def permanent_delete_recursive(
     session: AsyncSession,
     note: Note,
 ) -> None:
-    """Hard-delete ``note`` and every descendant under a folder."""
+    """Hard-delete ``note`` and every descendant under a folder; the caller deletes snapshots."""
     if note.node_type == NodeType.FOLDER:
         result = await session.execute(select(Note).where(Note.parent_id == note.id))
         children = result.scalars().all()
         for child in children:
             await permanent_delete_recursive(session, child)
 
-    await session.execute(
-        delete(RealtimeYjsSnapshot).where(
-            RealtimeYjsSnapshot.content_type == ContentType.NOTE,
-            RealtimeYjsSnapshot.content_id == note.id,
-        )
-    )
     await session.delete(note)
-    await session.commit()
+    # Children reference their parent, so each delete reaches the database before the parent's.
+    await session.flush()
 
 
 async def empty_trash(
@@ -149,7 +142,7 @@ async def empty_trash(
     organization_id: UUID,
     note_ids: list[UUID],
 ) -> int:
-    """Hard-delete the already-authorized soft-deleted notes."""
+    """Hard-delete authorized trashed notes; the caller holds their locks and deletes snapshots."""
     if not note_ids:
         return 0
     result = await session.execute(
@@ -189,13 +182,6 @@ async def empty_trash(
             session.add(note)
 
     await session.flush()
-
-    await session.execute(
-        delete(RealtimeYjsSnapshot).where(
-            RealtimeYjsSnapshot.content_type == ContentType.NOTE,
-            RealtimeYjsSnapshot.content_id.in_(deleted_ids),
-        )
-    )
 
     for note in deleted_notes:
         await session.delete(note)

@@ -4,6 +4,7 @@ import {
   SystemConfigService,
   GetSystemConfigRequestSchema,
   GetMfaPolicyRequestSchema,
+  GetRealtimeBufferStatusRequestSchema,
   SetPublicRegistrationRequestSchema,
   SetMfaPolicyRequestSchema,
 } from "@uniffy/proto/superadmin/v1/system_config_pb";
@@ -24,4 +25,8 @@ export const systemConfigApi = {
 
   setMfaPolicy: async (request: MessageInitShape<typeof SetMfaPolicyRequestSchema>) =>
     client.setMfaPolicy(request),
+
+  getRealtimeBufferStatus: async (
+    request: MessageInitShape<typeof GetRealtimeBufferStatusRequestSchema> = {},
+  ) => client.getRealtimeBufferStatus(request),
 };

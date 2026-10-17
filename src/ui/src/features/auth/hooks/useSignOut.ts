@@ -10,6 +10,11 @@ import { clearBlobCache } from "@/features/files/components/viewer/hooks/blobCac
 import { uploadService } from "@/features/files/upload";
 import { clearLibraryScope } from "@/features/library/store/clearLibraryScope";
 import { clearAllCache as clearNotesCache } from "@/features/notes/utils/notesCache";
+import {
+  clearPendingDocsFor,
+  discoverStoredPendingDocs,
+  hasUnsyncedEdits,
+} from "@/features/realtime";
 import { cancelRecording } from "@/features/recording/store/recordingThunks";
 import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 
@@ -21,21 +26,46 @@ export function clearSessionCaches(dispatch: AppDispatch): void {
   clearNotesCache().catch(console.error);
 }
 
-export function useSignOut(): () => void {
+export interface SignOutOptions {
+  /** The caller confirmed that edits no checkpoint covers yet may be lost. */
+  discardUnsynced?: boolean;
+}
+
+/**
+ * Returns false without signing out while realtime edits are unsynced, because the storage
+ * teardown below makes their encrypted rows unreadable; callers confirm and retry with
+ * `discardUnsynced`.
+ */
+export function useSignOut(): (options?: SignOutOptions) => Promise<boolean> {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
+  const userId = useAppSelector((state) => state.auth?.user?.id ?? null);
 
-  return useCallback(() => {
-    void dispatch(cancelRecording());
-    if (refreshToken) {
-      const client = createClient(AuthService, unaryTransport);
-      client.logout({ refreshToken }).catch(() => {});
-    }
-    clearMemoryAccessToken();
-    teardownStorageEncryption();
-    clearSessionCaches(dispatch);
-    dispatch(logout());
-    navigate("/auth");
-  }, [dispatch, navigate, refreshToken]);
+  return useCallback(
+    async (options?: SignOutOptions) => {
+      if (!options?.discardUnsynced && hasUnsyncedEdits(userId)) return false;
+      if (!options?.discardUnsynced && userId) {
+        try {
+          if (await discoverStoredPendingDocs(userId)) return false;
+        } catch {
+          return false;
+        }
+        if (hasUnsyncedEdits(userId)) return false;
+      }
+      void dispatch(cancelRecording());
+      if (refreshToken) {
+        const client = createClient(AuthService, unaryTransport);
+        client.logout({ refreshToken }).catch(() => {});
+      }
+      if (userId) clearPendingDocsFor(userId);
+      clearMemoryAccessToken();
+      teardownStorageEncryption();
+      clearSessionCaches(dispatch);
+      dispatch(logout());
+      navigate("/auth");
+      return true;
+    },
+    [dispatch, navigate, refreshToken, userId],
+  );
 }

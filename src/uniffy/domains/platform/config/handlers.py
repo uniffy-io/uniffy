@@ -7,6 +7,8 @@ from loguru import logger
 from uniffy_proto.superadmin.v1.system_config_pb import (
     GetMfaPolicyRequest,
     GetMfaPolicyResponse,
+    GetRealtimeBufferStatusRequest,
+    GetRealtimeBufferStatusResponse,
     GetSystemConfigRequest,
     GetSystemConfigResponse,
     SetMfaPolicyRequest,
@@ -20,9 +22,11 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.domains.auth.mfa.policy import MfaPolicyOperations
-from uniffy.domains.platform.config.converters import config_to_proto
+from uniffy.domains.platform.config.converters import config_to_proto, realtime_buffer_to_proto
 from uniffy.domains.platform.config.operations import SystemConfigOperations
+from uniffy.domains.platform.config.realtime import RealtimeBufferOperations
 from uniffy.domains.users.operations import UserOperations
 from uniffy.infrastructure.database import open_session
 
@@ -43,6 +47,9 @@ def _map_domain_error(exc: Exception) -> ConnectError:
 
 
 class SystemConfigHandlers:
+    def __init__(self, buffer: UpdateBuffer) -> None:
+        self._buffer = buffer
+
     async def get_system_config(
         self,
         request: GetSystemConfigRequest,
@@ -113,6 +120,24 @@ class SystemConfigHandlers:
         except Exception as exc:
             raise _map_domain_error(exc) from exc
         return SetMfaPolicyResponse(policy=_mfa_to_proto(policy))
+
+    async def get_realtime_buffer_status(
+        self,
+        request: GetRealtimeBufferStatusRequest,
+        ctx: RequestContext,
+    ) -> GetRealtimeBufferStatusResponse:
+        del request
+        user_id = current_user_id()
+        try:
+            async with open_session() as session:
+                status = await RealtimeBufferOperations(session, self._buffer).get_status(
+                    user_id=user_id
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return GetRealtimeBufferStatusResponse(status=realtime_buffer_to_proto(status))
 
 
 def _mfa_to_proto(policy) -> MfaPolicyProto:

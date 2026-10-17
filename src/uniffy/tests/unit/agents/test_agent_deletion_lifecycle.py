@@ -14,6 +14,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.cron_task import AgentCronTask
 from uniffy.core.models.agents.memory import AgentMemory
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 
 OPS_MODULE = "uniffy.domains.agents.agents.operations"
@@ -235,6 +236,7 @@ class TestChatInvocationRefusesDeletedAgent:
             agent.id,
             storage=MagicMock(),
             search_indexer=MagicMock(),
+            buffer=UpdateBuffer(),
             call_lifecycle=MagicMock(),
         )
 

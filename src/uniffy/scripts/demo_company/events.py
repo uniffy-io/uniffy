@@ -40,7 +40,7 @@ async def seed_events(
     if not events:
         return result
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer, ctx.buffer)
     room_ids = await _room_ids(ctx)
     calendar_id: UUID | None = None
     if not ctx.dry_run:
@@ -103,7 +103,7 @@ async def apply_event_mentions(
     if ctx.dry_run:
         return 0
 
-    ops = CalendarEventOperations(ctx.session, ctx.search_indexer)
+    ops = CalendarEventOperations(ctx.session, ctx.search_indexer, ctx.buffer)
     updated = 0
 
     for spec in events:

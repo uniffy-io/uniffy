@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -42,17 +42,17 @@ import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
-import { useCreateNote, useAutosave, useUpdateNote } from "@features/notes/useNoteMutations";
-import { notesApi } from "@features/notes/notesApi";
-import { useAuth } from "@core/providers/AuthContext";
+import { useCreateNote, useUpdateNote } from "@features/notes/useNoteMutations";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/useMentionInput";
 import { useScreenFocused } from "@shared/hooks/useScreenFocused";
 import { useNoteCoEditing } from "@features/notes/realtime/useNoteCoEditing";
+import { RecoveredDrafts } from "@shared/realtime/RecoveredDrafts";
+import { PersistenceChip } from "@shared/realtime/PersistenceChip";
 import { RealtimePresence } from "@features/notes/realtime/RealtimePresence";
 import { roleCanEdit } from "@shared/permissions/contentRoles";
-import { diffStrings } from "@features/notes/realtime/textDiff";
+import { createCompositionTracker } from "@features/notes/realtime/composition";
 import { useInsertFileReference } from "@features/mentions/useInsertFileReference";
 import {
   tokenizeLine,
@@ -215,14 +215,12 @@ export function NoteEditorScreen() {
     initialTitle?: string;
     initialContent?: string;
   }>();
-  const { organizationId } = useAuth();
   const { openAt } = useUniffy();
   const { attach: attachFile, uploading: attachUploading } = useInsertFileReference();
   const isEditMode = !!noteId;
 
   const noteQuery = useNote(isEditMode ? noteId : undefined);
   const createNote = useCreateNote();
-  const autosave = useAutosave(isEditMode ? noteId : undefined, organizationId);
   const updateNote = useUpdateNote();
 
   const {
@@ -326,53 +324,58 @@ export function NoteEditorScreen() {
   // Consumed by the body-change effect so a remote rebuild is not mistaken for
   // local typing (which would push the merged text back as a local edit).
   const applyingRemoteRef = useRef(false);
+  const [composition] = useState(createCompositionTracker);
+  const pendingCaretRef = useRef<number | null>(null);
 
-  // Rebuild the visible input from the merged doc, keeping the caret anchored
-  // relative to where the remote change landed.
+  // Rebuild the visible input from the merged doc. The caret lives in display
+  // coordinates and the remote deltas in canonical ones, so the prefix is
+  // converted in, mapped, and converted back.
   const applyRemote = useCallback(
-    (canonical: string) => {
+    (canonical: string, mapIndex: (index: number) => number) => {
       const oldDisplay = bodyStateRef.current;
       const { display: newDisplay } = parseMentions(canonical);
       if (newDisplay === oldDisplay) return;
+      if (bodyFocusedRef.current) {
+        const caret = selectionRef.current.start;
+        const canonicalCaret = toCanonical(oldDisplay.slice(0, caret), mentionsRef.current).length;
+        const mapped = parseMentions(canonical.slice(0, mapIndex(canonicalCaret))).display.length;
+        pendingCaretRef.current = Math.min(mapped, newDisplay.length);
+      }
       applyingRemoteRef.current = true;
       initFromCanonical(canonical);
       bodyStateRef.current = newDisplay;
-      if (bodyFocusedRef.current) {
-        const delta = diffStrings(oldDisplay, newDisplay);
-        if (delta) {
-          let caret = selectionRef.current.start;
-          if (caret > delta.index) {
-            caret = Math.max(delta.index, caret + delta.insert.length - delta.deleteCount);
-          }
-          const clamped = Math.min(caret, newDisplay.length);
-          setTimeout(() => bodyRef.current?.setSelection(clamped, clamped), 0);
-        }
-      }
     },
-    [initFromCanonical, bodyRef],
+    [initFromCanonical, mentionsRef],
   );
 
+  // Place the caret in the same commit that shows the merged text. Deferred
+  // to a timer, iOS keeps it pinned relative to the end of the input until
+  // the correction lands.
+  useLayoutEffect(() => {
+    const caret = pendingCaretRef.current;
+    if (caret === null) return;
+    pendingCaretRef.current = null;
+    bodyRef.current?.setSelection(caret, caret);
+  }, [body, bodyRef]);
+
   const isFocused = useScreenFocused();
-  // A VIEWER can still land here (the edit action renders on view access);
-  // read-only suppresses SYNC write frames, which the server would otherwise
-  // answer by 4403-closing the whole socket on the first keystroke.
   const canEditNote = noteQuery.data ? roleCanEdit(noteQuery.data.userRole) : true;
   const coEdit = useNoteCoEditing({
-    noteId: isEditMode ? noteId : undefined,
+    noteId: isEditMode && !isCanvas && !isFolder ? noteId : undefined,
     enabled: isEditMode && initialized && !isCanvas && !isFolder && isFocused,
     readOnly: !canEditNote,
     getLocalCanonical: () => toCanonical(bodyStateRef.current, mentionsRef.current),
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
+    isComposing: () => composition.isComposing(Date.now()),
   });
-
-  // The pre-sync keystrokes armed the legacy autosave; once realtime owns
-  // content that timer must not fire a stale full-document UpdateNote, which
-  // the server would graft over newer CRDT edits.
-  const autosaveCancel = autosave.cancel;
-  useEffect(() => {
-    if (coEdit.live) autosaveCancel();
-  }, [coEdit.live, autosaveCancel]);
+  const editAccessLost = [
+    "permission_lost",
+    "access_lost",
+    "token_revoked",
+    "update_rejected",
+  ].includes(coEdit.status);
+  const editable = canEditNote && !editAccessLost;
 
   // Keystrokes queue their push HERE, synchronously with the native event. A
   // remote rebuild can land between the event and React's post-render effect;
@@ -380,11 +383,19 @@ export function NoteEditorScreen() {
   // keystroke and the character was lost before it ever reached the doc.
   const handleBodyChange = useCallback(
     (text: string) => {
+      composition.textChanged(bodyStateRef.current, text, Date.now());
       setBody(text);
       bodyStateRef.current = text;
-      if (coEdit.live) coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
+      coEdit.scheduleLocalPush(toCanonical(text, mentionsRef.current));
     },
-    [setBody, coEdit, mentionsRef],
+    [setBody, coEdit, mentionsRef, composition],
+  );
+  const handleSelectionChange = useCallback(
+    (e: { nativeEvent: { selection: { start: number; end: number } } }) => {
+      onMentionSelectionChange(e);
+      composition.selectionChanged(e.nativeEvent.selection.start, e.nativeEvent.selection.end);
+    },
+    [onMentionSelectionChange, composition],
   );
 
   // The title lives outside the Y doc; it rides UpdateNote (metadata-only
@@ -417,22 +428,6 @@ export function NoteEditorScreen() {
     }
   }, [noteId, updateNote]);
 
-  // If the screen closes while the socket is down, the unsent CRDT ops die
-  // with the doc; one legacy UpdateNote carries the text out instead (the
-  // server grafts it into any live web session).
-  const unmountFlushRef = useRef<() => void>(() => {});
-  useEffect(() => {
-    unmountFlushRef.current = () => {
-      if (!isEditMode || !noteId || !organizationId) return;
-      if (!coEdit.live) return;
-      if (coEdit.status === "connected") return;
-      const canonical = toCanonical(bodyStateRef.current, mentionsRef.current);
-      if (loadedRef.current && canonical === loadedRef.current.content) return;
-      notesApi.updateNote({ noteId, organizationId, content: canonical }).catch(() => {});
-    };
-  });
-  useEffect(() => () => unmountFlushRef.current(), []);
-
   // Dismissing the keyboard with the back gesture leaves the input focused, so
   // the tap that brings it back fires no focus event - but the reveal comes
   // again with the keyboard. Pinning on the keyboard itself covers that second
@@ -455,15 +450,9 @@ export function NoteEditorScreen() {
   // against the bar itself when it is down.
   const bottomPad = bottomBarBlockHeight(insets.bottom);
 
-  // Persist on any content change. Typing, formatting, and @-reference
-  // insertion all funnel through body/title, so watching them here covers the
-  // mention path without a per-edit handler. Once the realtime session has
-  // synced it owns content (CRDT push, offline-replay included); the legacy
-  // autosave only runs before/without a sync so an unsynced session never
-  // loses edits. Running both would double-write: the server grafts the
-  // UpdateNote text into the live doc AND the CRDT ops replay on reconnect.
+  // Formatting and mention insertion also flow through this persistence path.
   useEffect(() => {
-    if (!isEditMode || !initialized) return;
+    if (!isEditMode || !initialized || !editable) return;
     if (applyingRemoteRef.current) {
       applyingRemoteRef.current = false;
       return;
@@ -471,23 +460,26 @@ export function NoteEditorScreen() {
     const canonical = toCanonical(body, mentionsRef.current);
     const loaded = loadedRef.current;
     if (loaded && canonical === loaded.content && title === loaded.title) return;
-    if (coEdit.live) {
+    if (coEdit.ownsContent) {
       coEdit.scheduleLocalPush(canonical);
       if (loaded && title !== loaded.title) scheduleTitleSave(title);
-    } else {
-      autosave.scheduleAutosave(canonical, title);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body, title, isEditMode, initialized, coEdit.live]);
+  }, [body, title, isEditMode, initialized, coEdit.ownsContent, editable]);
 
+  const persistingRef = useRef(false);
   const handleDone = useCallback(async () => {
     const canonicalBody = getCanonicalBody();
     if (isEditMode) {
-      if (coEdit.live) {
+      if (coEdit.ownsContent) {
+        if (persistingRef.current) return;
+        persistingRef.current = true;
         coEdit.flushLocalPush();
         flushTitleSave();
-      } else {
-        autosave.flush();
+        // The background drain finishes server saves once the device copy exists.
+        const stored = await coEdit.persistLocally();
+        persistingRef.current = false;
+        if (!stored) return;
       }
       router.back();
     } else {
@@ -510,7 +502,6 @@ export function NoteEditorScreen() {
     }
   }, [
     isEditMode,
-    autosave,
     coEdit,
     flushTitleSave,
     createNote,
@@ -819,24 +810,22 @@ export function NoteEditorScreen() {
           <ArrowLeft size={20} color={T.text} weight="bold" />
         </TouchableOpacity>
         <View style={styles.headerMeta}>
-          <Text style={[styles.headerLabel, { color: T.textDim }]}>
-            {!isEditMode
-              ? "New note"
-              : coEdit.live
-                ? coEdit.status === "connected"
-                  ? "Live"
-                  : coEdit.status === "connecting"
-                    ? "Syncing"
-                    : "Offline"
-                : autosave.isSaving
-                  ? "Saving..."
-                  : autosave.lastSaved
-                    ? "Saved"
-                    : "Note"}
-          </Text>
+          {coEdit.ownsContent ? (
+            <PersistenceChip state={coEdit.persistence} />
+          ) : (
+            <Text style={[styles.headerLabel, { color: T.textDim }]}>
+              {isEditMode ? "Note" : "New note"}
+            </Text>
+          )}
           <Text style={[styles.wordCount, { color: T.textDim }]}>{wordCount} words</Text>
         </View>
-        <RealtimePresence session={coEdit.session} status={coEdit.status} />
+        <RealtimePresence session={coEdit.session} />
+        <RecoveredDrafts
+          drafts={coEdit.recoveredDrafts}
+          editable={editable}
+          onRestore={coEdit.restoreRecoveredDraft}
+          onDiscard={coEdit.discardRecoveredDraft}
+        />
         <TouchableOpacity
           onPress={togglePreview}
           style={[
@@ -910,6 +899,7 @@ export function NoteEditorScreen() {
           }}
         >
           <TextInput
+            editable={editable}
             value={title}
             onChangeText={setTitle}
             style={[styles.titleInput, { color: T.textBright }]}
@@ -926,9 +916,10 @@ export function NoteEditorScreen() {
               plus our programmatic setBody, and the children mirror body exactly
               so the caret stays aligned. */}
           <TextInput
+            editable={editable}
             ref={bodyRef}
             onChangeText={handleBodyChange}
-            onSelectionChange={onMentionSelectionChange}
+            onSelectionChange={handleSelectionChange}
             onFocus={() => {
               bodyFocusedRef.current = true;
               // Armed here rather than on touch, so that only a tap that lands
@@ -941,8 +932,9 @@ export function NoteEditorScreen() {
             }}
             onBlur={() => {
               bodyFocusedRef.current = false;
-              // Blur ends the typing burst; land any peer edits held back by
-              // the idle gate.
+              // Blur ends the typing burst and any composition; land the peer
+              // edits held back by those gates.
+              composition.reset();
               coEdit.applyPendingRemote();
             }}
             style={[styles.bodyInput, { color: T.textBright }]}
@@ -1022,7 +1014,7 @@ export function NoteEditorScreen() {
                 },
               ]}
               onPress={onPress}
-              disabled={loading}
+              disabled={loading || !editable}
               activeOpacity={0.7}
             >
               {loading ? (

@@ -12,12 +12,14 @@ why every fixture and test in this suite shares one session-scoped loop.
 The schema is expected to be at head already; the dev stack migrates on boot.
 """
 
+import os
 from types import SimpleNamespace as NS
 from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete, select, text
+from sqlalchemy import delete, or_, select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.crypto import OrgCipher
@@ -31,15 +33,24 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
+from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.models.rooms.booking import RoomBooking
 from uniffy.core.models.rooms.room import Room
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import generate_id
 from uniffy.domains.files.registration import register_file_content
+from uniffy.domains.notes.registration import register_note_content
+from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database import close_db, init_db, open_session
 from uniffy.infrastructure.database.session import get_database_url
-from uniffy.domains.notes.registration import register_note_content
+
+# The dev stack's workers act on the shared database while a suite runs: a deadlock with one of
+# them, or a row one added after its table was cleared, aborts only that teardown attempt.
+_RACED_BY_WORKERS = {"40P01", "23503"}
+_TEARDOWN_ATTEMPTS = 3
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -47,9 +58,13 @@ async def database():
     """Bring up the real engine once, or skip the suite when nothing answers."""
     register_file_content()
     register_note_content()
+    register_project_content()
+    register_event_realtime_adapter(MagicMock())
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:
+        if os.getenv("REQUIRE_DATABASE_TESTS"):
+            raise
         pytest.skip(f"no database at {get_database_url()}: {exc}")
     try:
         yield
@@ -68,9 +83,15 @@ def search_indexer() -> SearchIndexer:
     return MagicMock(spec=SearchIndexer)
 
 
+@pytest.fixture
+def buffer() -> UpdateBuffer:
+    """No document in this suite gains a buffer epoch, so live state stays the stored row."""
+    return UpdateBuffer(namespace=f"test:{generate_id().hex}:")
+
+
 async def seed_env(db_session: AsyncSession) -> NS:
     """One org with an admin, a member, and a provisioned DEK."""
-    suffix = generate_id().hex[:12]
+    suffix = generate_id().hex[-12:]
     admin = User(
         email=f"itdb-admin-{suffix}@test.local",
         username=f"itdb-admin-{suffix}",
@@ -94,7 +115,30 @@ async def seed_env(db_session: AsyncSession) -> NS:
 
 
 async def teardown_env(db_session: AsyncSession, env: NS) -> None:
-    await db_session.rollback()
+    for attempt in range(_TEARDOWN_ATTEMPTS):
+        await db_session.rollback()
+        try:
+            await _delete_env(db_session, env)
+            await db_session.commit()
+            return
+        except DBAPIError as exc:
+            raced = getattr(exc.orig, "sqlstate", None) in _RACED_BY_WORKERS
+            if not raced or attempt == _TEARDOWN_ATTEMPTS - 1:
+                raise
+
+
+async def _delete_env(db_session: AsyncSession, env: NS) -> None:
+    users = [env.admin_id, env.member_id]
+    # Dev workers deliver notifications and due-date alerts for rows the tests create.
+    await db_session.execute(
+        delete(Notification).where(
+            or_(
+                Notification.organization_id == env.org_id,
+                Notification.user_id.in_(users),
+                Notification.actor_id.in_(users),
+            )
+        )
+    )
     await db_session.execute(delete(Agent).where(Agent.organization_id == env.org_id))
     await db_session.execute(
         delete(IntegrationConnection).where(IntegrationConnection.organization_id == env.org_id)
@@ -123,8 +167,7 @@ async def teardown_env(db_session: AsyncSession, env: NS) -> None:
         delete(OrganizationMember).where(OrganizationMember.organization_id == env.org_id)
     )
     await db_session.execute(delete(Organization).where(Organization.id == env.org_id))
-    await db_session.execute(delete(User).where(User.id.in_([env.admin_id, env.member_id])))
-    await db_session.commit()
+    await db_session.execute(delete(User).where(User.id.in_(users)))
 
 
 @pytest_asyncio.fixture(loop_scope="session")

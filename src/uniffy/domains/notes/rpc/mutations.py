@@ -27,6 +27,7 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import NodeType
 from uniffy.domains.notes.converters import node_type_from_proto, note_to_proto
 from uniffy.domains.notes.operations import NoteOperations
@@ -69,6 +70,8 @@ async def _note_proto(
 
 
 class NoteMutationHandlers:
+    buffer: UpdateBuffer
+
     async def create_note(
         self,
         request: CreateNoteRequest,
@@ -106,6 +109,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).create(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -154,9 +158,7 @@ class NoteMutationHandlers:
         try:
             async with open_session() as session:
                 note = await NoteOperations(
-                    session,
-                    self.storage,
-                    self.search_indexer,
+                    session, self.storage, self.search_indexer, self.buffer
                 ).update(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -168,6 +170,12 @@ class NoteMutationHandlers:
                     parent_id=parent_id,
                     tag_ids=tag_ids,
                     metadata=metadata,
+                    expected_content_version=(
+                        request.expected_content_version
+                        if request.has_field("expected_content_version")
+                        else None
+                    ),
+                    base_content=request.base_content if request.has_field("base_content") else None,
                 )
                 return UpdateNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)
@@ -191,6 +199,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).delete(
                     user_id=user_id,
                     organization_id=organization_id,
@@ -218,6 +227,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).restore(user_id, organization_id, note_id)
                 return RestoreNoteResponse(
                     note=await _note_proto(session, user_id, organization_id, note)
@@ -240,6 +250,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).empty_trash(user_id, organization_id)
                 return EmptyTrashResponse(
                     deleted_count=count,
@@ -272,6 +283,7 @@ class NoteMutationHandlers:
                     session,
                     self.storage,
                     self.search_indexer,
+                    self.buffer,
                 ).move(
                     user_id=user_id,
                     organization_id=organization_id,

@@ -16,6 +16,7 @@ from uniffy.core.auth.tokens import (
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.shared import AttendeeStatus
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.domains.scheduling.calendar.mail.compose import _respond_links_for
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
 from uniffy.domains.scheduling.calendar.routes import (
@@ -60,9 +61,7 @@ class TestToken:
             decode_event_response_token(create_access_token(USER, ORG))
 
     def test_an_expired_link_is_refused(self) -> None:
-        token = create_event_response_token(
-            USER, ORG, EVENT, expires_delta=timedelta(days=-400)
-        )
+        token = create_event_response_token(USER, ORG, EVENT, expires_delta=timedelta(days=-400))
 
         with pytest.raises(jwt.ExpiredSignatureError):
             decode_event_response_token(token)
@@ -93,6 +92,7 @@ class TestRoute:
         ):
             result = await respond_from_mail(
                 MagicMock(),
+                UpdateBuffer(),
                 RespondRequest(
                     token=create_event_response_token(USER, ORG, EVENT), response=response
                 ),
@@ -108,9 +108,7 @@ class TestRoute:
             ("ACCEPTED", AttendeeStatus.ACCEPTED),
         ],
     )
-    async def test_a_response_reaches_the_event(
-        self, word: str, expected: AttendeeStatus
-    ) -> None:
+    async def test_a_response_reaches_the_event(self, word: str, expected: AttendeeStatus) -> None:
         result, operations = await self._respond(word)
 
         assert result.status == expected.value
@@ -126,7 +124,9 @@ class TestRoute:
     async def test_a_forged_link_is_refused(self) -> None:
         with pytest.raises(HTTPException) as raised:
             await respond_from_mail(
-                MagicMock(), RespondRequest(token="not-a-token", response="accepted")
+                MagicMock(),
+                UpdateBuffer(),
+                RespondRequest(token="not-a-token", response="accepted"),
             )
 
         assert raised.value.status_code == 401
@@ -169,6 +169,7 @@ class TestRoute:
         ):
             await respond_from_mail(
                 MagicMock(),
+                UpdateBuffer(),
                 RespondRequest(
                     token=create_event_response_token(USER, ORG, EVENT), response="accepted"
                 ),
@@ -183,7 +184,7 @@ class TestMethod:
     def test_responding_is_a_post_and_never_a_get(self) -> None:
         """A mail scanner opening every link in a message must not be able to
         accept a meeting on somebody's behalf."""
-        router = create_calendar_router(MagicMock())
+        router = create_calendar_router(MagicMock(), MagicMock())
 
         route = next(r for r in router.routes if r.path.endswith(RESPOND_PATH))
         assert route.methods == {"POST"}

@@ -1,8 +1,8 @@
 """Outbound fanout for realtime Yjs updates, permission changes, and token
 revokes over Valkey pubsub.
 
-Doc-update payloads carry ``origin_replica`` and ``source_conn_id`` so subscribers
-can drop echoes of their own writes.
+Accepted-update payloads carry ``origin_replica`` so subscribers can drop echoes of their own
+writes.
 """
 
 import base64
@@ -29,7 +29,9 @@ class RealtimeChannelKind(StrEnum):
 
 
 class RealtimePayloadKind(StrEnum):
+    ACCEPTED_UPDATE = "accepted_update"
     CONTENT_REPLACE = "content_replace"
+    CHECKPOINT_PROGRESS = "checkpoint_progress"
 
 
 def doc_channel(content_type: ContentType, content_id: UUID) -> str:
@@ -70,40 +72,71 @@ def session_revoke_channel(user_id: UUID) -> str:
 async def publish_doc_update(
     content_type: ContentType,
     content_id: UUID,
-    update: bytes,
+    sealed: bytes,
     *,
-    source_conn_id: int,
+    generation: str,
+    epoch: str,
+    sequence: int,
+    update_id: str,
+    actor_id: UUID,
+    origin_replica: str | None = None,
 ) -> None:
-    """Broadcast a Yjs update blob to peers across replicas."""
+    """Hand an accepted record to peer replicas; one that misses it reloads the buffered tail.
+
+    The record stays sealed on the channel, so update id and actor travel along for the
+    receiver to rebuild its associated data.
+    """
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
-            "origin_replica": replica_id(),
-            "source_conn_id": source_conn_id,
-            "update": base64.b64encode(update).decode("ascii"),
+            "kind": RealtimePayloadKind.ACCEPTED_UPDATE,
+            "origin_replica": origin_replica or replica_id(),
+            "generation": generation,
+            "epoch": epoch,
+            "sequence": sequence,
+            "update_id": update_id,
+            "actor_id": str(actor_id),
+            "sealed": base64.b64encode(sealed).decode("ascii"),
             "published_at": time.time(),
         },
     )
 
 
-async def publish_content_replace(
-    content_type: ContentType,
-    content_id: UUID,
-    content: str,
-) -> None:
-    """Graft a domain column write into any live doc.
+async def publish_content_replace(content_type: ContentType, content_id: UUID) -> None:
+    """Tell replicas holding the document to reload checkpoint plus buffered tail after a write.
 
-    Session-holding replicas apply the content as a CRDT edit on their in-memory
-    doc, so a legacy write path (mobile autosave, agent tools) cannot be
-    clobbered by a later stale-doc snapshot flush. Not origin-deduped: the
-    publishing process may itself hold the live session.
+    Carries no content: every replica reloads authoritative state. Not origin-deduped, because
+    the publishing process may itself hold the live session.
     """
     await publish_to_channel(
         doc_channel(content_type, content_id),
         {
             "kind": RealtimePayloadKind.CONTENT_REPLACE,
             "origin_replica": replica_id(),
-            "content": content,
+            "published_at": time.time(),
+        },
+    )
+
+
+async def publish_checkpoint_progress(
+    content_type: ContentType,
+    content_id: UUID,
+    *,
+    generation: str,
+    epoch: str,
+    covered_sequence: int,
+    checkpoint_revision: int,
+) -> None:
+    """Announce on the document channel which accepted sequence of one epoch PostgreSQL covers."""
+    await publish_to_channel(
+        doc_channel(content_type, content_id),
+        {
+            "kind": RealtimePayloadKind.CHECKPOINT_PROGRESS,
+            "origin_replica": replica_id(),
+            "generation": generation,
+            "epoch": epoch,
+            "covered_sequence": covered_sequence,
+            "checkpoint_revision": checkpoint_revision,
             "published_at": time.time(),
         },
     )

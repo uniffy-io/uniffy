@@ -96,7 +96,7 @@ export function RealtimePresence({
     <div
       className={cn("flex items-center gap-1.5", className)}
       title={`${participants.length} active: ${tooltipNames}`}
-      aria-label={`${participants.length} active editors`}
+      aria-label={`${participants.length} active ${participants.length === 1 ? "editor" : "editors"}`}
     >
       <div className="flex -space-x-1.5">
         {visible.map((participant) => (

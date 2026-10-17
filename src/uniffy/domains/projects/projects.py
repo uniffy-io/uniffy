@@ -18,6 +18,11 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ProjectViewVisibility
+from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.lifecycle import stage_hard_delete
+from uniffy.core.realtime.publisher import publish_perm_change
+from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.engine import SearchTerm, all_of
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
@@ -263,6 +268,8 @@ class ProjectOperations(BaseContentOperations[Project]):
         user_id: UUID,
         organization_id: UUID,
         project_id: UUID,
+        *,
+        buffer: UpdateBuffer,
         **kwargs,
     ) -> Project:
         """Access-policy changes go through ``permissions.v1.MembersService``, never this method."""
@@ -320,6 +327,7 @@ class ProjectOperations(BaseContentOperations[Project]):
                     organization_id=organization_id,
                     target_urn=project_urn,
                     new_label=project.name,
+                    buffer=buffer,
                 )
             except Exception:
                 logger.opt(exception=True).warning(
@@ -345,27 +353,51 @@ class ProjectOperations(BaseContentOperations[Project]):
         organization_id: UUID,
         project_id: UUID,
         permanent: bool = False,
+        *,
+        buffer: UpdateBuffer,
     ) -> bool:
+        await lock_document(self.session, (ContentType.PROJECT, project_id))
         project = await self.get_by_id(user_id, organization_id, project_id)
         await self._require_delete(user_id, organization_id, project)
 
+        task_ids_query = select(Task.id).where(
+            Task.project_id == project_id, Task.organization_id == organization_id
+        )
+        task_ids = list((await self.session.scalars(task_ids_query)).all())
+        await lock_documents(self.session, [(ContentType.TASK, task_id) for task_id in task_ids])
+        described = await self.session.scalars(
+            select(RealtimeYjsSnapshot.content_id).where(
+                RealtimeYjsSnapshot.content_type == ContentType.TASK,
+                RealtimeYjsSnapshot.content_id.in_(task_ids_query),
+            )
+        )
+        # Tasks have no restore path, so trash removes their live documents as well.
+        retirements = [
+            await stage_hard_delete(buffer, self.session, (ContentType.TASK, task_id))
+            for task_id in described.all()
+        ]
+        staged_tags = []
         if permanent:
             tag_ops = TagOperations(self.session, self.search_indexer)
             project_urn = build_content_urn(self.content_type, project_id)
-            await tag_ops.unassign_all_for_urn(
-                actor_id=user_id,
-                organization_id=organization_id,
-                content_urn=project_urn,
+            staged_tags.append(
+                await tag_ops.stage_unassign_all_for_urn(
+                    actor_id=user_id,
+                    organization_id=organization_id,
+                    content_urn=project_urn,
+                )
             )
             task_id_rows = await self.session.execute(
                 select(Task.id).where(Task.project_id == project_id)
             )
             task_ids = [task_id for (task_id,) in task_id_rows]
             for task_id in task_ids:
-                await tag_ops.unassign_all_for_urn(
-                    actor_id=user_id,
-                    organization_id=organization_id,
-                    content_urn=build_content_urn(ContentType.TASK, task_id),
+                staged_tags.append(
+                    await tag_ops.stage_unassign_all_for_urn(
+                        actor_id=user_id,
+                        organization_id=organization_id,
+                        content_urn=build_content_urn(ContentType.TASK, task_id),
+                    )
                 )
 
             await purge_attachments_for_content(
@@ -402,6 +434,11 @@ class ProjectOperations(BaseContentOperations[Project]):
         )
 
         await self.session.commit()
+        for retire in retirements:
+            await retire()
+        for staged in staged_tags:
+            await tag_ops.finish_unassign_all_after_commit(staged)
+        await publish_perm_change(ContentType.PROJECT, project_id, None, None)
         await self.search_indexer.remove(
             build_content_urn(self.content_type, project_id), organization_id
         )

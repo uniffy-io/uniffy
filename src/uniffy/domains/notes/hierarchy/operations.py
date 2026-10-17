@@ -11,13 +11,22 @@ from sqlalchemy import select
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import NotFoundError, ValidationError
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.notes.note import Note
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.checkpoint import Enqueue, enqueue_core
+from uniffy.core.realtime.lifecycle import stage_hard_delete, stage_restore, stage_trash
+from uniffy.core.realtime.live import AfterCommit
+from uniffy.core.realtime.publisher import publish_perm_change
+from uniffy.core.realtime.storage import lock_document, lock_documents
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NodeType
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.notes import queries
+from uniffy.domains.permissions.access import ResourceAudienceResolver
 from uniffy.domains.tags.context import ContentTagMutations
 
 if TYPE_CHECKING:
@@ -29,8 +38,16 @@ _MAX_TREE_DEPTH = 64
 
 
 class NoteHierarchy:
-    def __init__(self, operations: NoteOperations) -> None:
+    def __init__(
+        self,
+        operations: NoteOperations,
+        buffer: UpdateBuffer,
+        enqueue: Enqueue = enqueue_core,
+    ) -> None:
         self.operations = operations
+        # Accepted realtime edits that trash keeps and deletion retires.
+        self.buffer = buffer
+        self.enqueue = enqueue
 
     async def require_moveable_under(
         self,
@@ -70,10 +87,18 @@ class NoteHierarchy:
         await self.operations._require_delete(user_id, organization_id, note)
 
         parent_folder_id = note.parent_id
-        removed_ids = await self.operations._collect_descendant_ids(note)
+        # Purging a folder also destroys descendants that were trashed earlier.
+        removed_ids = await self.collect_descendant_ids(note, include_deleted=permanent)
+        keys = [(ContentType.NOTE, item) for item in removed_ids]
+        await lock_documents(self.operations.session, keys)
+        # Read before the rows go, so the fanout reaches everyone who could open them.
+        audiences = await self._audiences(organization_id, removed_ids)
         tags = None
         staged_tag_removals = []
+        settle: list[AfterCommit] = []
         if permanent:
+            for key in keys:
+                settle.append(await stage_hard_delete(self.buffer, self.operations.session, key))
             tags = ContentTagMutations(
                 self.operations.session,
                 self.operations.search_indexer,
@@ -96,6 +121,11 @@ class NoteHierarchy:
             )
             await queries.permanent_delete_recursive(self.operations.session, note)
         else:
+            # Trash keeps every accepted edit in the checkpoint so restore can render it.
+            for key in keys:
+                settle.append(
+                    await stage_trash(self.buffer, self.operations.session, key, organization_id)
+                )
             await queries.soft_delete_recursive(self.operations.session, note)
 
         await write_audit_event(
@@ -112,6 +142,9 @@ class NoteHierarchy:
             },
         )
         await self.operations.session.commit()
+        for after_commit in settle:
+            await after_commit()
+        await self._publish_access(organization_id, audiences, ContentAccessAction.REVOKED)
         if tags is not None:
             for staged in staged_tag_removals:
                 try:
@@ -140,6 +173,8 @@ class NoteHierarchy:
         organization_id: UUID,
         note_id: UUID,
     ) -> Note:
+        key = (ContentType.NOTE, note_id)
+        await lock_document(self.operations.session, key)
         note = await self.operations._fetch_by_id(note_id, organization_id)
         if not note:
             raise NotFoundError("Note", note_id)
@@ -148,6 +183,9 @@ class NoteHierarchy:
         note.is_deleted = False
         note.deleted_at = None
         note.updated_at = datetime.now(UTC)
+        restored = await stage_restore(
+            self.buffer, self.operations.session, key, organization_id, enqueue=self.enqueue
+        )
         await write_audit_event(
             self.operations.session,
             organization_id=organization_id,
@@ -158,11 +196,64 @@ class NoteHierarchy:
             details={"title": note.title, "node_type": note.node_type.value},
         )
         await self.operations.session.commit()
+        # Edits retained while trashed render through the projection job.
+        await restored()
         await self.operations.session.refresh(note)
         await self.operations._index_for_search(note)
         await self.operations.session.commit()
+        await self._publish_access(
+            organization_id,
+            await self._audiences(organization_id, [note_id]),
+            ContentAccessAction.GRANTED,
+        )
         await self.operations._refresh_parent_folder(note.parent_id, organization_id)
         return note
+
+    async def _audiences(
+        self, organization_id: UUID, note_ids: list[UUID]
+    ) -> dict[UUID, list[UUID] | None]:
+        session = self.operations.session
+        rows = (
+            await session.execute(
+                select(Note.id, Note.owner_id, Note.access_mode, Note.baseline_role).where(
+                    Note.id.in_(note_ids), Note.organization_id == organization_id
+                )
+            )
+        ).all()
+        resolver = ResourceAudienceResolver(session)
+        return {
+            note_id: await resolver.fanout_audience(
+                organization_id=organization_id,
+                content_type=ContentType.NOTE,
+                content_id=note_id,
+                owner_id=owner_id,
+                access_mode=access_mode,
+                baseline_role=baseline_role,
+            )
+            for note_id, owner_id, access_mode, baseline_role in rows
+        }
+
+    async def _publish_access(
+        self,
+        organization_id: UUID,
+        audiences: dict[UUID, list[UUID] | None],
+        action: ContentAccessAction,
+    ) -> None:
+        """Runs after commit; a failed publish leaves live sessions to their periodic recheck."""
+        for note_id, audience in audiences.items():
+            try:
+                await publish_perm_change(ContentType.NOTE, note_id, None, None)
+                await publish_content_access_changed(
+                    content_type=content_type_to_proto(ContentType.NOTE),
+                    content_id=note_id,
+                    action=action,
+                    organization_id=organization_id,
+                    target_user_ids=audience,
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Note access change was not published", note_id=str(note_id)
+                )
 
     async def empty_trash(self, user_id: UUID, organization_id: UUID) -> int:
         access_filter = await self.operations.access_query.build_accessible_filter(
@@ -174,7 +265,7 @@ class NoteHierarchy:
             access_mode_column=Note.access_mode,
             baseline_role_column=Note.baseline_role,
         )
-        trash_ids = list(
+        candidates = list(
             (
                 await self.operations.session.execute(
                     select(Note.id).where(
@@ -188,6 +279,26 @@ class NoteHierarchy:
             .scalars()
             .all()
         )
+        await lock_documents(
+            self.operations.session, [(ContentType.NOTE, item) for item in candidates]
+        )
+        # A restore that committed before these locks keeps its note and its live state.
+        trash_ids = list(
+            (
+                await self.operations.session.execute(
+                    select(Note.id).where(Note.id.in_(candidates), Note.is_deleted.is_(True))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        settle: list[AfterCommit] = []
+        for note_id in trash_ids:
+            settle.append(
+                await stage_hard_delete(
+                    self.buffer, self.operations.session, (ContentType.NOTE, note_id)
+                )
+            )
         await purge_attachments_for_content(
             self.operations.session,
             self.operations.storage,
@@ -226,6 +337,8 @@ class NoteHierarchy:
                 details={"source": "empty_trash"},
             )
         await self.operations.session.commit()
+        for after_commit in settle:
+            await after_commit()
         for staged in staged_tag_removals:
             try:
                 await tags.finish_unassign_all_after_commit(staged)
@@ -246,22 +359,16 @@ class NoteHierarchy:
                 )
         return count
 
-    async def collect_descendant_ids(self, note: Note) -> list[UUID]:
+    async def collect_descendant_ids(
+        self, note: Note, *, include_deleted: bool = False
+    ) -> list[UUID]:
         ids = [note.id]
         if note.node_type != NodeType.FOLDER:
             return ids
-        children = (
-            (
-                await self.operations.session.execute(
-                    select(Note).where(
-                        Note.parent_id == note.id,
-                        Note.is_deleted == False,  # noqa: E712
-                    )
-                )
-            )
-            .scalars()
-            .all()
-        )
+        query = select(Note).where(Note.parent_id == note.id)
+        if not include_deleted:
+            query = query.where(Note.is_deleted == False)  # noqa: E712
+        children = (await self.operations.session.execute(query)).scalars().all()
         for child in children:
-            ids.extend(await self.collect_descendant_ids(child))
+            ids.extend(await self.collect_descendant_ids(child, include_deleted=include_deleted))
         return ids

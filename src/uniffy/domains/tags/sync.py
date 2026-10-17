@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.models.tags.tag import Tag, TagAssignment
+from uniffy.core.models.tags.tag import TAG_NAME_MAX_LENGTH, Tag, TagAssignment
 from uniffy.domains.tags.events import (
     EVENT_TAG_ASSIGNMENT_CHANGED,
     publish_tag_event,
@@ -65,10 +65,14 @@ async def stage_inline_tags(
 
     desired_slugs: dict[str, str] = {}
     for raw in parsed_names:
-        slug = slugify_tag(raw)
+        name = raw.strip()
+        # Invalid markers remain in the document without blocking content persistence.
+        if len(name) > TAG_NAME_MAX_LENGTH:
+            continue
+        slug = slugify_tag(name)
         if not slug:
             continue
-        desired_slugs.setdefault(slug, raw.strip())
+        desired_slugs.setdefault(slug, name)
 
     tags_for_slugs = await _ensure_tags(
         session,

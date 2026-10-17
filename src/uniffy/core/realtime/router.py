@@ -1,10 +1,4 @@
-"""Process-wide Valkey dispatcher.
-
-Four pattern subscribers per process (doc updates, perm changes, defaults, token
-revoke) replace per-doc / per-user subscribers. ``YDocManager`` registers
-``RouterCallbacks`` at startup; the router calls back into the manager rather
-than importing it (cycle with ``snapshot.py``).
-"""
+"""Route process-wide realtime signals to locally attached documents."""
 
 from __future__ import annotations
 
@@ -12,7 +6,7 @@ import asyncio
 import base64
 import contextlib
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -29,10 +23,11 @@ from uniffy.core.realtime.publisher import (
     RealtimePayloadKind,
 )
 from uniffy.core.realtime.state import ClientHandle, DocKey, YDocSession
+from uniffy.core.realtime.wire import MAX_WIRE_INTEGER, MAX_WIRE_STRING_BYTES, CheckpointProgress
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.valkey.pubsub import subscribe_patterns
 
-LOGGER_COMPONENT = "realtime.router"
+logger = logger.bind(component="core.realtime.router")
 
 _DOC_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DOC}:*"
 _PERM_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.PERM}:*"
@@ -41,41 +36,94 @@ _REVOKE_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}
 _REVOKE_SID_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
+# Records past this many queued for one document collapse into one reload of checkpoint plus tail.
+_DOC_QUEUE_LIMIT = 1024
+
+
+@dataclass(frozen=True, slots=True)
+class RemoteUpdate:
+    """A record another replica accepted, still sealed, with its place in the buffer epoch."""
+
+    sealed: bytes
+    generation: str
+    epoch: str
+    sequence: int
+    update_id: str
+    actor_id: UUID
+
+
+@dataclass(frozen=True, slots=True)
+class _DocWork:
+    """One routed document message waiting for that document's earlier messages."""
+
+    kind: RealtimePayloadKind
+    remote: RemoteUpdate | None = None
+    progress: CheckpointProgress | None = None
 
 
 @dataclass
 class RouterCallbacks:
     """Hooks the ``YDocManager`` registers to receive routed payloads."""
 
-    apply_remote_update: Callable[[YDocSession, bytes], Awaitable[None]]
-    apply_content_replace: Callable[[DocKey, str], Awaitable[None]]
-    enforce_role_change: Callable[[ClientHandle, str | None], Awaitable[None]]
+    apply_remote_update: Callable[[YDocSession, RemoteUpdate], Awaitable[None]]
+    apply_checkpoint_progress: Callable[[DocKey, CheckpointProgress], Awaitable[None]]
+    reload_document: Callable[[DocKey], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
     close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
-    reauthorize_doc: Callable[[DocKey], Awaitable[None]]
+    # ``user_id`` narrows to that user's handles; ``None`` re-checks everyone on the docs.
+    recheck_access: Callable[[Sequence[DocKey], UUID | None], Awaitable[None]]
 
 
-def _parse_doc_channel(channel: str) -> DocKey | None:
-    parts = channel.split(":")
+def _wire_string(value: object) -> str | None:
+    if isinstance(value, str) and len(value.encode()) <= MAX_WIRE_STRING_BYTES:
+        return value
+    return None
+
+
+def _wire_integer(value: object) -> int | None:
+    if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= MAX_WIRE_INTEGER:
+        return value
+    return None
+
+
+def _parse_remote_update(payload: dict[str, object]) -> RemoteUpdate | None:
+    generation = _wire_string(payload.get("generation"))
+    epoch = _wire_string(payload.get("epoch"))
+    sequence = _wire_integer(payload.get("sequence"))
+    update_id = _wire_string(payload.get("update_id"))
+    actor = _wire_string(payload.get("actor_id"))
+    encoded = payload.get("sealed")
     if (
-        len(parts) != 4
-        or parts[0] != RealtimeChannelNamespace.REALTIME
-        or parts[1] != RealtimeChannelKind.DOC
+        generation is None
+        or not epoch
+        or not sequence
+        or not update_id
+        or actor is None
+        or not isinstance(encoded, str)
     ):
         return None
     try:
-        return (ContentType[parts[2]], UUID(parts[3]))
-    except KeyError, ValueError:
+        sealed = base64.b64decode(encoded, validate=True)
+        actor_id = UUID(actor)
+    except ValueError:
+        # Covers ``binascii.Error`` from the base64 decode as well.
         return None
+    return RemoteUpdate(sealed, generation, epoch, sequence, update_id, actor_id)
 
 
-def _parse_perm_channel(channel: str) -> DocKey | None:
+def _parse_progress(payload: dict[str, object]) -> CheckpointProgress | None:
+    generation = _wire_string(payload.get("generation"))
+    epoch = _wire_string(payload.get("epoch"))
+    covered = _wire_integer(payload.get("covered_sequence"))
+    revision = _wire_integer(payload.get("checkpoint_revision"))
+    if generation is None or not epoch or covered is None or revision is None:
+        return None
+    return CheckpointProgress(generation, epoch, covered, revision)
+
+
+def _parse_content_channel(channel: str, kind: RealtimeChannelKind) -> DocKey | None:
     parts = channel.split(":")
-    if (
-        len(parts) != 4
-        or parts[0] != RealtimeChannelNamespace.REALTIME
-        or parts[1] != RealtimeChannelKind.PERM
-    ):
+    if len(parts) != 4 or parts[0] != RealtimeChannelNamespace.REALTIME or parts[1] != kind:
         return None
     try:
         return (ContentType[parts[2]], UUID(parts[3]))
@@ -139,16 +187,21 @@ def _parse_defaults_channel(channel: str) -> tuple[UUID, ContentType] | None:
 
 
 class RealtimeRouter:
-    """Singleton process-wide dispatcher for the realtime pubsub channels."""
+    """Dispatches the realtime pubsub channels to the documents one replica holds."""
 
-    def __init__(self) -> None:
+    def __init__(self, replica: str | None = None) -> None:
         self._callbacks: RouterCallbacks | None = None
         # Keyed by ``conn_id`` because ``ClientHandle`` is non-frozen and unhashable.
         self._doc_handles: dict[DocKey, dict[int, ClientHandle]] = {}
         self._user_handles: dict[UUID, dict[int, ClientHandle]] = {}
         self._doc_sessions: dict[DocKey, YDocSession] = {}
-        self._self_replica = replica_id()
+        self._policy_docs: dict[DocKey, set[DocKey]] = {}
+        self._self_replica = replica or replica_id()
         self._tasks: list[asyncio.Task[None]] = []
+        # Each document's messages run in order on its own task, so a reload that waits on one
+        # document's lock never holds up hints for the others.
+        self._doc_work: dict[DocKey, list[_DocWork]] = {}
+        self._doc_tasks: dict[DocKey, asyncio.Task[None]] = {}
         self._running = False
 
     def register_callbacks(self, callbacks: RouterCallbacks) -> None:
@@ -180,29 +233,39 @@ class RealtimeRouter:
                 name="realtime-router-revoke-sid",
             ),
         ]
-        logger.info(
-            "realtime router started (5 pattern subscribers)",
-            component=LOGGER_COMPONENT,
-        )
+        logger.info("realtime router started (5 pattern subscribers)")
 
     async def stop(self) -> None:
         """Cancel the subscriber tasks. Idempotent."""
         if not self._running:
             return
         self._running = False
-        for task in self._tasks:
+        tasks = [*self._tasks, *self._doc_tasks.values()]
+        for task in tasks:
             task.cancel()
-        for task in self._tasks:
+        for task in tasks:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._tasks = []
-        logger.info("realtime router stopped", component=LOGGER_COMPONENT)
+        self._doc_tasks.clear()
+        self._doc_work.clear()
+        logger.info("realtime router stopped")
 
     def register_doc_session(self, key: DocKey, session: YDocSession) -> None:
+        self.unregister_doc_session(key)
         self._doc_sessions[key] = session
+        self._policy_docs.setdefault(session.policy_key or key, set()).add(key)
 
     def unregister_doc_session(self, key: DocKey) -> None:
-        self._doc_sessions.pop(key, None)
+        session = self._doc_sessions.pop(key, None)
+        if session is None:
+            return
+        policy_key = session.policy_key or key
+        bucket = self._policy_docs.get(policy_key)
+        if bucket is not None:
+            bucket.discard(key)
+            if not bucket:
+                self._policy_docs.pop(policy_key, None)
 
     def attach_handle(self, key: DocKey, handle: ClientHandle) -> None:
         self._doc_handles.setdefault(key, {})[handle.conn_id] = handle
@@ -237,18 +300,14 @@ class RealtimeRouter:
                     try:
                         await handler(channel, payload)
                     except Exception as exc:
-                        logger.warning(
-                            f"router handler error on {channel}: {exc}",
-                            component=LOGGER_COMPONENT,
-                        )
+                        logger.warning(f"router handler error on {channel}: {exc}")
                 return
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 REALTIME_PUBSUB_RECONNECTS_TOTAL.labels(pattern=pattern).inc()
                 logger.warning(
-                    f"pattern subscriber {pattern} crashed: {exc}; reconnecting in {delay:.1f}s",
-                    component=LOGGER_COMPONENT,
+                    f"pattern subscriber {pattern} crashed: {exc}; reconnecting in {delay:.1f}s"
                 )
                 try:
                     await asyncio.sleep(delay)
@@ -259,46 +318,86 @@ class RealtimeRouter:
             delay = _RECONNECT_DELAY_INITIAL
 
     async def _handle_doc_message(self, channel: str, payload: dict[str, object]) -> None:
-        if payload.get("kind") == RealtimePayloadKind.CONTENT_REPLACE:
+        key = _parse_content_channel(channel, RealtimeChannelKind.DOC)
+        if key is None or key not in self._doc_sessions or self._callbacks is None:
+            return
+        kind = payload.get("kind")
+        if kind == RealtimePayloadKind.CONTENT_REPLACE:
             # Not origin-deduped: the publishing process may hold the session.
-            key = _parse_doc_channel(channel)
-            if key is None or key not in self._doc_sessions:
+            work = _DocWork(RealtimePayloadKind.CONTENT_REPLACE)
+        elif kind == RealtimePayloadKind.CHECKPOINT_PROGRESS:
+            # Not origin-deduped either: barriers in this process commit checkpoints too.
+            progress = _parse_progress(payload)
+            if progress is None:
+                logger.warning(f"router: malformed progress on {channel}")
                 return
-            callbacks = self._callbacks
-            content = payload.get("content")
-            if callbacks is None or not isinstance(content, str):
+            work = _DocWork(RealtimePayloadKind.CHECKPOINT_PROGRESS, progress=progress)
+        elif kind == RealtimePayloadKind.ACCEPTED_UPDATE:
+            if payload.get("origin_replica") == self._self_replica:
                 return
-            _observe_pubsub_latency("doc", payload)
-            await callbacks.apply_content_replace(key, content)
-            return
-        if payload.get("origin_replica") == self._self_replica:
-            return
-        key = _parse_doc_channel(channel)
-        if key is None:
-            return
-        session = self._doc_sessions.get(key)
-        if session is None:
-            return
-        update_b64 = payload.get("update")
-        if not isinstance(update_b64, str):
-            return
-        try:
-            update = base64.b64decode(update_b64)
-        except Exception:
-            logger.warning(f"router: malformed update on {channel}", component=LOGGER_COMPONENT)
-            return
-        callbacks = self._callbacks
-        if callbacks is None:
+            remote = _parse_remote_update(payload)
+            if remote is None:
+                logger.warning(f"router: malformed update on {channel}")
+                return
+            work = _DocWork(RealtimePayloadKind.ACCEPTED_UPDATE, remote=remote)
+        else:
             return
         _observe_pubsub_latency("doc", payload)
-        await callbacks.apply_remote_update(session, update)
+        self._queue_doc_work(key, work)
+
+    def _queue_doc_work(self, key: DocKey, work: _DocWork) -> None:
+        """Queue behind the document's earlier messages, dropping what later work makes moot.
+
+        A queued reload reads checkpoint plus tail when it runs, so it covers every record
+        published before it ran; only the newest checkpoint progress matters.
+        """
+        queue = self._doc_work.setdefault(key, [])
+        reload_queued = any(item.kind is RealtimePayloadKind.CONTENT_REPLACE for item in queue)
+        if work.kind is RealtimePayloadKind.ACCEPTED_UPDATE:
+            if reload_queued:
+                return
+            if len(queue) >= _DOC_QUEUE_LIMIT:
+                work = _DocWork(RealtimePayloadKind.CONTENT_REPLACE)
+        if work.kind is RealtimePayloadKind.CONTENT_REPLACE:
+            queue[:] = [
+                item for item in queue if item.kind is RealtimePayloadKind.CHECKPOINT_PROGRESS
+            ]
+        elif work.kind is RealtimePayloadKind.CHECKPOINT_PROGRESS:
+            queue[:] = [item for item in queue if item.kind is not work.kind]
+        queue.append(work)
+        if key not in self._doc_tasks:
+            self._doc_tasks[key] = asyncio.create_task(
+                self._run_doc_work(key), name="realtime-router-document"
+            )
+
+    async def _run_doc_work(self, key: DocKey) -> None:
+        try:
+            while queue := self._doc_work.get(key):
+                work = queue.pop(0)
+                if not queue:
+                    self._doc_work.pop(key, None)
+                try:
+                    await self._apply_doc_work(key, work)
+                except Exception as exc:
+                    logger.warning(f"router document handler error on {key[0].value}: {exc}")
+        finally:
+            self._doc_tasks.pop(key, None)
+
+    async def _apply_doc_work(self, key: DocKey, work: _DocWork) -> None:
+        callbacks = self._callbacks
+        session = self._doc_sessions.get(key)
+        if callbacks is None or session is None:
+            return
+        if work.kind is RealtimePayloadKind.CONTENT_REPLACE:
+            await callbacks.reload_document(key)
+        elif work.progress is not None:
+            await callbacks.apply_checkpoint_progress(key, work.progress)
+        elif work.remote is not None:
+            await callbacks.apply_remote_update(session, work.remote)
 
     async def _handle_perm_message(self, channel: str, payload: dict[str, object]) -> None:
-        if payload.get("origin_replica") == self._self_replica:
-            # Same-replica perm payloads are allowed through: the producer commits to PG
-            # and the local session relies on the pubsub bounce, not in-process fan-out.
-            pass
-        key = _parse_perm_channel(channel)
+        # Not origin-deduped: local sessions learn of a committed change only through this bounce.
+        key = _parse_content_channel(channel, RealtimeChannelKind.PERM)
         if key is None:
             return
         callbacks = self._callbacks
@@ -306,29 +405,27 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("perm", payload)
         user_id_raw = payload.get("user_id")
-        new_role = payload.get("new_role")
-        new_role_str = new_role if isinstance(new_role, str) else None
+        targets = tuple(self._policy_docs.get(key) or {key})
         if user_id_raw is None:
-            await callbacks.reauthorize_doc(key)
+            await callbacks.recheck_access(targets, None)
             return
         try:
             user_id = UUID(str(user_id_raw))
         except TypeError, ValueError:
-            logger.warning(
-                f"router: invalid user_id on {channel}: {user_id_raw!r}",
-                component=LOGGER_COMPONENT,
+            logger.warning(f"router: invalid user_id on {channel}: {user_id_raw!r}")
+            return
+        affected = tuple(
+            target
+            for target in targets
+            if any(
+                handle.user_id == user_id for handle in self._doc_handles.get(target, {}).values()
             )
-            return
-        bucket = self._doc_handles.get(key)
-        if not bucket:
-            return
-        for handle in list(bucket.values()):
-            if handle.user_id != user_id:
-                continue
-            await callbacks.enforce_role_change(handle, new_role_str)
+        )
+        if affected:
+            await callbacks.recheck_access(affected, user_id)
 
     async def _handle_defaults_message(self, channel: str, payload: dict[str, object]) -> None:
-        """Re-authorize every doc on this replica matching ``(org_id, content_type)``."""
+        """Recheck access on every doc of this replica whose policy follows these defaults."""
         parsed = _parse_defaults_channel(channel)
         if parsed is None:
             return
@@ -337,9 +434,13 @@ class RealtimeRouter:
         if callbacks is None:
             return
         _observe_pubsub_latency("defaults", payload)
-        for key, session in list(self._doc_sessions.items()):
-            if key[0] is content_type and session.organization_id == org_id:
-                await callbacks.reauthorize_doc(key)
+        affected = tuple(
+            key
+            for key, session in list(self._doc_sessions.items())
+            if (session.policy_key or key)[0] is content_type and session.organization_id == org_id
+        )
+        if affected:
+            await callbacks.recheck_access(affected, None)
 
     async def _handle_revoke_message(self, channel: str, payload: dict[str, object]) -> None:
         user_id = _parse_revoke_channel(channel)
@@ -375,6 +476,3 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("revoke_sid", payload)
         await callbacks.close_user_session_by_sid(user_id, session_id)
-
-
-router = RealtimeRouter()

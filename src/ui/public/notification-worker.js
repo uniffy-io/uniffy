@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
     icon: '/favicon-96x96.png',
     badge: '/favicon-96x96.png',
     data: { url: resolverUrl(payload) },
-    tag: payload.notification_type ? String(payload.notification_type) : 'uniffy-notification',
+    tag: payload.event_id || (payload.notification_type ? String(payload.notification_type) : 'uniffy-notification'),
     renotify: true,
   };
 

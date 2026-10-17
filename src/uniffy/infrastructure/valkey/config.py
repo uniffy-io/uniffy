@@ -25,6 +25,10 @@ _OPS_SOCKET_CONNECT_TIMEOUT = 0.2
 _OPS_SOCKET_TIMEOUT = 0.1
 _OPS_MAX_CONNECTIONS = int(os.getenv("VALKEY_OPS_MAX_CONNECTIONS", "10"))
 
+_BINARY_SOCKET_CONNECT_TIMEOUT = 0.2
+_BINARY_SOCKET_TIMEOUT = 0.15
+_BINARY_MAX_CONNECTIONS = int(os.getenv("VALKEY_BINARY_MAX_CONNECTIONS", "10"))
+
 _STREAMS_SOCKET_CONNECT_TIMEOUT = 2.0
 _STREAMS_SOCKET_TIMEOUT = 30.0
 _STREAMS_HEALTH_CHECK_INTERVAL = 30
@@ -97,6 +101,21 @@ class ValkeyConfig:
             "retry_on_timeout": False,
             "health_check_interval": 0,
             "max_connections": _OPS_MAX_CONNECTIONS,
+        }
+
+    def to_binary_kwargs(self) -> dict[str, Any]:
+        """``aioredis.from_url`` kwargs for the binary-safe client that stores raw realtime bytes.
+
+        No retries: a write must never be replayed onto an unverified replacement connection.
+        """
+        return {
+            "decode_responses": False,
+            "socket_connect_timeout": _BINARY_SOCKET_CONNECT_TIMEOUT,
+            "socket_timeout": _BINARY_SOCKET_TIMEOUT,
+            "retry_on_error": [],
+            "retry_on_timeout": False,
+            "health_check_interval": 0,
+            "max_connections": _BINARY_MAX_CONNECTIONS,
         }
 
     def to_streams_kwargs(self) -> dict[str, Any]:

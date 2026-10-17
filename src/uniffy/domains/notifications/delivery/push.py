@@ -73,6 +73,7 @@ class PushAdapter(DeliveryAdapter):
         # The worker resolves the click target from these; it cannot map a URN to a
         # route on its own, and the route table is frontend-owned.
         payload = dumps_str({
+            "event_id": str(event.event_id),
             "title": event.title,
             "body": event.body or "",
             "source_urn": event.source_urn or "",

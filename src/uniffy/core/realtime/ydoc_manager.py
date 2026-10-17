@@ -1,83 +1,102 @@
-"""In-memory YDoc cache + client-handle registry keyed by ``(content_type, content_id)``.
-
-Owns cold-start hydration, local peer fanout, snapshot debounce, 15-minute idle
-eviction, the role-change decision matrix, and the token-revoke close path.
-:class:`RealtimeRouter` dispatches Valkey payloads back here via
-:class:`RouterCallbacks`.
-"""
+"""Resident document caches follow PostgreSQL checkpoints and the Valkey update buffer."""
 
 import asyncio
-import contextlib
-import time
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pycrdt
 from loguru import logger
-from sqlalchemy import select
 
-from uniffy.core.auth.permissions import role_can_edit, role_can_view
-from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import get_realtime_adapter
-from uniffy.core.realtime.auth import (
-    WS_CLOSE_FORBIDDEN,
-    WS_CLOSE_TOKEN_REVOKED,
+from uniffy.core.crypto import SealedDataError
+from uniffy.core.realtime.access import AccessGates
+from uniffy.core.realtime.admission import Admitted, RoleRefused, SavingUnavailable, admit_update
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.realtime.buffer_keys import BufferScope, Receipt
+from uniffy.core.realtime.fanout import (
+    AcceptedEffects,
+    AcceptedUpdate,
+    broadcast,
+    enqueue_for_handle,
 )
+from uniffy.core.realtime.hydration import hydrate, realign
 from uniffy.core.realtime.identity import replica_id
+from uniffy.core.realtime.live import LiveStateUnavailable, accept_seed, claim_seed
+from uniffy.core.realtime.markdown import PROSEMIRROR_FRAGMENT_FIELD
 from uniffy.core.realtime.metrics import (
     REALTIME_ACTIVE_CLIENTS,
     REALTIME_ACTIVE_DOCS,
-    REALTIME_FRAMES_DROPPED_TOTAL,
-    REALTIME_HYDRATION_DURATION,
-    REALTIME_PERMISSION_REJECTIONS_TOTAL,
-    REALTIME_UPDATE_MESSAGES_TOTAL,
+    REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL,
+    REALTIME_GAP_REPAIRS_TOTAL,
 )
-from uniffy.core.realtime.multiplex import encode_doc_frame
-from uniffy.core.realtime.publisher import publish_doc_update
-from uniffy.core.realtime.router import RouterCallbacks, router
-from uniffy.core.realtime.snapshot import snapshot_writer
-from uniffy.core.realtime.state import (
-    ClientHandle,
-    DocKey,
-    WSSession,
-    YDocSession,
-    doc_name_for,
+from uniffy.core.realtime.resident import Continuity, follow_record
+from uniffy.core.realtime.router import RealtimeRouter, RemoteUpdate, RouterCallbacks
+from uniffy.core.realtime.seeding import has_fragment_content
+from uniffy.core.realtime.state import ClientHandle, DocKey, WSSession, YDocSession
+from uniffy.core.realtime.storage import EditDenied
+from uniffy.core.realtime.wire import (
+    CheckpointProgress,
+    create_checkpoint_progress_message,
+    create_fragment_seeder_message,
+    create_update_message,
 )
-from uniffy.core.realtime.wire import create_update_message
-from uniffy.core.types import ContentRole
-from uniffy.infrastructure.database.session import open_session
 
-__all__ = ["ClientHandle", "DocKey", "WSSession", "YDocManager", "YDocSession", "ydoc_manager"]
+logger = logger.bind(component="core.realtime.ydoc_manager")
+
+__all__ = ["YDocManager"]
 
 IDLE_EVICTION_SECONDS = 15 * 60
-
-_ROLES_REQUIRING_CLOSE: frozenset[str | None] = frozenset({None, "BLOCKED"})
-
-LOGGER_COMPONENT = "realtime.manager"
+# Bounded so a slow pubsub cannot hold the process past its graceful-shutdown window.
+SHUTDOWN_DRAIN_SECONDS = 5.0
+SEED_RETRY_SECONDS = 1.0
 
 
 class YDocManager:
-    """Process-wide registry of live ``YDocSession`` instances."""
+    """Registry of the live ``YDocSession`` instances one replica holds."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        buffer: UpdateBuffer,
+        replica: str | None = None,
+        idle_eviction_seconds: float = IDLE_EVICTION_SECONDS,
+    ) -> None:
         self._sessions: dict[DocKey, YDocSession] = {}
         # Per-key lock so hydration of one doc cannot stall concurrent connects to others.
         self._hydration_locks: dict[DocKey, asyncio.Lock] = {}
         self._global_lock = asyncio.Lock()
-        self._replica_id = replica_id()
+        self._replica_id = replica or replica_id()
+        self._buffer = buffer
+        # Shares the replica id so the router drops exactly this manager's own echoes.
+        self._router = RealtimeRouter(self._replica_id)
+        self._idle_eviction_seconds = idle_eviction_seconds
+        self._effects = AcceptedEffects(self._replica_id, self.refresh_fragment_seeder)
+        self.access = AccessGates(
+            self._sessions, release=self.release, reelect_seeder=self._reelect_seeder
+        )
 
     @property
     def replica_id(self) -> str:
         return self._replica_id
 
-    def router_callbacks(self) -> RouterCallbacks:
-        return RouterCallbacks(
-            apply_remote_update=self._apply_remote_pubsub_update,
-            apply_content_replace=self._apply_content_replace,
-            enforce_role_change=self._enforce_role_change,
-            close_stale_user_sessions=self._close_stale_user_sessions,
-            close_user_session_by_sid=self._close_user_session_by_sid,
-            reauthorize_doc=self._reauthorize_doc_by_key,
+    @property
+    def realtime_router(self) -> RealtimeRouter:
+        return self._router
+
+    def install(self) -> None:
+        """Route this process's document, permission and auth signals to this manager."""
+        self._router.register_callbacks(
+            RouterCallbacks(
+                apply_remote_update=self._apply_remote_update,
+                apply_checkpoint_progress=self._apply_checkpoint_progress,
+                reload_document=self._reload_document,
+                close_stale_user_sessions=self.access.close_stale_user_sessions,
+                close_user_session_by_sid=self.access.close_user_session_by_sid,
+                recheck_access=self.access.recheck,
+            )
         )
+
+    def resident(self, key: DocKey) -> YDocSession | None:
+        return self._sessions.get(key)
 
     async def acquire(
         self,
@@ -98,10 +117,12 @@ class YDocManager:
                 session = self._sessions.get(key)
 
             if session is None:
-                session = await self._hydrate(key, ws_session.organization_id)
+                session = await hydrate(
+                    self._buffer, key, ws_session.organization_id, ws_session.user_id
+                )
                 async with self._global_lock:
                     self._sessions[key] = session
-                router.register_doc_session(key, session)
+                self._router.register_doc_session(key, session)
                 REALTIME_ACTIVE_DOCS.labels(content_type=key[0].value).inc()
 
             async with self._global_lock:
@@ -131,7 +152,7 @@ class YDocManager:
         )
         session.clients[ws_session.conn_id] = handle
         ws_session.doc_handles[session.key] = handle
-        router.attach_handle(session.key, handle)
+        self._router.attach_handle(session.key, handle)
         REALTIME_ACTIVE_CLIENTS.labels(content_type=session.key[0].value).inc()
         return handle
 
@@ -143,17 +164,116 @@ class YDocManager:
                 return
             handle = session.clients.pop(conn_id, None)
             if handle is not None:
-                router.detach_handle(key, handle)
-                if handle.ws_session is not None:
-                    handle.ws_session.doc_handles.pop(key, None)
+                handle.closed = True
+                self._router.detach_handle(key, handle)
+                handle.ws_session.doc_handles.pop(key, None)
                 REALTIME_ACTIVE_CLIENTS.labels(content_type=key[0].value).dec()
             if not session.clients and session.eviction_task is None:
                 session.eviction_task = asyncio.create_task(self._evict_after_idle(key))
+        await self._reelect_seeder(session)
 
     async def release_all(self, ws_session: WSSession) -> None:
         """Tear down every doc attachment on ``ws_session``."""
         for key in list(ws_session.doc_handles.keys()):
             await self.release(key, ws_session.conn_id)
+
+    async def refresh_fragment_seeder(self, session: YDocSession) -> None:
+        async with session.seed_lock:
+            candidates = [
+                f"{self._replica_id}:{handle.conn_id}"
+                for handle in session.clients.values()
+                if handle.can_edit and handle.can_seed and not handle.closed
+            ]
+            initialized = has_fragment_content(
+                session.ydoc.get(PROSEMIRROR_FRAGMENT_FIELD, type=pycrdt.XmlFragment)
+            )
+            try:
+                lease = (
+                    None
+                    if initialized or (not candidates and session.seeder_conn_id is None)
+                    else await claim_seed(
+                        self._buffer,
+                        session.key,
+                        session.organization_id,
+                        candidates,
+                        self._replica_id,
+                    )
+                )
+            except LiveStateUnavailable:
+                # The election reads live state; keep the current seeder and ask again shortly.
+                self._schedule_seed_refresh(session, SEED_RETRY_SECONDS)
+                return
+            selected = next(
+                (
+                    handle.conn_id
+                    for handle in session.clients.values()
+                    if lease and f"{self._replica_id}:{handle.conn_id}" == lease.owner
+                ),
+                None,
+            )
+            token = lease.token if lease else ""
+            previous = session.seeder_conn_id
+            changed = previous != selected or session.seed_token != token
+            session.seeder_conn_id = selected
+            session.seed_token = token
+            expires_at = lease.expires_at if lease else None
+            if (
+                session.seed_expires_at != expires_at
+                or session.seed_task is None
+                or not session.clients
+            ):
+                session.seed_expires_at = expires_at
+                delay = (
+                    max(0.01, (expires_at - datetime.now(UTC)).total_seconds())
+                    if expires_at
+                    else None
+                )
+                self._schedule_seed_refresh(session, delay)
+            if not changed:
+                return
+            for handle in session.clients.values():
+                if handle.conn_id == selected or handle.conn_id == previous:
+                    enqueue_for_handle(
+                        handle,
+                        create_fragment_seeder_message(
+                            handle.conn_id == selected, token if handle.conn_id == selected else ""
+                        ),
+                        kind="seeder",
+                    )
+
+    async def _reelect_seeder(self, session: YDocSession) -> None:
+        """Re-elect without failing the caller; a failed election retries shortly."""
+        try:
+            await self.refresh_fragment_seeder(session)
+        except Exception:
+            logger.exception("Seed refresh failed; retrying")
+            self._schedule_seed_refresh(session, SEED_RETRY_SECONDS)
+
+    def _schedule_seed_refresh(self, session: YDocSession, delay: float | None) -> None:
+        if session.seed_task is not None and session.seed_task is not asyncio.current_task():
+            session.seed_task.cancel()
+        session.seed_task = None
+        if delay is not None and session.clients:
+            session.seed_task = asyncio.create_task(self._refresh_seed_after(session, delay))
+
+    async def _refresh_seed_after(self, session: YDocSession, delay: float) -> None:
+        try:
+            await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            return
+        session.seed_task = None
+        if session.clients:
+            await self._reelect_seeder(session)
+
+    async def drain_for_shutdown(self, *, timeout: float = SHUTDOWN_DRAIN_SECONDS) -> None:
+        """Stop seed lease timers and give queued peer hints ``timeout`` to publish.
+
+        Writes no document state: accepted edits already wait in the buffer with their
+        checkpoint scheduled.
+        """
+        for session in list(self._sessions.values()):
+            self._schedule_seed_refresh(session, None)
+        await self._effects.drain(timeout)
 
     async def apply_local_update(
         self,
@@ -161,277 +281,169 @@ class YDocManager:
         update_bytes: bytes,
         *,
         source_conn_id: int,
-    ) -> None:
-        """Apply a local client's update, fan out to other local clients, and publish to Valkey."""
-        content_type_label = session.key[0].value
+        generation: str,
+        update_id: str,
+    ) -> Receipt | None:
+        """Admit a client's update into the buffer; local peers receive it once it is accepted.
+
+        ``None`` means PostgreSQL already holds every byte of the update. The role admission read
+        under the document lock also applies to the writer's handle, so a write frame needs no
+        separate access read.
+        """
+        source = session.clients.get(source_conn_id)
+        if source is None:
+            raise EditDenied
         async with session.lock:
-            session.ydoc.apply_update(update_bytes)
-            frame = create_update_message(update_bytes)
-            for cid, peer in session.clients.items():
-                if cid == source_conn_id:
-                    continue
-                enqueue_for_handle(peer, frame, kind="update")
-                REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-                    content_type=content_type_label, direction="local_fanout"
-                ).inc()
-
-        await publish_doc_update(
-            session.key[0],
-            session.key[1],
-            update_bytes,
-            source_conn_id=source_conn_id,
+            admitted = await self._admit(
+                session, source.user_id, generation, update_id, update_bytes
+            )
+            if isinstance(admitted, Admitted) and admitted.applied:
+                broadcast(session, [create_update_message(update_bytes)], skip=source_conn_id)
+        await self.access.apply_role(session, source, admitted.role)
+        if isinstance(admitted, RoleRefused):
+            raise admitted
+        receipt = admitted.receipt
+        accepted = (
+            AcceptedUpdate(admitted.sealed, receipt, source.user_id)
+            if admitted.sealed is not None and receipt is not None
+            else None
         )
-        REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-            content_type=content_type_label, direction="pubsub_out"
-        ).inc()
-        await snapshot_writer.schedule(session)
+        self._effects.queue(session, accepted)
+        return receipt
 
-    async def broadcast_awareness(
+    async def _admit(
         self,
         session: YDocSession,
-        frame: bytes,
+        actor_id: UUID,
+        generation: str,
+        update_id: str,
+        update_bytes: bytes,
+    ) -> Admitted | RoleRefused:
+        try:
+            return await admit_update(
+                self._buffer, session, actor_id, generation, update_id, update_bytes, broadcast
+            )
+        except RoleRefused as refused:
+            return refused
+
+    async def apply_seed_update(
+        self,
+        session: YDocSession,
+        update_bytes: bytes,
         *,
         source_conn_id: int,
+        generation: str,
+        seed_token: str,
+        seed_base: str,
     ) -> None:
-        """Re-broadcast awareness to every peer except the source. Drops on full queues."""
-        for cid, peer in session.clients.items():
-            if cid == source_conn_id:
-                continue
-            enqueue_for_handle(peer, frame, kind="awareness")
-
-    async def _hydrate(
-        self,
-        key: DocKey,
-        organization_id: UUID,
-    ) -> YDocSession:
-        """Seed a fresh ``YDocSession`` from snapshot or domain row."""
-        content_type, content_id = key
-        ydoc = pycrdt.Doc()
-        started = time.perf_counter()
-        source = "snapshot"
-
-        async with open_session() as db:
-            snapshot = (
-                await db.execute(
-                    select(RealtimeYjsSnapshot).where(
-                        RealtimeYjsSnapshot.content_type == content_type,
-                        RealtimeYjsSnapshot.content_id == content_id,
-                    )
+        """Commit a fragment seed proposal synchronously; PostgreSQL holds it on return."""
+        source = session.clients.get(source_conn_id)
+        if source is None:
+            raise EditDenied
+        async with session.lock:
+            try:
+                await accept_seed(
+                    self._buffer,
+                    session.key,
+                    session.organization_id,
+                    source.user_id,
+                    generation,
+                    update_bytes,
+                    seed_owner=f"{self._replica_id}:{source_conn_id}",
+                    seed_token=seed_token,
+                    seed_base=seed_base,
                 )
-            ).scalar_one_or_none()
+            except LiveStateUnavailable as exc:
+                raise SavingUnavailable("live_state_unavailable") from exc
+            broadcast(session, await realign(self._buffer, session))
+        self._effects.queue(session, None)
 
-            if snapshot is not None:
-                ydoc.apply_update(snapshot.updates)
-                logger.debug(
-                    f"hydrated {content_type.value}:{content_id} from snapshot",
-                    component=LOGGER_COMPONENT,
-                )
-            else:
-                source = "domain"
-                adapter = get_realtime_adapter(content_type)
-                await adapter.hydrate_ydoc(db, ydoc, content_id, organization_id)
-                logger.debug(
-                    f"hydrated {content_type.value}:{content_id} from domain row",
-                    component=LOGGER_COMPONENT,
-                )
-
-        REALTIME_HYDRATION_DURATION.labels(content_type=content_type.value, source=source).observe(
-            time.perf_counter() - started
-        )
-        return YDocSession(key=key, ydoc=ydoc, organization_id=organization_id)
+    async def refresh_document(self, session: YDocSession) -> None:
+        """Realign the resident document with checkpoint plus tail, sending clients the change."""
+        async with session.lock:
+            broadcast(session, await realign(self._buffer, session))
+        await self.refresh_fragment_seeder(session)
 
     async def _evict_after_idle(self, key: DocKey) -> None:
-        """Drop the session from memory if no client reconnects within ``IDLE_EVICTION_SECONDS``."""
+        """Drop an idle session from memory; buffered edits keep their own checkpoint schedule."""
         try:
-            await asyncio.sleep(IDLE_EVICTION_SECONDS)
+            await asyncio.sleep(self._idle_eviction_seconds)
         except asyncio.CancelledError:
             return
-
-        async with self._global_lock:
-            session = self._sessions.get(key)
-            if session is None or session.clients:
-                return
-
-        # Invariant: the force flush completes while the session stays registered,
-        # so a concurrent acquire reuses the in-memory doc and can never hydrate
-        # from the pre-flush snapshot row.
-        try:
-            await snapshot_writer.flush(session, force=True)
-        except asyncio.CancelledError:
-            # A client re-attached mid-flush and cancelled this task; keep the session.
-            return
-        except Exception:
-            logger.exception(
-                f"eviction flush failed for {key[0].value}:{key[1]}",
-                component=LOGGER_COMPONENT,
-            )
 
         async with self._global_lock:
             session = self._sessions.get(key)
             if session is None or session.clients:
                 return
             del self._sessions[key]
-
-        router.unregister_doc_session(key)
+        self._schedule_seed_refresh(session, None)
+        self._router.unregister_doc_session(key)
+        self._buffer.forget(key)
         REALTIME_ACTIVE_DOCS.labels(content_type=key[0].value).dec()
-        logger.info(
-            f"evicted idle session {key[0].value}:{key[1]}",
-            component=LOGGER_COMPONENT,
-        )
+        logger.info(f"evicted idle session {key[0].value}:{key[1]}")
 
-    async def _apply_remote_pubsub_update(self, session: YDocSession, update_bytes: bytes) -> None:
-        """Apply a peer-replica update and fan out to local clients without re-publishing."""
-        content_type_label = session.key[0].value
-        REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-            content_type=content_type_label, direction="pubsub_in"
-        ).inc()
-        async with session.lock:
-            session.ydoc.apply_update(update_bytes)
-            frame = create_update_message(update_bytes)
-            for peer in session.clients.values():
-                enqueue_for_handle(peer, frame, kind="update")
+    async def _apply_remote_update(self, session: YDocSession, remote: RemoteUpdate) -> None:
+        """Apply a peer replica's record when it continues the head; otherwise reload the tail.
 
-        await snapshot_writer.schedule(session)
-
-    async def _apply_content_replace(self, key: DocKey, content: str) -> None:
-        """Graft a domain column write into the live doc and fan it out.
-
-        Keeps the session alive: evicting instead would make every attached
-        client re-push its old CRDT state on reconnect and double the content.
+        A record that does not unseal is treated as a gap: the reload reads the stored record,
+        which either opens or poisons the document.
         """
-        async with self._global_lock:
-            session = self._sessions.get(key)
+        try:
+            scope = BufferScope(
+                session.organization_id, *session.key, remote.generation, remote.epoch
+            )
+            update = await self._buffer.unseal_record(
+                scope, remote.update_id, remote.actor_id, remote.sealed
+            )
+        except (SealedDataError, ValueError) as exc:
+            REALTIME_BUFFER_UNSEAL_FAILURES_TOTAL.labels(source="remote").inc()
+            logger.warning(
+                "Peer record {sequence} of {kind}:{id} does not unseal: {error}",
+                sequence=remote.sequence,
+                kind=session.key[0].value,
+                id=session.key[1],
+                error=type(exc).__name__,
+            )
+            await self.refresh_document(session)
+            return
+        continuity = follow_record(session, remote.generation, remote.epoch, remote.sequence, update)
+        if continuity is Continuity.APPLIED:
+            broadcast(session, [create_update_message(update)])
+        elif continuity is Continuity.GAP:
+            same_epoch = (remote.generation, remote.epoch) == (session.generation, session.epoch)
+            REALTIME_GAP_REPAIRS_TOTAL.labels(cause="sequence" if same_epoch else "epoch").inc()
+            await self.refresh_document(session)
+
+    async def _apply_checkpoint_progress(self, key: DocKey, progress: CheckpointProgress) -> None:
+        """Record a committed watermark and tell attached clients which receipts it covers."""
+        session = self._sessions.get(key)
         if session is None:
             return
-        adapter = get_realtime_adapter(key[0])
-        async with session.lock:
-            state_before = session.ydoc.get_state()
-            if not adapter.apply_external_content(session.ydoc, content):
-                return
-            update_bytes = session.ydoc.get_update(state_before)
-            frame = create_update_message(update_bytes)
-            for peer in session.clients.values():
-                enqueue_for_handle(peer, frame, kind="update")
-            REALTIME_UPDATE_MESSAGES_TOTAL.labels(
-                content_type=key[0].value, direction="content_replace"
-            ).inc()
-
-        await snapshot_writer.schedule(session)
-
-    async def _enforce_role_change(self, handle: ClientHandle, new_role: object) -> None:
-        if new_role in _ROLES_REQUIRING_CLOSE:
-            if handle.doc_key is not None:
-                REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                    content_type=handle.doc_key[0].value, reason="role_revoked"
-                ).inc()
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
+        if (
+            (progress.generation, progress.epoch) != (session.generation, session.epoch)
+            or progress.checkpoint_revision > session.checkpoint_revision
+            or progress.covered_sequence > session.head_seq
+        ):
+            # Barriers and seeds commit bytes no buffered record carries.
+            await self.refresh_document(session)
+        if (progress.generation, progress.epoch) != (session.generation, session.epoch):
             return
-        # Same EDITOR floor as attach-time and reauthorize: COMMENTER and below
-        # are read-only on the doc. Unknown role values fail closed.
-        try:
-            role = new_role if isinstance(new_role, ContentRole) else ContentRole(str(new_role))
-        except ValueError:
-            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-            return
-        handle.can_edit = role_can_edit(role)
-
-    async def _reauthorize_doc_by_key(self, key: DocKey) -> None:
-        """Re-run authorize for every attached client; downgrade or close per result."""
-        session = self._sessions.get(key)
-        if session is None or not session.clients:
-            return
-        await self._reauthorize_all(session)
-
-    async def _reauthorize_all(self, session: YDocSession) -> None:
-        content_type, content_id = session.key
-        adapter = get_realtime_adapter(content_type)
-        affected = list(session.clients.values())
-        if not affected:
-            return
-
-        async with open_session() as db:
-            for handle in affected:
-                try:
-                    role = await adapter.authorize(
-                        db, handle.user_id, session.organization_id, content_id
-                    )
-                except Exception:
-                    logger.exception(
-                        "reauthorize failed; closing session as forbidden",
-                        component=LOGGER_COMPONENT,
-                    )
-                    REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                        content_type=content_type.value, reason="reauthorize_failed"
-                    ).inc()
-                    await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "reauthorize failed")
-                    continue
-
-                if role is None or not role_can_view(role):
-                    REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
-                        content_type=content_type.value, reason="role_revoked"
-                    ).inc()
-                    await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "access revoked")
-                    continue
-                handle.can_edit = role_can_edit(role)
-
-    async def _close_stale_user_sessions(self, user_id: UUID, new_version: int) -> None:
-        """Close every handle for ``user_id`` whose ``token_version`` predates ``new_version``."""
-        affected: list[ClientHandle] = []
-        for session in self._sessions.values():
-            for handle in session.clients.values():
-                if handle.user_id != user_id:
-                    continue
-                if handle.token_version is None or handle.token_version < new_version:
-                    affected.append(handle)
-
-        for handle in affected:
-            await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "token revoked")
-
-    async def _close_user_session_by_sid(self, user_id: UUID, session_id: UUID) -> None:
-        """Close handles bound to a single revoked session.
-
-        Used for per-session logout / "revoke this device" where the
-        user's ``token_version`` does NOT bump - only the matching
-        ``sid`` is gone. Handles without a ``session_id`` (legacy
-        tokens before sid tracking) are left alone here; the
-        ``_close_stale_user_sessions`` path catches the broader bump.
-        """
-        affected: list[ClientHandle] = []
-        for session in self._sessions.values():
-            for handle in session.clients.values():
-                if handle.user_id != user_id:
-                    continue
-                if handle.session_id is None or handle.session_id != session_id:
-                    continue
-                affected.append(handle)
-
-        for handle in affected:
-            await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "session revoked")
-
-    async def _close_handle(self, handle: ClientHandle, code: int, reason: str) -> None:
-        if handle.closed:
-            return
-        handle.closed = True
-        with contextlib.suppress(BaseException):
-            await handle.ws.close(code=code, reason=reason)
-
-
-def enqueue_for_handle(handle: ClientHandle, frame: bytes, *, kind: str) -> None:
-    """Best-effort enqueue onto the owning WS's outbound queue. Drops on
-    full to protect the broadcaster.
-    """
-    if handle.ws_session is None or handle.doc_key is None:
-        return
-    framed = encode_doc_frame(doc_name_for(handle.doc_key), frame)
-    try:
-        handle.ws_session.outbound.put_nowait(framed)
-    except asyncio.QueueFull:
-        REALTIME_FRAMES_DROPPED_TOTAL.labels(kind=f"outbound_full_{kind}").inc()
-        logger.warning(
-            f"outbound queue full for conn {handle.conn_id}; dropping {kind} frame",
-            component=LOGGER_COMPONENT,
+        # The revision stays with the bytes the resident document applied, so a refresh that
+        # failed here still loads that checkpoint later.
+        session.checkpoint_seq = max(session.checkpoint_seq, progress.covered_sequence)
+        broadcast(
+            session,
+            [
+                create_checkpoint_progress_message(
+                    generation=progress.generation,
+                    epoch=progress.epoch,
+                    covered_sequence=progress.covered_sequence,
+                    checkpoint_revision=progress.checkpoint_revision,
+                )
+            ],
         )
 
-
-ydoc_manager = YDocManager()
-router.register_callbacks(ydoc_manager.router_callbacks())
+    async def _reload_document(self, key: DocKey) -> None:
+        session = self._sessions.get(key)
+        if session is not None:
+            await self.refresh_document(session)

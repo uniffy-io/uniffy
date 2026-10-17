@@ -6,6 +6,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
@@ -36,9 +37,11 @@ class TaskContentOperations(BaseContentOperations[Task]):
         session: AsyncSession,
         storage: ObjectStorage | None = None,
         search_indexer: SearchIndexer | None = None,
+        *,
+        permission_checker: PermissionChecker | None = None,
     ) -> None:
         register_project_content()
-        super().__init__(session, search_indexer)
+        super().__init__(session, search_indexer, permission_checker=permission_checker)
         self._storage = storage
 
     @property

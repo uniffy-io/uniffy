@@ -1,31 +1,25 @@
-import { useEffect, useRef, useState } from "react";
-import * as Y from "yjs";
-import { Awareness } from "y-protocols/awareness";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@core/providers/AuthContext";
-import { realtimeMultiplexer, type DocSubscription } from "@shared/realtime/multiplexer";
-import { statusFromCloseCode, type RealtimeStatus } from "@shared/realtime/protocol";
+import {
+  DETACHED_SESSION_SNAPSHOT,
+  openDocSession,
+  type DocSession,
+  type DocSessionHandle,
+  type DocSessionSnapshot,
+} from "@shared/realtime/docSession";
 
-/** Stable per-attach handle; identity never changes while the doc stays attached. */
-export interface DocSession {
-  ydoc: Y.Doc;
-  awareness: Awareness;
-  /** Origin tag for this mount's local transactions. */
-  sessionId: string;
-  /** Resolves on the first server SyncStep2 for this doc. */
-  whenSynced: Promise<void>;
-}
-
-export interface DocSessionState {
+export interface DocSessionState extends DocSessionSnapshot {
   session: DocSession | null;
-  status: RealtimeStatus;
-  synced: boolean;
+  discardRecoveredDraft: (id: string) => Promise<void>;
+  trackDraftWrite: (write: Promise<void>) => Promise<boolean>;
+  persistLocally: () => Promise<boolean>;
 }
 
 export interface UseDocSessionOptions {
   contentType: string;
   contentId: string | null | undefined;
   enabled: boolean;
-  /** Suppresses every SYNC write frame; VIEWER roles get 4403-closed otherwise. */
+  /** Suppresses every write frame, which the server refuses from a viewer anyway. */
   readOnly?: boolean;
   /**
    * Runs at the top of the detach cleanup, while the doc and the multiplexer
@@ -36,18 +30,16 @@ export interface UseDocSessionOptions {
   onBeforeDetach?: () => void;
 }
 
-// Uniqueness per mount is all an origin tag needs; Hermes lacks crypto.randomUUID.
-function newSessionId(): string {
-  return `rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
+const subscribeDetached = () => () => {};
+const detachedSnapshot = () => DETACHED_SESSION_SNAPSHOT;
 
 export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   const { contentType, contentId, enabled, readOnly } = opts;
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
+  const userId = user?.id;
 
-  const [session, setSession] = useState<DocSession | null>(null);
-  const [status, setStatus] = useState<RealtimeStatus>("idle");
-  const [synced, setSynced] = useState(false);
+  const [handle, setHandle] = useState<DocSessionHandle | null>(null);
+  const [reset, setReset] = useState(0);
 
   const beforeDetachRef = useRef(opts.onBeforeDetach);
   useEffect(() => {
@@ -55,60 +47,57 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
   });
 
   useEffect(() => {
-    if (!enabled || !contentId || !organizationId) return;
-
-    const ydoc = new Y.Doc();
-    const awareness = new Awareness(ydoc);
-    const sessionId = newSessionId();
-
-    let resolveServerSync!: () => void;
-    const whenSynced = new Promise<void>((resolve) => {
-      resolveServerSync = resolve;
+    if (!enabled || !contentId || !organizationId || !userId) return;
+    const opened = openDocSession({
+      contentType,
+      contentId,
+      organizationId,
+      userId,
+      readOnly,
+      onGenerationMismatch: () => setReset((value) => value + 1),
     });
-
-    let subscription: DocSubscription;
-    try {
-      subscription = realtimeMultiplexer.attach({
-        contentType,
-        contentId,
-        organizationId,
-        ydoc,
-        awareness,
-        onStatus: (next) => setStatus(next),
-        onSync: () => {
-          setSynced(true);
-          resolveServerSync();
-        },
-        onCloseCode: (code) => {
-          const mapped = statusFromCloseCode(code);
-          if (mapped) setStatus(mapped);
-        },
-      });
-    } catch (err) {
-      // Double-attach or a torn-down multiplexer; stay idle instead of taking
-      // the screen down from inside a passive effect.
-      console.warn(`[realtime] attach failed for ${contentType}:${contentId}`, err);
-      awareness.destroy();
-      ydoc.destroy();
-      return;
-    }
-    if (readOnly) realtimeMultiplexer.setDocReadOnly(subscription.docName, true);
-
+    if (!opened) return;
     // The handle can only exist after the attach side effect succeeds; there
     // is nothing to derive during render.
     // eslint-disable-next-line react/react-compiler
-    setSession({ ydoc, awareness, sessionId, whenSynced });
-
+    setHandle(opened);
     return () => {
       beforeDetachRef.current?.();
-      subscription.destroy();
-      awareness.destroy();
-      ydoc.destroy();
-      setSession(null);
-      setSynced(false);
-      setStatus("idle");
+      void opened.close();
+      setHandle(null);
     };
-  }, [enabled, contentType, contentId, organizationId, readOnly]);
+  }, [enabled, contentType, contentId, organizationId, userId, readOnly, reset]);
 
-  return { session, status, synced };
+  const snapshot = useSyncExternalStore(
+    handle?.subscribe ?? subscribeDetached,
+    handle?.getSnapshot ?? detachedSnapshot,
+  );
+
+  const discardRecoveredDraft = useCallback(
+    async (id: string) => {
+      await handle?.discardRecoveredDraft(id);
+    },
+    [handle],
+  );
+  const trackDraftWrite = useCallback(
+    (write: Promise<void>) =>
+      handle?.trackDraftWrite(write) ??
+      write.then(
+        () => true,
+        () => false,
+      ),
+    [handle],
+  );
+  const persistLocally = useCallback(
+    () => handle?.persistLocally() ?? Promise.resolve(true),
+    [handle],
+  );
+
+  return {
+    ...snapshot,
+    session: handle?.session ?? null,
+    discardRecoveredDraft,
+    trackDraftWrite,
+    persistLocally,
+  };
 }

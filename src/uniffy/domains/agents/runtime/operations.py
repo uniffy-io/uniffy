@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.database import SessionFactory
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
 from uniffy.domains.agents.providers.base import StreamEvent
@@ -25,6 +26,7 @@ class RuntimeOperations:
         session: AsyncSession,
         storage: ObjectStorage,
         search_indexer: SearchIndexer,
+        buffer: UpdateBuffer,
         session_factory: SessionFactory,
         call_lifecycle: ChannelCallLifecycle,
     ) -> None:
@@ -32,6 +34,7 @@ class RuntimeOperations:
             session,
             storage,
             search_indexer,
+            buffer,
             session_factory,
             call_lifecycle,
         )
@@ -39,6 +42,7 @@ class RuntimeOperations:
             session,
             storage,
             search_indexer,
+            buffer,
             session_factory,
             call_lifecycle,
         )

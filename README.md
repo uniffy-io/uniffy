@@ -193,6 +193,8 @@ uniffy/
 
 - For production deployments, it is recommended to support HTTP/2 at all levels of the stack. This is especially important for large deployments, as ConnectRPC benefits significantly from HTTP/2 multiplexing to avoid head-of-line blocking and reduce connection overhead.
 
+- **Live editing:** Reverse proxies must forward WebSocket upgrades on `/api/realtime`, including `Upgrade`, `Connection`, and `Sec-WebSocket-Protocol` headers, and allow long-lived connections. Use HTTPS in production so browsers can encrypt device drafts. If live editing cannot connect, notes remain readable with a Retry action. Task and event descriptions offer editing without live updates and save through ConnectRPC on Done.
+
 - **Note on Valkey:** While Redis should in theory work as a drop-in replacement for Valkey, this has not been tested and is not recommended by us. We only support and test against Valkey.
 
 - **Note on Calls:** LiveKit is the SFU for audio/video/screen. It reuses the existing Valkey on a separate database (DB 1; the app uses DB 0) for its room registry. All app traffic and call signaling enter through the same reverse proxy on a single TLS endpoint; the proxy routes `/livekit/*` to the LiveKit signaling port (7880). The backend calls LiveKit's admin REST API server-to-server, and LiveKit posts signed webhooks back to the backend at `/internal/webhooks/livekit`. WebRTC media cannot ride HTTP and takes one of two paths depending on the deployment:

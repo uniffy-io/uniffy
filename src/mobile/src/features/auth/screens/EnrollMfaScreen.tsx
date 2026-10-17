@@ -7,6 +7,7 @@ import { MfaEnrollFlow } from "@features/auth/components/MfaEnrollFlow";
 import { BRAND } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/AuthContext";
+import { useSignOut } from "@features/auth/useSignOut";
 
 /**
  * Forced MFA enrollment after login, when the org/platform mandates a second
@@ -17,7 +18,8 @@ import { useAuth } from "@core/providers/AuthContext";
 export function EnrollMfaScreen() {
   const insets = useSafeAreaInsets();
   const { token } = useLocalSearchParams<{ token: string }>();
-  const { beginForcedEnrollment, logout, setHoldNavigation } = useAuth();
+  const { beginForcedEnrollment, setHoldNavigation } = useAuth();
+  const { signOut, signingOut } = useSignOut();
 
   // Adopt the enrollment token as the active bearer during the first render,
   // before MfaEnrollFlow mounts and fires BeginEnrollment. A mount effect would
@@ -32,7 +34,7 @@ export function EnrollMfaScreen() {
   }, [token, setHoldNavigation]);
 
   const cancel = async () => {
-    await logout();
+    if (!(await signOut())) return;
     setHoldNavigation(false);
     router.replace("/auth" as any);
   };
@@ -55,7 +57,12 @@ export function EnrollMfaScreen() {
           <ActivityIndicator color={BRAND.violet} />
         </View>
       )}
-      <TouchableOpacity style={styles.cancel} onPress={cancel} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.cancel}
+        onPress={() => void cancel()}
+        disabled={signingOut}
+        activeOpacity={0.7}
+      >
         <Text style={styles.cancelText}>Cancel and sign out</Text>
       </TouchableOpacity>
     </View>

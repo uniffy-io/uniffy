@@ -13,6 +13,7 @@ tool. These tests assert:
 from unittest.mock import AsyncMock, MagicMock
 
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.providers.base import ToolCall
 from uniffy.domains.agents.tools.definitions import (
@@ -33,6 +34,7 @@ def _context(
         session=session or _stub_session(),
         user_id=generate_id(),
         organization_id=generate_id(),
+        buffer=UpdateBuffer(),
         agent_id=generate_id(),
         session_id=generate_id(),
         allowed_tools=allowed,
@@ -44,6 +46,7 @@ def _stub_session() -> MagicMock:
     session.add = MagicMock()
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: None))
     session.commit = AsyncMock()
+    session.rollback = AsyncMock()
     return session
 
 

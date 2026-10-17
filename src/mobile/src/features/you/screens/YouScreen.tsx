@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
+import { useSignOut } from "@features/auth/useSignOut";
 import { useSessions } from "@features/you/useSessions";
 import { Avatar } from "@shared/components/Avatar";
 import { DomainHeader } from "@shared/components/DomainHeader";
@@ -26,7 +27,8 @@ export function YouScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { signOut, signingOut } = useSignOut();
   const { sessions } = useSessions();
 
   const userName = user?.fullName || user?.username || "User";
@@ -186,11 +188,12 @@ export function YouScreen() {
         {/* Sign Out */}
         <TouchableOpacity
           style={[styles.signOutBtn, { borderColor: "#FA525240" }]}
-          onPress={logout}
+          onPress={() => void signOut()}
+          disabled={signingOut}
           activeOpacity={0.7}
         >
           <SignOut size={15} color="#FA5252" weight="regular" />
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>{signingOut ? "Signing out..." : "Sign out"}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

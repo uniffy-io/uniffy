@@ -388,6 +388,127 @@ jobs:
           comment: false
           job_summary: true
 
+  test-integration:
+    name: Integration tests (${{ matrix.suite }})
+    needs: changes
+    if: >
+      needs.changes.outputs.run_checks == 'true' &&
+      (needs.changes.outputs.backend == 'true' || needs.changes.outputs.proto == 'true')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: application
+            paths: src/uniffy/tests/integration/
+            options: >-
+              --ignore=src/uniffy/tests/integration/agents/providers/
+              --ignore=src/uniffy/tests/integration/internal/migrations/
+              --ignore=src/uniffy/tests/integration/internal/media/
+              --ignore=src/uniffy/tests/integration/internal/database/test_file_playback.py
+          - suite: migrations
+            paths: src/uniffy/tests/integration/internal/migrations/
+            options: -n 4 --dist load
+          - suite: media
+            paths: >-
+              src/uniffy/tests/integration/internal/media/
+              src/uniffy/tests/integration/internal/database/test_file_playback.py
+            options: ""
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: uniffy
+          POSTGRES_PASSWORD: uniffy
+          POSTGRES_DB: uniffy
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U uniffy"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      rustfs:
+        image: rustfs/rustfs:1.0.0-beta.11
+        env:
+          RUSTFS_ROOT_USER: rustfsadmin
+          RUSTFS_ROOT_PASSWORD: rustfsadmin
+        ports: ["9000:9000"]
+        options: >-
+          --health-cmd "curl -f http://localhost:9000/health"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      meilisearch:
+        image: getmeili/meilisearch:v1.54
+        env:
+          MEILI_ENV: development
+          MEILI_NO_ANALYTICS: "true"
+        ports: ["7700:7700"]
+        options: >-
+          --health-cmd "curl -f http://localhost:7700/health"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: uniffy
+      POSTGRES_PASSWORD: uniffy
+      POSTGRES_DB: uniffy
+      VALKEY_HOST: localhost
+      VALKEY_PORT: "6379"
+      VALKEY_PASSWORD: ""
+      S3_ENDPOINT_URL: http://localhost:9000
+      S3_ACCESS_KEY: rustfsadmin
+      S3_SECRET_KEY: rustfsadmin
+      S3_BUCKET_NAME: uniffy-integration
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+      MEILISEARCH_URL: http://localhost:7700
+      MEILISEARCH_MASTER_KEY: ""
+      REQUIRE_DATABASE_TESTS: "1"
+      REQUIRE_VALKEY_TESTS: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: ".python-version"
+      - run: uv sync --frozen
+      - name: Generate test keys
+        shell: bash
+        run: |
+          echo "APP_MASTER_KEY=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
+          echo "JWT_SECRET_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Install media test tools
+        if: matrix.suite == 'media'
+        shell: bash
+        run: |
+          media_image=$(sed -n 's/^ARG FIXTURE_FFMPEG_IMAGE=//p' src/uniffy/Dockerfile)
+          media_container=$(docker create --entrypoint /ffmpeg "$media_image" -version)
+          trap 'docker rm "$media_container"' EXIT
+          mkdir -p "$RUNNER_TEMP/media-bin"
+          docker cp "$media_container:/ffmpeg" "$RUNNER_TEMP/media-bin/ffmpeg"
+          docker cp "$media_container:/ffprobe" "$RUNNER_TEMP/media-bin/ffprobe"
+          sudo install -m 755 "$RUNNER_TEMP/media-bin/ffmpeg" "$RUNNER_TEMP/media-bin/ffprobe" /usr/local/bin/
+          sudo ln -s ffmpeg /usr/local/bin/ffmpeg-fixtures
+      - run: uv run alembic -c src/uniffy/alembic.ini upgrade head
+        if: matrix.suite != 'migrations'
+      - name: Integration tests
+        run: |
+          mkdir -p reports
+          uv run pytest ${{ matrix.paths }} ${{ matrix.options }} \
+            --junitxml=reports/integration-${{ matrix.suite }}.xml \
+            -q --tb=short --durations=10
+      - name: Upload integration test report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: integration-${{ matrix.suite }}
+          path: reports/integration-${{ matrix.suite }}.xml
+          if-no-files-found: warn
+          retention-days: 14
+
   test-frontend:
     needs: changes
     if: >
@@ -559,6 +680,7 @@ jobs:
       - typecheck-mobile
       - lint-docker
       - test-python
+      - test-integration
       - test-frontend
       - test-mobile
       - benchmark-python
@@ -665,6 +787,7 @@ jobs:
       - typecheck-mobile
       - lint-docker
       - test-python
+      - test-integration
       - test-frontend
       - test-mobile
       - benchmark-python

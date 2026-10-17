@@ -44,6 +44,7 @@ from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import JSONDecodeError, dumps_str, loads
 from uniffy.core.models.agents.message import AgentMessageRole
 from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.budgets.operations import BudgetsOperations
 from uniffy.domains.agents.limits.policy import check_agent_message_limits
@@ -213,6 +214,8 @@ async def _subscribe_runtime_events(
 
 class RuntimeHandlers:
     """RPC handlers for runtime service."""
+
+    buffer: UpdateBuffer
 
     async def send_message(
         self,
@@ -786,6 +789,7 @@ class RuntimeHandlers:
                     session=session,
                     storage=self.storage,
                     search_indexer=self.search_indexer,
+                    buffer=self.buffer,
                     user_id=user_id,
                     organization_id=org_id,
                     channel_id=channel_id,

@@ -305,7 +305,12 @@ type UpdateNoteRequest struct {
 	Icon *NoteIcon `protobuf:"bytes,8,opt,name=icon,proto3,oneof" json:"icon,omitempty"`
 	// Replacement set of unified-tag ids. Empty list clears all manual tags.
 	// Field is unset (HasField=false) to leave manual tags untouched.
-	TagIds        *NoteTagIds `protobuf:"bytes,9,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	TagIds *NoteTagIds `protobuf:"bytes,9,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
+	// Note version the caller last read. A content write is rejected when the note
+	// moved past it or live edits are still awaiting projection.
+	ExpectedContentVersion *int64 `protobuf:"varint,10,opt,name=expected_content_version,json=expectedContentVersion,proto3,oneof" json:"expected_content_version,omitempty"`
+	// Original Markdown read by the caller. Required for content writes without a version.
+	BaseContent   *string `protobuf:"bytes,11,opt,name=base_content,json=baseContent,proto3,oneof" json:"base_content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -401,6 +406,20 @@ func (x *UpdateNoteRequest) GetTagIds() *NoteTagIds {
 		return x.TagIds
 	}
 	return nil
+}
+
+func (x *UpdateNoteRequest) GetExpectedContentVersion() int64 {
+	if x != nil && x.ExpectedContentVersion != nil {
+		return *x.ExpectedContentVersion
+	}
+	return 0
+}
+
+func (x *UpdateNoteRequest) GetBaseContent() string {
+	if x != nil && x.BaseContent != nil {
+		return *x.BaseContent
+	}
+	return ""
 }
 
 // Wrapper so the caller can distinguish "leave tags alone" from
@@ -2117,7 +2136,7 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\x0e_baseline_role\"R\n" +
 	"\x0eGetNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\xf1\x03\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"\x86\x05\n" +
 	"\x11UpdateNoteRequest\x12\x17\n" +
 	"\anote_id\x18\x01 \x01(\tR\x06noteId\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
@@ -2127,7 +2146,10 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"\tparent_id\x18\x06 \x01(\tH\x03R\bparentId\x88\x01\x01\x12E\n" +
 	"\bmetadata\x18\a \x03(\v2).notes.v1.UpdateNoteRequest.MetadataEntryR\bmetadata\x12+\n" +
 	"\x04icon\x18\b \x01(\v2\x12.notes.v1.NoteIconH\x04R\x04icon\x88\x01\x01\x122\n" +
-	"\atag_ids\x18\t \x01(\v2\x14.notes.v1.NoteTagIdsH\x05R\x06tagIds\x88\x01\x01\x1a;\n" +
+	"\atag_ids\x18\t \x01(\v2\x14.notes.v1.NoteTagIdsH\x05R\x06tagIds\x88\x01\x01\x12=\n" +
+	"\x18expected_content_version\x18\n" +
+	" \x01(\x03H\x06R\x16expectedContentVersion\x88\x01\x01\x12&\n" +
+	"\fbase_content\x18\v \x01(\tH\aR\vbaseContent\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\b\n" +
@@ -2139,7 +2161,9 @@ const file_notes_v1_notes_proto_rawDesc = "" +
 	"_parent_idB\a\n" +
 	"\x05_iconB\n" +
 	"\n" +
-	"\b_tag_ids\"\x1e\n" +
+	"\b_tag_idsB\x1b\n" +
+	"\x19_expected_content_versionB\x0f\n" +
+	"\r_base_content\"\x1e\n" +
 	"\n" +
 	"NoteTagIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"s\n" +

@@ -36,6 +36,7 @@ export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentCustomStatus = useCustomStatus(user?.id ?? "");
   const orgChartEnabled = useAppSelector((state) => state.people.policy.orgChartEnabled);
@@ -92,9 +93,12 @@ export function UserMenu() {
     performLogout();
   };
 
-  const performLogout = () => {
+  const performLogout = async () => {
     setConfirmingLogout(false);
-    signOut();
+    if (!(await signOut())) {
+      setConfirmingUnsynced(true);
+      setIsOpen(false);
+    }
   };
 
   const displayName = user.fullName || user.username || "User";
@@ -346,6 +350,19 @@ export function UserMenu() {
         onConfirm={performLogout}
         title="Stop recording and sign out?"
         message="A screen recording is in progress. Signing out will discard it."
+        confirmLabel="Discard and sign out"
+        cancelLabel="Stay"
+        variant="warning"
+      />
+      <ConfirmDialog
+        isOpen={confirmingUnsynced}
+        onClose={() => setConfirmingUnsynced(false)}
+        onConfirm={() => {
+          setConfirmingUnsynced(false);
+          signOut({ discardUnsynced: true });
+        }}
+        title="Discard unsynced edits?"
+        message="Some edits have not reached the server yet. Signing out now discards them."
         confirmLabel="Discard and sign out"
         cancelLabel="Stay"
         variant="warning"

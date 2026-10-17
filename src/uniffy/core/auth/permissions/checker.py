@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -14,6 +15,7 @@ from uniffy.core.auth.permissions.defaults import (
 )
 from uniffy.core.auth.permissions.scalar import (
     ScalarAuthorizationFacts,
+    load_audience_authorization_facts,
     load_scalar_authorization_facts,
 )
 from uniffy.core.auth.support_session import (
@@ -85,20 +87,80 @@ class PermissionChecker:
             content_type=content_type,
             content_id=content_id,
         )
+        return self._resolve_facts(
+            facts,
+            user_id=user_id,
+            organization_id=organization_id,
+            content_type=content_type,
+            owner_id=owner_id,
+            access_mode=access_mode,
+            baseline_role=baseline_role,
+            record_support=True,
+        )
+
+    async def effective_roles(
+        self,
+        user_ids: Collection[UUID],
+        organization_id: UUID,
+        content_type: ContentType,
+        content_id: UUID,
+        *,
+        owner_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+    ) -> dict[UUID, ContentRole | None]:
+        facts = await load_audience_authorization_facts(
+            self.session,
+            user_ids=user_ids,
+            organization_id=organization_id,
+            content_type=content_type,
+            content_id=content_id,
+        )
+        for user_id in user_ids:
+            self._authorization_facts[(user_id, organization_id, content_type, content_id)] = (
+                facts.get(user_id)
+            )
+        return {
+            user_id: self._resolve_facts(
+                facts.get(user_id),
+                user_id=user_id,
+                organization_id=organization_id,
+                content_type=content_type,
+                owner_id=owner_id,
+                access_mode=access_mode,
+                baseline_role=baseline_role,
+                record_support=False,
+            )
+            for user_id in user_ids
+        }
+
+    @staticmethod
+    def _resolve_facts(
+        facts: ScalarAuthorizationFacts | None,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        content_type: ContentType,
+        owner_id: UUID,
+        access_mode: AccessMode | None,
+        baseline_role: ContentRole | None,
+        record_support: bool,
+    ) -> ContentRole | None:
         if facts is None or not facts.is_active_user:
             return None
 
         if facts.is_system_admin and facts.organization_role is None:
             if facts.support_session_id is None or facts.support_scope is None:
                 return None
-            active_support_session_var.set(
-                ActiveSupportSession(
-                    session_id=facts.support_session_id,
-                    organization_id=organization_id,
-                    support_user_id=user_id,
-                    scope=facts.support_scope.value,
+            if record_support:
+                active_support_session_var.set(
+                    ActiveSupportSession(
+                        session_id=facts.support_session_id,
+                        organization_id=organization_id,
+                        support_user_id=user_id,
+                        scope=facts.support_scope.value,
+                    )
                 )
-            )
             return (
                 ContentRole.EDITOR
                 if facts.support_scope == SupportSessionScope.READ_WRITE
