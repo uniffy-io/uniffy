@@ -180,6 +180,17 @@ def test_namespace_with_hash_tag_or_glob_characters_is_refused(namespace: str) -
         (cast(Any, 7), b"u"),
         ("id", cast(Any, "text")),
     ],
+    # Explicit ids keep the megabyte update out of the test name, which the CI log cannot carry.
+    ids=[
+        "empty-id",
+        "id-too-many-characters",
+        "id-too-many-bytes",
+        "id-lone-surrogate",
+        "empty-update",
+        "update-above-frame-limit",
+        "id-not-a-string",
+        "update-not-bytes",
+    ],
 )
 def test_update_arguments_outside_the_contract_are_refused(update_id: str, update: bytes) -> None:
     with pytest.raises(ValueError):
