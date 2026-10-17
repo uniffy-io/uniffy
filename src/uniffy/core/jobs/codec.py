@@ -33,6 +33,9 @@ def deserialize_job_payload(raw: bytes) -> dict[str, Any]:
     data = loads(raw)
     if not isinstance(data, dict):
         raise ValueError("job payload is not a JSON object")
+    if isinstance(data.get("a"), list):
+        # ARQ hands positional arguments to handlers and job info as a tuple.
+        data["a"] = tuple(data["a"])
     return data
 
 
