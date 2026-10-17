@@ -961,61 +961,6 @@ def bench(args, stack):
     )
 
 
-QUALIFICATION_STACK = [
-    "docker",
-    "compose",
-    "-f",
-    str(ROOT / ".docker/compose/qualification.yaml"),
-    "-p",
-    "uniffy-qual",
-]
-QUALIFICATION_MEASURED = ("backend-a", "backend-b", "worker-core", "postgres", "valkey")
-
-
-@cli.command(context_settings=PASSTHROUGH)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-@click.option("--keep", is_flag=True, help="Leave the qualification stack running afterwards.")
-def qualify(args, keep):
-    """Run the realtime qualification driver on its own disposable stack.
-
-    ARGS go to the driver (`./manage.py qualify -- --help` lists them). The uniffy-qual stack and
-    its volumes are removed afterwards unless --keep is given; the dev stack is never touched.
-    """
-    try:
-        sh([*QUALIFICATION_STACK, "up", "-d", "--wait", "--wait-timeout", "900"])
-        # The driver reads container CPU from the host cgroup tree, mounted read-only.
-        cgroups: list[str] = []
-        for service in QUALIFICATION_MEASURED:
-            container = subprocess.run(
-                [*QUALIFICATION_STACK, "ps", "-q", service],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                check=True,
-            ).stdout.strip()
-            for directory in (f"system.slice/docker-{container}.scope", f"docker/{container}"):
-                if os.access(Path("/sys/fs/cgroup") / directory / "cpu.stat", os.R_OK):
-                    cgroups += ["--cgroup", f"{service}=/host/cgroup/{directory}"]
-                    break
-        # Other work in the shared checkout runs inside this stack too, so record what was live.
-        image = subprocess.run(
-            ["docker", "image", "inspect", "uniffy-dev-backend", "--format", "{{.Id}}"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        changed = git_out("status", "--porcelain", "--", "src/uniffy").splitlines()
-        labels = [
-            *("--label", f"backend_image={image.removeprefix('sha256:')[:12]}"),
-            *("--label", f"commit={git_out('rev-parse', '--short', 'HEAD')}"),
-            *("--label", f"uncommitted_backend_files={len(changed)}"),
-        ]
-        sh([*QUALIFICATION_STACK, "run", "--rm", "driver", *cgroups, *labels, *args])
-    finally:
-        if not keep:
-            sh([*QUALIFICATION_STACK, "down", "-v", "--remove-orphans"], check=False)
-
-
 @cli.group()
 def db():
     """Database operations."""
