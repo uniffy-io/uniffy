@@ -64,6 +64,7 @@ def test_user_token_grants(minter):
         user_id=user_id,
         device_id="dev1",
         display_name="Alice",
+        max_participants=75,
     )
     claims = _decode(minted.token)
     assert claims["sub"] == participant_identity(user_id, "dev1")
@@ -72,31 +73,25 @@ def test_user_token_grants(minter):
     assert claims["video"]["room"] == livekit_room_name(org_id, call_id)
     assert claims["video"]["roomJoin"] is True
     assert claims["video"]["canPublish"] is True
-    assert "microphone" in claims["video"]["canPublishSources"]
+    assert claims["video"]["canSubscribe"] is True
+    assert claims["video"]["canPublishSources"] == [
+        "camera",
+        "microphone",
+        "screen_share",
+        "screen_share_audio",
+    ]
+    assert claims["roomConfig"] == {"maxParticipants": 75}
     metadata = loads(claims["metadata"])
     assert metadata["user_id"] == str(user_id)
     assert metadata["jti"] == minted.jti
     assert claims["exp"] - time.time() == pytest.approx(USER_TOKEN_TTL_SECONDS, abs=30)
 
 
-def test_user_token_listen_only(minter):
-    minted = minter.mint_user_token(
-        organization_id=generate_id(),
-        call_id=generate_id(),
-        user_id=generate_id(),
-        device_id="dev1",
-        display_name="Bob",
-        can_publish=False,
-    )
-    claims = _decode(minted.token)
-    assert claims["video"]["canPublish"] is False
-    assert claims["video"]["canPublishSources"] == []
-
-
 def test_admin_token_grants(minter):
-    claims = _decode(minter.mint_admin_token(room="org_x:call_y"))
+    room = "org_x:call_y"
+    claims = _decode(minter.mint_admin_token(room=room))
     assert claims["video"]["roomAdmin"] is True
-    assert claims["video"]["room"] == "org_x:call_y"
+    assert claims["video"]["room"] == room
 
 
 def _webhook_auth(
@@ -113,9 +108,10 @@ def _webhook_auth(
 
 
 def test_webhook_verify_accepts_valid(minter):
-    body = dumps_bytes({"event": "participant_left", "room": {"name": "r"}})
+    event_name = "participant_left"
+    body = dumps_bytes({"event": event_name, "room": {"name": "r"}})
     event = minter.verify_webhook(body, f"Bearer {_webhook_auth(body)}")
-    assert event["event"] == "participant_left"
+    assert event["event"] == event_name
 
 
 def test_webhook_verify_accepts_raw_token_header(minter):

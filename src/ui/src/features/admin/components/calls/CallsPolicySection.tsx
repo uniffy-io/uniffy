@@ -20,10 +20,10 @@ interface PolicyForm {
 }
 
 const QUALITY_OPTIONS: SelectOption<ScreenShareQuality>[] = [
-  { value: ScreenShareQuality.UNSPECIFIED, label: "No cap (per-type default)" },
-  { value: ScreenShareQuality.BALANCED, label: "Balanced (1080p, ~6 Mbps)" },
-  { value: ScreenShareQuality.HIGH, label: "High (1080p, ~10 Mbps)" },
-  { value: ScreenShareQuality.MAX, label: "Maximum (native, ~16 Mbps)" },
+  { value: ScreenShareQuality.UNSPECIFIED, label: "Use default" },
+  { value: ScreenShareQuality.BALANCED, label: "Balanced" },
+  { value: ScreenShareQuality.HIGH, label: "High" },
+  { value: ScreenShareQuality.MAX, label: "Maximum" },
 ];
 
 const QUALITY_CALL_TYPES: {
@@ -123,9 +123,7 @@ export function CallsPolicySection() {
           <h1 className="text-xl md:text-2xl font-bold">Calls</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Control voice and video calls for this organization. The screen-share ceiling caps how
-          much a sharer may broadcast. Viewers on weaker networks still step down automatically; a
-          1:1 direct call defaults to the maximum since it has a single viewer.
+          Control voice and video calls for this organization.
         </p>
       </div>
 
@@ -156,12 +154,13 @@ export function CallsPolicySection() {
           </Row>
 
           <div className="p-5">
-            <h3 className="text-sm font-semibold text-foreground">Maximum screen-share quality</h3>
+            <h3 className="text-sm font-semibold text-foreground">Screen-share quality policy</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              The highest tier a member may broadcast, set per call type. Higher tiers use more of
-              the media server's outbound bandwidth per viewer. &ldquo;No cap&rdquo; uses the
-              built-in default for that type: direct 1:1 calls default to maximum, group and channel
-              calls to balanced.
+              Highest quality tier available in Uniffy apps, set per call type. Custom clients may
+              exceed this setting. It does not guarantee bandwidth protection. Mobile apps use lower
+              bitrates. Viewers on weaker networks step down automatically. &ldquo;Use
+              default&rdquo; selects maximum for direct calls and deployment default for group and
+              channel calls. Quality changes apply when joining calls.
             </p>
             <div className="mt-4 flex flex-col gap-3">
               {QUALITY_CALL_TYPES.map(({ key, label }) => (
@@ -184,7 +183,7 @@ export function CallsPolicySection() {
 
           <Row
             title="Maximum participants"
-            description="Cap on how many people can be in a single call (1 to 1000)."
+            description="Maximum connected devices per call (1 to 1000). Each device uses one slot. Changes apply to new calls."
           >
             <ClampedNumberInput
               value={form.maxParticipants}

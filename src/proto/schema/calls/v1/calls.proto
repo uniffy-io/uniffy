@@ -24,11 +24,8 @@ enum CallEndReason {
   CALL_END_REASON_ORG_DELETED = 7;
 }
 
-// Ceiling for the publisher's top screen-share layer. Simulcast still adds lower
-// rungs under every tier, so viewers on weak networks downshift regardless.
-// UNSPECIFIED on a policy field means "no explicit cap for that call type"; the
-// server then falls back to a built-in default (DIRECT to MAX, others to the env
-// default) and returns the resolved ceiling on join.
+// Quality policy applied by Uniffy clients, not enforced by the media server.
+// UNSPECIFIED selects MAX for direct calls and deployment default for other types.
 enum ScreenShareQuality {
   SCREEN_SHARE_QUALITY_UNSPECIFIED = 0;
   SCREEN_SHARE_QUALITY_BALANCED = 1;
@@ -130,7 +127,7 @@ message InitiateCallResponse {
   string livekit_token = 3;
   // True when an active call already existed and the caller joined it.
   bool joined_existing = 4;
-  // Resolved screen-share ceiling for this session (org cap, else per-type default).
+  // Client-applied quality policy for this session (org policy, else per-type default).
   ScreenShareQuality screen_share_quality_cap = 5;
   // Empty in direct-media mode; TURN relay config when the deployment relays media.
   repeated IceServer ice_servers = 6;
@@ -148,7 +145,7 @@ message JoinCallResponse {
   Call call = 1;
   string ws_url = 2;
   string livekit_token = 3;
-  // Resolved screen-share ceiling for this session (org cap, else per-type default).
+  // Client-applied quality policy for this session (org policy, else per-type default).
   ScreenShareQuality screen_share_quality_cap = 4;
   // Empty in direct-media mode; TURN relay config when the deployment relays media.
   repeated IceServer ice_servers = 5;
@@ -246,10 +243,10 @@ message ReportMediaStateResponse {
 message OrgCallPolicy {
   string organization_id = 1;
   bool calls_enabled = 2;
+  // Connected device limit captured when a call starts. Changes apply to new calls.
   int32 max_participants = 3;
   int32 max_duration_minutes = 4;
-  // Per-call-type screen-share ceilings. UNSPECIFIED = no explicit cap for that
-  // type, so the server falls back to the built-in default.
+  // Client-applied quality policies. UNSPECIFIED selects the per-type default.
   ScreenShareQuality max_screen_share_quality_direct = 5;
   ScreenShareQuality max_screen_share_quality_group = 6;
   ScreenShareQuality max_screen_share_quality_channel = 7;

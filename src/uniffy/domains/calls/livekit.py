@@ -139,6 +139,11 @@ class LiveKitAdminClient:
     async def delete_room(self, room: str) -> None:
         await self._call("DeleteRoom", {"room": room}, room=room)
 
+    async def create_room(self, room: str, *, max_participants: int) -> dict[str, Any]:
+        return await self._call(
+            "CreateRoom", {"name": room, "max_participants": max_participants}, room=room
+        )
+
     async def list_participants(self, room: str) -> list[dict[str, Any]]:
         data = await self._call("ListParticipants", {"room": room}, room=room)
         return data.get("participants", [])

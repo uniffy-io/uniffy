@@ -176,6 +176,7 @@ configs:
       room:
         empty_timeout: 60
         departure_timeout: 30
+        # Fallback for external rooms. Uniffy sets capacity on each room it creates.
         max_participants: 50
 
       development: true
