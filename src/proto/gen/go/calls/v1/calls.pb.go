@@ -138,11 +138,8 @@ func (CallEndReason) EnumDescriptor() ([]byte, []int) {
 	return file_calls_v1_calls_proto_rawDescGZIP(), []int{1}
 }
 
-// Ceiling for the publisher's top screen-share layer. Simulcast still adds lower
-// rungs under every tier, so viewers on weak networks downshift regardless.
-// UNSPECIFIED on a policy field means "no explicit cap for that call type"; the
-// server then falls back to a built-in default (DIRECT to MAX, others to the env
-// default) and returns the resolved ceiling on join.
+// Quality policy applied by Uniffy clients, not enforced by the media server.
+// UNSPECIFIED selects MAX for direct calls and deployment default for other types.
 type ScreenShareQuality int32
 
 const (
@@ -617,7 +614,7 @@ type InitiateCallResponse struct {
 	LivekitToken string                 `protobuf:"bytes,3,opt,name=livekit_token,json=livekitToken,proto3" json:"livekit_token,omitempty"`
 	// True when an active call already existed and the caller joined it.
 	JoinedExisting bool `protobuf:"varint,4,opt,name=joined_existing,json=joinedExisting,proto3" json:"joined_existing,omitempty"`
-	// Resolved screen-share ceiling for this session (org cap, else per-type default).
+	// Client-applied quality policy for this session (org policy, else per-type default).
 	ScreenShareQualityCap ScreenShareQuality `protobuf:"varint,5,opt,name=screen_share_quality_cap,json=screenShareQualityCap,proto3,enum=calls.v1.ScreenShareQuality" json:"screen_share_quality_cap,omitempty"`
 	// Empty in direct-media mode; TURN relay config when the deployment relays media.
 	IceServers         []*IceServer       `protobuf:"bytes,6,rep,name=ice_servers,json=iceServers,proto3" json:"ice_servers,omitempty"`
@@ -778,7 +775,7 @@ type JoinCallResponse struct {
 	Call         *Call                  `protobuf:"bytes,1,opt,name=call,proto3" json:"call,omitempty"`
 	WsUrl        string                 `protobuf:"bytes,2,opt,name=ws_url,json=wsUrl,proto3" json:"ws_url,omitempty"`
 	LivekitToken string                 `protobuf:"bytes,3,opt,name=livekit_token,json=livekitToken,proto3" json:"livekit_token,omitempty"`
-	// Resolved screen-share ceiling for this session (org cap, else per-type default).
+	// Client-applied quality policy for this session (org policy, else per-type default).
 	ScreenShareQualityCap ScreenShareQuality `protobuf:"varint,4,opt,name=screen_share_quality_cap,json=screenShareQualityCap,proto3,enum=calls.v1.ScreenShareQuality" json:"screen_share_quality_cap,omitempty"`
 	// Empty in direct-media mode; TURN relay config when the deployment relays media.
 	IceServers         []*IceServer       `protobuf:"bytes,5,rep,name=ice_servers,json=iceServers,proto3" json:"ice_servers,omitempty"`
@@ -1780,13 +1777,13 @@ func (x *ReportMediaStateResponse) GetSuccess() bool {
 }
 
 type OrgCallPolicy struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	OrganizationId     string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
-	CallsEnabled       bool                   `protobuf:"varint,2,opt,name=calls_enabled,json=callsEnabled,proto3" json:"calls_enabled,omitempty"`
-	MaxParticipants    int32                  `protobuf:"varint,3,opt,name=max_participants,json=maxParticipants,proto3" json:"max_participants,omitempty"`
-	MaxDurationMinutes int32                  `protobuf:"varint,4,opt,name=max_duration_minutes,json=maxDurationMinutes,proto3" json:"max_duration_minutes,omitempty"`
-	// Per-call-type screen-share ceilings. UNSPECIFIED = no explicit cap for that
-	// type, so the server falls back to the built-in default.
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CallsEnabled   bool                   `protobuf:"varint,2,opt,name=calls_enabled,json=callsEnabled,proto3" json:"calls_enabled,omitempty"`
+	// Connected device limit captured when a call starts. Changes apply to new calls.
+	MaxParticipants    int32 `protobuf:"varint,3,opt,name=max_participants,json=maxParticipants,proto3" json:"max_participants,omitempty"`
+	MaxDurationMinutes int32 `protobuf:"varint,4,opt,name=max_duration_minutes,json=maxDurationMinutes,proto3" json:"max_duration_minutes,omitempty"`
+	// Client-applied quality policies. UNSPECIFIED selects the per-type default.
 	MaxScreenShareQualityDirect  ScreenShareQuality `protobuf:"varint,5,opt,name=max_screen_share_quality_direct,json=maxScreenShareQualityDirect,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_direct,omitempty"`
 	MaxScreenShareQualityGroup   ScreenShareQuality `protobuf:"varint,6,opt,name=max_screen_share_quality_group,json=maxScreenShareQualityGroup,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_group,omitempty"`
 	MaxScreenShareQualityChannel ScreenShareQuality `protobuf:"varint,7,opt,name=max_screen_share_quality_channel,json=maxScreenShareQualityChannel,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_channel,omitempty"`

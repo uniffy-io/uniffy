@@ -16,7 +16,7 @@ _MIN_SECRET_LENGTH = 32
 
 
 def default_screen_share_quality() -> ScreenShareQuality:
-    """Channel and group calls need a deploy-time ceiling on screen-share egress."""
+    """Default quality policy for Uniffy clients in channel and group calls."""
     raw = os.getenv("CALLS_DEFAULT_SCREEN_SHARE_QUALITY", "BALANCED").strip().upper()
     try:
         return ScreenShareQuality[raw]

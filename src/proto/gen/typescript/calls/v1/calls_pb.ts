@@ -233,7 +233,7 @@ export type InitiateCallResponse = Message<"calls.v1.InitiateCallResponse"> & {
   joinedExisting: boolean;
 
   /**
-   * Resolved screen-share ceiling for this session (org cap, else per-type default).
+   * Client-applied quality policy for this session (org policy, else per-type default).
    *
    * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 5;
    */
@@ -311,7 +311,7 @@ export type JoinCallResponse = Message<"calls.v1.JoinCallResponse"> & {
   livekitToken: string;
 
   /**
-   * Resolved screen-share ceiling for this session (org cap, else per-type default).
+   * Client-applied quality policy for this session (org policy, else per-type default).
    *
    * @generated from field: calls.v1.ScreenShareQuality screen_share_quality_cap = 4;
    */
@@ -738,6 +738,8 @@ export type OrgCallPolicy = Message<"calls.v1.OrgCallPolicy"> & {
   callsEnabled: boolean;
 
   /**
+   * Connected device limit captured when a call starts. Changes apply to new calls.
+   *
    * @generated from field: int32 max_participants = 3;
    */
   maxParticipants: number;
@@ -748,8 +750,7 @@ export type OrgCallPolicy = Message<"calls.v1.OrgCallPolicy"> & {
   maxDurationMinutes: number;
 
   /**
-   * Per-call-type screen-share ceilings. UNSPECIFIED = no explicit cap for that
-   * type, so the server falls back to the built-in default.
+   * Client-applied quality policies. UNSPECIFIED selects the per-type default.
    *
    * @generated from field: calls.v1.ScreenShareQuality max_screen_share_quality_direct = 5;
    */
@@ -954,11 +955,8 @@ export const CallEndReasonSchema: GenEnum<CallEndReason> = /*@__PURE__*/
   enumDesc(file_calls_v1_calls, 1);
 
 /**
- * Ceiling for the publisher's top screen-share layer. Simulcast still adds lower
- * rungs under every tier, so viewers on weak networks downshift regardless.
- * UNSPECIFIED on a policy field means "no explicit cap for that call type"; the
- * server then falls back to a built-in default (DIRECT to MAX, others to the env
- * default) and returns the resolved ceiling on join.
+ * Quality policy applied by Uniffy clients, not enforced by the media server.
+ * UNSPECIFIED selects MAX for direct calls and deployment default for other types.
  *
  * @generated from enum calls.v1.ScreenShareQuality
  */

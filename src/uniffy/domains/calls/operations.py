@@ -126,6 +126,7 @@ class CallOperations:
             initiator_user_id=user_id,
             host_user_id=user_id,
             livekit_room_name="",
+            max_participants=await self._max_participants(organization_id),
         )
         call.livekit_room_name = livekit_room_name(organization_id, call.id)
         self.session.add(call)
@@ -241,6 +242,7 @@ class CallOperations:
             user_id=user_id,
             device_id=device_id,
             display_name=info.display_name,
+            max_participants=call.max_participants,
             device_label=participant.device_label,
         )
         # session_jti stays put: the live SFU session keeps emitting its original
@@ -897,6 +899,16 @@ class CallOperations:
         is_start: bool = False,
     ) -> tuple[MintedToken, list[CallParticipant]]:
         await self._require_live_auth_session(user_id, auth_session_id)
+        # Serialize admission counts and recheck termination after waiting for the lock.
+        locked = await self.session.execute(
+            select(Call)
+            .where(Call.id == call.id, Call.organization_id == call.organization_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        call = locked.scalar_one()
+        if call.ended_at is not None:
+            raise ValidationError("call", "Call has ended")
         identity = participant_identity(user_id, device_id)
         info = await self.chat.resolve_profile(user_id)
 
@@ -906,8 +918,7 @@ class CallOperations:
             raise ValidationError("device", "Already in this call on too many devices")
 
         active = await self.list_active_participants(call.id)
-        max_participants = await self._max_participants(call.organization_id)
-        if existing_row is None and len(active) >= max_participants:
+        if existing_row is None and len(active) >= call.max_participants:
             raise ValidationError("call", "Call is full")
 
         token = self._minter.mint_user_token(
@@ -916,6 +927,7 @@ class CallOperations:
             user_id=user_id,
             device_id=device_id,
             display_name=info.display_name,
+            max_participants=call.max_participants,
             device_label=device_label,
         )
 
@@ -923,6 +935,7 @@ class CallOperations:
             if await self._reopen_participant_row(
                 call, existing_row, token, device_label, auth_session_id
             ):
+                await self._prepare_media_room(call)
                 return token, await self.list_active_participants(call.id)
             # A concurrent ghost sweep retired the row; fall through to a fresh insert.
 
@@ -953,8 +966,10 @@ class CallOperations:
                 call, existing_row, token, device_label, auth_session_id
             ):
                 raise
+            await self._prepare_media_room(call)
             return token, await self.list_active_participants(call.id)
 
+        await self._prepare_media_room(call)
         participants = await self.list_active_participants(call.id)
         member_ids = await self.call_recipient_ids(call, participants)
         if is_start:
@@ -983,6 +998,18 @@ class CallOperations:
                 channel_id=call.channel_id,
             )
         return token, participants
+
+    async def _prepare_media_room(self, call: Call) -> None:
+        """Committed admission never returns credentials for a room with different capacity."""
+        room = await get_livekit_admin_client().create_room(
+            call.livekit_room_name, max_participants=call.max_participants
+        )
+        capacity = room.get("max_participants", room.get("maxParticipants"))
+        if capacity != call.max_participants:
+            raise ValidationError(
+                "call",
+                "Call capacity differs from the media room. End this call and start a new one.",
+            )
 
     async def _ring_callees(self, call: Call, channel: ChatChannel, caller_id: UUID) -> None:
         member_ids = await self.member_user_ids(channel.id)
@@ -1071,12 +1098,7 @@ class CallOperations:
     async def resolve_screen_share_ceiling(
         self, organization_id: UUID, call_type: CallType
     ) -> ScreenShareQuality:
-        """Effective screen-share ceiling: the org's per-type cap, else the built-in default.
-
-        A 1:1 DIRECT call has a single viewer, so its egress is trivial and it
-        defaults to MAX. Channel / group calls fall back to the env default,
-        which protects the single SFU node from viewer-count egress.
-        """
+        """Resolve the quality policy applied by Uniffy clients, not enforced by LiveKit."""
         policy = await self.get_org_policy(organization_id)
         if policy is not None:
             cap = ScreenShareQuality(_policy_cap_for_type(policy, call_type))

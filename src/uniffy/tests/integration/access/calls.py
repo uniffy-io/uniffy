@@ -34,6 +34,12 @@ def livekit(monkeypatch):
     client.get_participant = AsyncMock()
     client.list_participants = AsyncMock(return_value=[])
     client.list_rooms = AsyncMock(return_value=[])
+    client.create_room = AsyncMock(
+        side_effect=lambda room, *, max_participants: {
+            "name": room,
+            "max_participants": max_participants,
+        }
+    )
     monkeypatch.setattr(calls_operations, "get_livekit_admin_client", MagicMock(return_value=client))
     monkeypatch.setattr(calls_webhook, "get_livekit_admin_client", lambda: client)
     monkeypatch.setattr(calls_jobs, "get_livekit_admin_client", lambda: client)

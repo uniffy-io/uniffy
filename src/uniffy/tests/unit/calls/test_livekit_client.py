@@ -43,9 +43,21 @@ async def test_list_participants_unwraps_payload():
     participants = await client.list_participants("room")
     assert participants == [{"identity": "u:d"}]
     url = client._http.post.call_args.args[0]
-    assert url == "http://livekit:7880/twirp/livekit.RoomService/ListParticipants"
+    expected_url = "http://livekit:7880/twirp/livekit.RoomService/ListParticipants"
+    assert url == expected_url
     headers = client._http.post.call_args.kwargs["headers"]
     assert headers["authorization"].startswith("Bearer ")
+
+
+async def test_create_room_overrides_deployment_capacity():
+    client = _client()
+    client._http.post = AsyncMock(return_value=_response(200, {"max_participants": 75}))
+
+    room = await client.create_room("room", max_participants=75)
+
+    assert room["max_participants"] == 75
+    assert client._http.post.call_args.args[0].endswith("/CreateRoom")
+    assert client._http.post.call_args.kwargs["content"] == {"name": "room", "max_participants": 75}
 
 
 async def test_4xx_raises_without_tripping_breaker():

@@ -28,12 +28,7 @@ class CallEndReason(str, Enum):
 
 
 class Call(SQLModel, table=True):
-    """One call session in a channel; ended_at IS NULL marks it active.
-
-    The partial unique index on (channel_id) WHERE ended_at IS NULL is the
-    concurrency guard for simultaneous starts - the loser of the race joins
-    the winner's call instead of creating a second one.
-    """
+    """The partial channel index permits one active call per channel."""
 
     __tablename__ = "calls_calls"
     __table_args__ = (
@@ -63,6 +58,8 @@ class Call(SQLModel, table=True):
     # LiveKit room name: "org_{organization_id}:call_{id}" - org prefix is a
     # cross-org isolation defense inside the shared SFU.
     livekit_room_name: str = Field(max_length=120, nullable=False, unique=True)
+    # Capacity stays fixed for this call, including media room recreation.
+    max_participants: int = Field(default=50, nullable=False)
     started_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -94,11 +91,7 @@ class Call(SQLModel, table=True):
 
 
 class CallParticipant(SQLModel, table=True):
-    """Per-(call, user, device) join record; left_at IS NULL marks presence.
-
-    A rejoin within the grace window reopens the row (left_at cleared) so the
-    partial unique index on (call_id, identity) holds one active row per device.
-    """
+    """The partial identity index permits one active participant row per device."""
 
     __tablename__ = "calls_participants"
     __table_args__ = (

@@ -1,8 +1,4 @@
-"""LiveKit JWT minting and webhook verification.
-
-Tokens are HS256 JWTs signed with LIVEKIT_API_SECRET (independent of the app's
-JWT_SECRET_KEY). Grants ride in the `video` claim per the LiveKit token spec.
-"""
+"""LiveKit credentials use a separate signing secret from application tokens."""
 
 import base64
 import hashlib
@@ -68,8 +64,8 @@ class LiveKitTokenMinter:
         user_id: UUID,
         device_id: str,
         display_name: str,
+        max_participants: int,
         device_label: str | None = None,
-        can_publish: bool = True,
     ) -> MintedToken:
         now = int(time.time())
         token_jti = str(uuid.uuid4())
@@ -89,12 +85,13 @@ class LiveKitTokenMinter:
             "exp": expires_at,
             "jti": token_jti,
             "metadata": dumps_str(metadata),
+            "roomConfig": {"maxParticipants": max_participants},
             "video": {
                 "room": livekit_room_name(organization_id, call_id),
                 "roomJoin": True,
                 "canSubscribe": True,
-                "canPublish": can_publish,
-                "canPublishSources": PUBLISH_SOURCES if can_publish else [],
+                "canPublish": True,
+                "canPublishSources": PUBLISH_SOURCES,
             },
         }
         token = jwt.encode(claims, self._config.api_secret, algorithm="HS256")
@@ -116,12 +113,7 @@ class LiveKitTokenMinter:
         return jwt.encode(claims, self._config.api_secret, algorithm="HS256")
 
     def verify_webhook(self, body: bytes, auth_header: str) -> dict[str, Any]:
-        """Verify a LiveKit webhook and return the parsed event.
-
-        LiveKit signs webhooks with an HS256 JWT in the Authorization header
-        whose `sha256` claim is the base64 SHA-256 of the raw body - both the
-        signature and the body hash must hold before the payload is trusted.
-        """
+        """Both the LiveKit signature and body hash must hold before trusting an event."""
         if not auth_header:
             raise WebhookVerificationError("missing Authorization header")
         token = auth_header.removeprefix("Bearer ").strip()
