@@ -24,6 +24,9 @@ from uniffy.domains.chat.limits import (
     REACTION_ADD,
     SEND,
 )
+from uniffy.domains.notes.adapter import register_note_realtime_adapter
+from uniffy.domains.projects.realtime import register_task_realtime_adapter
+from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.infrastructure.database.session import init_db, open_session
 from uniffy.infrastructure.search import MeiliSearchEngine
 from uniffy.infrastructure.storage import S3Storage
@@ -124,6 +127,9 @@ async def main() -> None:
     search = WorkspaceSearch(MeiliSearchEngine())
     await search.startup()
     search_indexer = SearchIndexer(search)
+    register_note_realtime_adapter(search_indexer)
+    register_task_realtime_adapter(search_indexer)
+    register_event_realtime_adapter(search_indexer)
     await _init_valkey()
     storage = S3Storage()
     await storage.startup()

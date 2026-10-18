@@ -116,12 +116,16 @@ async def apply_event_mentions(
         event_id = await _find_event_id(ctx, spec, start)
         if event_id is None:
             continue
+        event = await ctx.session.get(CalendarEvent, event_id)
+        if event is None or event.description == linked:
+            continue
 
         await ops.update(
             user_id=ctx.actor_id,
             organization_id=ctx.organization_id,
             event_id=event_id,
             description=linked,
+            base_description=event.description or "",
             call_lifecycle=CallsLifecycle(open_session),
         )
         updated += 1

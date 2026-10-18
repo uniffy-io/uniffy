@@ -97,6 +97,7 @@ async def apply_note_mentions(
             organization_id=ctx.organization_id,
             note_id=note.id,
             content=linked,
+            base_content=note.content,
         )
         updated += 1
         logger.info(f"Linked mentions in {spec.title!r}")
