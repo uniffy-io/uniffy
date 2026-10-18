@@ -27,7 +27,8 @@ export function SidebarSection({ id, title, children, action }: SidebarSectionPr
       <div className="flex items-center justify-between">
         <button
           onClick={handleToggle}
-          className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+          aria-expanded={!isCollapsed}
+          className="focus-ring min-h-11 flex flex-1 items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
         >
           <span>{title}</span>
           <CaretDown

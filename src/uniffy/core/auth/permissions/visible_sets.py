@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
+from uniffy.core.content.registry import find_visibility_filter
 from uniffy.core.types import ContentType
 
 _TAGGABLE_ACCESS_MODE_TYPES: tuple[ContentType, ...] = (
@@ -220,61 +221,18 @@ async def compute_visible_content_ids_by_type(
     return {row for row in rows if row is not None}
 
 
-async def _event_extra_access(
-    access_query: ContentAccessQuery,
-    user_id: UUID,
-    organization_id: UUID,
-):
-    """Events are also readable through their calendar and through an invitation.
-
-    Mirrors the calendar domain's event filter, which core cannot import; an
-    explicit BLOCKED on the series beats both lifts, edited occurrences included.
-    """
-    from sqlalchemy import and_, func, or_
-
-    from uniffy.core.models.calendar.attendee import EventAttendee
-    from uniffy.core.models.calendar.calendar import Calendar
-    from uniffy.core.models.calendar.event import CalendarEvent
-
-    calendar_filter = await access_query.build_accessible_filter(
-        user_id=user_id,
-        organization_id=organization_id,
-        content_type=ContentType.CALENDAR,
-        content_id_column=Calendar.id,
-        owner_id_column=Calendar.owner_id,
-        access_mode_column=Calendar.access_mode,
-        baseline_role_column=Calendar.baseline_role,
-    )
-    readable_calendars = select(Calendar.id).where(
-        Calendar.organization_id == organization_id,
-        Calendar.is_deleted == False,  # noqa: E712
-        calendar_filter,
-    )
-    invited = select(EventAttendee.event_id).where(EventAttendee.user_id == user_id)
-    return and_(
-        or_(
-            CalendarEvent.calendar_id.in_(readable_calendars),
-            CalendarEvent.id.in_(invited),
-        ),
-        access_query.build_not_blocked_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=ContentType.CALENDAR_EVENT,
-            content_id_column=func.coalesce(CalendarEvent.recurrence_id, CalendarEvent.id),
-        ),
-    )
-
-
 async def _type_access_filter(
     access_query: ContentAccessQuery,
     user_id: UUID,
     organization_id: UUID,
     content_type: ContentType,
 ):
-    from sqlalchemy import or_
+    builder = find_visibility_filter(content_type)
+    if builder is not None:
+        return await builder(access_query, user_id, organization_id)
 
     _model, id_col, owner_col, am_col, baseline_col, _org_col = _content_columns(content_type)
-    access_filter = await access_query.build_accessible_filter(
+    return await access_query.build_accessible_filter(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
@@ -283,11 +241,6 @@ async def _type_access_filter(
         access_mode_column=am_col,
         baseline_role_column=baseline_col,
     )
-    if content_type != ContentType.CALENDAR_EVENT:
-        return access_filter
-    if not await access_query.is_active_member(user_id, organization_id):
-        return access_filter
-    return or_(access_filter, await _event_extra_access(access_query, user_id, organization_id))
 
 
 def _content_id_from_urn_expr():

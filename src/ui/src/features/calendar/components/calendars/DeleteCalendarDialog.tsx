@@ -9,7 +9,7 @@ import type { CalendarEventDisposition, CalendarInfo } from "@/features/calendar
 import { cn } from "@/shared/utils/cn";
 
 /** Mirrors the server's cap on deleting events one series at a time. */
-const MAX_DELETED_EVENTS = 200;
+const MAX_DELETED_SERIES = 200;
 
 interface DeleteCalendarDialogProps {
   calendar: CalendarInfo;
@@ -42,7 +42,7 @@ export function DeleteCalendarDialog({ calendar, onClose }: DeleteCalendarDialog
   }, [dispatch, calendar.id]);
 
   const isEmpty = eventCount === 0;
-  const tooManyToDelete = eventCount !== null && eventCount > MAX_DELETED_EVENTS;
+  const tooManyToDelete = eventCount !== null && eventCount > MAX_DELETED_SERIES;
   const effectiveDisposition: CalendarEventDisposition = isEmpty ? "delete" : disposition;
   // Without a count the member still chooses; the server enforces the delete cap.
   const countKnown = eventCount !== null || countFailed;
@@ -72,7 +72,7 @@ export function DeleteCalendarDialog({ calendar, onClose }: DeleteCalendarDialog
         : "Counting its events..."
       : isEmpty
         ? "It has no events."
-        : `It holds ${eventCount} ${eventCount === 1 ? "event" : "events"}.`;
+        : `It holds ${eventCount} ${eventCount === 1 ? "event or recurring series" : "events or recurring series"}.`;
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
@@ -110,7 +110,7 @@ export function DeleteCalendarDialog({ calendar, onClose }: DeleteCalendarDialog
               title="Delete the events"
               detail={
                 tooManyToDelete
-                  ? `More than ${MAX_DELETED_EVENTS} events can't be deleted at once. Move them instead.`
+                  ? `More than ${MAX_DELETED_SERIES} events can't be deleted at once. Move them instead.`
                   : "Attendees are told the events are cancelled."
               }
             />

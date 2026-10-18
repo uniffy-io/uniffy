@@ -30,6 +30,7 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
@@ -241,6 +242,7 @@ class EventCreateOperations:
         staged: _StagedCalendarEventCreate,
     ) -> None:
         event = staged.event
+        await publish_event_change(event)
         if staged.tags is not None:
             try:
                 await TagOperations(

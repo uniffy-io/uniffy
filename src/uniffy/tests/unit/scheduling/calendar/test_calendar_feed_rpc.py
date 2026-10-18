@@ -15,6 +15,7 @@ CALENDAR = uuid4()
 
 MINTED_AT = datetime(2026, 9, 11, 8, 30, tzinfo=UTC)
 FETCHED_AT = datetime(2026, 9, 11, 9, 30, tzinfo=UTC)
+EXISTING_URL = "https://example.test/api/calendar/feed/live-token.ics"
 
 
 def _row(*, last_used_at: datetime | None = None) -> CalendarFeedToken:
@@ -31,7 +32,9 @@ def _row(*, last_used_at: datetime | None = None) -> CalendarFeedToken:
 
 @asynccontextmanager
 async def _session():
-    yield MagicMock()
+    session = MagicMock()
+    session.commit = AsyncMock()
+    yield session
 
 
 def _patches(**doubles):
@@ -72,7 +75,7 @@ class TestGet:
             feed_url=lambda token: f"https://example.test/api/calendar/feed/{token}.ics",
         )
 
-        assert response.url == "https://example.test/api/calendar/feed/live-token.ics"
+        assert response.url == EXISTING_URL
         assert timestamp_to_datetime(response.created_at) == MINTED_AT
         assert timestamp_to_datetime(response.last_used_at) == FETCHED_AT
 
@@ -141,8 +144,6 @@ class TestRevoke:
 
 class TestDefaultCalendar:
     async def test_an_omitted_id_means_the_callers_own_calendar(self):
-        """There is no calendar picker in the product yet, so a client has no
-        id to send; event creation already reads an empty id the same way."""
         issuer = AsyncMock(return_value=("fresh-token", _row()))
         queries = MagicMock()
         queries.ensure_default_calendar = AsyncMock(return_value=MagicMock(id=CALENDAR))

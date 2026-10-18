@@ -17,10 +17,10 @@ from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
-# A member sees their own calendars, those shared with them, and whatever is open
-# to the organization; past this the list is a directory, not a sidebar.
+# Bound each page while allowing every accessible calendar to be discovered.
 MAX_LISTED_CALENDARS = 500
 
 
@@ -65,7 +65,45 @@ class CalendarReader(BaseContentOperations[Calendar]):
     def _get_search_metadata(self, model: Calendar) -> dict[str, str] | None:
         return {"color": model.color, "calendar_type": model.calendar_type.value}
 
-    async def list_calendars(self, user_id: UUID, organization_id: UUID) -> list[CalendarListing]:
+    def _listing_query(self, user_id: UUID, organization_id: UUID):
+        return (
+            select(
+                Calendar,
+                CalendarMemberSettings.is_hidden,
+                self._explicitly_shared(user_id, organization_id).label("shared"),
+            )
+            .outerjoin(
+                CalendarMemberSettings,
+                and_(
+                    CalendarMemberSettings.calendar_id == Calendar.id,
+                    CalendarMemberSettings.user_id == user_id,
+                ),
+            )
+            .where(Calendar.organization_id == organization_id, Calendar.is_deleted.is_(False))
+        )
+
+    @staticmethod
+    def _listing(
+        user_id: UUID, calendar: Calendar, is_hidden: bool | None, shared: bool
+    ) -> CalendarListing:
+        section = (
+            CalendarSection.MINE
+            if calendar.owner_id == user_id
+            else CalendarSection.SHARED
+            if shared
+            else CalendarSection.ORGANIZATION
+        )
+        hidden = is_hidden if is_hidden is not None else section == CalendarSection.ORGANIZATION
+        return CalendarListing(calendar, section, hidden)
+
+    async def list_calendars(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        *,
+        after: UUID | None = None,
+        limit: int = MAX_LISTED_CALENDARS,
+    ) -> list[CalendarListing]:
         access_filter = await self.access_query.build_accessible_filter(
             user_id=user_id,
             organization_id=organization_id,
@@ -75,46 +113,15 @@ class CalendarReader(BaseContentOperations[Calendar]):
             access_mode_column=Calendar.access_mode,
             baseline_role_column=Calendar.baseline_role,
         )
+        query = self._listing_query(user_id, organization_id).where(access_filter)
+        if after is not None:
+            query = query.where(Calendar.id > after)
         rows = (
             await self.session.execute(
-                select(
-                    Calendar,
-                    CalendarMemberSettings.is_hidden,
-                    self._explicitly_shared(user_id, organization_id).label("shared"),
-                )
-                .outerjoin(
-                    CalendarMemberSettings,
-                    and_(
-                        CalendarMemberSettings.calendar_id == Calendar.id,
-                        CalendarMemberSettings.user_id == user_id,
-                    ),
-                )
-                .where(
-                    Calendar.organization_id == organization_id,
-                    Calendar.is_deleted == False,  # noqa: E712
-                    access_filter,
-                )
-                .order_by(
-                    (Calendar.owner_id != user_id).asc(),
-                    Calendar.is_default.desc(),
-                    Calendar.name.asc(),
-                )
-                .limit(MAX_LISTED_CALENDARS)
+                query.order_by(Calendar.id).limit(min(limit, MAX_LISTED_CALENDARS + 1))
             )
         ).all()
-        listings: list[CalendarListing] = []
-        for calendar, is_hidden, shared in rows:
-            if calendar.owner_id == user_id:
-                section = CalendarSection.MINE
-            elif shared:
-                section = CalendarSection.SHARED
-            else:
-                section = CalendarSection.ORGANIZATION
-            # Organization-wide calendars stay out of the grid until a member opts
-            # in, so a tenant with many team calendars does not flood everyone.
-            hidden = is_hidden if is_hidden is not None else section == CalendarSection.ORGANIZATION
-            listings.append(CalendarListing(calendar, section, hidden))
-        return listings
+        return [self._listing(user_id, *row) for row in rows]
 
     async def get_listing(
         self,
@@ -122,13 +129,37 @@ class CalendarReader(BaseContentOperations[Calendar]):
         organization_id: UUID,
         calendar_id: UUID,
     ) -> CalendarListing:
-        calendar = await self.get_by_id(user_id, organization_id, calendar_id)
-        for listing in await self.list_calendars(user_id, organization_id):
-            if listing.calendar.id == calendar.id:
-                return listing
-        # Reachable but past the list cap: still describe it truthfully.
-        section = CalendarSection.MINE if calendar.owner_id == user_id else CalendarSection.SHARED
-        return CalendarListing(calendar, section, False)
+        await self.get_by_id(user_id, organization_id, calendar_id)
+        row = (
+            await self.session.execute(
+                self._listing_query(user_id, organization_id).where(Calendar.id == calendar_id)
+            )
+        ).one()
+        return self._listing(user_id, *row)
+
+    async def count_event_series(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        calendar_id: UUID,
+    ) -> int:
+        await self.get_by_id(user_id, organization_id, calendar_id)
+        access = await EventContentOperations(self.session).event_access_filter(
+            user_id, organization_id
+        )
+        return (
+            await self.session.scalar(
+                select(func.count())
+                .select_from(CalendarEvent)
+                .where(
+                    CalendarEvent.organization_id == organization_id,
+                    CalendarEvent.calendar_id == calendar_id,
+                    CalendarEvent.is_deleted.is_(False),
+                    CalendarEvent.recurrence_id.is_(None),
+                    access,
+                )
+            )
+        ) or 0
 
     async def event_visibility_filter(
         self,

@@ -27,6 +27,7 @@ from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.common_proto import access_mode_from_proto, content_role_from_proto
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.login.user import User
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
@@ -36,13 +37,18 @@ from uniffy.domains.scheduling.calendar.calendars.converters import (
     calendar_type_from_proto,
 )
 from uniffy.domains.scheduling.calendar.calendars.operations import CalendarOperations
-from uniffy.domains.scheduling.calendar.calendars.reader import CalendarListing, CalendarReader
+from uniffy.domains.scheduling.calendar.calendars.reader import (
+    MAX_LISTED_CALENDARS,
+    CalendarListing,
+    CalendarReader,
+)
 from uniffy.domains.scheduling.calendar.rpc.support import map_domain_error, parse_uuid
 from uniffy.infrastructure.database import open_session
 
 
 class CalendarManagementHandlers:
     search_indexer: SearchIndexer
+    buffer: UpdateBuffer
 
     async def list_calendars(
         self,
@@ -55,13 +61,18 @@ class CalendarManagementHandlers:
             async with open_session() as session:
                 # Every member has somewhere to put an event, even before their first one.
                 await queries.ensure_default_calendar(session, organization_id, user_id)
-                listings = await CalendarReader(session).list_calendars(user_id, organization_id)
-                calendars = await _to_proto(session, user_id, organization_id, listings)
+                size = min(MAX_LISTED_CALENDARS, max(1, request.page_size or 100))
+                after = parse_uuid(request.page_token, "page_token") if request.page_token else None
+                listings = await CalendarReader(session).list_calendars(
+                    user_id, organization_id, after=after, limit=size + 1
+                )
+                next_token = str(listings[size - 1].calendar.id) if len(listings) > size else ""
+                calendars = await _to_proto(session, user_id, organization_id, listings[:size])
         except ConnectError:
             raise
         except Exception as exc:
             raise map_domain_error("list_calendars", exc) from exc
-        return ListCalendarsResponse(calendars=calendars)
+        return ListCalendarsResponse(calendars=calendars, next_page_token=next_token)
 
     async def get_calendar(
         self,
@@ -77,11 +88,14 @@ class CalendarManagementHandlers:
                     user_id, organization_id, calendar_id
                 )
                 (calendar,) = await _to_proto(session, user_id, organization_id, [listing])
+                count = await CalendarReader(session).count_event_series(
+                    user_id, organization_id, calendar_id
+                )
         except ConnectError:
             raise
         except Exception as exc:
             raise map_domain_error("get_calendar", exc) from exc
-        return GetCalendarResponse(calendar=calendar)
+        return GetCalendarResponse(calendar=calendar, event_series_count=count)
 
     async def create_calendar(
         self,
@@ -173,7 +187,11 @@ class CalendarManagementHandlers:
                 )
             async with open_session() as session:
                 result = await CalendarOperations(session, self.search_indexer).delete_calendar(
-                    user_id, organization_id, calendar_id, target_calendar_id=target
+                    user_id,
+                    organization_id,
+                    calendar_id,
+                    target_calendar_id=target,
+                    buffer=self.buffer,
                 )
         except ConnectError:
             raise

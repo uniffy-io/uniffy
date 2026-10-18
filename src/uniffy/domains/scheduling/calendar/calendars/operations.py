@@ -11,12 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.content.mentions import publish_mention_state
+from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.events.realtime import ContentAccessAction, publish_content_access_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.member_settings import CalendarMemberSettings
+from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, CalendarType, ContentRole, ContentType, SubjectType
@@ -30,7 +34,6 @@ from uniffy.domains.scheduling.calendar.calendars.search import (
 )
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
 from uniffy.domains.scheduling.calendar.policy import (
-    TEAM_CALENDAR_TYPES,
     require_can_create_team_calendar,
     require_can_open_calendar_to_org,
 )
@@ -68,6 +71,8 @@ class CalendarOperations(CalendarReader):
         admin_user_ids: list[UUID] | None = None,
         admin_group_ids: list[UUID] | None = None,
     ) -> Calendar:
+        if await get_active_membership(self.session, user_id, organization_id) is None:
+            raise PermissionDeniedError("create", ContentType.CALENDAR.value)
         name = _validated_name(name)
         admin_user_ids = [uid for uid in admin_user_ids or [] if uid != user_id]
         admin_group_ids = list(admin_group_ids or [])
@@ -77,8 +82,7 @@ class CalendarOperations(CalendarReader):
         access_mode, baseline_role = await self._resolve_access_policy(
             organization_id, access_mode, baseline_role
         )
-        if calendar_type in TEAM_CALENDAR_TYPES:
-            await require_can_create_team_calendar(self.session, user_id, organization_id)
+        await require_can_create_team_calendar(self.session, user_id, organization_id)
         if access_mode == AccessMode.OPEN_TO_ORG:
             await require_can_open_calendar_to_org(self.session, user_id, organization_id)
 
@@ -122,11 +126,13 @@ class CalendarOperations(CalendarReader):
                         role=ContentRole.ADMIN,
                     )
                 )
+            await record_calendar_search_acl_refresh(self.session, organization_id, calendar.id)
             await self.session.commit()
         except Exception:
             await self.session.rollback()
             raise
         await self.session.refresh(calendar)
+        await enqueue_calendar_search_acl_refresh(calendar.id)
 
         for staged in staged_members:
             try:
@@ -177,8 +183,10 @@ class CalendarOperations(CalendarReader):
             resource_id=calendar_id,
             details={"changed_keys": changed},
         )
+        await record_calendar_search_acl_refresh(self.session, organization_id, calendar.id)
         await self.session.commit()
         await self.session.refresh(calendar)
+        await enqueue_calendar_search_acl_refresh(calendar.id)
 
         try:
             await self._index_for_search(calendar)
@@ -233,6 +241,7 @@ class CalendarOperations(CalendarReader):
         calendar_id: UUID,
         *,
         target_calendar_id: UUID | None,
+        buffer: UpdateBuffer,
     ) -> CalendarDeletion:
         """Move every event to ``target_calendar_id``, or delete them all when it is None."""
         await self._hold_calendars(organization_id, calendar_id, target_calendar_id)
@@ -248,7 +257,7 @@ class CalendarOperations(CalendarReader):
             deleted = 0
         else:
             moved = 0
-            deleted = await self._delete_all_events(user_id, organization_id, calendar_id)
+            deleted = await self._delete_all_events(user_id, organization_id, calendar_id, buffer)
             # Each series delete commits and lets go of the calendar, so take it
             # back and make sure nothing was filed on it meanwhile.
             await self._hold_calendars(organization_id, calendar_id, None)
@@ -294,6 +303,15 @@ class CalendarOperations(CalendarReader):
             )
         except Exception:
             logger.opt(exception=True).warning(f"Failed to publish calendar tombstone {calendar_id}")
+        try:
+            await publish_content_access_changed(
+                content_type=content_type_to_proto(self.content_type),
+                content_id=calendar_id,
+                action=ContentAccessAction.REVOKED,
+                organization_id=organization_id,
+            )
+        except Exception:
+            logger.opt(exception=True).warning("Failed to refresh deleted calendar views")
         return CalendarDeletion(events_moved=moved, events_deleted=deleted)
 
     async def _hold_calendars(
@@ -393,6 +411,7 @@ class CalendarOperations(CalendarReader):
         user_id: UUID,
         organization_id: UUID,
         calendar_id: UUID,
+        buffer: UpdateBuffer,
     ) -> int:
         live_series = (
             select(CalendarEvent.id)
@@ -412,7 +431,7 @@ class CalendarOperations(CalendarReader):
                 f"({MAX_DELETED_SERIES}). Move them to another calendar instead.",
             )
         event_ids = list((await self.session.execute(live_series)).scalars())
-        events = CalendarEventOperations(self.session, self.search_indexer)
+        events = CalendarEventOperations(self.session, self.search_indexer, buffer)
         for event_id in event_ids:
             await events.delete(user_id, organization_id, event_id)
         return len(event_ids)

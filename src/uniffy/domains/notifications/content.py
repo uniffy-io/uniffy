@@ -43,7 +43,7 @@ async def project_content_change(
 ) -> ContentChangedPayload | None:
     try:
         content_type = CONTENT_TYPE_FROM_PROTO.get(payload.get("content_type"))
-        if content_type not in {ContentType.TASK, ContentType.CALENDAR_EVENT}:
+        if content_type not in {ContentType.TASK, ContentType.CALENDAR_EVENT, ContentType.CALENDAR}:
             return None
         content_id = UUID(payload["content_id"])
         key = ResourceKey(content_type, content_id)

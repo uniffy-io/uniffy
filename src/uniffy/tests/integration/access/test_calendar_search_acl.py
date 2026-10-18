@@ -9,6 +9,10 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
+from sqlalchemy import select
+from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditEvent
+
 import pytest
 
 from uniffy.core.models.calendar.calendar import Calendar
@@ -136,7 +140,9 @@ class TestCalendarSearchAccess:
 
 
 class TestIndexing:
-    async def test_an_event_is_indexed_with_its_calendars_access(self, session, access) -> None:
+    async def test_an_event_is_indexed_with_its_calendars_access(
+        self, buffer, session, access
+    ) -> None:
         calendar = await _calendar(session, access)
         session.add(
             _member(access, calendar.id, SubjectType.USER, access.peer_id, ContentRole.VIEWER)
@@ -144,7 +150,7 @@ class TestIndexing:
         await session.commit()
         indexer = AsyncMock(spec=SearchIndexer)
 
-        await CalendarEventOperations(session, indexer).create(
+        await CalendarEventOperations(session, indexer, buffer).create(
             user_id=access.member_id,
             organization_id=access.org_id,
             title="planning",
@@ -175,7 +181,7 @@ class TestRefreshQueue:
         assert await session.get(CalendarSearchAclRefresh, calendar_id) is not None
 
     async def test_moving_a_deleted_calendars_events_refreshes_the_target(
-        self, session, access
+        self, buffer, session, access
     ) -> None:
         source = await _calendar(session, access)
         target = await _calendar(session, access)
@@ -184,7 +190,11 @@ class TestRefreshQueue:
         source_id, target_id = source.id, target.id
 
         await CalendarOperations(session, AsyncMock(spec=SearchIndexer)).delete_calendar(
-            access.member_id, access.org_id, source_id, target_calendar_id=target_id
+            access.member_id,
+            access.org_id,
+            source_id,
+            target_calendar_id=target_id,
+            buffer=buffer,
         )
 
         assert await session.get(CalendarSearchAclRefresh, target_id) is not None
@@ -217,7 +227,7 @@ class TestRefreshJob:
         await session.commit()
         calendar_id, master_id, override_id = calendar.id, master.id, override.id
 
-        search = MagicMock()
+        search = AsyncMock(spec=WorkspaceSearch)
         search.update_container_access = AsyncMock(return_value=2)
         result = await calendar_search_jobs._process_calendar(calendar_id, search)
 
@@ -240,7 +250,7 @@ class TestRefreshJob:
             await session.commit()
             return 1
 
-        search = MagicMock()
+        search = AsyncMock(spec=WorkspaceSearch)
         search.update_container_access = AsyncMock(side_effect=share_meanwhile)
         result = await calendar_search_jobs._process_calendar(calendar_id, search)
 
@@ -258,7 +268,7 @@ class TestRefreshJob:
         await session.commit()
         calendar_id = calendar.id
 
-        search = MagicMock()
+        search = AsyncMock(spec=WorkspaceSearch)
         search.update_container_access = AsyncMock(side_effect=RuntimeError("search down"))
         with pytest.raises(RuntimeError):
             await calendar_search_jobs._process_calendar(calendar_id, search)
@@ -277,7 +287,7 @@ class TestRefreshJob:
         await session.commit()
         calendar_id = calendar.id
 
-        search = MagicMock()
+        search = AsyncMock(spec=WorkspaceSearch)
         search.update_container_access = AsyncMock(return_value=1)
         result = await calendar_search_jobs._process_calendar(calendar_id, search)
 
@@ -286,7 +296,7 @@ class TestRefreshJob:
 
     async def test_nothing_queued_is_a_no_op(self, session, access) -> None:
         calendar = await _calendar(session, access)
-        search = MagicMock()
+        search = AsyncMock(spec=WorkspaceSearch)
         search.update_container_access = AsyncMock()
 
         assert await calendar_search_jobs._process_calendar(calendar.id, search) == {
@@ -297,7 +307,7 @@ class TestRefreshJob:
 
 class TestLiveSearch:
     async def test_calendar_members_find_its_events_until_the_share_ends(
-        self, session, access
+        self, buffer, session, access
     ) -> None:
         search = WorkspaceSearch(MeiliSearchEngine())
         await search.startup()
@@ -310,7 +320,9 @@ class TestLiveSearch:
         await session.commit()
         calendar_id = calendar.id
         urn = build_content_urn(ContentType.CALENDAR_EVENT, event.id)
-        await CalendarEventOperations(session, SearchIndexer(search))._index_for_search(event)
+        await CalendarEventOperations(session, SearchIndexer(search), buffer)._index_for_search(
+            event
+        )
         operations = SearchOperations(session, search)
 
         async def candidates(user_id) -> int:
@@ -347,3 +359,136 @@ class TestLiveSearch:
         finally:
             await search.delete_document(urn, access.org_id)
             await search.shutdown()
+
+
+async def test_move_search_failure_keeps_audit_and_recovery(session, access, buffer):
+    source = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="source",
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    target = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="target",
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add_all([source, target])
+    await session.flush()
+    start = datetime.now(UTC) + timedelta(days=1)
+    event = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.member_id,
+        calendar_id=source.id,
+        title="move during outage",
+        start_time=start,
+        end_time=start + timedelta(hours=1),
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add(event)
+    await session.commit()
+    indexer = AsyncMock(spec=SearchIndexer)
+    indexer.index.side_effect = RuntimeError("Injected search outage")
+    await CalendarEventOperations(session, indexer, buffer).update(
+        user_id=access.member_id,
+        organization_id=access.org_id,
+        event_id=event.id,
+        calendar_id=target.id,
+        call_lifecycle=MagicMock(),
+    )
+    target_id = target.id
+    await session.rollback()
+    await session.refresh(event)
+    assert event.calendar_id == target_id
+    assert await session.get(CalendarSearchAclRefresh, target_id) is not None
+    assert (
+        await session.scalar(
+            select(AuditEvent.id).where(
+                AuditEvent.resource_id == event.id, AuditEvent.action == Action.CALENDAR_EVENT_MOVED
+            )
+        )
+        is not None
+    )
+
+
+@pytest.mark.parametrize("crash_after_write", [False, True])
+async def test_source_refresh_repairs_destination_after_concurrent_move(
+    session, access, buffer, crash_after_write
+):
+    import asyncio
+    from uniffy.domains.scheduling.calendar.calendars.search import (
+        record_calendar_search_acl_refresh,
+    )
+    from uniffy.domains.scheduling.calendar.jobs.search import _process_calendar
+    from uniffy.core.search.workspace import WorkspaceSearch
+
+    source = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="source",
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    target = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="target",
+        access_mode=AccessMode.OPEN_TO_ORG,
+        baseline_role=ContentRole.VIEWER,
+    )
+    session.add_all([source, target])
+    await session.flush()
+    start = datetime.now(UTC) + timedelta(days=1)
+    event = CalendarEvent(
+        organization_id=access.org_id,
+        organizer_id=access.member_id,
+        calendar_id=source.id,
+        title="race event",
+        start_time=start,
+        end_time=start + timedelta(hours=1),
+        access_mode=AccessMode.OWNER_ONLY,
+    )
+    session.add(event)
+    await record_calendar_search_acl_refresh(session, access.org_id, source.id)
+    await session.commit()
+    source_id, target_id = source.id, target.id
+    selected = asyncio.Event()
+    release = asyncio.Event()
+    writes = []
+    search = AsyncMock(spec=WorkspaceSearch)
+
+    async def patch(ids, audience):
+        if not audience.open_to_org:
+            selected.set()
+            await release.wait()
+        writes.append(audience.open_to_org)
+        if crash_after_write and not audience.open_to_org:
+            raise RuntimeError("worker interrupted after writing")
+        return len(ids)
+
+    search.update_container_access.side_effect = patch
+    source_task = asyncio.create_task(_process_calendar(source_id, search))
+    try:
+        await asyncio.wait_for(selected.wait(), timeout=5)
+        await CalendarOperations(session, AsyncMock(spec=SearchIndexer)).delete_calendar(
+            access.member_id, access.org_id, source.id, target_calendar_id=target.id, buffer=buffer
+        )
+        await _process_calendar(target_id, search)
+    finally:
+        release.set()
+        if crash_after_write:
+            with pytest.raises(RuntimeError, match="worker interrupted"):
+                await source_task
+        else:
+            await source_task
+    assert writes == [True, False]
+    session.expire_all()
+    if crash_after_write:
+        queued = await session.get(CalendarSearchAclRefresh, source_id)
+        assert queued is not None and queued.pending_event_ids
+        await _process_calendar(source_id, search)
+    else:
+        assert await session.get(CalendarSearchAclRefresh, source_id) is None
+        assert await session.get(CalendarSearchAclRefresh, target_id) is not None
+        await _process_calendar(target_id, search)
+    assert writes[-1] is True

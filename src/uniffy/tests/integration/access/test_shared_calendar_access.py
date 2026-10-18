@@ -14,6 +14,7 @@ from sqlalchemy import delete, func, select
 
 from uniffy.core.auth.permissions.visible_sets import compute_visible_content_ids_by_type
 from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.events import realtime as realtime_events
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -48,6 +49,48 @@ from uniffy.infrastructure.database import open_session
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 START = datetime.now(UTC).replace(microsecond=0) + timedelta(days=2)
+
+
+@pytest.mark.parametrize("mutation", ["privacy", "move", "title"])
+async def test_event_updates_publish_committed_refresh_hints(
+    session, access, buffer, monkeypatch, mutation
+):
+    source = await _calendar(session, access)
+    destination = await _calendar(session, access)
+    event = await _event(session, access, source.id)
+    await _share(session, access, source.id, SubjectType.USER, access.peer_id, ContentRole.VIEWER)
+    hints = []
+
+    async def capture(channel, payload):
+        async with open_session() as reader:
+            stored = await reader.get(CalendarEvent, event.id)
+            if mutation == "privacy":
+                assert stored.visibility is EventVisibility.PRIVATE
+            elif mutation == "move":
+                assert stored.calendar_id == destination.id
+            else:
+                assert stored.title == "Renamed"
+        hints.append((channel, payload))
+
+    monkeypatch.setattr(realtime_events, "publish_to_channel", capture)
+    changes = {
+        "privacy": {"visibility": EventVisibility.PRIVATE},
+        "move": {"calendar_id": destination.id},
+        "title": {"title": "Renamed"},
+    }
+    await CalendarEventOperations(session, _indexer(), buffer).update(
+        access.member_id, access.org_id, event.id, call_lifecycle=MagicMock(), **changes[mutation]
+    )
+    expected = (
+        realtime_events.NotificationPayloadType.CONTENT_CHANGED
+        if mutation == "title"
+        else realtime_events.NotificationPayloadType.CONTENT_ACCESS_CHANGED
+    )
+    matching = [payload for channel, payload in hints if payload["_type"] == expected]
+    assert matching
+    assert matching[0]["content_id"] == str(event.id)
+    assert "title" not in matching[0]
+    assert "description" not in matching[0]
 
 
 def _indexer() -> SearchIndexer:
@@ -204,7 +247,7 @@ class TestGroupViewerOnATeamCalendar:
             content_type=ContentType.CALENDAR_EVENT,
         )
 
-    async def test_a_viewer_cannot_edit(self, session, access) -> None:
+    async def test_a_viewer_cannot_edit(self, buffer, session, access) -> None:
         calendar = await _calendar(session, access)
         await _share(
             session, access, calendar.id, SubjectType.USER, access.peer_id, ContentRole.VIEWER
@@ -213,7 +256,7 @@ class TestGroupViewerOnATeamCalendar:
         event_id, title = event.id, event.title
 
         with pytest.raises(PermissionDeniedError):
-            await CalendarEventOperations(session, _indexer()).update(
+            await CalendarEventOperations(session, _indexer(), buffer).update(
                 user_id=access.peer_id,
                 organization_id=access.org_id,
                 event_id=event_id,
@@ -227,7 +270,9 @@ class TestGroupViewerOnATeamCalendar:
             == title
         )
 
-    async def test_a_calendar_editor_edits_events_others_organized(self, session, access) -> None:
+    async def test_a_calendar_editor_edits_events_others_organized(
+        self, buffer, session, access
+    ) -> None:
         calendar = await _calendar(session, access)
         await _share(
             session, access, calendar.id, SubjectType.USER, access.peer_id, ContentRole.EDITOR
@@ -235,7 +280,7 @@ class TestGroupViewerOnATeamCalendar:
         event = await _event(session, access, calendar.id)
 
         assert await _role(session, access, access.peer_id, event) is ContentRole.EDITOR
-        updated = await CalendarEventOperations(session, _indexer()).update(
+        updated = await CalendarEventOperations(session, _indexer(), buffer).update(
             user_id=access.peer_id,
             organization_id=access.org_id,
             event_id=event.id,
@@ -326,6 +371,13 @@ class TestBlockedPrecedence:
         in_page = await _in_page(session, access, access.peer_id)
         assert master.id not in in_range and edited.id not in in_range
         assert master.id not in in_page and edited.id not in in_page
+        visible_for_tags = await compute_visible_content_ids_by_type(
+            session,
+            user_id=access.peer_id,
+            organization_id=access.org_id,
+            content_type=ContentType.CALENDAR_EVENT,
+        )
+        assert master.id not in visible_for_tags and edited.id not in visible_for_tags
 
     async def test_a_calendar_block_leaves_the_invitation(self, session, access) -> None:
         calendar = await _calendar(session, access)

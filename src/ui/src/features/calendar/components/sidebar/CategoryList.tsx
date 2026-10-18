@@ -79,10 +79,7 @@ export function CategoryList() {
                 onClick={() => handleToggle(category.id)}
                 className="flex items-center gap-2 flex-1 text-left min-w-0"
               >
-                <div
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: category.color }}
-                />
+                <div className="w-2.5 h-2.5 rounded-full shrink-0 bg-current opacity-50" />
                 <span className="truncate">{category.name}</span>
               </button>
 

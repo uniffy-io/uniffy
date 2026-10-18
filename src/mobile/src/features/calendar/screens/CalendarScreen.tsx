@@ -18,7 +18,7 @@ import { runOnJS } from "react-native-reanimated";
 import Svg, { Line } from "react-native-svg";
 import * as Haptics from "expo-haptics";
 import { AirplaneTilt, Funnel, Plus, Target, Warning } from "phosphor-react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
@@ -41,7 +41,7 @@ import {
 import { ShareSheet } from "@shared/permissions/ShareSheet";
 import { memberCommitments, resolveEventColor } from "@features/calendar/calendarList";
 import { useAuth } from "@core/providers/AuthContext";
-import { useUpdateEvent } from "@features/calendar/useCalendarMutations";
+import { useUpdateEvent, useSetCalendarVisibility } from "@features/calendar/useCalendarMutations";
 import { blocksTime, eventDisplayState } from "@features/calendar/eventDisplay";
 import { CalendarFilterSheet } from "@features/calendar/components/CalendarFilterSheet";
 import { AgendaList } from "@features/calendar/components/AgendaList";
@@ -932,6 +932,19 @@ export function CalendarScreen() {
   const categories = categoriesQuery.data ?? [];
 
   const calendarsQuery = useCalendars();
+  const { calendar: linkedCalendarId } = useLocalSearchParams<{ calendar?: string }>();
+  const { mutate: setLinkedVisibility } = useSetCalendarVisibility();
+  const openedCalendar = useRef<string | null>(null);
+  useEffect(() => {
+    if (!linkedCalendarId || openedCalendar.current === linkedCalendarId || !calendarsQuery.data)
+      return;
+    const linked = calendarsQuery.data.find((calendar) => calendar.id === linkedCalendarId);
+    openedCalendar.current = linkedCalendarId;
+    if (linked) {
+      if (linked.isHidden) setLinkedVisibility({ calendarId: linked.id, hidden: false });
+      setSharedCalendar(linked);
+    }
+  }, [linkedCalendarId, calendarsQuery.data, setLinkedVisibility]);
   const calendarPolicy = useCalendarPolicy();
   const queryClient = useQueryClient();
   const calendarsById = useMemo(() => {

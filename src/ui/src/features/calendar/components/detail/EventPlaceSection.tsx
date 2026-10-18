@@ -69,7 +69,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
         <InlineTextField
           value={event.location}
           onCommit={(location) => commit({ location })}
-          placeholder="Add location"
+          placeholder={canEdit ? "Add location" : "No location"}
           readOnly={!canEdit}
           className="flex-1 min-w-0"
         />

@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index
+from sqlalchemy import ARRAY, Column, DateTime, ForeignKey, Index, Uuid
 from sqlmodel import Field, SQLModel
 
 
@@ -22,6 +22,9 @@ class CalendarSearchAclRefresh(SQLModel, table=True):
             ForeignKey("login_organizations.id", ondelete="CASCADE"),
             nullable=False,
         ),
+    )
+    pending_event_ids: list[UUID] = Field(
+        default_factory=list, sa_column=Column(ARRAY(Uuid), nullable=False, server_default="{}")
     )
     version: int = Field(default=1, nullable=False)
     attempts: int = Field(default=0, nullable=False)

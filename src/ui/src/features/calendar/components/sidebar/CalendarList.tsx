@@ -2,8 +2,6 @@ import { useRef, useState } from "react";
 import {
   DotsThreeVertical,
   DownloadSimple,
-  Eye,
-  EyeSlash,
   PencilSimple,
   Plus,
   Rss,
@@ -60,7 +58,7 @@ export function CalendarList() {
                 <button
                   type="button"
                   onClick={() => setDialog({ kind: "create" })}
-                  className="focus-ring p-0.5 rounded hover:bg-muted"
+                  className="focus-ring min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-muted"
                   title="New calendar"
                   aria-label="New calendar"
                 >
@@ -158,7 +156,7 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
       <button
         type="button"
         onClick={toggleVisibility}
-        className="focus-ring flex flex-1 min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left"
+        className="focus-ring min-h-11 flex flex-1 min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left"
         aria-pressed={!hidden}
         title={hidden ? `Show ${label}` : `Hide ${label}`}
       >
@@ -173,21 +171,11 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
       </button>
 
       <span className="flex shrink-0 items-center md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
-        {/* The row button is the accessible toggle; the eye repeats it for the pointer. */}
-        <button
-          type="button"
-          onClick={toggleVisibility}
-          tabIndex={-1}
-          aria-hidden
-          className="p-1 rounded text-muted-foreground hover:bg-background/60"
-        >
-          {hidden ? <EyeSlash size={14} weight="duotone" /> : <Eye size={14} weight="duotone" />}
-        </button>
         <button
           ref={triggerRef}
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
-          className="focus-ring p-1 rounded hover:bg-background/60"
+          className="focus-ring min-w-11 min-h-11 flex items-center justify-center rounded hover:bg-background/60"
           aria-label={`${label} options`}
           aria-haspopup="menu"
           aria-expanded={menuOpen}

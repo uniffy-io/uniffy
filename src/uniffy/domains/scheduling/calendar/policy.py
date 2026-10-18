@@ -17,13 +17,10 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.config.settings.organization import OrgSettingsOperations
 from uniffy.core.errors import PermissionDeniedError
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.types import CalendarType, ContentType
+from uniffy.core.types import ContentType
 
 CALENDAR_NAMESPACE = "calendar"
 POLICY_KEY = "policy"
-
-# Kinds of calendar that exist to be shared with a team; creating one is policy-gated.
-TEAM_CALENDAR_TYPES = frozenset({CalendarType.TEAM, CalendarType.SHARED})
 
 
 class CalendarPolicyAudience(StrEnum):
@@ -37,7 +34,7 @@ DEFAULT_ORG_WIDE_CALENDAR_SHARERS = CalendarPolicyAudience.EVERYONE
 
 @dataclass(frozen=True)
 class ResolvedCalendarPolicy:
-    """Effective per-org calendar policy; field names mirror the proto message."""
+    """Creation policy covers additional calendars; wire names retain compatibility."""
 
     organization_id: UUID
     team_calendar_creators: CalendarPolicyAudience = DEFAULT_TEAM_CALENDAR_CREATORS
@@ -104,7 +101,7 @@ async def require_can_create_team_calendar(
     policy = await resolve_calendar_policy(session, organization_id)
     if not await _admits(session, policy.team_calendar_creators, user_id, organization_id):
         raise PermissionDeniedError(
-            "create", "team calendar - your organization limits this to calendar admins"
+            "create", "calendar - your organization limits this to calendar admins"
         )
 
 

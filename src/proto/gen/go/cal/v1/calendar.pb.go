@@ -3255,6 +3255,8 @@ func (x *Calendar) GetOwnerName() string {
 type ListCalendarsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	PageToken      string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageSize       int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -3296,9 +3298,24 @@ func (x *ListCalendarsRequest) GetOrganizationId() string {
 	return ""
 }
 
+func (x *ListCalendarsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListCalendarsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
 type ListCalendarsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Calendars     []*Calendar            `protobuf:"bytes,1,rep,name=calendars,proto3" json:"calendars,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3338,6 +3355,13 @@ func (x *ListCalendarsResponse) GetCalendars() []*Calendar {
 		return x.Calendars
 	}
 	return nil
+}
+
+func (x *ListCalendarsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
 }
 
 type GetCalendarRequest struct {
@@ -3393,10 +3417,11 @@ func (x *GetCalendarRequest) GetOrganizationId() string {
 }
 
 type GetCalendarResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Calendar      *Calendar              `protobuf:"bytes,1,opt,name=calendar,proto3" json:"calendar,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Calendar         *Calendar              `protobuf:"bytes,1,opt,name=calendar,proto3" json:"calendar,omitempty"`
+	EventSeriesCount int32                  `protobuf:"varint,2,opt,name=event_series_count,json=eventSeriesCount,proto3" json:"event_series_count,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *GetCalendarResponse) Reset() {
@@ -3434,6 +3459,13 @@ func (x *GetCalendarResponse) GetCalendar() *Calendar {
 		return x.Calendar
 	}
 	return nil
+}
+
+func (x *GetCalendarResponse) GetEventSeriesCount() int32 {
+	if x != nil {
+		return x.EventSeriesCount
+	}
+	return 0
 }
 
 type CreateCalendarRequest struct {
@@ -7933,17 +7965,22 @@ const file_cal_v1_calendar_proto_rawDesc = "" +
 	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1d\n" +
 	"\n" +
 	"owner_name\x18\x10 \x01(\tR\townerNameB\x10\n" +
-	"\x0e_baseline_role\"?\n" +
+	"\x0e_baseline_role\"{\n" +
 	"\x14ListCalendarsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"G\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x02 \x01(\tR\tpageToken\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"o\n" +
 	"\x15ListCalendarsResponse\x12.\n" +
-	"\tcalendars\x18\x01 \x03(\v2\x10.cal.v1.CalendarR\tcalendars\"^\n" +
+	"\tcalendars\x18\x01 \x03(\v2\x10.cal.v1.CalendarR\tcalendars\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"^\n" +
 	"\x12GetCalendarRequest\x12\x1f\n" +
 	"\vcalendar_id\x18\x01 \x01(\tR\n" +
 	"calendarId\x12'\n" +
-	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"C\n" +
+	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\"q\n" +
 	"\x13GetCalendarResponse\x12,\n" +
-	"\bcalendar\x18\x01 \x01(\v2\x10.cal.v1.CalendarR\bcalendar\"\xcb\x03\n" +
+	"\bcalendar\x18\x01 \x01(\v2\x10.cal.v1.CalendarR\bcalendar\x12,\n" +
+	"\x12event_series_count\x18\x02 \x01(\x05R\x10eventSeriesCount\"\xcb\x03\n" +
 	"\x15CreateCalendarRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12%\n" +

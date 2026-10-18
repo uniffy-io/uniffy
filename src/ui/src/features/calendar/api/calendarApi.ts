@@ -6,6 +6,7 @@ import {
   CreateCalendarRequestSchema,
   DeleteCalendarRequestSchema,
   GetCalendarPolicyRequestSchema,
+  GetCalendarRequestSchema,
   ListCalendarsRequestSchema,
   ListEventsRequestSchema,
   SetCalendarVisibilityRequestSchema,
@@ -80,6 +81,9 @@ function activityFromProto(proto: ProtoEventActivity): EventActivity {
 const calendarClient = createClient(CalendarService, unaryTransport);
 
 export const calendarApi = {
+  getCalendar: (request: MessageInitShape<typeof GetCalendarRequestSchema>) =>
+    calendarClient.getCalendar(request),
+
   listCalendars: async (request: MessageInitShape<typeof ListCalendarsRequestSchema>) => {
     return calendarClient.listCalendars(request);
   },

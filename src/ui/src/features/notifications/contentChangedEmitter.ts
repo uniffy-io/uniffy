@@ -22,13 +22,17 @@ export function emitContentChanged(change: ContentChange | null): void {
 
 export function subscribeContentRefresh(
   contentType: ContentType,
-  contentId: string,
+  contentId: string | null,
   refresh: () => void,
   delay = 300,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const unsubscribe = onContentChanged((change) => {
-    if (change && (change.contentType !== contentType || change.contentId !== contentId)) return;
+    if (
+      change &&
+      (change.contentType !== contentType || (contentId !== null && change.contentId !== contentId))
+    )
+      return;
     if (timer) return;
     timer = setTimeout(() => {
       timer = null;

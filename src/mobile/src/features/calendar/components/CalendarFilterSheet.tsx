@@ -196,18 +196,18 @@ export function CalendarFilterSheet({
                   style={[
                     styles.row,
                     {
-                      borderColor: active ? cat.color : T.border,
-                      backgroundColor: active ? cat.color + "18" : "transparent",
+                      borderColor: active ? T.accent : T.border,
+                      backgroundColor: active ? T.accent + "18" : "transparent",
                     },
                   ]}
                   onPress={() => onToggle(cat.id)}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.dot, { backgroundColor: cat.color }]} />
+                  <View style={[styles.dot, { backgroundColor: T.textDim }]} />
                   <Text style={[styles.name, { color: active ? T.textBright : T.text }]}>
                     {cat.name}
                   </Text>
-                  {active && <Check size={16} color={cat.color} weight="bold" />}
+                  {active && <Check size={16} color={T.accent} weight="bold" />}
                 </TouchableOpacity>
               );
             })}

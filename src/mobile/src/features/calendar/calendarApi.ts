@@ -9,6 +9,7 @@ import {
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
   GetCalendarPolicyRequestSchema,
+  GetCalendarRequestSchema,
   GetEventRequestSchema,
   GetEventsInRangeRequestSchema,
   ListCalendarsRequestSchema,
@@ -27,6 +28,9 @@ import { transport } from "@core/api/transport";
 const client = createClient(CalendarService, transport);
 
 export const calendarApi = {
+  getCalendar: (request: MessageInitShape<typeof GetCalendarRequestSchema>) =>
+    client.getCalendar(request),
+
   createEvent: (request: MessageInitShape<typeof CreateEventRequestSchema>) =>
     client.createEvent(request),
 

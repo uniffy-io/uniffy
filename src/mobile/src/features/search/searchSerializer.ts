@@ -21,7 +21,7 @@ const DOMAIN_TO_TYPES: Record<Domain, SearchResultType[]> = {
   notes: [SearchResultType.NOTE],
   files: [SearchResultType.FILE],
   chat: [SearchResultType.CHAT],
-  calendar: [SearchResultType.CALENDAR_EVENT],
+  calendar: [SearchResultType.CALENDAR, SearchResultType.CALENDAR_EVENT],
   projects: [SearchResultType.PROJECT, SearchResultType.TASK],
   agents: [SearchResultType.AGENT, SearchResultType.AGENT_CHAT],
 };

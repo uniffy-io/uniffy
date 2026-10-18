@@ -302,7 +302,9 @@ class TestUpdate:
 
 
 class TestDelete:
-    async def test_moving_keeps_series_attendees_and_overrides(self, session, access) -> None:
+    async def test_moving_keeps_series_attendees_and_overrides(
+        self, buffer, session, access
+    ) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
             user_id=access.member_id,
@@ -338,7 +340,11 @@ class TestDelete:
         master_id, override_id, source_id = master.id, override.id, source.id
 
         result = await operations.delete_calendar(
-            access.member_id, access.org_id, source_id, target_calendar_id=target.id
+            access.member_id,
+            access.org_id,
+            source_id,
+            target_calendar_id=target.id,
+            buffer=buffer,
         )
 
         assert (result.events_moved, result.events_deleted) == (2, 0)
@@ -358,7 +364,7 @@ class TestDelete:
         )
         assert await session.scalar(select(Calendar.is_deleted).where(Calendar.id == source_id))
 
-    async def test_moving_needs_edit_on_the_target(self, session, access) -> None:
+    async def test_moving_needs_edit_on_the_target(self, buffer, session, access) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
             user_id=access.member_id,
@@ -372,12 +378,16 @@ class TestDelete:
         # A calendar the actor cannot see is indistinguishable from one that does not exist.
         with pytest.raises(NotFoundError):
             await operations.delete_calendar(
-                access.member_id, access.org_id, source_id, target_calendar_id=colleague.id
+                access.member_id,
+                access.org_id,
+                source_id,
+                target_calendar_id=colleague.id,
+                buffer=buffer,
             )
         await session.rollback()
         assert not await session.scalar(select(Calendar.is_deleted).where(Calendar.id == source_id))
 
-    async def test_deleting_removes_every_event(self, session, access) -> None:
+    async def test_deleting_removes_every_event(self, buffer, session, access) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
             user_id=access.member_id,
@@ -389,7 +399,11 @@ class TestDelete:
         event_ids = [event.id for event in events]
 
         result = await operations.delete_calendar(
-            access.member_id, access.org_id, source.id, target_calendar_id=None
+            access.member_id,
+            access.org_id,
+            source.id,
+            target_calendar_id=None,
+            buffer=buffer,
         )
 
         assert (result.events_moved, result.events_deleted) == (0, 3)
@@ -400,7 +414,9 @@ class TestDelete:
         ).scalars()
         assert all(deleted)
 
-    async def test_deleting_cancels_the_event_for_its_attendees(self, session, access) -> None:
+    async def test_deleting_cancels_the_event_for_its_attendees(
+        self, buffer, session, access
+    ) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
             user_id=access.member_id,
@@ -415,7 +431,11 @@ class TestDelete:
 
         try:
             await operations.delete_calendar(
-                access.member_id, access.org_id, source.id, target_calendar_id=None
+                access.member_id,
+                access.org_id,
+                source.id,
+                target_calendar_id=None,
+                buffer=buffer,
             )
 
             rows = (
@@ -436,7 +456,7 @@ class TestDelete:
             await session.commit()
 
     async def test_too_many_series_refuse_the_delete_and_change_nothing(
-        self, session, access, monkeypatch
+        self, buffer, session, access, monkeypatch
     ) -> None:
         monkeypatch.setattr(calendar_operations, "MAX_DELETED_SERIES", 2)
         operations = _operations(session)
@@ -451,7 +471,11 @@ class TestDelete:
 
         with pytest.raises(ValidationError):
             await operations.delete_calendar(
-                access.member_id, access.org_id, source_id, target_calendar_id=None
+                access.member_id,
+                access.org_id,
+                source_id,
+                target_calendar_id=None,
+                buffer=buffer,
             )
         await session.rollback()
 
@@ -463,15 +487,19 @@ class TestDelete:
         assert not any(deleted)
         assert not await session.scalar(select(Calendar.is_deleted).where(Calendar.id == source_id))
 
-    async def test_the_default_calendar_is_not_deletable(self, session, access) -> None:
+    async def test_the_default_calendar_is_not_deletable(self, buffer, session, access) -> None:
         default = await ensure_default_calendar(session, access.org_id, access.member_id)
 
         with pytest.raises(ValidationError):
             await _operations(session).delete_calendar(
-                access.member_id, access.org_id, default.id, target_calendar_id=None
+                access.member_id,
+                access.org_id,
+                default.id,
+                target_calendar_id=None,
+                buffer=buffer,
             )
 
-    async def test_a_viewer_cannot_delete(self, session, access) -> None:
+    async def test_a_viewer_cannot_delete(self, buffer, session, access) -> None:
         operations = _operations(session)
         calendar = await operations.create_calendar(
             user_id=access.member_id,
@@ -485,7 +513,11 @@ class TestDelete:
 
         with pytest.raises(PermissionDeniedError):
             await operations.delete_calendar(
-                access.peer_id, access.org_id, calendar_id, target_calendar_id=None
+                access.peer_id,
+                access.org_id,
+                calendar_id,
+                target_calendar_id=None,
+                buffer=buffer,
             )
         await session.rollback()
         assert not await session.scalar(
@@ -493,7 +525,7 @@ class TestDelete:
         )
 
     async def test_a_blocked_series_stops_the_delete_before_anything_changes(
-        self, session, access
+        self, buffer, session, access
     ) -> None:
         operations = _operations(session)
         calendar = await operations.create_calendar(
@@ -521,7 +553,11 @@ class TestDelete:
 
         with pytest.raises(PermissionDeniedError):
             await operations.delete_calendar(
-                access.member_id, access.org_id, calendar_id, target_calendar_id=None
+                access.member_id,
+                access.org_id,
+                calendar_id,
+                target_calendar_id=None,
+                buffer=buffer,
             )
         await session.rollback()
         assert not await session.scalar(
@@ -535,7 +571,7 @@ class TestDelete:
         assert not any(deleted)
 
     async def test_moving_frees_an_imported_uid_held_by_a_deleted_copy(
-        self, session, access
+        self, buffer, session, access
     ) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
@@ -554,7 +590,11 @@ class TestDelete:
         stale_id, live_id = stale.id, live.id
 
         await operations.delete_calendar(
-            access.member_id, access.org_id, source.id, target_calendar_id=target.id
+            access.member_id,
+            access.org_id,
+            source.id,
+            target_calendar_id=target.id,
+            buffer=buffer,
         )
 
         rows = dict(
@@ -568,7 +608,9 @@ class TestDelete:
         )
         assert rows == {stale_id: None, live_id: uid}
 
-    async def test_two_live_copies_of_one_import_refuse_the_move(self, session, access) -> None:
+    async def test_two_live_copies_of_one_import_refuse_the_move(
+        self, buffer, session, access
+    ) -> None:
         operations = _operations(session)
         source = await operations.create_calendar(
             user_id=access.member_id,
@@ -586,14 +628,20 @@ class TestDelete:
 
         with pytest.raises(ValidationError):
             await operations.delete_calendar(
-                access.member_id, access.org_id, source_id, target_calendar_id=target.id
+                access.member_id,
+                access.org_id,
+                source_id,
+                target_calendar_id=target.id,
+                buffer=buffer,
             )
         await session.rollback()
         assert not await session.scalar(select(Calendar.is_deleted).where(Calendar.id == source_id))
 
 
 class TestDeactivatedOwner:
-    async def test_a_co_admin_keeps_managing_the_team_calendar(self, session, access) -> None:
+    async def test_a_co_admin_keeps_managing_the_team_calendar(
+        self, buffer, session, access
+    ) -> None:
         operations = _operations(session)
         calendar = await operations.create_calendar(
             user_id=access.member_id,
@@ -632,7 +680,11 @@ class TestDeactivatedOwner:
 
         target = await ensure_default_calendar(session, access.org_id, access.peer_id)
         result = await operations.delete_calendar(
-            access.peer_id, access.org_id, calendar_id, target_calendar_id=target.id
+            access.peer_id,
+            access.org_id,
+            calendar_id,
+            target_calendar_id=target.id,
+            buffer=buffer,
         )
 
         assert (result.events_moved, result.events_deleted) == (1, 0)
@@ -642,3 +694,115 @@ class TestDeactivatedOwner:
             )
             == target.id
         )
+
+
+@pytest.mark.parametrize("removed", [False, True])
+async def test_calendar_creation_requires_active_membership(session, access, removed):
+    if removed:
+        await session.execute(
+            delete(OrganizationMember).where(
+                OrganizationMember.user_id == access.ghost_id,
+                OrganizationMember.organization_id == access.org_id,
+            )
+        )
+        await session.commit()
+    with pytest.raises(PermissionDeniedError):
+        await _operations(session).create_calendar(
+            access.ghost_id,
+            access.org_id,
+            "Unauthorized",
+            "#123456",
+            access_mode=AccessMode.OPEN_TO_ORG,
+            baseline_role=ContentRole.VIEWER,
+        )
+    with pytest.raises(PermissionDeniedError):
+        await ensure_default_calendar(session, access.org_id, access.ghost_id)
+    assert not (
+        await session.execute(
+            select(Calendar.id).where(
+                Calendar.organization_id == access.org_id,
+                Calendar.owner_id == access.ghost_id,
+            )
+        )
+    ).all()
+
+
+async def test_default_calendar_has_durable_search_projection(session, access):
+    from uniffy.core.models.calendar.search_acl_refresh import CalendarSearchAclRefresh
+
+    calendar = await ensure_default_calendar(session, access.org_id, access.member_id)
+    assert await session.get(CalendarSearchAclRefresh, calendar.id) is not None
+
+
+async def test_calendar_pages_include_hidden_rows_beyond_first_page(session, access):
+    rows = [
+        Calendar(
+            organization_id=access.org_id,
+            owner_id=access.member_id,
+            name=f"Calendar {i}",
+            access_mode=AccessMode.OWNER_ONLY,
+        )
+        for i in range(501)
+    ]
+    session.add_all(rows)
+    await session.commit()
+    target_id = max(row.id for row in rows)
+    result = await _operations(session).set_visibility(
+        access.member_id, access.org_id, target_id, True
+    )
+    assert result.is_hidden
+    reader = CalendarReader(session)
+    page = await reader.list_calendars(access.member_id, access.org_id)
+    following = await reader.list_calendars(
+        access.member_id, access.org_id, after=page[-1].calendar.id
+    )
+    assert len(page) == 500
+    assert [item.calendar.id for item in following] == [target_id]
+    assert following[0].is_hidden
+
+
+async def test_delete_count_counts_series_not_overrides(session, access):
+    calendar = await ensure_default_calendar(session, access.org_id, access.member_id)
+    master = await _event(session, access, calendar.id)
+    session.add_all([
+        CalendarEvent(
+            organization_id=access.org_id,
+            organizer_id=access.member_id,
+            calendar_id=calendar.id,
+            title="Changed occurrence",
+            start_time=START + timedelta(days=i + 1),
+            end_time=START + timedelta(days=i + 1, hours=1),
+            recurrence_id=master.id,
+            access_mode=AccessMode.OWNER_ONLY,
+        )
+        for i in range(201)
+    ])
+    await session.commit()
+    assert (
+        await CalendarReader(session).count_event_series(
+            access.member_id, access.org_id, calendar.id
+        )
+        == 1
+    )
+
+
+async def test_delete_notifies_calendar_viewers(session, access, buffer, monkeypatch):
+    publish = AsyncMock()
+    monkeypatch.setattr(calendar_operations, "publish_content_access_changed", publish)
+    calendar = await _operations(session).create_calendar(
+        access.member_id,
+        access.org_id,
+        "Shared rota",
+        "#123456",
+    )
+    await _operations(session).delete_calendar(
+        access.member_id,
+        access.org_id,
+        calendar.id,
+        target_calendar_id=None,
+        buffer=buffer,
+    )
+    assert publish.await_args.kwargs["content_id"] == calendar.id
+    assert publish.await_args.kwargs["organization_id"] == access.org_id
+    assert publish.await_args.kwargs["action"].value == "revoked"
+    assert "target_user_ids" not in publish.await_args.kwargs

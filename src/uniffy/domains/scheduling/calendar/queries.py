@@ -8,13 +8,18 @@ from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import NotFoundError
+from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.category import Category
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.login.user import User
 from uniffy.core.types import AccessMode, CalendarType, generate_id
+from uniffy.domains.scheduling.calendar.calendars.search import (
+    enqueue_calendar_search_acl_refresh,
+    record_calendar_search_acl_refresh,
+)
 
 
 async def get_events_in_range(
@@ -153,6 +158,8 @@ async def ensure_default_calendar(
     organization_id: UUID,
     owner_id: UUID,
 ) -> Calendar:
+    if await get_active_membership(session, owner_id, organization_id) is None:
+        raise PermissionDeniedError("create", "calendar")
     calendar = await get_default_calendar(session, organization_id, owner_id)
     if calendar:
         return calendar
@@ -182,10 +189,12 @@ async def ensure_default_calendar(
             index_where=and_(Calendar.is_default, ~Calendar.is_deleted),
         )
     )
-    await session.commit()
     calendar = await get_default_calendar(session, organization_id, owner_id)
     if calendar is None:
         raise NotFoundError("Calendar", owner_id)
+    await record_calendar_search_acl_refresh(session, organization_id, calendar.id)
+    await session.commit()
+    await enqueue_calendar_search_acl_refresh(calendar.id)
     return calendar
 
 

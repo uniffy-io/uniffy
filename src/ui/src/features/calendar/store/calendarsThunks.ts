@@ -92,11 +92,18 @@ export const fetchCalendars = createAsyncThunk<
   CalendarInfo[],
   void,
   { state: RootState; rejectValue: string }
->("calendar/fetchCalendars", async (_, { getState, rejectWithValue }) => {
+>("calendar/fetchCalendars", async (_, { getState, rejectWithValue, signal }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await calendarApi.listCalendars({ organizationId });
-    return response.calendars.map(calendarFromProto);
+    const calendars: CalendarInfo[] = [];
+    let pageToken = "";
+    do {
+      signal.throwIfAborted();
+      const response = await calendarApi.listCalendars({ organizationId, pageToken });
+      calendars.push(...response.calendars.map(calendarFromProto));
+      pageToken = response.nextPageToken;
+    } while (pageToken);
+    return calendars;
   } catch (error) {
     return rejectWithValue(message(error, "Failed to load calendars"));
   }
@@ -174,22 +181,40 @@ export const deleteCalendar = createAsyncThunk<
   }
 });
 
+const visibilityWrites = new Map<string, Promise<unknown>>();
+
 export const setCalendarVisibility = createAsyncThunk<
   CalendarInfo,
   { calendarId: string; hidden: boolean },
   { state: RootState; rejectValue: string; dispatch: AppDispatch }
->("calendar/setCalendarVisibility", async (params, { getState, rejectWithValue, dispatch }) => {
-  try {
-    const organizationId = getOrganizationId(getState());
-    const response = await calendarApi.setCalendarVisibility({ organizationId, ...params });
-    if (!response.calendar) return rejectWithValue("Failed to change calendar visibility");
-    // The server decides which events a hidden calendar removes, invitations included.
-    await refreshVisibleRange(getState(), dispatch);
-    return calendarFromProto(response.calendar);
-  } catch (error) {
-    return rejectWithValue(message(error, "Failed to change calendar visibility"));
-  }
-});
+>(
+  "calendar/setCalendarVisibility",
+  async (params, { getState, rejectWithValue, dispatch, signal }) => {
+    try {
+      const organizationId = getOrganizationId(getState());
+      const key = `${getState().auth.user?.id}:${organizationId}:${params.calendarId}`;
+      const write = async () => {
+        signal.throwIfAborted();
+        return calendarApi.setCalendarVisibility({ organizationId, ...params });
+      };
+      const pending = (visibilityWrites.get(key) ?? Promise.resolve()).then(write, write);
+      visibilityWrites.set(key, pending);
+      let response;
+      try {
+        response = await pending;
+      } finally {
+        if (visibilityWrites.get(key) === pending) visibilityWrites.delete(key);
+      }
+      signal.throwIfAborted();
+      if (!response.calendar) return rejectWithValue("Failed to change calendar visibility");
+      // The server decides which events a hidden calendar removes, invitations included.
+      await refreshVisibleRange(getState(), dispatch);
+      return calendarFromProto(response.calendar);
+    } catch (error) {
+      return rejectWithValue(message(error, "Failed to change calendar visibility"));
+    }
+  },
+);
 
 /** Event count shown before a delete, so the member knows what the choice covers. */
 export const countCalendarEvents = createAsyncThunk<
@@ -199,13 +224,8 @@ export const countCalendarEvents = createAsyncThunk<
 >("calendar/countCalendarEvents", async (calendarId, { getState, rejectWithValue }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await calendarApi.listEvents({
-      organizationId,
-      calendarId,
-      page: 1,
-      pageSize: 1,
-    });
-    return response.totalCount;
+    const response = await calendarApi.getCalendar({ organizationId, calendarId });
+    return response.eventSeriesCount;
   } catch (error) {
     return rejectWithValue(message(error, "Failed to count events"));
   }

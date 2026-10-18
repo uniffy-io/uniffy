@@ -97,8 +97,8 @@ export function CalendarPolicySection() {
       ) : (
         <div className="rounded-xl bg-surface shadow-edge divide-y divide-border/60">
           <PolicyRow
-            title="Who can create team calendars"
-            detail="Team calendars start with co-admins, so they keep working when someone leaves. Every member can still share their own calendars with people and groups."
+            title="Who can create additional calendars"
+            detail="Every member keeps their default calendar. This controls who can add calendars. Add co-admins through sharing."
             value={form.teamCalendarCreators}
             onChange={(value) => setDraft({ ...form, teamCalendarCreators: value })}
             disabled={disabled}

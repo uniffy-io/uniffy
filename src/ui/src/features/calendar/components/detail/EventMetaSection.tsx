@@ -19,6 +19,7 @@ interface EventMetaSectionProps {
 }
 
 export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionProps) {
+  const labelOf = useCalendarLabel();
   const categories = useAppSelector((state) => state.calendar.categories);
   const eventCalendar = useAppSelector((state) => state.calendar.calendars[event.calendarId]);
   const eventTags = useTagsByIds(event.tagIds);
@@ -36,7 +37,9 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
   if (!canEdit) {
     return eventCalendar || eventTags.length > 0 ? (
       <div className="flex flex-wrap items-center gap-2">
-        {eventCalendar && <CalendarBadge name={eventCalendar.name} color={eventCalendar.color} />}
+        {eventCalendar && (
+          <CalendarBadge name={labelOf(eventCalendar)} color={eventCalendar.color} />
+        )}
         {eventTags.map((tag) => (
           <TagChip key={tag.id} tag={tag} />
         ))}
@@ -63,10 +66,7 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
                   : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full mr-1.5"
-                style={{ backgroundColor: cat.color }}
-              />
+              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1.5 bg-current opacity-50" />
               {cat.label}
             </button>
           ))}

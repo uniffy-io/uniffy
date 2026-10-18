@@ -29,6 +29,7 @@ import {
 } from "@/features/calendar/store/calendarsThunks";
 import { displayParts, instantDayKey, parseISO } from "@/features/calendar/utils";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
+import { subscribeContentRefresh } from "@/features/notifications/contentChangedEmitter";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 
 /** Fractional wall-clock hour of an instant on the display zone's clock. */
@@ -157,6 +158,18 @@ export function CalendarPage() {
     refetchVisibleEvents();
   }, [dispatch, refetchVisibleEvents]);
   useContentAccessRefetch(ContentType.CALENDAR, refetchCalendars);
+  useEffect(() => {
+    const stopEvents = subscribeContentRefresh(
+      ContentType.CALENDAR_EVENT,
+      null,
+      refetchVisibleEvents,
+    );
+    const stopCalendars = subscribeContentRefresh(ContentType.CALENDAR, null, refetchCalendars);
+    return () => {
+      stopEvents();
+      stopCalendars();
+    };
+  }, [refetchVisibleEvents, refetchCalendars]);
 
   return (
     <>

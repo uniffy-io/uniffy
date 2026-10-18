@@ -822,16 +822,16 @@ creating. Needs an organizer (A), an attendee (B), a third member (C), an org ad
       selected. On mobile, editing an event now allows removing the last reminder too.
 - [ ] Creating a template no longer logs a Redux serializability error in the console.
 
-## Calendar: shared and team calendars
+## Calendar: shared calendars
 
 Calendars are shareable content: a calendar's members reach every event filed on it, a
-per-member show/hide stays with the member, and the org policy decides who may create team
+per-member show/hide stays with the member, and the org policy decides who may create additional
 calendars or open a calendar to the whole organization. Needs an owner (A), a co-admin (D), a
 group containing B but not C, an org admin who is not a member of anything below, a second
 browser for B/C, `db shell`, and mailcatcher. (both products)
 
-- [ ] A clicks `+` on "My calendars" -> New calendar, picks Type "Team", adds D as a
-      co-admin, and creates it. D's sidebar lists it under "Shared with me" and D's row menu
+- [ ] A clicks `+` on "My calendars" -> New calendar, enters a name and creates it. It starts
+      private. A opens row menu -> Share and adds D as Admin. D's sidebar lists it under "Shared with me" and D's row menu
       offers Edit, Share, Import and Delete.
 - [ ] A shares the calendar with B's group as Viewer (row menu -> Share). B sees its events
       on the grid (week, month, agenda), in search, and in the `@` picker, in the calendar's
@@ -846,7 +846,15 @@ browser for B/C, `db shell`, and mailcatcher. (both products)
       move them to another calendar or change their sharing (both need admin on the event).
 - [ ] D (calendar co-admin) opens the Share dialog on an event A filed on the calendar and
       gets full controls; a BLOCKED grant for D on that event still wins over the calendar.
-- [ ] Mark one event Private: B (Viewer) sees only "Busy" for it; an Editor sees the details.
+- [ ] Mark one event Private while B has it open: B (Viewer) sees only "Busy" without reloading;
+      an Editor sees the details. Move an event to a calendar B cannot access: B's grid removes
+      it and its open detail becomes unavailable without reloading.
+- [ ] Rename an event or import a calendar file while B views the calendar: B's grid updates
+      without reloading. A viewer's empty detail fields say "No location" and "No description".
+- [ ] Edit one occurrence of a recurring event and choose "This event": the saved occurrence
+      stays open with its updated title. Closing the modal while saving must not reopen it.
+- [ ] Create a subscribe link, close and reopen its panel, and fetch it: it returns iCalendar.
+      Replace it: the previous URL stops working. Stop sharing: the replacement stops working.
 - [ ] A shares their default calendar with B: B sees it named after A (e.g. "Alice Johnson"), not
       a second "My Calendar", in the sidebar/filter sheet, pickers and the event badge; A still
       sees "My Calendar".
@@ -875,8 +883,9 @@ browser for B/C, `db shell`, and mailcatcher. (both products)
       in mailcatcher and the events leave every grid. A calendar holding more than 200 series
       refuses this disposition with a message suggesting a move instead. Default calendars
       offer no Delete.
-- [ ] Admin -> Calendar: set "Who can create team calendars" to "Org and calendar admins". A
-      non-admin's New calendar dialog loses the Type choice; the org admin keeps it. Set "Who
+- [ ] Admin -> Calendar: set "Who can create additional calendars" to "Org and calendar admins".
+      A non-admin loses the New calendar action, and creation is refused through the API. Their
+      default calendar remains available. Set "Who
       can share a calendar with the whole organization" the same way: a non-admin's Share
       dialog no longer offers "Everyone in org" and `SetAccessMode` to OPEN_TO_ORG
       is refused. Each save writes a `calendar.policy_updated` audit row with the

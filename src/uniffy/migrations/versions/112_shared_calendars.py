@@ -1,27 +1,12 @@
-"""Make calendars shareable content.
-
-Revision ID: 108
-Revises: 107
-Create Date: 2026-09-28
-
-Adds ``CALENDAR`` to ``contenttype`` so calendars can carry member rows, pins every existing
-calendar to ``OWNER_ONLY`` so no organization default can open a personal calendar once calendar
-access resolves, adds soft delete and a description, keeps one default calendar per member, and
-stores each member's own visibility choice per calendar. A durable queue records calendars whose
-events' search ACLs must be refreshed after a sharing change.
-
-Edited occurrences are re-pointed at their series' calendar, since access and the search refresh
-resolve a series through one calendar, and the old column defaults that opened any calendar inserted
-without a policy to the whole organization are dropped.
-"""
+"""Add calendar sharing, visibility preferences, and durable search refreshes."""
 
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "108"
-down_revision: str | None = "107"
+revision: str = "112"
+down_revision: str | None = "111"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -151,6 +136,7 @@ def upgrade() -> None:
             sa.ForeignKey("login_organizations.id", ondelete="CASCADE"),
             nullable=False,
         ),
+        sa.Column("pending_event_ids", sa.ARRAY(sa.Uuid()), nullable=False, server_default="{}"),
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -160,6 +146,11 @@ def upgrade() -> None:
         "calendar_search_acl_refresh_queue",
         ["created_at"],
     )
+
+    op.execute("""
+        INSERT INTO calendar_search_acl_refresh_queue (calendar_id, organization_id, created_at)
+        SELECT id, organization_id, now() FROM calendar_calendars WHERE NOT is_deleted
+    """)
 
 
 def downgrade() -> None:

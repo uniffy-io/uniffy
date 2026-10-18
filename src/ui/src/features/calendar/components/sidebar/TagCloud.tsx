@@ -5,6 +5,7 @@ import { toggleTagFilter } from "@/features/calendar/store";
 import { useCalendarEvents } from "@/features/calendar/hooks";
 import { TagChip } from "@/features/tags";
 import type { SerializedTag } from "@/features/tags";
+import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
 import { cn } from "@/shared/utils/cn";
 
 export function TagCloud() {
@@ -20,12 +21,9 @@ export function TagCloud() {
 
   if (tags.length === 0) {
     return (
-      <div className="space-y-2">
-        <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          Tags
-        </h3>
+      <SidebarSection id="tags" title="Tags">
         <p className="text-xs text-muted-foreground">Tags you add to events will appear here</p>
-      </div>
+      </SidebarSection>
     );
   }
 
@@ -34,10 +32,7 @@ export function TagCloud() {
   };
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-        Tags
-      </h3>
+    <SidebarSection id="tags" title="Tags">
       <div className="flex flex-wrap gap-2">
         {tags.map((tag) => {
           const isSelected = selectedTagIds.includes(tag.id);
@@ -57,6 +52,6 @@ export function TagCloud() {
           );
         })}
       </div>
-    </div>
+    </SidebarSection>
   );
 }

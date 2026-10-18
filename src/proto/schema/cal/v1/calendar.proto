@@ -712,10 +712,13 @@ message Calendar {
 
 message ListCalendarsRequest {
   string organization_id = 1;
+  string page_token = 2;
+  int32 page_size = 3;
 }
 
 message ListCalendarsResponse {
   repeated Calendar calendars = 1;
+  string next_page_token = 2;
 }
 
 message GetCalendarRequest {
@@ -725,6 +728,7 @@ message GetCalendarRequest {
 
 message GetCalendarResponse {
   Calendar calendar = 1;
+  int32 event_series_count = 2;
 }
 
 message CreateCalendarRequest {

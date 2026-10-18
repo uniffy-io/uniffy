@@ -23,6 +23,7 @@ from uniffy.core.types import (
     ContentType,
     RecurrenceEditScope,
 )
+from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
     finish_following_overrides,
     stage_following_overrides,
@@ -97,6 +98,7 @@ class EventDeleteOperations:
                     details={"occurrence_date": occurrence_date.isoformat(), "following": True},
                 )
                 await self.session.commit()
+                await publish_event_change(master, access_changed=True)
                 await finish_following_overrides(self.search_indexer, overrides)
                 return True
 
@@ -178,6 +180,7 @@ class EventDeleteOperations:
             },
         )
         await self.session.commit()
+        await publish_event_change(event, access_changed=True)
         for retire in retirements:
             await retire()
 

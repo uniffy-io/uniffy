@@ -265,6 +265,7 @@ export function EventDetailScreen() {
                 color={T.accent}
               />
               <ShareButton
+                calendarLabel={calendar?.label}
                 contentType={ContentType.CALENDAR_EVENT}
                 contentId={event.id}
                 color={T.accent}

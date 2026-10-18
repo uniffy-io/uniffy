@@ -573,6 +573,12 @@ export function CreateEventScreen() {
           </View>
         )}
 
+        {targetCalendar && (
+          <Text style={[styles.fieldLabel, { color: T.textDim }]}>
+            Calendar members and invited people can access this event.
+          </Text>
+        )}
+
         {/* Category */}
         {categories.length > 0 && (
           <View style={[styles.fieldCard, { backgroundColor: T.surface, borderColor: T.border }]}>

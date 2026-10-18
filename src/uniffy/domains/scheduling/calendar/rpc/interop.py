@@ -267,6 +267,7 @@ class InteropHandlers:
                     calendar_id=calendar_id,
                 )
                 created_at = row.created_at
+                await session.commit()
         except Exception as exc:
             raise map_domain_error("regenerate_calendar_feed", exc) from exc
 
@@ -293,6 +294,7 @@ class InteropHandlers:
                     organization_id=organization_id,
                     calendar_id=calendar_id,
                 )
+                await session.commit()
         except Exception as exc:
             raise map_domain_error("revoke_calendar_feed", exc) from exc
 

@@ -3,10 +3,14 @@
 from collections.abc import Awaitable, Callable
 from uuid import UUID
 
+from sqlalchemy import ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.errors import ValidationError
 from uniffy.core.types import AccessMode, ContentRole, ContentType
+
+VisibilityFilter = Callable[[ContentAccessQuery, UUID, UUID], Awaitable[ColumnElement[bool]]]
 
 ContentLoader = Callable[[AsyncSession, UUID, UUID], Awaitable[object | None]]
 AttachmentCascadeLoader = Callable[
@@ -28,6 +32,8 @@ AccessModeGuard = Callable[
 RoleResolver = Callable[[AsyncSession, UUID, UUID, object], Awaitable[ContentRole | None]]
 # (session, organization_id, content, new_owner_user_id); raises to refuse the transfer.
 TransferGuard = Callable[[AsyncSession, UUID, object, UUID], Awaitable[None]]
+
+_visibility_filters: dict[ContentType, VisibilityFilter] = {}
 
 _content_loaders: dict[ContentType, ContentLoader] = {}
 _attachment_cascade_loaders: dict[ContentType, list[AttachmentCascadeLoader]] = {}
@@ -130,3 +136,11 @@ def register_transfer_guard(content_type: ContentType, guard: TransferGuard) -> 
 
 def find_transfer_guard(content_type: ContentType) -> TransferGuard | None:
     return _transfer_guards.get(content_type)
+
+
+def register_visibility_filter(content_type: ContentType, builder: VisibilityFilter) -> None:
+    _visibility_filters[content_type] = builder
+
+
+def find_visibility_filter(content_type: ContentType) -> VisibilityFilter | None:
+    return _visibility_filters.get(content_type)

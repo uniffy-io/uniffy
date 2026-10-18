@@ -344,7 +344,7 @@ export function EventDetailModal() {
               )}
 
               <div className="px-6 py-3 border-b border-border">
-                {!eventSupportsRealtime(selectedEvent) && (
+                {canEdit && !eventSupportsRealtime(selectedEvent) && (
                   <p className="mb-2 text-xs text-muted-foreground">
                     Recurring description. Changes save on Done after you choose which events to
                     update.
@@ -357,7 +357,9 @@ export function EventDetailModal() {
                   value={selectedEvent.description}
                   realtime={eventSupportsRealtime(selectedEvent)}
                   onDone={handleDescriptionDone}
-                  placeholder="Click to add a description... (type @ to mention)"
+                  placeholder={
+                    canEdit ? "Click to add a description... (type @ to mention)" : "No description"
+                  }
                   label="Description"
                   enableUpload
                   fullPreview

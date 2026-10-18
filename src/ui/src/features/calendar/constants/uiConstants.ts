@@ -29,7 +29,7 @@ export const SIDEBAR_SECTIONS = {
   calendars: true,
   shared_calendars: true,
   organization: true,
-  categories: true,
-  templates: true,
-  tags: true,
+  categories: false,
+  templates: false,
+  tags: false,
 } as const;

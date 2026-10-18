@@ -344,6 +344,18 @@ export function QuickEventModal({
         <ModalHeader title="New event" />
 
         <ModalBody>
+          {writableCalendars.length > 0 && (
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Calendar</label>
+              <CalendarSelect
+                calendars={writableCalendars}
+                value={targetCalendarId || undefined}
+                onChange={setSelectedCalendarId}
+                triggerClassName="w-full sm:w-72"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Title</label>
             <Input
@@ -609,18 +621,6 @@ export function QuickEventModal({
             <ReminderSelector value={reminders} onChange={setReminders} />
           </div>
 
-          {writableCalendars.length > 1 && (
-            <div>
-              <label className="block text-sm text-muted-foreground mb-1">Calendar</label>
-              <CalendarSelect
-                calendars={writableCalendars}
-                value={targetCalendarId || undefined}
-                onChange={setSelectedCalendarId}
-                triggerClassName="w-full sm:w-72"
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Category</label>
             <div className="flex flex-wrap gap-2">
@@ -636,10 +636,7 @@ export function QuickEventModal({
                       : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full mr-2"
-                    style={{ backgroundColor: cat.color }}
-                  />
+                  <span className="inline-block w-2 h-2 rounded-full mr-2 bg-current opacity-50" />
                   {cat.label}
                 </button>
               ))}

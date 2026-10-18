@@ -115,17 +115,17 @@ class TestAdminsOnly:
         view = await get_calendar_policy_view(session, access.member_id, access.org_id)
         assert not view.can_create_team_calendars
 
-    async def test_a_personal_calendar_stays_open_to_everyone(self, session, access) -> None:
+    async def test_creation_policy_covers_personal_calendars(self, session, access) -> None:
         await _restrict(session, access)
 
-        calendar = await _create(session, access, access.member_id, name="mine")
-
-        assert calendar.calendar_type == CalendarType.PERSONAL
+        with pytest.raises(PermissionDeniedError):
+            await _create(session, access, access.member_id, name="mine")
+        assert await _calendars_named(session, access, "mine") == 0
 
     async def test_a_member_cannot_open_a_calendar_to_the_organization(
         self, session, access
     ) -> None:
-        await _restrict(session, access)
+        await _restrict(session, access, team=EVERYONE)
         calendar = await _create(session, access, access.member_id, name="closed")
         calendar_id = calendar.id
 
@@ -146,7 +146,7 @@ class TestAdminsOnly:
         )
 
     async def test_clearing_the_mode_cannot_inherit_an_open_default(self, session, access) -> None:
-        await _restrict(session, access)
+        await _restrict(session, access, team=EVERYONE)
         session.add(
             OrganizationPermissionDefaults(
                 organization_id=access.org_id,

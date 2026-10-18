@@ -127,7 +127,7 @@ export function AtOverlay() {
 
   const handleReference = (item: SerializedSearchResult) => {
     if (!item.domain) return;
-    insertReference({ id: item.id, label: item.title, domain: item.domain });
+    insertReference({ id: item.id, label: item.title, domain: item.domain, urn: item.urn });
     closeAt();
   };
 

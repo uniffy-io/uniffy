@@ -65,9 +65,9 @@ async def _calendar(session, *, organization_id, owner_id, shared_with=None, rol
     return calendar
 
 
-async def _create(session, access, *, calendar_id, title, author=None) -> CalendarEvent:
+async def _create(session, access, *, buffer, calendar_id, title, author=None) -> CalendarEvent:
     start = datetime.now(UTC) + timedelta(days=1)
-    return await CalendarEventOperations(session, _indexer()).create(
+    return await CalendarEventOperations(session, _indexer(), buffer).create(
         user_id=author or access.member_id,
         organization_id=access.org_id,
         title=title,
@@ -88,8 +88,8 @@ async def _events_titled(session, access, title) -> int:
     )
 
 
-async def _move(session, access, event_id, calendar_id, *, author=None) -> CalendarEvent:
-    return await CalendarEventOperations(session, _indexer()).update(
+async def _move(session, access, event_id, calendar_id, *, buffer, author=None) -> CalendarEvent:
+    return await CalendarEventOperations(session, _indexer(), buffer).update(
         user_id=author or access.member_id,
         organization_id=access.org_id,
         event_id=event_id,
@@ -99,14 +99,16 @@ async def _move(session, access, event_id, calendar_id, *, author=None) -> Calen
 
 
 class TestCreateTargetsAnEditableCalendar:
-    async def test_the_author_files_on_their_own_calendar(self, session, access) -> None:
+    async def test_the_author_files_on_their_own_calendar(self, buffer, session, access) -> None:
         calendar = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
 
-        event = await _create(session, access, calendar_id=calendar.id, title="own-calendar")
+        event = await _create(
+            session, access, calendar_id=calendar.id, title="own-calendar", buffer=buffer
+        )
 
         assert event.calendar_id == calendar.id
 
-    async def test_an_editor_files_on_a_shared_calendar(self, session, access) -> None:
+    async def test_an_editor_files_on_a_shared_calendar(self, buffer, session, access) -> None:
         calendar = await _calendar(
             session,
             organization_id=access.org_id,
@@ -116,12 +118,17 @@ class TestCreateTargetsAnEditableCalendar:
         )
 
         event = await _create(
-            session, access, calendar_id=calendar.id, title="team-entry", author=access.peer_id
+            session,
+            access,
+            calendar_id=calendar.id,
+            title="team-entry",
+            author=access.peer_id,
+            buffer=buffer,
         )
 
         assert (event.calendar_id, event.organizer_id) == (calendar.id, access.peer_id)
 
-    async def test_a_viewer_is_refused(self, session, access) -> None:
+    async def test_a_viewer_is_refused(self, buffer, session, access) -> None:
         calendar = await _calendar(
             session,
             organization_id=access.org_id,
@@ -133,23 +140,28 @@ class TestCreateTargetsAnEditableCalendar:
 
         with pytest.raises(PermissionDeniedError):
             await _create(
-                session, access, calendar_id=calendar.id, title=title, author=access.peer_id
+                session,
+                access,
+                calendar_id=calendar.id,
+                title=title,
+                author=access.peer_id,
+                buffer=buffer,
             )
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
 
-    async def test_a_colleagues_calendar_is_refused(self, session, access) -> None:
+    async def test_a_colleagues_calendar_is_refused(self, buffer, session, access) -> None:
         calendar = await _calendar(session, organization_id=access.org_id, owner_id=access.peer_id)
         title = f"planted-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=calendar.id, title=title)
+            await _create(session, access, calendar_id=calendar.id, title=title, buffer=buffer)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
 
-    async def test_another_tenants_calendar_is_refused(self, session, access) -> None:
+    async def test_another_tenants_calendar_is_refused(self, buffer, session, access) -> None:
         """The organization is compared too, so a leaked id from elsewhere is
         as useless as one that does not exist."""
         calendar = await _calendar(
@@ -158,16 +170,16 @@ class TestCreateTargetsAnEditableCalendar:
         title = f"cross-tenant-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=calendar.id, title=title)
+            await _create(session, access, calendar_id=calendar.id, title=title, buffer=buffer)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
 
-    async def test_an_unknown_calendar_is_refused(self, session, access) -> None:
+    async def test_an_unknown_calendar_is_refused(self, buffer, session, access) -> None:
         title = f"nowhere-{generate_id().hex[:8]}"
 
         with pytest.raises(NotFoundError):
-            await _create(session, access, calendar_id=generate_id(), title=title)
+            await _create(session, access, calendar_id=generate_id(), title=title, buffer=buffer)
         await session.rollback()
 
         assert await _events_titled(session, access, title) == 0
@@ -175,16 +187,16 @@ class TestCreateTargetsAnEditableCalendar:
 
 class TestMoveTargetsAnEditableCalendar:
     async def test_an_event_cannot_be_moved_onto_a_colleagues_calendar(
-        self, session, access
+        self, buffer, session, access
     ) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         theirs = await _calendar(session, organization_id=access.org_id, owner_id=access.peer_id)
-        event = await _create(session, access, calendar_id=mine.id, title="stays-put")
+        event = await _create(session, access, calendar_id=mine.id, title="stays-put", buffer=buffer)
         # Read through the ids before the rollback expires the instances.
         mine_id, theirs_id, event_id = mine.id, theirs.id, event.id
 
         with pytest.raises(NotFoundError):
-            await _move(session, access, event_id, theirs_id)
+            await _move(session, access, event_id, theirs_id, buffer=buffer)
         await session.rollback()
 
         assert (
@@ -194,7 +206,9 @@ class TestMoveTargetsAnEditableCalendar:
             == mine_id
         )
 
-    async def test_a_calendar_editor_cannot_move_someone_elses_event(self, session, access) -> None:
+    async def test_a_calendar_editor_cannot_move_someone_elses_event(
+        self, buffer, session, access
+    ) -> None:
         """Moving changes who can read the event, so editing it is not enough."""
         team = await _calendar(
             session,
@@ -205,12 +219,17 @@ class TestMoveTargetsAnEditableCalendar:
         )
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         event = await _create(
-            session, access, calendar_id=team.id, title="team-sync", author=access.peer_id
+            session,
+            access,
+            calendar_id=team.id,
+            title="team-sync",
+            author=access.peer_id,
+            buffer=buffer,
         )
         team_id, mine_id, event_id = team.id, mine.id, event.id
 
         with pytest.raises(PermissionDeniedError):
-            await _move(session, access, event_id, mine_id)
+            await _move(session, access, event_id, mine_id, buffer=buffer)
         await session.rollback()
 
         assert (
@@ -220,7 +239,9 @@ class TestMoveTargetsAnEditableCalendar:
             == team_id
         )
 
-    async def test_a_series_moves_with_its_occurrences_and_responses(self, session, access) -> None:
+    async def test_a_series_moves_with_its_occurrences_and_responses(
+        self, buffer, session, access
+    ) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         team = await _calendar(
             session,
@@ -264,7 +285,7 @@ class TestMoveTargetsAnEditableCalendar:
         await session.commit()
         master_id, override_id, team_id = master.id, override.id, team.id
 
-        await _move(session, access, master_id, team_id)
+        await _move(session, access, master_id, team_id, buffer=buffer)
 
         placed = set(
             (
@@ -292,7 +313,9 @@ class TestMoveTargetsAnEditableCalendar:
             (access.owner_id, AttendeeStatus.DECLINED),
         }
 
-    async def test_one_edited_occurrence_cannot_leave_its_series(self, session, access) -> None:
+    async def test_one_edited_occurrence_cannot_leave_its_series(
+        self, buffer, session, access
+    ) -> None:
         mine = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         other = await _calendar(session, organization_id=access.org_id, owner_id=access.member_id)
         start = datetime.now(UTC) + timedelta(days=1)
@@ -323,7 +346,7 @@ class TestMoveTargetsAnEditableCalendar:
         override_id, mine_id, other_id = override.id, mine.id, other.id
 
         with pytest.raises(ValidationError):
-            await _move(session, access, override_id, other_id)
+            await _move(session, access, override_id, other_id, buffer=buffer)
         await session.rollback()
 
         assert (

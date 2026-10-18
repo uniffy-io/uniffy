@@ -9,6 +9,7 @@ import type {
 } from "@/features/calendar/types";
 import { LAYOUT, SIDEBAR_SECTIONS } from "@/features/calendar/constants";
 import { instantDayKey } from "@/features/calendar/utils";
+import { updateEvent } from "@/features/calendar/store/calendarThunks";
 
 interface CalendarUiState {
   viewMode: ViewMode;
@@ -173,6 +174,17 @@ const calendarUiSlice = createSlice({
     },
 
     resetCalendarUiState: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder.addCase(updateEvent.fulfilled, (state, action) => {
+      const { eventId, recurrenceEditScope } = action.meta.arg;
+      if (
+        state.selectedEventId === eventId &&
+        (recurrenceEditScope === "this_event" || recurrenceEditScope === "this_and_following")
+      ) {
+        state.selectedEventId = action.payload.id;
+      }
+    });
   },
 });
 

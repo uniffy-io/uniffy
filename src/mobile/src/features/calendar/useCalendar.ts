@@ -115,9 +115,19 @@ export function useCalendars() {
 
   return useQuery({
     queryKey: calendarsQueryKey(organizationId),
-    queryFn: async () => {
-      const response = await calendarApi.listCalendars({ organizationId: organizationId! });
-      return response.calendars.map(calendarToPlain);
+    queryFn: async ({ signal }) => {
+      const calendars: SerializedCalendar[] = [];
+      let pageToken = "";
+      do {
+        signal.throwIfAborted();
+        const response = await calendarApi.listCalendars({
+          organizationId: organizationId!,
+          pageToken,
+        });
+        calendars.push(...response.calendars.map(calendarToPlain));
+        pageToken = response.nextPageToken;
+      } while (pageToken);
+      return calendars;
     },
     select: useCallback(
       (calendars: SerializedCalendar[]) =>

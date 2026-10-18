@@ -2,15 +2,17 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.content.registry import (
     register_access_mode_guard,
     register_child_acl_refresh_hook,
     register_content_loader,
     register_role_resolver,
     register_transfer_guard,
+    register_visibility_filter,
 )
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -71,6 +73,16 @@ async def _resolve_event_role(
     return await EventContentOperations(session)._resolve_role(user_id, organization_id, content)
 
 
+async def _event_visibility_filter(
+    access_query: ContentAccessQuery,
+    user_id: UUID,
+    organization_id: UUID,
+) -> ColumnElement[bool]:
+    operations = EventContentOperations(access_query.session)
+    operations.access_query = access_query
+    return await operations.event_access_filter(user_id, organization_id)
+
+
 def register_calendar_content() -> None:
     global _registered
     if _registered:
@@ -79,6 +91,7 @@ def register_calendar_content() -> None:
     register_content_loader(ContentType.CALENDAR, _load_calendar)
     register_access_mode_guard(ContentType.CALENDAR_EVENT, guard_event_access_mode)
     register_role_resolver(ContentType.CALENDAR_EVENT, _resolve_event_role)
+    register_visibility_filter(ContentType.CALENDAR_EVENT, _event_visibility_filter)
     register_access_mode_guard(ContentType.CALENDAR, guard_calendar_access_mode)
     register_transfer_guard(ContentType.CALENDAR, guard_calendar_transfer)
     register_child_acl_refresh_hook(
