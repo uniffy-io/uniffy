@@ -11,6 +11,19 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+it("refreshes a calendar list for any event and coalesces imports", () => {
+  vi.useFakeTimers();
+  const refresh = vi.fn();
+  cleanups.push(subscribeContentRefresh(ContentType.CALENDAR_EVENT, null, refresh));
+  emitContentChanged({ contentType: ContentType.TASK, contentId: "one" });
+  vi.advanceTimersByTime(300);
+  expect(refresh).not.toHaveBeenCalled();
+  emitContentChanged({ contentType: ContentType.CALENDAR_EVENT, contentId: "one" });
+  emitContentChanged({ contentType: ContentType.CALENDAR_EVENT, contentId: "two" });
+  vi.advanceTimersByTime(300);
+  expect(refresh).toHaveBeenCalledOnce();
+});
+
 it("refreshes only matching open readers and bounds a continuous burst", () => {
   vi.useFakeTimers();
   const task = vi.fn();

@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
 import type { Icon } from "@phosphor-icons/react";
 import {
+  CalendarBlank,
   Users,
   UsersThree,
   ShieldCheck,
@@ -66,6 +67,7 @@ const orgGroups: NavGroup[] = [
     title: "Workspace",
     items: [
       { name: "Agents", path: "/admin/agents", icon: Robot },
+      { name: "Calendar", path: "/admin/calendar", icon: CalendarBlank },
       { name: "Chat", path: "/admin/chat", icon: ChatCircle },
       { name: "Integrations", path: "/admin/integrations", icon: Plugs },
       { name: "Rooms", path: "/admin/rooms", icon: Door },

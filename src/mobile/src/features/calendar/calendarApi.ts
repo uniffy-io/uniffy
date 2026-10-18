@@ -8,13 +8,17 @@ import {
   CreateEventTemplateRequestSchema,
   DeleteCategoryRequestSchema,
   DeleteEventRequestSchema,
+  GetCalendarPolicyRequestSchema,
+  GetCalendarRequestSchema,
   GetEventRequestSchema,
   GetEventsInRangeRequestSchema,
+  ListCalendarsRequestSchema,
   ListCategoriesRequestSchema,
   ListEventActivitiesRequestSchema,
   ListEventTemplatesRequestSchema,
   ListEventsRequestSchema,
   RemoveAttendeesRequestSchema,
+  SetCalendarVisibilityRequestSchema,
   UpdateAttendeeStatusRequestSchema,
   UpdateCategoryRequestSchema,
   UpdateEventRequestSchema,
@@ -24,6 +28,9 @@ import { transport } from "@core/api/transport";
 const client = createClient(CalendarService, transport);
 
 export const calendarApi = {
+  getCalendar: (request: MessageInitShape<typeof GetCalendarRequestSchema>) =>
+    client.getCalendar(request),
+
   createEvent: (request: MessageInitShape<typeof CreateEventRequestSchema>) =>
     client.createEvent(request),
 
@@ -40,6 +47,15 @@ export const calendarApi = {
 
   getEventsInRange: (request: MessageInitShape<typeof GetEventsInRangeRequestSchema>) =>
     client.getEventsInRange(request),
+
+  listCalendars: (request: MessageInitShape<typeof ListCalendarsRequestSchema>) =>
+    client.listCalendars(request),
+
+  getCalendarPolicy: (request: MessageInitShape<typeof GetCalendarPolicyRequestSchema>) =>
+    client.getCalendarPolicy(request),
+
+  setCalendarVisibility: (request: MessageInitShape<typeof SetCalendarVisibilityRequestSchema>) =>
+    client.setCalendarVisibility(request),
 
   listCategories: (request: MessageInitShape<typeof ListCategoriesRequestSchema>) =>
     client.listCategories(request),

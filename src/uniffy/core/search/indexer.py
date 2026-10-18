@@ -7,7 +7,11 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.search.engine import SearchFilter, search_filter_to_data
-from uniffy.core.search.policy import SearchDocumentInput, build_search_document
+from uniffy.core.search.policy import (
+    SearchContainerAccess,
+    SearchDocumentInput,
+    build_search_document,
+)
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import AccessMode, ContentRole, ContentType
 
@@ -103,6 +107,7 @@ RANK_SCORE_BY_ENTITY_TYPE: dict[str, float] = {
     "agent_chat": 0.8,
     "agent_folder": 0.8,
     "room": 0.8,
+    "calendar": 0.8,
     "agent": 0.8,
     "user": 0.8,
     "team": 0.8,
@@ -143,6 +148,7 @@ class SearchIndexer:
         blocked_user_ids: list[UUID] | None = None,
         blocked_group_ids: list[UUID] | None = None,
         attendee_user_ids: list[UUID] | None = None,
+        container: SearchContainerAccess | None = None,
         tags: list[str] | None = None,
         rank_score: float | None = None,
         metadata: dict[str, str] | None = None,
@@ -164,6 +170,7 @@ class SearchIndexer:
                 blocked_user_ids=tuple(blocked_user_ids or ()),
                 blocked_group_ids=tuple(blocked_group_ids or ()),
                 attendee_user_ids=tuple(attendee_user_ids or ()),
+                container=container,
                 tags=tuple(tags or ()),
                 rank_score=(
                     rank_score if rank_score is not None else default_rank_score(entity_type)
@@ -227,6 +234,13 @@ class SearchIndexer:
         attendee_user_ids: list[UUID],
     ) -> None:
         await self.search.update_document_attendees(urn, organization_id, attendee_user_ids)
+
+    async def update_container_access(
+        self,
+        document_ids: list[str],
+        container: SearchContainerAccess,
+    ) -> int:
+        return await self.search.update_container_access(document_ids, container)
 
     async def update_access_policy(
         self,

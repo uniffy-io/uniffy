@@ -11,6 +11,7 @@ const TYPE_LABELS: Partial<Record<SearchResultType, string>> = {
   [SearchResultType.CHAT_MESSAGE]: "Message",
   [SearchResultType.USER]: "User",
   [SearchResultType.TEAM]: "Team",
+  [SearchResultType.CALENDAR]: "Calendar",
   [SearchResultType.CALENDAR_EVENT]: "Event",
   [SearchResultType.PROJECT]: "Project",
   [SearchResultType.TASK]: "Task",
@@ -29,6 +30,7 @@ const TYPE_DOMAINS: Partial<Record<SearchResultType, Domain>> = {
   [SearchResultType.AGENT_CHAT]: "chat",
   [SearchResultType.AGENT_FOLDER]: "chat",
   [SearchResultType.CHAT_MESSAGE]: "chat",
+  [SearchResultType.CALENDAR]: "calendar",
   [SearchResultType.CALENDAR_EVENT]: "calendar",
   [SearchResultType.PROJECT]: "projects",
   [SearchResultType.TASK]: "projects",
@@ -49,6 +51,7 @@ export type UrnType =
   | "FILE"
   | "PROJECT"
   | "TASK"
+  | "CALENDAR"
   | "CALENDAR_EVENT"
   | "ROOM"
   | "CHAT"
@@ -67,6 +70,7 @@ const URN_TYPES: ReadonlySet<string> = new Set<UrnType>([
   "FILE",
   "PROJECT",
   "TASK",
+  "CALENDAR",
   "CALENDAR_EVENT",
   "ROOM",
   "CHAT",
@@ -116,6 +120,8 @@ export function nativeRouteFor(
       const channelId = metadata["channel_id"];
       return channelId ? `/chat/${channelId}` : null;
     }
+    case SearchResultType.CALENDAR:
+      return `/calendar?calendar=${encodeURIComponent(id)}`;
     case SearchResultType.CALENDAR_EVENT:
       return `/calendar/${id}`;
     case SearchResultType.PROJECT:

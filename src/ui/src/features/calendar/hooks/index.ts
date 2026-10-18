@@ -5,3 +5,8 @@ export { useTodayEvents } from "@/features/calendar/hooks/useTodayEvents";
 export { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
 export type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 export { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
+export {
+  useCalendars,
+  useDefaultCalendar,
+  useWritableCalendars,
+} from "@/features/calendar/hooks/useCalendars";

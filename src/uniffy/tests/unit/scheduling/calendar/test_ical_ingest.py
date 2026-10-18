@@ -9,7 +9,8 @@ import pytest
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
-from uniffy.core.types import AccessMode, RecurrencePattern, generate_id
+from uniffy.core.types import AccessMode, ContentRole, RecurrencePattern, generate_id
+from uniffy.domains.scheduling.calendar.ical import ingest as ingest_module
 from uniffy.domains.scheduling.calendar.ical.ingest import apply_import, preview_import
 from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 
@@ -31,6 +32,18 @@ def _vevent(uid: str, *, summary: str = "Meeting", extra: bytes = b"") -> bytes:
 
 def _document(*bodies: bytes) -> bytes:
     return HEADER + b"".join(bodies) + FOOTER
+
+
+async def _calendar_gate(session, user_id, organization_id, calendar_id):
+    """Stands in for the role gate: the fake session's owner holds the calendar, nobody else."""
+    if vars(session).get("_owner", user_id) != user_id:
+        raise NotFoundError("Calendar", calendar_id)
+    return ContentRole.OWNER
+
+
+@pytest.fixture(autouse=True)
+def _calendar_role_gate(monkeypatch):
+    monkeypatch.setattr(ingest_module, "require_calendar_edit", _calendar_gate)
 
 
 class _Session:

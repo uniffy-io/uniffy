@@ -20,7 +20,12 @@ const COPIED_FEEDBACK_MS = 2000;
  * into Outlook, Google or Apple - but it is also a credential, which is why
  * replacing it says plainly that existing subscriptions stop working.
  */
-export function CalendarFeedPanel() {
+interface CalendarFeedPanelProps {
+  /** Omitted for the member's default calendar. */
+  calendarId?: string;
+}
+
+export function CalendarFeedPanel({ calendarId }: CalendarFeedPanelProps) {
   const dispatch = useAppDispatch();
 
   const [feed, setFeed] = useState<CalendarFeed | null>(null);
@@ -31,7 +36,7 @@ export function CalendarFeedPanel() {
 
   useEffect(() => {
     let cancelled = false;
-    void dispatch(fetchCalendarFeed(undefined)).then((outcome) => {
+    void dispatch(fetchCalendarFeed(calendarId)).then((outcome) => {
       if (cancelled) return;
       if (fetchCalendarFeed.fulfilled.match(outcome)) setFeed(outcome.payload);
       setLoading(false);
@@ -39,7 +44,7 @@ export function CalendarFeedPanel() {
     return () => {
       cancelled = true;
     };
-  }, [dispatch]);
+  }, [dispatch, calendarId]);
 
   const handleCopy = () => {
     if (!feed?.url) return;
@@ -51,7 +56,7 @@ export function CalendarFeedPanel() {
   const handleRegenerate = async () => {
     setConfirming(null);
     setBusy(true);
-    const outcome = await dispatch(regenerateCalendarFeed(undefined));
+    const outcome = await dispatch(regenerateCalendarFeed(calendarId));
     setBusy(false);
     if (regenerateCalendarFeed.fulfilled.match(outcome)) setFeed(outcome.payload);
   };
@@ -59,7 +64,7 @@ export function CalendarFeedPanel() {
   const handleRevoke = async () => {
     setConfirming(null);
     setBusy(true);
-    const outcome = await dispatch(revokeCalendarFeed(undefined));
+    const outcome = await dispatch(revokeCalendarFeed(calendarId));
     setBusy(false);
     if (revokeCalendarFeed.fulfilled.match(outcome)) setFeed(null);
   };

@@ -8,15 +8,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import extract_all_outgoing_references
+from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
-from uniffy.core.types import AccessMode, EventTransparency
+from uniffy.core.types import AccessMode, ContentType, EventTransparency
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
 from uniffy.domains.scheduling.calendar.ical.parse import (
     ParsedEvent,
     SkippedEntry,
     parse_calendar,
 )
-from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 
 logger = logger.bind(component="scheduling.calendar.ical.ingest")
@@ -46,7 +47,7 @@ async def preview_import(
     calendar_id: UUID,
     payload: bytes,
 ) -> ImportPreview:
-    await require_own_calendar(session, user_id, organization_id, calendar_id)
+    await require_calendar_edit(session, user_id, organization_id, calendar_id)
     parsed = parse_calendar(payload)
     present = await _existing_uids(session, calendar_id, [event.ical_uid for event in parsed.events])
 
@@ -122,6 +123,11 @@ async def apply_import(
         await session.rollback()
         raise
 
+    if created:
+        try:
+            await publish_content_changed(ContentType.CALENDAR, calendar_id, organization_id)
+        except Exception:
+            logger.opt(exception=True).warning("Imported calendar refresh failed")
     await _index_after_commit(created, projection)
 
     return ImportOutcome(

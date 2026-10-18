@@ -14,6 +14,8 @@ import type {
 import { formatDateShort } from "@/shared/utils/dateFormatting";
 
 interface ImportCalendarModalProps {
+  /** Omitted for the member's default calendar. */
+  calendarId?: string;
   onClose: () => void;
   onImported?: () => void;
 }
@@ -30,7 +32,7 @@ const plural = (count: number, singular: string, plural_: string) =>
  * entries we cannot represent, and finding that out after the import is worse
  * than before it.
  */
-export function ImportCalendarModal({ onClose, onImported }: ImportCalendarModalProps) {
+export function ImportCalendarModal({ calendarId, onClose, onImported }: ImportCalendarModalProps) {
   const dispatch = useAppDispatch();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -47,7 +49,7 @@ export function ImportCalendarModal({ onClose, onImported }: ImportCalendarModal
     setPreview(null);
     setResult(null);
     setBusy(true);
-    const outcome = await dispatch(previewCalendarImport({ content: bytes }));
+    const outcome = await dispatch(previewCalendarImport({ content: bytes, calendarId }));
     setBusy(false);
     if (previewCalendarImport.fulfilled.match(outcome)) setPreview(outcome.payload);
   };
@@ -55,7 +57,7 @@ export function ImportCalendarModal({ onClose, onImported }: ImportCalendarModal
   const handleImport = async () => {
     if (!content) return;
     setBusy(true);
-    const outcome = await dispatch(applyCalendarImport({ content }));
+    const outcome = await dispatch(applyCalendarImport({ content, calendarId }));
     setBusy(false);
     if (applyCalendarImport.fulfilled.match(outcome)) {
       setResult(outcome.payload);

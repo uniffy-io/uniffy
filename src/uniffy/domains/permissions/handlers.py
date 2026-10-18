@@ -29,6 +29,7 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.defaults import resolve_effective_policy
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.content.registry import get_content_loader
+from uniffy.core.content.roles import resolve_content_role
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_member_action_from_proto,
@@ -124,14 +125,14 @@ async def _policy_for(
     if content is None:
         raise ConnectError(Code.NOT_FOUND, "Content not found")
     checker = PermissionChecker(session)
-    caller_role = await checker.effective_role(
+    caller_role = await resolve_content_role(
+        session,
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
         content_id=content_id,
-        owner_id=content.owner_id,
-        access_mode=content.access_mode,
-        baseline_role=content.baseline_role,
+        content=content,
+        checker=checker,
     )
     default_mode, default_baseline = await checker.get_org_defaults(organization_id, content_type)
     effective_mode, _ = resolve_effective_policy(

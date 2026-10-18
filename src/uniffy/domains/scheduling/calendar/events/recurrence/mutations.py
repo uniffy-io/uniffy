@@ -23,6 +23,7 @@ from uniffy.core.types import (
     EventStatus,
     RecurrencePattern,
 )
+from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
     finish_following_overrides,
     stage_following_overrides,
@@ -108,6 +109,7 @@ class RecurrenceMutationOperations:
         )
 
         await self.session.commit()
+        await publish_event_change(event)
 
     async def edit_single_occurrence(
         self,
@@ -252,6 +254,7 @@ class RecurrenceMutationOperations:
                 actions=changed_actions,
             )
         await self.session.commit()
+        await publish_event_change(master)
 
         await EventTagOperations(self.events).finish_copy_tags(staged_tags)
         try:
@@ -444,6 +447,7 @@ class RecurrenceMutationOperations:
                 actor_user_id=user_id,
             )
         await self.session.commit()
+        await publish_event_change(master, access_changed=True)
 
         await EventTagOperations(self.events).finish_copy_tags(staged_tags)
         await finish_following_overrides(self.events.search_indexer, withdrawn_overrides)

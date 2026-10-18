@@ -41,6 +41,8 @@ import { TagPicker } from "@/features/tags";
 import type { Attendee, RecurrenceConfig } from "@/features/calendar/types";
 import type { EventModalPrefill } from "@/features/calendar/types/ui";
 import { MeetingChannelPicker } from "@/features/calendar/components/modals/MeetingChannelPicker";
+import { CalendarSelect } from "@/features/calendar/components/calendars/CalendarSelect";
+import { useDefaultCalendar, useWritableCalendars } from "@/features/calendar/hooks/useCalendars";
 import type { MeetingMode } from "@/features/calendar/utils/meeting";
 import { useNotificationSettings } from "@/features/settings/hooks/useSettings";
 
@@ -108,6 +110,7 @@ export function QuickEventModal({
   const [startHour, setStartHour] = useState(initialStartHour);
   const [endHour, setEndHour] = useState(initialEndHour);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedCalendarId, setSelectedCalendarId] = useState("");
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [recurrence, setRecurrence] = useState<RecurrenceConfig | undefined>(undefined);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
@@ -129,6 +132,8 @@ export function QuickEventModal({
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const categories = useAppSelector((state) => state.calendar.categories);
   const currentUser = useAppSelector((state) => state.auth.user);
+  const writableCalendars = useWritableCalendars();
+  const defaultCalendar = useDefaultCalendar();
 
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
@@ -209,11 +214,16 @@ export function QuickEventModal({
       } else if (categoryIds.length > 0) {
         setSelectedCategoryId(categoryIds[0]);
       }
+      const prefillCalendar = writableCalendars.find((c) => c.id === prefill?.calendarId);
+      setSelectedCalendarId(prefillCalendar?.id ?? defaultCalendar?.id ?? "");
       setAttendees([]);
       pendingFileIdsRef.current = [];
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialStartHour, initialEndHour, prefill]);
+
+  // The calendar list can land after the modal opened, so an empty pick falls back to the default.
+  const targetCalendarId = selectedCalendarId || defaultCalendar?.id || "";
 
   const handleAttendeeAdd = (member: { userId: string; displayName: string; email: string }) => {
     if (attendees.some((a) => a.id === member.userId)) return;
@@ -276,7 +286,7 @@ export function QuickEventModal({
         endTime: eventEndTime.toISOString(),
         isAllDay: isMultiDay,
         timezone: getEffectiveTimeZone(),
-        calendarId: "",
+        calendarId: targetCalendarId,
         categoryId: isUuid(selectedCategoryId) ? selectedCategoryId : undefined,
         isFocusTime: selectedCategoryId === "cat-deepwork",
         attendeeIds: attendees.map((a) => a.id),
@@ -334,6 +344,18 @@ export function QuickEventModal({
         <ModalHeader title="New event" />
 
         <ModalBody>
+          {writableCalendars.length > 0 && (
+            <div>
+              <label className="block text-sm text-muted-foreground mb-1">Calendar</label>
+              <CalendarSelect
+                calendars={writableCalendars}
+                value={targetCalendarId || undefined}
+                onChange={setSelectedCalendarId}
+                triggerClassName="w-full sm:w-72"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-sm text-muted-foreground mb-1">Title</label>
             <Input
@@ -614,10 +636,7 @@ export function QuickEventModal({
                       : "border-border bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full mr-2"
-                    style={{ backgroundColor: cat.color }}
-                  />
+                  <span className="inline-block w-2 h-2 rounded-full mr-2 bg-current opacity-50" />
                   {cat.label}
                 </button>
               ))}

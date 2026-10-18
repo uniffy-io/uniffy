@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { ContentRole, AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ShieldCheck, ArrowRight } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
+import { calendarLabel } from "@/features/calendar/utils/calendarLabel";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SubjectPicker } from "@/components/subject/SubjectPicker";
@@ -28,6 +29,8 @@ interface AccessPolicyPanelProps {
   explicitUserRole?: ContentRole | number | null;
   /** One rung above the host: `surface` on an app-frame page, `card` inside a dialog. */
   tone?: "card" | "surface";
+  /** `AccessMode` values to leave out of the selector, e.g. an org policy the viewer is under. */
+  hiddenAccessModes?: number[];
 }
 
 export function AccessPolicyPanel({
@@ -36,9 +39,16 @@ export function AccessPolicyPanel({
   showAuditLink = false,
   explicitUserRole,
   tone = "card",
+  hiddenAccessModes,
 }: AccessPolicyPanelProps) {
+  const isEvent = contentType === ContentType.CALENDAR_EVENT;
+  const AccessSection = isEvent ? "details" : "div";
   const pane = tone === "surface" ? "bg-surface" : "bg-card";
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
+  const inheritedCalendar = useAppSelector((state) => {
+    const event = isEvent ? state.calendar.events[contentId] : undefined;
+    return event ? state.calendar.calendars[event.calendarId] : undefined;
+  });
   const { policy, members, loading, error, add, update, remove, setMode, transfer, refresh } =
     useContentMembers(contentType, contentId);
   const myRole = useMyContentRole(contentType, contentId, explicitUserRole);
@@ -130,6 +140,8 @@ export function AccessPolicyPanel({
     setTransferring(true);
     try {
       await transfer(subject.id);
+      // The previous owner stays on as an admin member, which the response does not carry.
+      await refresh();
     } finally {
       setTransferring(false);
     }
@@ -149,133 +161,161 @@ export function AccessPolicyPanel({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Owner
-        </h3>
-        <div className={cn("flex items-center gap-3 rounded-xl px-4 py-3 shadow-edge", pane)}>
-          <SubjectAvatar subject={owner} size="md" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <div className="text-sm font-medium text-foreground truncate">
-                {owner?.name ?? "Unknown"}
-              </div>
-              {isOwner && <span className="text-xs text-muted-foreground">(you)</span>}
-            </div>
-            {owner?.email && (
-              <div className="text-xs text-muted-foreground truncate">{owner.email}</div>
-            )}
-          </div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <ShieldCheck size={16} weight="fill" />
-            <span>Owner</span>
-          </div>
-          {canTransfer && (
-            <TransferOwnershipButton
-              existingSubjectIds={existingSubjectIds}
-              onTransfer={handleTransfer}
-              disabled={transferring}
-            />
-          )}
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-          Access
-        </h3>
-        <AccessModeSelector
-          value={{
-            accessMode: policy.accessMode as AccessMode,
-            baselineRole: policy.baselineRole,
-          }}
-          onChange={handleModeChange}
-          disabled={!canManage}
-          allowBaselineInheritance
-          showInheritOption={
-            policy.accessMode === AccessMode.UNSPECIFIED ||
-            resolvedAccessMode === AccessMode.OPEN_TO_ORG
-          }
-          hiddenModes={
-            contentType === ContentType.CALENDAR_EVENT ? [AccessMode.OPEN_TO_ORG] : undefined
-          }
-          tone={tone}
-        />
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Members{" "}
-            {active.length > 0 && <span className="ml-1 font-normal">({active.length})</span>}
-          </h3>
-          {canManage && (
-            <AddMemberPopover existingSubjectIds={existingSubjectIds} onAdd={handleAdd} />
-          )}
-        </div>
-        {canManage && isPersonal && (
-          <p className="text-xs text-muted-foreground mb-2">
-            This is personal. Adding people switches it to{" "}
-            <span className="font-medium text-foreground">Invited people</span>.
+      {isEvent && (
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">
+            {inheritedCalendar
+              ? `Calendar: ${calendarLabel(inheritedCalendar, currentUserId)}`
+              : "Access follows the calendar and invitations"}
           </p>
-        )}
-        {active.length === 0 ? (
-          <div
-            className={cn(
-              "rounded-xl py-4 text-center text-sm text-muted-foreground shadow-edge",
-              pane,
-            )}
-          >
-            No members yet
-          </div>
-        ) : (
-          <div className={cn("space-y-1 rounded-xl p-1 shadow-edge", pane)}>
-            {active.map((m) => (
-              <MemberRow
-                key={`${m.subjectType}:${m.subjectId}`}
-                member={m}
-                canEdit={canManage}
-                onUpdate={(role) => {
-                  update(m.subjectType, m.subjectId, role);
-                }}
-                onRemove={() => remove(m.subjectType, m.subjectId)}
-              />
-            ))}
-          </div>
-        )}
-        <BlockedMembersSection members={blocked} canEdit={canManage} onUnblock={handleUnblock} />
-      </div>
-
-      {canManage && (
-        <div>
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Pending requests
-          </h3>
-          <PendingAccessRequests
-            canonicalContentType={contentType}
-            canonicalContentId={contentId}
-            tone={tone}
-          />
+          <p>
+            Calendar permissions and event invitations apply. Private events hide details from
+            calendar viewers, while editors can still see them.
+          </p>
+          <p>
+            Change calendar sharing to change inherited access. Extra event grants appear below.
+          </p>
         </div>
       )}
+      <AccessSection className="space-y-6">
+        {isEvent && (
+          <summary className="focus-ring cursor-pointer py-3 text-sm font-medium">
+            Additional event access
+          </summary>
+        )}
 
-      {showAuditLink && (
         <div>
-          <button
-            type="button"
-            onClick={() => setShowAudit((v) => !v)}
-            className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-          >
-            {showAudit ? "Hide" : "View"} access history
-            <ArrowRight size={14} weight="bold" />
-          </button>
-          {showAudit && (
-            <div className="mt-3">
-              <AuditLogPanel contentType={contentType} contentId={contentId} />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            Owner
+          </h3>
+          <div className={cn("flex items-center gap-3 rounded-xl px-4 py-3 shadow-edge", pane)}>
+            <SubjectAvatar subject={owner} size="md" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {owner?.name ?? "Unknown"}
+                </div>
+                {isOwner && <span className="text-xs text-muted-foreground">(you)</span>}
+              </div>
+              {owner?.email && (
+                <div className="text-xs text-muted-foreground truncate">{owner.email}</div>
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <ShieldCheck size={16} weight="fill" />
+              <span>Owner</span>
+            </div>
+            {canTransfer && (
+              <TransferOwnershipButton
+                existingSubjectIds={existingSubjectIds}
+                onTransfer={handleTransfer}
+                disabled={transferring}
+              />
+            )}
+          </div>
+        </div>
+
+        {!isEvent && (
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+              Access
+            </h3>
+            <AccessModeSelector
+              value={{
+                accessMode: policy.accessMode as AccessMode,
+                baselineRole: policy.baselineRole,
+              }}
+              onChange={handleModeChange}
+              disabled={!canManage}
+              allowBaselineInheritance
+              showInheritOption={
+                policy.accessMode === AccessMode.UNSPECIFIED ||
+                resolvedAccessMode === AccessMode.OPEN_TO_ORG
+              }
+              hiddenModes={
+                contentType === ContentType.CALENDAR_EVENT
+                  ? [AccessMode.OPEN_TO_ORG]
+                  : hiddenAccessModes
+              }
+              tone={tone}
+            />
+          </div>
+        )}
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Members{" "}
+              {active.length > 0 && <span className="ml-1 font-normal">({active.length})</span>}
+            </h3>
+            {canManage && (
+              <AddMemberPopover existingSubjectIds={existingSubjectIds} onAdd={handleAdd} />
+            )}
+          </div>
+          {canManage && isPersonal && !isEvent && (
+            <p className="text-xs text-muted-foreground mb-2">
+              This is personal. Adding people switches it to{" "}
+              <span className="font-medium text-foreground">Invited people</span>.
+            </p>
+          )}
+          {active.length === 0 ? (
+            <div
+              className={cn(
+                "rounded-xl py-4 text-center text-sm text-muted-foreground shadow-edge",
+                pane,
+              )}
+            >
+              {isEvent ? "No additional members" : "No members yet"}
+            </div>
+          ) : (
+            <div className={cn("space-y-1 rounded-xl p-1 shadow-edge", pane)}>
+              {active.map((m) => (
+                <MemberRow
+                  key={`${m.subjectType}:${m.subjectId}`}
+                  member={m}
+                  canEdit={canManage}
+                  onUpdate={(role) => {
+                    update(m.subjectType, m.subjectId, role);
+                  }}
+                  onRemove={() => remove(m.subjectType, m.subjectId)}
+                />
+              ))}
             </div>
           )}
+          <BlockedMembersSection members={blocked} canEdit={canManage} onUnblock={handleUnblock} />
         </div>
-      )}
+
+        {canManage && (
+          <div>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pending requests
+            </h3>
+            <PendingAccessRequests
+              canonicalContentType={contentType}
+              canonicalContentId={contentId}
+              tone={tone}
+            />
+          </div>
+        )}
+
+        {showAuditLink && (
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAudit((v) => !v)}
+              className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+            >
+              {showAudit ? "Hide" : "View"} access history
+              <ArrowRight size={14} weight="bold" />
+            </button>
+            {showAudit && (
+              <div className="mt-3">
+                <AuditLogPanel contentType={contentType} contentId={contentId} />
+              </div>
+            )}
+          </div>
+        )}
+      </AccessSection>
 
       <ConfirmDialog
         isOpen={confirmPersonal}

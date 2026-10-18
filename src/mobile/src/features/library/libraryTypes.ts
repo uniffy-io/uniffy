@@ -43,6 +43,12 @@ export const LIBRARY_TYPES: Record<UrnType, LibraryTypeConfig> = {
     contentType: ContentType.PROJECT,
   },
   TASK: { label: "Task", labelPlural: "Tasks", icon: CheckSquare, contentType: ContentType.TASK },
+  CALENDAR: {
+    label: "Calendar",
+    labelPlural: "Calendars",
+    icon: CalendarDots,
+    contentType: ContentType.CALENDAR,
+  },
   CALENDAR_EVENT: {
     label: "Event",
     labelPlural: "Events",
@@ -89,6 +95,7 @@ const BRAND_RAMP_ORDER: readonly UrnType[] = [
   "FILE",
   "PROJECT",
   "TASK",
+  "CALENDAR",
   "CALENDAR_EVENT",
   "ROOM",
   "CHAT",
@@ -107,6 +114,7 @@ export const BOOKMARK_FILTER_TYPES: UrnType[] = [
   "FILE",
   "FOLDER",
   "CHAT_MESSAGE",
+  "CALENDAR",
   "CALENDAR_EVENT",
   "PROJECT",
   "TASK",
@@ -119,6 +127,7 @@ export const BOOKMARK_FILTER_TYPES: UrnType[] = [
 export const TAG_FILTER_TYPES: UrnType[] = [
   "NOTE",
   "FILE",
+  "CALENDAR",
   "CALENDAR_EVENT",
   "CHAT",
   "AGENT",

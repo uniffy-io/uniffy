@@ -21,6 +21,7 @@ const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
   NOTE: "notes",
   FILE: "files",
   CHAT: "chat",
+  CALENDAR: "calendar",
   CALENDAR_EVENT: "calendar",
   PROJECT: "projects",
 };
@@ -267,7 +268,12 @@ function renderMixedParts(
       const handlePress = onMentionPress
         ? () => onMentionPress(part.urn, part.label)
         : refId && NAVIGABLE_DOMAINS.has(domain)
-          ? () => router.push(`/${domain}/${refId}` as any)
+          ? () =>
+              router.push(
+                (urnType === "CALENDAR"
+                  ? `/calendar?calendar=${encodeURIComponent(refId)}`
+                  : `/${domain}/${refId}`) as any,
+              )
           : undefined;
       return (
         <ReferenceChip

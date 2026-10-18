@@ -13,8 +13,14 @@ export function AccessPolicyDialogProvider({ children }: { children: ReactNode }
   const [isOpen, setIsOpen] = useState(false);
 
   const openFor = useCallback(
-    (contentType: number, contentId: string, title?: string, explicitUserRole?: number | null) => {
-      setActiveContent({ contentType, contentId, title, explicitUserRole });
+    (
+      contentType: number,
+      contentId: string,
+      title?: string,
+      explicitUserRole?: number | null,
+      hiddenAccessModes?: number[],
+    ) => {
+      setActiveContent({ contentType, contentId, title, explicitUserRole, hiddenAccessModes });
       setIsOpen(true);
     },
     [],
@@ -59,6 +65,7 @@ export function AccessPolicyDialog() {
           contentId={activeContent.contentId}
           contentTitle={activeContent.title}
           explicitUserRole={activeContent.explicitUserRole}
+          hiddenAccessModes={activeContent.hiddenAccessModes}
           showAuditLink
         />
       </ModalBody>

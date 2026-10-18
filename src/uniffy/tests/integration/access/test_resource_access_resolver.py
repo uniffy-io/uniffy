@@ -370,7 +370,14 @@ async def test_calendar_attendee_floor_does_not_demote_higher_roles(session, acc
         owner_id=access.peer_id,
         name="Floor calendar",
     )
-    session.add(calendar)
+    # An invitation lives on its organizer's calendar; filed on the invitee's
+    # own calendar it would resolve through that calendar instead.
+    organizer_calendar = Calendar(
+        organization_id=access.org_id,
+        owner_id=access.member_id,
+        name="Organizer calendar",
+    )
+    session.add_all([calendar, organizer_calendar])
     await session.flush()
     own_event = CalendarEvent(
         organization_id=access.org_id,
@@ -384,7 +391,7 @@ async def test_calendar_attendee_floor_does_not_demote_higher_roles(session, acc
     invited_event = CalendarEvent(
         organization_id=access.org_id,
         organizer_id=access.member_id,
-        calendar_id=calendar.id,
+        calendar_id=organizer_calendar.id,
         title="Invited event",
         start_time=now,
         end_time=now + timedelta(hours=1),

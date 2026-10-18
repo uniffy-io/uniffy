@@ -168,7 +168,7 @@ export function ChatThreadScreen() {
   useEffect(() => {
     if (!pendingReference || !screenFocused.current) return;
     const contentType = DOMAIN_TO_CONTENT_TYPE[pendingReference.domain] ?? "NOTE";
-    const urn = `urn:uniffy:content:${contentType}:${pendingReference.id}`;
+    const urn = pendingReference.urn ?? `urn:uniffy:content:${contentType}:${pendingReference.id}`;
     const label = sanitizeMentionLabel(pendingReference.label);
     mentionsRef.current.push({ label, urn });
     insertAtCursor(`@${label} `, true);

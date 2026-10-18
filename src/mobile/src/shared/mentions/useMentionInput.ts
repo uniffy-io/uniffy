@@ -79,7 +79,8 @@ export function useMentionInput(initialCanonical?: string) {
   useEffect(() => {
     if (pendingReference && screenFocused.current) {
       const contentType = DOMAIN_TO_CONTENT_TYPE[pendingReference.domain] || "NOTE";
-      const urn = `urn:uniffy:content:${contentType}:${pendingReference.id}`;
+      const urn =
+        pendingReference.urn ?? `urn:uniffy:content:${contentType}:${pendingReference.id}`;
       const label = sanitizeMentionLabel(pendingReference.label);
       mentionsRef.current.push({ label, urn });
 

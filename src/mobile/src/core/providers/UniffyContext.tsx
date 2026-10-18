@@ -9,6 +9,7 @@ type AtState = {
 };
 
 export type ReferenceItem = {
+  urn?: string;
   id: string;
   label: string;
   domain: Domain;

@@ -85,6 +85,7 @@ UNREAD_QUEUE_DATABASE = 15
 # them, or a row one added after its table was cleared, aborts only that teardown attempt.
 _RACED_BY_WORKERS = {"40P01", "23503"}
 _TEARDOWN_ATTEMPTS = 3
+from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
@@ -94,6 +95,7 @@ async def database():
     register_note_content()
     register_project_content()
     register_event_realtime_adapter(recording_indexer())
+    register_calendar_content()
     try:
         await init_db(skip_migrations=True)
     except Exception as exc:

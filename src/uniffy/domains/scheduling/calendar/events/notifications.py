@@ -7,11 +7,17 @@ from loguru import logger
 from sqlalchemy import select
 
 from uniffy.core.content.team_mentions import expand_team_mentions
+from uniffy.core.converters.common_proto import CONTENT_TYPE_TO_PROTO
 from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
     extract_mentioned_team_ids,
     extract_mentioned_user_ids,
+)
+from uniffy.core.events.realtime import (
+    ContentAccessAction,
+    publish_content_access_changed,
+    publish_content_changed,
 )
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -22,6 +28,24 @@ from uniffy.core.types import (
 )
 
 logger = logger.bind(component="scheduling.calendar.events.notifications")
+
+
+async def publish_event_change(event: CalendarEvent, *, access_changed: bool = False) -> None:
+    try:
+        if access_changed:
+            # Former readers must receive invalidation even when access is already gone.
+            await publish_content_access_changed(
+                content_type=CONTENT_TYPE_TO_PROTO[ContentType.CALENDAR_EVENT],
+                content_id=event.id,
+                action=ContentAccessAction.ACCESS_MODE_CHANGED,
+                organization_id=event.organization_id,
+            )
+        else:
+            await publish_content_changed(
+                ContentType.CALENDAR_EVENT, event.id, event.organization_id
+            )
+    except Exception:
+        logger.opt(exception=True).warning("Calendar event refresh failed", event_id=str(event.id))
 
 
 class EventNotifications:

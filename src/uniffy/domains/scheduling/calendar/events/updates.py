@@ -5,6 +5,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import and_, select
+from sqlalchemy import update as sa_update
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
@@ -18,7 +19,7 @@ from uniffy.core.events import (
     NotificationEvent,
     emit_notification,
 )
-from uniffy.core.events.realtime import ContentAccessAction, publish_content_changed
+from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -39,6 +40,13 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
+from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.calendars.relocation import stage_ical_uid_release
+from uniffy.domains.scheduling.calendar.calendars.search import (
+    enqueue_calendar_search_acl_refresh,
+    record_calendar_search_acl_refresh,
+)
+from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -49,7 +57,6 @@ from uniffy.domains.scheduling.calendar.mail.staging import (
     stage_cancellation_mail,
     stage_change_mail,
 )
-from uniffy.domains.scheduling.calendar.queries import require_own_calendar
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -235,11 +242,34 @@ class EventUpdateOperations:
         previous_calendar_id = event.calendar_id
         calendar_moved = calendar_id is not None and calendar_id != event.calendar_id
         if calendar_moved:
-            # Editing an event you organize must not let you file it on a
-            # calendar you do not hold.
-            await require_own_calendar(self.events.session, user_id, organization_id, calendar_id)
+            if event.recurrence_id is not None:
+                # Access resolves through the series' calendar, so one edited
+                # occurrence cannot live on a different one.
+                raise ValidationError("calendar_id", "Move the whole series instead.")
+            # The calendar decides who can read the series, so moving it is a
+            # sharing change: it takes the same role as changing the event's access.
+            await self.events._require_manage(user_id, organization_id, event)
+            await require_calendar_edit(self.events.session, user_id, organization_id, calendar_id)
+            await stage_ical_uid_release(
+                self.events.session,
+                organization_id,
+                select(CalendarEvent.id).where(
+                    CalendarEvent.organization_id == organization_id,
+                    (CalendarEvent.id == event.id) | (CalendarEvent.recurrence_id == event.id),
+                ),
+                calendar_id,
+            )
         if calendar_id is not None:
             event.calendar_id = calendar_id
+        if calendar_moved:
+            await self.events.session.execute(
+                sa_update(CalendarEvent)
+                .where(
+                    CalendarEvent.organization_id == organization_id,
+                    CalendarEvent.recurrence_id == event.id,
+                )
+                .values(calendar_id=calendar_id)
+            )
         if category_id is not None:
             event.category_id = category_id
         if recurrence_config is not None:
@@ -393,6 +423,25 @@ class EventUpdateOperations:
             self.events.session, event.id, removed_attendee_ids, datetime.now(UTC)
         )
 
+        if calendar_moved:
+            await write_audit_event(
+                self.events.session,
+                organization_id=organization_id,
+                actor_user_id=user_id,
+                action=Action.CALENDAR_EVENT_MOVED,
+                resource_type=AuditResourceType.CALENDAR_EVENT,
+                resource_id=event_id,
+                details={
+                    "previous_calendar_id": (
+                        str(previous_calendar_id) if previous_calendar_id else None
+                    ),
+                    "new_calendar_id": str(event.calendar_id),
+                },
+            )
+            await record_calendar_search_acl_refresh(
+                self.events.session, organization_id, event.calendar_id
+            )
+
         if merge is not None:
             await stage_inline_reconciliation(
                 self.events.session, ContentType.CALENDAR_EVENT, event.id, organization_id
@@ -401,10 +450,13 @@ class EventUpdateOperations:
         if merge is not None:
             await merge.after_commit()
         await self.events.session.refresh(event)
+        await publish_event_change(
+            event,
+            access_changed=calendar_moved or visibility is not None or attendee_ids is not None,
+        )
         if visibility is not None or attendee_ids is not None:
             await publish_perm_change(ContentType.CALENDAR_EVENT, event.id, None, None)
         if merge is not None:
-            await publish_content_changed(ContentType.CALENDAR_EVENT, event.id, organization_id)
             await publish_content_replace(ContentType.CALENDAR_EVENT, event.id)
 
         if tag_ids is not None:
@@ -419,8 +471,16 @@ class EventUpdateOperations:
                 tag_ids=tag_ids,
             )
 
-        await self.events._index_for_search(event)
-        await self.events.session.commit()
+        try:
+            await self.events._index_for_search(event)
+        except Exception:
+            if not calendar_moved:
+                raise
+            logger.opt(exception=True).warning(
+                "Moved event search projection deferred", event_id=str(event_id)
+            )
+        if calendar_moved:
+            await enqueue_calendar_search_acl_refresh(event.calendar_id)
 
         # Rename propagation rewrites mention labels inside other people's
         # documents; a private event's title must not be written there.
@@ -519,23 +579,6 @@ class EventUpdateOperations:
                 end_time=end_time or event.end_time,
                 title=event.title,
             )
-
-        if calendar_moved:
-            await write_audit_event(
-                self.events.session,
-                organization_id=organization_id,
-                actor_user_id=user_id,
-                action=Action.CALENDAR_EVENT_MOVED,
-                resource_type=AuditResourceType.CALENDAR_EVENT,
-                resource_id=event_id,
-                details={
-                    "previous_calendar_id": (
-                        str(previous_calendar_id) if previous_calendar_id else None
-                    ),
-                    "new_calendar_id": str(event.calendar_id),
-                },
-            )
-            await self.events.session.commit()
 
         await self.events._finish_auto_created_room_members(event, staged_room)
 

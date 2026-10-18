@@ -37,7 +37,11 @@ const FILTERS: { key: "all" | Domain; label: string; types: SearchResultType[] }
   { key: "notes", label: "Notes", types: [SearchResultType.NOTE] },
   { key: "files", label: "Files", types: [SearchResultType.FILE] },
   { key: "chat", label: "Chat", types: [SearchResultType.CHAT] },
-  { key: "calendar", label: "Calendar", types: [SearchResultType.CALENDAR_EVENT] },
+  {
+    key: "calendar",
+    label: "Calendar",
+    types: [SearchResultType.CALENDAR, SearchResultType.CALENDAR_EVENT],
+  },
   {
     key: "projects",
     label: "Projects",

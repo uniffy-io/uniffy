@@ -8,6 +8,7 @@ import {
   User,
   UsersThree,
   CalendarDots,
+  CalendarBlank,
   Kanban,
   CheckSquare,
   Brain,
@@ -93,6 +94,16 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: "people/teams",
     theme: getUrnTypeTheme(UrnType.TEAM),
     hexColor: getUrnTypeHexColor(UrnType.TEAM),
+  },
+  [UrnType.CALENDAR]: {
+    type: UrnType.CALENDAR,
+    icon: CalendarBlank,
+    label: "Calendar",
+    labelPlural: "Calendars",
+    // urnToPath opens it as /calendar?calendar={id}, not /calendar/{id}.
+    route: "calendar",
+    theme: getUrnTypeTheme(UrnType.CALENDAR),
+    hexColor: getUrnTypeHexColor(UrnType.CALENDAR),
   },
   [UrnType.CALENDAR_EVENT]: {
     type: UrnType.CALENDAR_EVENT,

@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import and_, or_, select
+from sqlalchemy import ColumnElement, and_, select
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.event import CalendarEvent
@@ -41,30 +41,15 @@ class RecurrenceQueryOperations:
         calendar_ids: list[UUID] | None = None,
         category_ids: list[UUID] | None = None,
         channel_id: UUID | None = None,
+        visibility_filter: ColumnElement[bool] | None = None,
     ) -> list[CalendarEvent]:
-        """Get events the user can access in a date range.
-
-        Combines the canonical accessible-filter with an attendee bypass
-        so invitees always see events they are on.
-        """
+        """Events the user can access in a date range, including recurring expansions."""
         if end_date < start_date:
             raise ValidationError("range", "Range end precedes its start")
         if end_date - start_date > timedelta(days=MAX_RANGE_DAYS):
             raise ValidationError("range", f"Range is capped at {MAX_RANGE_DAYS} days")
 
-        access_filter = await self.access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=self.content_type,
-            content_id_column=CalendarEvent.id,
-            owner_id_column=CalendarEvent.organizer_id,
-            access_mode_column=CalendarEvent.access_mode,
-            baseline_role_column=CalendarEvent.baseline_role,
-        )
-        permission_filter = or_(
-            access_filter,
-            await self.events.attendee_access_filter(user_id, organization_id),
-        )
+        permission_filter = await self.events.event_access_filter(user_id, organization_id)
 
         base_filters = [
             CalendarEvent.organization_id == organization_id,
@@ -77,6 +62,8 @@ class RecurrenceQueryOperations:
             base_filters.append(CalendarEvent.category_id.in_(category_ids))
         if channel_id:
             base_filters.append(CalendarEvent.channel_id == channel_id)
+        if visibility_filter is not None:
+            base_filters.append(visibility_filter)
 
         query = (
             select(CalendarEvent)

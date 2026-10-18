@@ -39,6 +39,7 @@ def _make_ops(
     effective_role: ContentRole | None = None,
     is_attendee: bool = False,
     is_blocked: bool = False,
+    calendar_role: ContentRole | None = None,
 ) -> CalendarEventOperations:
     ops = CalendarEventOperations.__new__(CalendarEventOperations)
     ops.session = MagicMock()
@@ -46,6 +47,7 @@ def _make_ops(
     ops.permission_checker.effective_role = AsyncMock(return_value=effective_role)
     ops.permission_checker.is_blocked = AsyncMock(return_value=is_blocked)
     ops._is_attendee = AsyncMock(return_value=is_attendee)
+    ops._calendar_derived_role = AsyncMock(return_value=calendar_role)
     return ops
 
 
@@ -80,6 +82,43 @@ class TestResolveRoleAttendeeFloor:
         role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
         assert role == ContentRole.EDITOR
         ops._is_attendee.assert_not_awaited()
+
+
+class TestResolveRoleThroughCalendar:
+    """A calendar grant reaches the events filed on it without replacing the
+    event's own grants, and an explicit BLOCKED on the event still wins."""
+
+    async def test_calendar_viewer_sees_an_owner_only_event(self) -> None:
+        ops = _make_ops(calendar_role=ContentRole.VIEWER)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.VIEWER
+
+    async def test_calendar_editor_outranks_the_invitation(self) -> None:
+        ops = _make_ops(calendar_role=ContentRole.EDITOR, is_attendee=True)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.EDITOR
+        ops._is_attendee.assert_not_awaited()
+
+    async def test_calendar_grant_lifts_a_lower_event_grant(self) -> None:
+        ops = _make_ops(effective_role=ContentRole.VIEWER, calendar_role=ContentRole.ADMIN)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.ADMIN
+
+    async def test_a_higher_event_grant_is_not_lowered(self) -> None:
+        ops = _make_ops(effective_role=ContentRole.EDITOR, calendar_role=ContentRole.VIEWER)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.EDITOR
+
+    async def test_the_organizer_needs_no_calendar_lookup(self) -> None:
+        ops = _make_ops(effective_role=ContentRole.OWNER, calendar_role=ContentRole.ADMIN)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.OWNER
+        ops._calendar_derived_role.assert_not_awaited()
+
+    async def test_event_block_beats_the_calendar_grant(self) -> None:
+        ops = _make_ops(calendar_role=ContentRole.EDITOR, is_blocked=True)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role is None
 
 
 class TestResolveRoleOnExpandedOccurrence:
@@ -198,6 +237,7 @@ class TestSearchAttendeeIds:
         ops._get_search_tags_async = AsyncMock(return_value=None)
         invitee = generate_id()
         ops._get_search_attendee_user_ids = AsyncMock(return_value=[invitee])
+        ops._get_search_container_access = AsyncMock(return_value=None)
 
         await ops._index_for_search(_make_event(), skip_member_lookup=True)
 
@@ -267,6 +307,17 @@ class TestSearchCandidateFilter:
         user_id = generate_id()
         expressions = tuple(_walk_filter(build_permission_filter(generate_id(), user_id)))
         assert SearchTerm("attendee_user_ids", str(user_id)) in expressions
+        assert SearchNot(SearchTerm("blocked_user_ids", str(user_id))) in expressions
+
+    def test_filter_includes_calendar_branch(self) -> None:
+        user_id, group_id = generate_id(), generate_id()
+        expressions = tuple(
+            _walk_filter(build_permission_filter(generate_id(), user_id, (group_id,)))
+        )
+        assert SearchTerm("container_user_ids", str(user_id)) in expressions
+        assert SearchTerm("container_group_ids", str(group_id)) in expressions
+        assert SearchTerm("container_open_to_org", True) in expressions
+        # The event's own BLOCKED still excludes a calendar member.
         assert SearchNot(SearchTerm("blocked_user_ids", str(user_id))) in expressions
 
     def test_my_content_only_narrows_to_owned(self) -> None:

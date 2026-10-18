@@ -11,6 +11,7 @@ export const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.CHAT_MESSAGE]: UrnType.CHAT_MESSAGE,
   [SearchResultType.USER]: UrnType.USER,
   [SearchResultType.TEAM]: UrnType.TEAM,
+  [SearchResultType.CALENDAR]: UrnType.CALENDAR,
   [SearchResultType.CALENDAR_EVENT]: UrnType.CALENDAR_EVENT,
   [SearchResultType.PROJECT]: UrnType.PROJECT,
   [SearchResultType.TASK]: UrnType.TASK,

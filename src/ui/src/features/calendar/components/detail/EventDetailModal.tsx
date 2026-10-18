@@ -27,6 +27,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { useCalendarEvents } from "@/features/calendar/hooks";
 import { useEventCommit } from "@/features/calendar/hooks/useEventCommit";
+import { useConflictScope } from "@/features/calendar/hooks/useCalendars";
 import { useEventPermission } from "@/features/calendar/hooks/useEventPermission";
 import { useAccessPolicyDialog } from "@/features/permissions";
 import { ACCENT_EVENT_COLOR } from "@/features/calendar/constants";
@@ -45,11 +46,13 @@ import { EventMetaSection } from "@/features/calendar/components/detail/EventMet
 import { EventStateSection } from "@/features/calendar/components/detail/EventStateSection";
 import { EventSchedulingSection } from "@/features/calendar/components/detail/EventSchedulingSection";
 import { EventActivityLog } from "@/features/calendar/components/detail/EventActivityLog";
+import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 export function EventDetailModal() {
   const dispatch = useAppDispatch();
   const { selectedEvent, visibleEvents } = useCalendarEvents();
   const categories = useAppSelector((state) => state.calendar.categories);
+  const calendars = useAppSelector((state) => state.calendar.calendars);
   const isLoadingDetail = useAppSelector((state) => state.calendar.loading.eventDetail);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -81,13 +84,15 @@ export function EventDetailModal() {
     return extractMentionsFromMarkdown(eventDescription);
   }, [eventDescription]);
 
+  const conflictScope = useConflictScope();
   const conflictingEvents = useMemo(() => {
     if (!selectedEvent) return [];
-    return findConflicts(selectedEvent, visibleEvents);
-  }, [selectedEvent, visibleEvents]);
+    return findConflicts(selectedEvent, visibleEvents, conflictScope);
+  }, [selectedEvent, visibleEvents, conflictScope]);
 
-  const category = selectedEvent?.categoryId ? categories[selectedEvent.categoryId] : null;
-  const categoryColor = category?.color ?? ACCENT_EVENT_COLOR;
+  const categoryColor = selectedEvent
+    ? resolveEventColor(selectedEvent, categories, calendars)
+    : ACCENT_EVENT_COLOR;
 
   useContentRefresh(ContentType.CALENDAR_EVENT, selectedEvent?.id ?? null, () => {
     if (selectedEvent) void dispatch(fetchEvent(selectedEvent.id));
@@ -257,8 +262,9 @@ export function EventDetailModal() {
                       onClick={handleDeleteClick}
                       title="Delete event"
                       aria-label="Delete event"
+                      className="text-destructive hover-destructive"
                     >
-                      <Trash size={18} weight="duotone" className="text-red-500" />
+                      <Trash size={18} weight="duotone" />
                     </Button>
                   )}
                 </div>
@@ -338,7 +344,7 @@ export function EventDetailModal() {
               )}
 
               <div className="px-6 py-3 border-b border-border">
-                {!eventSupportsRealtime(selectedEvent) && (
+                {canEdit && !eventSupportsRealtime(selectedEvent) && (
                   <p className="mb-2 text-xs text-muted-foreground">
                     Recurring description. Changes save on Done after you choose which events to
                     update.
@@ -351,7 +357,9 @@ export function EventDetailModal() {
                   value={selectedEvent.description}
                   realtime={eventSupportsRealtime(selectedEvent)}
                   onDone={handleDescriptionDone}
-                  placeholder="Click to add a description... (type @ to mention)"
+                  placeholder={
+                    canEdit ? "Click to add a description... (type @ to mention)" : "No description"
+                  }
                   label="Description"
                   enableUpload
                   fullPreview

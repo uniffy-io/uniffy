@@ -165,13 +165,23 @@ async def _filter_resource_audience(
                 )
             ).scalars()
         )
+        calendar_readers = set(
+            await _filter_resource_audience(
+                resolver,
+                organization_id=organization_id,
+                key=ResourceKey(ContentType.CALENDAR, master.calendar_id),
+                candidate_user_ids=candidate_user_ids,
+                visited=visited,
+            )
+        )
+        lifted = (attendees | calendar_readers) - allowed
         blocked = await resolver.blocked_users(
             organization_id,
             ContentType.CALENDAR_EVENT,
             master.id,
-            attendees,
+            lifted,
         )
-        allowed.update(attendees - blocked)
+        allowed.update(lifted - blocked)
         return [user_id for user_id in candidate_user_ids if user_id in allowed]
 
     if key.content_type in (

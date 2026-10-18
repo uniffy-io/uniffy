@@ -25,6 +25,10 @@ export function appPathForLink(link: string, serverOrigin: string): string | nul
     return null;
   }
 
+  if (path === "/calendar" || path === "/calendar/") {
+    const calendarId = url.searchParams.get("calendar");
+    return calendarId ? `/calendar?calendar=${encodeURIComponent(calendarId)}` : "/calendar";
+  }
   const project = PROJECT_PATH.exec(path);
   if (!project) return null;
   const viewId = url.searchParams.get("view");

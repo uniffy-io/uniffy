@@ -15,6 +15,11 @@ describe("appPathForLink", () => {
     expect(appPathForLink("/projects/p1", SERVER)).toBe("/projects/p1");
   });
 
+  it("opens calendar links without routing them as events", () => {
+    expect(appPathForLink(`${SERVER}/calendar?calendar=c1`, SERVER)).toBe("/calendar?calendar=c1");
+    expect(appPathForLink("uniffy://calendar?calendar=c1", SERVER)).toBe("/calendar?calendar=c1");
+  });
+
   it("leaves links to other hosts and unknown paths alone", () => {
     expect(appPathForLink("https://example.com/projects/p1", SERVER)).toBeNull();
     expect(appPathForLink(`${SERVER}/notes/n1`, SERVER)).toBeNull();

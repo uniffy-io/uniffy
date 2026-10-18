@@ -18,6 +18,17 @@ export {
 } from "@/features/calendar/store/calendarThunks";
 
 export {
+  fetchCalendars,
+  createCalendar,
+  updateCalendar as updateCalendarThunk,
+  deleteCalendar,
+  setCalendarVisibility,
+  countCalendarEvents,
+  fetchCalendarPolicy,
+  updateCalendarPolicy,
+} from "@/features/calendar/store/calendarsThunks";
+
+export {
   setEvents,
   addEvent,
   updateEvent,

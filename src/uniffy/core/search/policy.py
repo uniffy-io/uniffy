@@ -58,6 +58,9 @@ WORKSPACE_SEARCH_SCHEMA = SearchSchema(
         "blocked_user_ids",
         "blocked_group_ids",
         "attendee_user_ids",
+        "container_user_ids",
+        "container_group_ids",
+        "container_open_to_org",
         "tags",
         "updated_at",
         "metadata.channel_id",
@@ -100,6 +103,19 @@ FILTERABLE_METADATA_KEYS = frozenset(
 
 
 @dataclass(frozen=True, slots=True)
+class SearchContainerAccess:
+    """Who reaches a document through the container it sits in, e.g. an event's calendar.
+
+    Kept apart from the document's own ``shared_*`` fields, which its member
+    mutations own. Hints only: every hit is still resolved against PostgreSQL.
+    """
+
+    user_ids: tuple[UUID, ...] = ()
+    group_ids: tuple[UUID, ...] = ()
+    open_to_org: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class SearchDocumentInput:
     urn: str
     organization_id: UUID
@@ -116,6 +132,7 @@ class SearchDocumentInput:
     blocked_user_ids: tuple[UUID, ...] = ()
     blocked_group_ids: tuple[UUID, ...] = ()
     attendee_user_ids: tuple[UUID, ...] = ()
+    container: SearchContainerAccess | None = None
     tags: tuple[str, ...] = ()
     rank_score: float = 1.0
     metadata: dict[str, str] | None = None
@@ -133,6 +150,15 @@ def parse_document_id(document_id: str) -> tuple[str, str]:
     safe_urn, organization_id = parts
     urn = safe_urn.replace("urn-uniffy-content-", "urn:uniffy:content:", 1)
     return urn, organization_id
+
+
+def container_fields(container: SearchContainerAccess | None) -> dict[str, Any]:
+    container = container or SearchContainerAccess()
+    return {
+        "container_user_ids": [str(value) for value in container.user_ids],
+        "container_group_ids": [str(value) for value in container.group_ids],
+        "container_open_to_org": container.open_to_org,
+    }
 
 
 def build_search_document(item: SearchDocumentInput) -> dict[str, Any]:
@@ -153,6 +179,7 @@ def build_search_document(item: SearchDocumentInput) -> dict[str, Any]:
         "blocked_user_ids": [str(value) for value in item.blocked_user_ids],
         "blocked_group_ids": [str(value) for value in item.blocked_group_ids],
         "attendee_user_ids": [str(value) for value in item.attendee_user_ids],
+        **container_fields(item.container),
         "tags": list(item.tags),
         "rank_score": item.rank_score,
         "metadata": item.metadata or {},
@@ -175,12 +202,15 @@ def build_permission_filter(
         ),
         SearchTerm("shared_user_ids", user),
         SearchTerm("attendee_user_ids", user),
+        SearchTerm("container_user_ids", user),
+        SearchTerm("container_open_to_org", True),
         all_of(
             SearchTerm("access_mode", "OPEN_TO_ORG"),
             SearchExists("baseline_role"),
         ),
     ]
     allow.extend(SearchTerm("shared_group_ids", str(group_id)) for group_id in user_group_ids)
+    allow.extend(SearchTerm("container_group_ids", str(group_id)) for group_id in user_group_ids)
 
     exclusions: list[SearchFilter] = [SearchNot(SearchTerm("blocked_user_ids", user))]
     exclusions.extend(

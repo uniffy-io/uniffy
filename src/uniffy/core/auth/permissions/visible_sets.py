@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
+from uniffy.core.content.registry import find_visibility_filter
 from uniffy.core.types import ContentType
 
 _TAGGABLE_ACCESS_MODE_TYPES: tuple[ContentType, ...] = (
@@ -145,16 +146,8 @@ async def compute_visible_tag_ids(
     branches = [select(Tag.id.label("tag_id")).where(*creator_predicates)]
 
     for ct in _TAGGABLE_ACCESS_MODE_TYPES:
-        model, id_col, owner_col, am_col, baseline_col, org_col = _content_columns(ct)
-        access_filter = await access_query.build_accessible_filter(
-            user_id=user_id,
-            organization_id=organization_id,
-            content_type=ct,
-            content_id_column=id_col,
-            owner_id_column=owner_col,
-            access_mode_column=am_col,
-            baseline_role_column=baseline_col,
-        )
+        model, id_col, _owner_col, _am_col, _baseline_col, org_col = _content_columns(ct)
+        access_filter = await _type_access_filter(access_query, user_id, organization_id, ct)
         branches.append(
             select(TagAssignment.tag_id.label("tag_id"))
             .join(model, id_col == _content_id_from_urn_expr())
@@ -218,8 +211,28 @@ async def compute_visible_content_ids_by_type(
         return set()
 
     access_query = ContentAccessQuery(session)
-    _model, id_col, owner_col, am_col, baseline_col, org_col = _content_columns(content_type)
-    access_filter = await access_query.build_accessible_filter(
+    _model, id_col, _owner_col, _am_col, _baseline_col, org_col = _content_columns(content_type)
+    access_filter = await _type_access_filter(access_query, user_id, organization_id, content_type)
+    rows = (
+        (await session.execute(select(id_col).where(org_col == organization_id, access_filter)))
+        .scalars()
+        .all()
+    )
+    return {row for row in rows if row is not None}
+
+
+async def _type_access_filter(
+    access_query: ContentAccessQuery,
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+):
+    builder = find_visibility_filter(content_type)
+    if builder is not None:
+        return await builder(access_query, user_id, organization_id)
+
+    _model, id_col, owner_col, am_col, baseline_col, _org_col = _content_columns(content_type)
+    return await access_query.build_accessible_filter(
         user_id=user_id,
         organization_id=organization_id,
         content_type=content_type,
@@ -228,12 +241,6 @@ async def compute_visible_content_ids_by_type(
         access_mode_column=am_col,
         baseline_role_column=baseline_col,
     )
-    rows = (
-        (await session.execute(select(id_col).where(org_col == organization_id, access_filter)))
-        .scalars()
-        .all()
-    )
-    return {row for row in rows if row is not None}
 
 
 def _content_id_from_urn_expr():
