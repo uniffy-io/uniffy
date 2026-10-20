@@ -1,7 +1,8 @@
 ---
-title: Agents
-description: What an agent can and cannot do on your behalf, how it borrows your access instead of holding its own, and how to work with one from chat.
+title: Use AI agents in chat
+description: Work with Uniffy AI agents in chat. Learn how permissions, approval requests, skills, memory, scheduled runs, and personal spend limits work.
 sidebar:
+  label: Agents
   order: 3
 ---
 

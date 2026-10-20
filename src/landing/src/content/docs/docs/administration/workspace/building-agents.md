@@ -1,7 +1,8 @@
 ---
-title: Building agents
-description: Who can build agents, what the four panels of an agent change, and how skills, memory and automations behave once you ship them to the organization.
+title: Build and configure AI agents
+description: Build Uniffy agents with instructions, tools, skills, and memory. Learn builder permissions, test runs, scheduled automations, sharing, and retirement.
 sidebar:
+  label: Building agents
   order: 2
 ---
 

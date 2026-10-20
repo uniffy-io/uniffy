@@ -1,6 +1,6 @@
 ---
-title: Administration Guide
-description: Manage an organization on Uniffy. Members, teams, groups, permissions, encryption, audit, email, agents, rooms, storage.
+title: Uniffy administration guide
+description: Manage your Uniffy organization. Find guides to member roles, teams, sharing permissions, audit events, AI provider keys, budgets, and agent building.
 sidebar:
   label: Overview
   order: 0

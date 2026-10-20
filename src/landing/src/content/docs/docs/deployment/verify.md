@@ -1,6 +1,6 @@
 ---
-title: Verify a Release
-description: Every Uniffy release is signed. How to check the pinset, the images, and the SBOM before you trust them, by hand or with an admission policy in your cluster.
+title: Verify Uniffy release signatures
+description: Verify Uniffy release manifests and container images with cosign. Inspect software bills of materials and enforce signature checks in Kubernetes.
 sidebar:
   label: Verify a Release
   order: 4

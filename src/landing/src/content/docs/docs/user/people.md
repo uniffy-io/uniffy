@@ -1,6 +1,6 @@
 ---
 title: People, teams and the org chart
-description: Find who is who in your organization. Browse the org chart, read profiles, keep your own details current, and use teams when you share or invite.
+description: Find colleagues in Uniffy, browse reporting lines, update your profile, and use teams for sharing and meeting invitations. Learn how teams differ from groups.
 sidebar:
   order: 2
 ---

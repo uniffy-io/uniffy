@@ -1,6 +1,6 @@
 ---
 title: Library, tags and the knowledge graph
-description: Bookmarks that stay private, one tag vocabulary for the whole organization, and a graph that draws how your work connects. What each one does with your data.
+description: Organize work in Uniffy with private bookmarks, shared tags, and a knowledge graph built from mentions. Learn how permissions shape what you see.
 sidebar:
   label: Library
   order: 4

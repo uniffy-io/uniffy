@@ -1,6 +1,6 @@
 ---
-title: Video playback
-description: What happens when your device cannot play an uploaded video.
+title: Video playback and downloads
+description: Learn how Uniffy plays uploaded videos, prepares compatible MP4 copies, and preserves original downloads. Covers screen recordings and access permissions.
 sidebar:
   label: Video
   order: 5

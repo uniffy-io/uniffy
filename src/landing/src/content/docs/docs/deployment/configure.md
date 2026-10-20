@@ -1,6 +1,6 @@
 ---
-title: Configure Uniffy
-description: Reference for every environment variable Uniffy reads at startup. What each setting does, its default, and when to override it.
+title: Configure Uniffy environment variables
+description: Look up Uniffy environment variables, defaults, and overrides for authentication, databases, storage, workers, video processing, calls, and email.
 sidebar:
   label: Configure Uniffy
   order: 6

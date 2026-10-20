@@ -1,6 +1,6 @@
 ---
-title: Install on a VM
-description: Run Uniffy on a single virtual machine with one command. The installer brings k3s, the traffic plane, the data stores, and Uniffy itself, with every choice already made.
+title: Install Uniffy on a VM with k3s
+description: Install Uniffy on an Ubuntu VM using the k3s installer. Covers server sizing, DNS, certificates, calls, storage, and checks after installation.
 sidebar:
   label: Install on a VM
   order: 1

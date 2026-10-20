@@ -1,6 +1,6 @@
 ---
-title: Deployment Guide
-description: Install, configure, upgrade, and back up a self hosted Uniffy on Kubernetes or on a single VM with k3s.
+title: Self host Uniffy
+description: Deploy Uniffy on Kubernetes or a single VM with k3s. Find installation, configuration, backup, upgrade, and security guides for self hosted operators.
 sidebar:
   label: Overview
   order: 0

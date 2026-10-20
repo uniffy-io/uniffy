@@ -1,6 +1,6 @@
 ---
-title: User Guide
-description: Everything you need to be productive in Uniffy. Notes, files, chat, mentions, agents, calendar.
+title: Uniffy user guide
+description: Learn how sharing, AI agents, people profiles, bookmarks, tags, and project exports work in Uniffy. Find guides for everyday workspace use.
 sidebar:
   label: Overview
   order: 0

@@ -1,7 +1,8 @@
 ---
-title: Sharing and privacy
-description: Everything you make in Uniffy is private until you share it. How sharing works, what each role can do, and who can and cannot see your work.
+title: Share content and manage access
+description: Share private work in Uniffy with people, teams, or groups. Understand access roles, explicit blocks, and who can invite others to your content.
 sidebar:
+  label: Sharing and privacy
   order: 1
 ---
 

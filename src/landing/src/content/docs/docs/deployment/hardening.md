@@ -1,6 +1,6 @@
 ---
-title: Harden the Edge
-description: Lock the platform operator API to your private network with one chart value. What it blocks, what it renders, how to verify it, and when the client IP lies.
+title: Restrict platform API and metrics access
+description: Keep Uniffy's platform operator API and metrics private. Configure network restrictions, verify blocked routes, and account for proxy client addresses.
 sidebar:
   label: Harden the Edge
   order: 9
