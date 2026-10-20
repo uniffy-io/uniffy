@@ -26,7 +26,7 @@ The command on this page is the path of last resort. Use it when every admin who
 
 The command is gated behind an environment variable so it does not exist in containers that do not need it. Set `ENABLE_BREAK_GLASS_CLI=1` on the backend before invoking it. Anything else (empty, `0`, missing) refuses to run and exits with status 2.
 
-Set the variable inline for the single invocation. Do not bake it into the image and do not commit it to your deployment manifests. The whole point is that you have to consciously enable it.
+Set the variable inline for the single invocation. Do not bake it into the image and do not commit it to your deployment manifests. Enabling it should take a deliberate step every time.
 
 ## Kubernetes
 
@@ -81,7 +81,7 @@ spec:
 
 Apply with `kubectl apply -f reset-job.yaml`, read the logs with `kubectl logs -n uniffy job/uniffy-mfa-reset`, and delete the manifest or the secret reference afterward so the email and reason do not linger in your version control. The `ttlSecondsAfterFinished` cleans the job up automatically ten minutes after it completes.
 
-The `envFrom` block should reference whatever secret your backend deployment already uses for its environment. The point is that the one shot Job sees the same database and master key the backend sees, so the reset writes to the right database.
+The `envFrom` block should reference whatever secret your backend deployment already uses for its environment. That way the one shot Job sees the same database and master key the backend sees, so the reset writes to the right database.
 
 ## What the command does
 
@@ -89,7 +89,7 @@ The command opens a database session, finds the user by email, deletes the two f
 
 The audit row is the forensic record. It carries the target user id, the target email, the reason text you supplied, and a timestamp. The `actor_user_id` field is null on purpose. There is no signed in user when the command runs. The reason field is your accountability.
 
-The token version bump and the revoked sessions land in the same commit. Every request checks those facts in PostgreSQL, so every access token the user holds is rejected from the next request on. Open live editing connections close with code 4410 within thirty seconds, and the old tokens cannot open new ones. They are signed out cluster wide. The next sign in is a fresh start.
+The token version bump and the revoked sessions land in the same commit. Every request checks those facts in PostgreSQL, so every access token the user holds is rejected from the next request on. Open live editing connections close with code 4410 within thirty seconds, and the old tokens cannot open new ones. They are signed out cluster wide.
 
 ## After the reset
 
@@ -97,13 +97,13 @@ The user signs in with their password. The login flow sees that they have no two
 
 If the user was a platform admin and the deployment policy requires two factor authentication for platform admins, fresh enrollment is mandatory. The user cannot reach any platform page until they finish.
 
-Tell the user what you did and why. The out of band email that org admin and platform admin resets send is not sent for break glass resets. The user will see "two factor was reset" on the audit log later, but a heads up from you is the right courtesy.
+Tell the user what you did and why. Org admin and platform admin resets send an out of band email. Break glass resets do not. The user will see "two factor was reset" on the audit log later, but a heads up from you is the right courtesy.
 
 ## Disable the command afterward
 
 Unset `ENABLE_BREAK_GLASS_CLI` or remove the env file entry. The command should not be reachable by accident. If you used a one shot Job, delete the manifest. If you used `kubectl exec`, the inline env value is already gone with the shell.
 
-The shell history is the other place to clean up. The reason text often contains a ticket number or a brief description, neither of which need to live in your shell history forever. `history -d` on bash or the equivalent on your shell of choice.
+The shell history is the other place to clean up. The reason text often contains a ticket number or a brief description, neither of which needs to live in your shell history forever. `history -d` on bash or the equivalent on your shell of choice.
 
 ## What this command will not do
 
@@ -111,15 +111,13 @@ It will not reset a password. Use the password reset flow in the app for that.
 
 It will not unsuspend a user account or undelete an organization. Those are separate platform admin actions with their own audit trails.
 
-It will not recover lost notes, lost files, or any other content. Two factor authentication is the door, not the room.
+It will not recover lost notes, lost files, or any other content.
 
 It will not work if the database is unreachable or the master key is missing. The reset writes to the same database the backend uses, and the audit row goes through the same writer the rest of the app uses. If the backend cannot start, this command cannot run either.
 
-If your last admin has lost their device, your master key is intact, and your database is reachable, this command gets them back in. That is the whole scope.
-
 ## Unsaved edits after a Valkey restart
 
-Live edits wait in Valkey for a few seconds before Uniffy saves them to PostgreSQL. A Valkey restart needs no command from you, with or without persistence. This is what happens.
+Live edits wait in Valkey for a few seconds before Uniffy saves them to PostgreSQL. A Valkey restart needs no command from you, with or without persistence.
 
 Every restart gives Valkey a new identity, even when persistence kept every key. Uniffy ties each document's waiting edits to the identity that accepted them, so it never mistakes a restarted instance for the old one. On the next touch of a document, Uniffy saves the unbroken run of edits the restarted Valkey still holds and starts a fresh buffer for that document. A touch is an edit, someone opening the document, a write through the API, a save job, or the maintenance pass that runs each minute and works through every document with keys left in Valkey.
 
@@ -129,7 +127,7 @@ Each backend and worker logs `Valkey instance changed` with the old and new iden
 
 ### Planned Valkey maintenance
 
-Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data is different. The server's copy of every waiting edit goes with it, so save those edits to PostgreSQL first.
+Restarting or upgrading Valkey with its persistence intact loses nothing. Wiping its data takes the server's copy of every waiting edit with it, so save those edits to PostgreSQL first.
 
 Stop the backend pods so no new edits arrive, and keep the core workers running. Then run the checkpoint command once from a core worker pod. It uses the database and Valkey settings of the pod it runs in.
 
@@ -150,9 +148,11 @@ The exit status is 0 only when nothing is left behind. Otherwise the report list
 
 Any other reason means the command could not finish that document. Run it again.
 
-Wiping while lines remain removes those records from the server. Editors that never saw those edits saved still hold them on the device and send them again when their authors next open Uniffy.
+Wiping while the report still lists unsaved buffers removes those records from the server. Editors that never saw those edits saved still hold them on the device and send them again when their authors next open Uniffy.
 
-Confirm on the core worker metrics that `uniffy_realtime_buffer_oldest_pending_seconds` reads 0. That gauge only sees documents on the save schedule, which is why the command comes first. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. The Realtime edit buffer card on the platform overview reads the same counters, with the same limits. Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
+Confirm on the core worker metrics that `uniffy_realtime_buffer_oldest_pending_seconds` reads 0. That gauge only sees documents on the save schedule, which is why the command comes first. Do not wait on `uniffy_realtime_buffer_pending_records` instead. After keys disappear it also counts the edits Uniffy keeps for investigation for up to seven days, and no save clears those. The Realtime edit buffer card on the platform overview reads the same counters, with the same limits.
+
+Then wipe Valkey and start the backends again. Editors keep their unsaved edits on the device in the meantime and send them when the backends return.
 
 Never restore or delete Uniffy's keys inside a running Valkey. Load a different data set only by restarting Valkey, so it gets a new identity. If keys vanish while it keeps running, Uniffy notices on the next touch and starts that document afresh, but edits that lived only in those keys are gone from the server.
 

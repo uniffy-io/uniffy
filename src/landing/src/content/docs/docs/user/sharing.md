@@ -9,7 +9,7 @@ Everything you make in Uniffy is private until you decide otherwise.
 
 When you create a note, upload a file, start a project, or build an agent, it belongs to you and only you. Nobody else can open it, find it in search, or see it in their sidebar. That stays true until you share it.
 
-This holds all the way up. A teammate cannot see it. A team lead cannot see it. Your organization's [admin cannot see it either](/docs/administration/security/access-model/). On cloud, neither can we. We wrote down [why](/docs/principles/).
+This holds all the way up. A teammate cannot see it, a team lead cannot see it, and your organization's [admin cannot see it either](/docs/administration/security/access-model/). On cloud, neither can we. We wrote down [why](/docs/principles/).
 
 ## Sharing something
 
@@ -42,10 +42,16 @@ Sharing runs the other way too. Say a note is open to everyone in your organizat
 
 ## Shared with me
 
-When someone shares something with you, it shows up under **Shared with me** in the sidebar. That section is exactly what other people have handed you, nothing more. If something is not there, nobody shared it with you.
+**Shared with me** lists what other people opened to you by name, directly or through a team or group. It is a subset of what you can reach.
 
-## The short version
+Notes and files that are open to everyone in your organization sit under **Organization** instead, even when the owner also invited you by name. Calendars work the other way. A calendar someone invited you to stays under Shared with me, and calendars open to the whole organization start out hidden under Organization.
 
-Your private work is private. The only way anyone else sees it is if you let them in, or if someone you gave manage rights to adds them. There is no admin override and no back door.
+Projects have no Shared with me section. A project shared with you appears under All Projects.
 
-If that is not how your current tool works, that is the thing worth checking before you trust it with anything personal.
+So when something is missing from Shared with me, check Organization before you assume nobody let you in.
+
+## Who can let people in
+
+Only you and anyone you gave the admin role on that item can open your work to someone else. There is no admin override and no back door.
+
+Check whether your current tool works this way before you trust it with anything personal.

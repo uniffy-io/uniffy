@@ -10,21 +10,21 @@ Plenty of deployments put something in front of Uniffy: Cloudflare for DDoS cove
 
 ## The rules for any edge
 
-Uniffy's traffic is streams, websockets, and calls media, not just request and response. Whatever sits in front must:
+Uniffy carries streams, websockets, and calls media on top of plain request and response. Whatever sits in front must:
 
 1. Pass websockets. The realtime connection rides one.
-2. Stream response bodies without buffering. Agent replies arrive token by token; an edge that collects the response before forwarding it turns a live answer into a dead wait.
-3. Keep idle timeouts generous on `/api` paths. A quiet stream is not a stuck stream.
+2. Stream response bodies without buffering. Agent replies arrive token by token; an edge that collects the response before forwarding it holds the whole answer back until the agent finishes.
+3. Keep idle timeouts generous on `/api` paths. A stream can go quiet while it is still working.
 4. Never inject scripts into pages. Uniffy ships a content security policy locked to its own origin, so any edge feature that rewrites HTML to add its own JavaScript breaks the app instantly.
 5. Never challenge API clients. Browser challenges and bot interstitials on `/api` lock out the mobile app, which cannot solve them.
 6. Leave port 3478 out of it. Calls media is TURN over UDP and TCP, not HTTP. No HTTP edge can carry it.
 
-The friendliest edge is a layer 4 passthrough: it preserves everything above by not touching it. Each layer 7 feature you add after that is something to test against the list.
+The friendliest edge is a layer 4 passthrough. It forwards connections without touching them, so everything above survives. Each layer 7 feature you add after that is something to test against the list.
 
 ## Cloudflare
 
 :::caution
-We do not recommend the Cloudflare proxy. Proxied mode means Cloudflare terminates your TLS. Every request is decrypted on their servers before it reaches you: every note, every message, every file, every credential. That is not a Cloudflare flaw. It is what an HTTP proxy is. It also puts a third party inside a product you chose to run on your own hardware. Turn it on only if you accept that Cloudflare can read everything your organization puts in Uniffy. DNS only mode avoids all of this and still gives you Cloudflare DNS.
+We do not recommend the Cloudflare proxy. Proxied mode means Cloudflare terminates your TLS. Every request is decrypted on their servers before it reaches you: every note, every message, every file, every credential. Every HTTP proxy works this way, Cloudflare included. It also puts a third party inside a product you chose to run on your own hardware. Turn it on only if you accept that Cloudflare can read everything your organization puts in Uniffy. DNS only mode avoids all of this and still gives you Cloudflare DNS.
 :::
 
 If you accept that tradeoff, the proxy works in front of Uniffy with the settings below. Anything not mentioned is fine at its default.
@@ -49,7 +49,7 @@ sudo bash uniffy-k3s.sh install \
 
 ### TLS mode
 
-Full (strict), nothing else. Uniffy's gateway terminates its own certificate, so strict verification costs nothing. Flexible mode sends plain HTTP to the origin and is not supported: secure cookies and the gateway's listeners both assume TLS.
+Full (strict), nothing else. Uniffy's gateway terminates its own certificate, so strict verification costs nothing. Flexible mode sends plain HTTP to the origin and is not supported, because secure cookies and the gateway's listeners both assume TLS.
 
 ### Switch off anything that edits HTML
 
@@ -59,20 +59,24 @@ Rocket Loader, email obfuscation, Zaraz, and any feature described as injecting 
 
 Bot Fight Mode, managed challenges, and Under Attack mode must exclude `/api`. A browser might pass a challenge invisibly; the mobile app cannot pass one at all. If you want bot protection, scope it to `/` and leave the API to rate limits, which Uniffy applies per IP on its own.
 
-WAF managed rules can stay on. Watch the WAF event log during the first week: RPC bodies carrying code snippets or markdown occasionally trip generic injection rules, and the fix is an exclusion for the matched rule on `/api`, not disabling the WAF.
+WAF managed rules can stay on. Watch the WAF event log during the first week. RPC bodies carrying code snippets or markdown occasionally trip generic injection rules. When one does, add an exclusion for the matched rule on `/api` and leave the WAF on.
 
 ### Limits that do not bite, and one that might
 
-File uploads travel as chunks of at most 50 MB, safely under the 100 MB request body cap on Cloudflare's free plan. Caching defaults are safe: Cloudflare does not cache API responses unless you force it, so do not create a cache everything rule that covers `/api`. The one to remember is the 100 second first byte timeout: everything Uniffy streams sends bytes early, but if a custom automation of yours produces a single silent long call, that is where it will die.
+File uploads travel as chunks of at most 50 MB, safely under the 100 MB request body cap on Cloudflare's free plan.
+
+Caching defaults are safe. Cloudflare does not cache API responses unless you force it, so do not create a cache everything rule that covers `/api`.
+
+The one to remember is the 100 second first byte timeout. Everything Uniffy streams sends bytes early, but if a custom automation of yours produces a single silent long call, that is where it will die.
 
 ## Client addresses behind an edge
 
 Cloudflare terminates the connection, so the gateway sees Cloudflare's addresses. Two things depend on the real client address and both need telling:
 
 - Set `TRUSTED_PROXY_HOPS=2`, one hop for Cloudflare and one for the gateway, so audit logs and per IP rate limits record the person, not the proxy. The row in [Configure Uniffy](/docs/deployment/configure/) explains the count.
-- The operator API allowlist from [Harden the Edge](/docs/deployment/hardening/) evaluates the address the gateway sees. Behind Cloudflare, configure the gateway to trust one forwarded hop, and only after locking the origin down so traffic cannot reach it around Cloudflare; a forwarded header from an unlocked origin is an open door with extra steps. Belt and suspenders: mirror the same block as a Cloudflare WAF rule, path prefix `/api/superadmin.v1.` denied unless the source is your VPN.
+- The operator API allowlist from [Harden the Edge](/docs/deployment/hardening/) evaluates the address the gateway sees. Behind Cloudflare, configure the gateway to trust one forwarded hop. Do that only after you lock the origin down so traffic cannot reach it around Cloudflare. On an origin anyone can reach directly, a client can forge the forwarded header. For belt and suspenders, mirror the same block as a Cloudflare WAF rule that denies the path prefix `/api/superadmin.v1.` unless the source is your VPN.
 
-A corporate edge that terminates TCP instead has the same problem with a different fix: enable proxy protocol on both the edge and the gateway, and the original address survives the hop.
+A corporate edge that terminates TCP instead has the same problem with a different fix. Enable proxy protocol on both the edge and the gateway, and the original address survives the hop.
 
 ## Other edges in one paragraph each
 
@@ -82,4 +86,4 @@ A corporate edge that terminates TCP instead has the same problem with a differe
 
 **A CDN other than Cloudflare** follows the Cloudflare section in spirit, warning included: the proxy reads your traffic, never proxy the TURN hostname, cache nothing under `/api`, and inject nothing.
 
-The pattern across all of it: Uniffy assumes the pipe between the browser and the gateway is dumb. Every edge feature is a smartness added to that pipe, and each one is your responsibility to test. When something breaks only for users behind the edge, take the edge out of the path first and let the difference tell you which feature to go look at.
+Uniffy assumes the pipe between the browser and the gateway is dumb. When something breaks only for users behind the edge, take the edge out of the path first and let the difference tell you which feature to go look at.

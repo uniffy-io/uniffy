@@ -6,7 +6,7 @@ sidebar:
   order: 1
 ---
 
-One virtual machine, one command, a running Uniffy. This page is for a team that wants the product, not a Kubernetes project. The installer makes every infrastructure choice for you. If you want to make those choices yourself, you want [Install on Kubernetes](/docs/deployment/install-kubernetes/) instead.
+One virtual machine, one command, a running Uniffy. This page is for a team that wants the product without taking on a Kubernetes project. The installer makes every infrastructure choice for you. If you want to make those choices yourself, you want [Install on Kubernetes](/docs/deployment/install-kubernetes/) instead.
 
 ## What you need
 
@@ -80,9 +80,9 @@ The certificate file must be the full chain, the leaf and the intermediates conc
 5. Installs the Uniffy chart from the release pinset: Postgres, Valkey, Meilisearch, object storage, LiveKit, the backend, the workers, and the frontend, one replica each.
 6. Waits for everything to become healthy, probes TURN on port 3478, and prints the result.
 
-The final output is your URL, your admin login, and one warning worth reading twice: back up the master key. The `APP_MASTER_KEY` encrypts every secret your organization stores in Uniffy. Lose the key and that data is gone. The installer prints the exact backup command; run it and put the copy somewhere that is not this VM.
+The final output is your URL, your admin login, and a warning to back up the master key. The `APP_MASTER_KEY` encrypts every secret your organization stores in Uniffy. Lose the key and that data is gone. The installer prints the exact backup command; run it and put the copy somewhere that is not this VM.
 
-The command is safe to re-run. Every step detects work already done and skips it, so a failed run is fixed by fixing the cause and running the same command again. Failed at the certificate step? That is almost always DNS not propagated yet. Wait, re-run.
+The command is safe to rerun. Every step detects work already done and skips it, so you fix a failed run by fixing the cause and running the same command again. A failure at the certificate step is almost always DNS that has not propagated yet, so wait and rerun.
 
 ## After the install
 

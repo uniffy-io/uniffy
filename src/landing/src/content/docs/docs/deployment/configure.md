@@ -8,8 +8,6 @@ sidebar:
 
 Uniffy is configured through environment variables. The backend, workers, and supporting services all read from the same set. A working starting point lives at `.env.example` in the repository; copy it to `.env` and edit before running the stack.
 
-This page documents every variable.
-
 ## Server
 
 | Variable | Default | Purpose |
@@ -83,11 +81,11 @@ Queue, pub/sub, and cache connection profiles are set in code. Cache calls have 
 
 **Eviction requirement.** Valkey's eviction policy must not be one of the `allkeys-*` policies. Under those, Valkey can silently delete edits that are waiting for their save when memory runs low. `noeviction`, the Valkey default, and every `volatile-*` policy are safe. Waiting edits carry no expiry, so caches go first, and a full instance refuses new edits instead of dropping old ones. Editors show that as Saving unavailable and keep the edits on the device.
 
-The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup, and again as soon as they reach a restarted or replaced Valkey. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable, content writes through the API to documents that currently hold a live edit buffer fail with a retryable error, and the log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
+The backend and every worker read the eviction policy, `maxmemory` and the persistence settings at startup, and again as soon as they reach a restarted or replaced Valkey. With `REALTIME_VALKEY_PREFLIGHT=strict`, a confirmed `allkeys-*` policy turns live edit acceptance off. Editors keep working on their device copies and show Saving unavailable. Content writes through the API to documents that currently hold a live edit buffer fail with a retryable error. The log names the setting to change. A document holds that buffer from the moment someone opens it in a live editor until an hour passes without new edits. `warn` accepts edits anyway and logs the risk.
 
-Some managed services hide `CONFIG`. The policy is then unknown: Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview, together with the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment, refreshed every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
+Some managed services hide `CONFIG`. The policy is then unknown. Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview. The card also shows the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment. It refreshes every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
 
-The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits, and one organization at most half of it, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. One organization may use at most half of that share, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
 
 ## Realtime editing
 
@@ -131,7 +129,7 @@ The **media worker** handles video conversion, thumbnails, metadata and document
 | `MEDIA_WORKER_POLL_DELAY` | `0.5` | Seconds between media queue polls. |
 | `MEDIA_WORKER_JOB_TIMEOUT` | `300` | Default media job timeout in seconds. Video conversions have a longer duration based limit. |
 | `WORKER_JOB_TIMEOUT` | `300` | Timeout per core job, in seconds. |
-| `EGRESS_WORKER_JOB_TIMEOUT` | `900` | Per-job timeout for the egress fleet. Agent runtime jobs may legitimately run up to `MAX_TOOL_ITERATIONS * 60s` when slow tools fan out. |
+| `EGRESS_WORKER_JOB_TIMEOUT` | `900` | Timeout per job for the egress fleet. Agent runtime jobs may legitimately run up to `MAX_TOOL_ITERATIONS * 60s` when slow tools fan out. |
 | `WORKER_KEEP_RESULT` | `3600` | Seconds to retain completed job results in Valkey. |
 | `WORKER_MAX_TRIES` | `3` | Retry attempts before a job is marked failed. |
 | `WORKER_HEALTH_CHECK_INTERVAL` | `30` | Seconds between worker health pings. |
@@ -177,7 +175,7 @@ Stores original uploads, attachments, file versions, thumbnails, and completed v
 
 Media workers prepare completed MP4 copies for uploaded videos. Browsers try the original first and use the copy if original playback fails. Uploaded originals remain in storage; screen recordings replace their WebM source with the promised MP4 after conversion succeeds.
 
-Recording conversions and playback copies share an encode limit within each media worker process. Run one media worker process per pod. Each pod gets its own slots: three pods with two encode slots each can run six conversions at once. LiveKit calls do not use these workers or settings.
+Recording conversions and playback copies share an encode limit within each media worker process. Run one media worker process per pod. Each pod gets its own slots. Three pods with two encode slots each can run six conversions at once. LiveKit calls do not use these workers or settings.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -280,10 +278,10 @@ LiveKit is the SFU for audio and video calls. Server config lives in LiveKit's o
 | Variable | Default | Purpose |
 |---|---|---|
 | `LIVEKIT_WS_URL` | `ws://localhost:7880` | WebSocket URL the **browser** uses to reach LiveKit signaling. |
-| `LIVEKIT_HOST` | `http://localhost:7880` | HTTP URL the **backend** uses for LiveKit admin REST API (server-to-server). |
+| `LIVEKIT_HOST` | `http://localhost:7880` | HTTP URL the **backend** uses for LiveKit admin REST API (server to server). |
 | `LIVEKIT_API_KEY` | `devkey` | Shared API key. Rotate together with the secret. |
 | `LIVEKIT_API_SECRET` | none | Shared secret, yours to generate: `openssl rand -hex 32`. At least 32 characters, and never one published in the repository. Calls stay disabled until it is set on both the backend and the LiveKit server. |
-| `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross-impact. |
+| `LIVEKIT_VALKEY_DATABASE` | `1` | Valkey logical DB used by LiveKit for its room registry. Kept separate from the app's DB (`VALKEY_DATABASE`) to avoid eviction or pub/sub cross impact. |
 
 ## TURN relay
 
@@ -291,7 +289,7 @@ Optional. By default media flows directly to LiveKit and NAT traversal uses Live
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `TURN_SERVER_URLS` | empty | Comma-separated TURN URIs advertised to clients. Empty means direct media mode. |
+| `TURN_SERVER_URLS` | empty | Comma separated TURN URIs advertised to clients. Empty means direct media mode. |
 | `TURN_SHARED_SECRET` | empty | Shared secret for ephemeral TURN credentials (TURN REST spec). Must match the relay. Required when `TURN_SERVER_URLS` is set. |
 | `TURN_CREDENTIAL_TTL_SECONDS` | `28800` | Lifetime of minted TURN credentials. Must exceed the longest expected call; ICE servers cannot be rotated mid connection. |
 
@@ -299,27 +297,27 @@ Optional. By default media flows directly to LiveKit and NAT traversal uses Live
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CACHE_DISABLED_NAMESPACES` | empty | Comma-separated list of Valkey cache namespaces to bypass at runtime. Accepts either a metrics namespace (first segment of the key) or a multi-segment prefix. Known namespaces: `chat`, `chat:channel`, `perm`, `agent`, `user`, `provider`. Use only when an operational issue forces a single namespace off without taking the rest down. |
+| `CACHE_DISABLED_NAMESPACES` | empty | Comma separated list of Valkey cache namespaces to bypass at runtime. Accepts either a metrics namespace (first segment of the key) or a prefix of several segments. Known namespaces: `chat`, `chat:channel`, `perm`, `agent`, `user`, `provider`. Use only when an operational issue forces a single namespace off without taking the rest down. |
 
 ## Audit log
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the backend, as a hop count rather than an address list. With `N` above zero, the audit middleware takes the entry `N` from the right of `X-Forwarded-For` as the client IP captured into `audit_events.ip_address`, matching how nginx, Caddy, ALB, and Cloudflare append the immediate caller. At `0` the raw socket peer is used and `X-Forwarded-For` is ignored: correct for direct-connect deployments and the safe default behind an unknown load balancer. Also load-bearing for per-IP rate limits: at `0` a private or loopback peer skips the per-IP bucket so a misconfigured proxy cannot lock out every user behind it. Set `1` behind a single proxy, `2` when chained. |
-| `AUDIT_EVENTS_FILE_UPLOADED` | `false` | Opt-in for the high-volume `file.uploaded` audit row. Each successful upload writes one row. Turn on once storage volume has been characterised and compliance asks for upload attribution. Accepts `1`, `true`, `yes` (case-insensitive). |
+| `TRUSTED_PROXY_HOPS` | `0` | Number of reverse proxies in front of the backend, as a hop count rather than an address list. With `N` above zero, the audit middleware takes the entry `N` from the right of `X-Forwarded-For` as the client IP captured into `audit_events.ip_address`, matching how nginx, Caddy, ALB, and Cloudflare append the immediate caller. At `0` the raw socket peer is used and `X-Forwarded-For` is ignored. That is correct for direct connect deployments and the safe default behind an unknown load balancer. Rate limits per IP also depend on it. At `0` a private or loopback peer skips the per IP bucket, so a misconfigured proxy cannot lock out every user behind it. Set `1` behind a single proxy, `2` when chained. |
+| `AUDIT_EVENTS_FILE_UPLOADED` | `false` | Adds the high volume `file.uploaded` audit row. Each successful upload writes one row. Turn it on once you have measured storage volume and compliance asks for upload attribution. Accepts `1`, `true`, `yes` (case insensitive). |
 
 ## Prometheus metrics
 
-Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a per-component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
+Granian forks `WORKERS` children. Without multiprocess mode, each child owns a private metrics registry and a `/metrics` scrape returns one child's slice only. The bootstrap helper in `uniffy.infrastructure.observability.bootstrap` manages a per component subdir under `PROMETHEUS_MULTIPROC_BASE_DIR` so backend and worker each get their own clean directory on startup.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `PROMETHEUS_MULTIPROC_BASE_DIR` | `/tmp/uniffy_prom_metrics` | Base directory for the per-component subdirs. Override only when the container needs a writable path elsewhere. |
-| `PROMETHEUS_MULTIPROC_DIR` | unset | Explicit override; bypasses the per-component subdir. |
+| `PROMETHEUS_MULTIPROC_BASE_DIR` | `/tmp/uniffy_prom_metrics` | Base directory for the per component subdirs. Override only when the container needs a writable path elsewhere. |
+| `PROMETHEUS_MULTIPROC_DIR` | unset | Explicit override; bypasses the per component subdir. |
 
 ## Email and SMTP (optional, system default)
 
-Optional. Used when an organization has no per-org SMTP override, or for org-less flows such as a pre-org password reset. Both the system default and per-org SMTP can also be configured via the admin UI; per-org SMTP passwords are stored encrypted via `OrgCipher` (envelope encryption, per-org DEK).
+Optional. Used when an organization has no SMTP override of its own, or for mail sent outside any organization, such as a password reset. Platform admins can also set the system default from the platform pages, and org admins set their organization's SMTP from the admin pages. SMTP passwords for an organization are stored encrypted via `OrgCipher` (envelope encryption, one DEK per organization).
 
 All providers are reached through SMTP. For Resend, use the SMTP relay (`smtp.resend.com:587`, username `resend`, password is your Resend API key).
 
@@ -328,11 +326,11 @@ All providers are reached through SMTP. For Resend, use the SMTP relay (`smtp.re
 | `MAIL_FROM_ADDRESS` | empty | Default `From` address. Required to send mail. |
 | `MAIL_FROM_NAME` | `Uniffy` | Display name shown to recipients. |
 | `MAIL_REPLY_TO` | empty | Optional `Reply-To` header. |
-| `MAIL_RATE_LIMIT_PER_MIN` | `100` | Per-org or per-system cap, enforced via a Valkey token bucket. |
-| `MAIL_DELIVERY_LOG_ENABLED` | `false` | Persist per-send rows in `mail_delivery_log`. Off saves storage; on gives forensics. |
+| `MAIL_RATE_LIMIT_PER_MIN` | `100` | Per organization or per system cap, enforced via a Valkey token bucket. |
+| `MAIL_DELIVERY_LOG_ENABLED` | `false` | Persist one row per send in `mail_delivery_log`. Off saves storage; on gives forensics. |
 | `UNIFFY_BASE_URL` | `http://localhost:5173` | Public app URL used to build user facing links in outbound email (accept invite, password reset, support session notifications). No trailing slash. Example: `https://cloud.uniffy.io`. |
 | `SMTP_HOST` | empty | SMTP server hostname. |
 | `SMTP_PORT` | `587` | SMTP port. `587` for STARTTLS, `465` for implicit TLS. |
 | `SMTP_USERNAME` | empty | SMTP auth user. For Resend: `resend`. |
 | `SMTP_PASSWORD` | empty | SMTP auth password. For Resend: your API key. |
-| `SMTP_USE_TLS` | `true` | Use STARTTLS on connect. Disable only for plain-text dev relays. |
+| `SMTP_USE_TLS` | `true` | Use STARTTLS on connect. Disable only for plain text dev relays. |

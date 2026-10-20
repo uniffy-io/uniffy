@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-Every organization has a who is who. In Uniffy it is the People page, and it is built from real data, not a stale slide.
+Every organization has a who is who. In Uniffy it is the People page, drawn from the profiles and reporting lines your organization keeps in Uniffy.
 
 Open it from your avatar menu. You get your whole organization as a chart: who reports to whom, and which team each person sits in.
 
@@ -23,15 +23,15 @@ Hover any person for a quick card with their title, team, local time, and contac
 
 ## Profiles
 
-A profile shows what a colleague would ask you in the hallway. Name and pronouns. Title and department. Who their manager is and who reports to them. Which teams they belong to. How to reach them, and what time it is where they are.
+A profile answers what a colleague would ask in the hallway: name and pronouns, title and department, who their manager is and who reports to them, which teams they belong to, how to reach them, and what time it is where they are.
 
-Everything on a profile is visible to everyone in your organization. There are no per field privacy dials to decode. A field someone left empty simply does not show.
+Everything on a profile is visible to everyone in your organization. There are no per field privacy dials to decode. A field someone left empty does not show.
 
 ## Your own details
 
 You edit your personal fields in your account settings: phones, timezone, birthday, bio, links, and pronouns. They appear on your profile the moment you save.
 
-Job title, department, office, and manager work differently. Those are facts about the organization, so admins maintain them. If your organization syncs people from a company directory, synced fields show a small lock and edit themselves.
+Job title, department, office, and manager work differently. Those are facts about the organization, so admins maintain them. If your organization syncs people from a company directory, synced fields show a small lock and update from the directory.
 
 ## Teams and groups
 
@@ -53,4 +53,4 @@ Pick a team and everyone currently in it lands on the invite as an individual at
 
 Search works on more than names. Type a job title or a department and the right people come back, each result showing their title and team. Mentions of a person anywhere in Uniffy link straight to their profile. Teams show up in search too, and you can mention a team like anything else to link its slice of the chart.
 
-The chart is only as good as the data behind it, and the data lives where work already happens. When an admin fixes a title or a manager, every chart, profile, search result, and mention card updates. Ask your current org chart tool when it was last true.
+When an admin fixes a title or a manager, every chart, profile, search result, and mention card updates. Ask your current org chart tool when it was last true.

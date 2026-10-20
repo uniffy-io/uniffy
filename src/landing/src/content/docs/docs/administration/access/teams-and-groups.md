@@ -20,23 +20,23 @@ Owners and admins can open all four. Members browse the People page and edit the
 
 A **team** is an organizational unit. It has members, a lead, and optionally a parent team, so Engineering can contain Backend, Frontend, and Platform, and Platform can contain Infrastructure.
 
-The Teams page shows the whole tree indented, with each team's lead and member count. Create a team, pick its parent, pick its lead, manage its roster. That is the entire surface.
+The Teams page shows the whole tree indented, with each team's lead and member count. Create a team, pick its parent, pick its lead, manage its roster.
 
-Teams carry through the whole product. The org chart draws them as boxes. Profiles list them. Search results show a person's team next to their title. And a team works everywhere a set of people works: share a note with it, invite it to a meeting.
+Teams carry through the whole product. The org chart draws them as boxes, profiles list them, and search results show a person's team next to their title. A team also works everywhere a set of people works, so you can share a note with it or invite it to a meeting.
 
 ### Lead and manager are different things
 
 A **lead** belongs to the team. A **manager** belongs to a person, and you set it on the Members page, in the member's profile editor.
 
-Managers draw the solid reporting lines on the org chart. The lead steps in only as a fallback: when a person has no manager on record, the chart draws a dashed line to their team's lead. Set managers for the people whose reporting line matters, and let the lead fallback carry the rest.
+Managers draw the solid reporting lines on the org chart. The lead steps in only as a fallback. When a person has no manager on record, the chart draws a dashed line to their team's lead. Set managers for the people whose reporting line matters, and let the lead fallback carry the rest.
 
 ## Groups
 
-An **access group** is a named sharing list. Release Approvers. Incident Response. Security Council. You create it once, and anyone can share content with it instead of adding five people by hand. Membership changes propagate: join the group, inherit its access, leave it, lose it.
+An **access group** is a named sharing list, like Release Approvers, Incident Response, or Security Council. You create it once, and anyone can share content with it instead of adding five people by hand. Membership changes propagate. Someone who joins the group inherits its access, and someone who leaves loses it.
 
-A group can be **private**. A private group is invisible to regular members. It does not appear in their pickers, and its roster is not browsable. Its grants still work. Use it when the list itself is sensitive, like a compensation review circle.
+A group can be **private**, which makes it invisible to regular members. It does not appear in their pickers, and its roster is not browsable. Its grants still work. Use it when the list itself is sensitive, like a compensation review circle.
 
-When the set of people you are about to create is really an organizational unit, do not make a group. Make a team. You get the same sharing powers plus the chart, the profiles, and the search metadata.
+When the set of people you are about to create is really an organizational unit, make a team instead of a group. You get the same sharing powers plus the chart, the profiles, and the search metadata.
 
 ## One name per organization
 
@@ -49,7 +49,3 @@ This is deliberate. Both appear in the same pickers across the product. Two entr
 If your organization syncs people from an identity source, some data stops being yours to edit. Synced profile fields show a lock that says so, and a synced team's name and kind reject edits the same way. The next sync would revert your change anyway, so Uniffy refuses it up front instead of silently losing it.
 
 The Directory page also holds the two People page switches. You can turn the org chart off for the whole organization if you do not want one.
-
-## The short version
-
-Structure goes in teams. Sharing lists go in groups. Reporting lines go on members. If you keep those three sentences straight, the four pages never fight you.

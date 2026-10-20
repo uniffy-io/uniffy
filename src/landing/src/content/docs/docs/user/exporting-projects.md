@@ -31,7 +31,7 @@ From the portfolio you can select several projects and export them into one file
 
 Tick the bundle option and you get a zip instead of a single file. Next to the tasks it holds the sprints, the full activity history, every comment, and the field definitions with their options.
 
-The files are read at the same moment. A comment in the bundle always belongs to a task in the same bundle, even when someone keeps working while the download runs.
+Uniffy reads every file in the bundle at the same moment. A comment in the bundle always belongs to a task in the same bundle, even when someone keeps working while the download runs.
 
 ## Limits and who can export
 
@@ -43,4 +43,4 @@ Every export shows up in your organization's [audit log](/docs/administration/se
 
 A spreadsheet will run a cell that starts with an equals sign as a formula. Uniffy puts a quote mark in front of any text that would trigger that, so a task titled `=SUM()` stays a title when you open the file.
 
-If you are evaluating where your work will live, ask every tool the same thing: can I get all of it back out, today, without asking anyone?
+If you are evaluating where your work will live, ask every tool the same thing: Can I get all of it back out, today, without asking anyone?

@@ -8,7 +8,7 @@ sidebar:
 
 Uniffy is one workspace for the things you would normally keep in five apps. Notes, files, chat, projects, calendar, AI agents. They live next to each other, and you can reference any piece of content from anywhere with an `@` mention.
 
-Uniffy is not just for organizations. It works for one person keeping their own life in order, a few friends sharing things securely, a small team, or a large company. Same product, same code, regardless of how many of you there are.
+Uniffy works for one person keeping their own life in order, a few friends sharing things securely, a small team, or a large company. Same product, same code, regardless of how many of you there are.
 
 These docs exist so that you can verify all of that for yourself, decide whether Uniffy fits the way you work, and get unstuck when something breaks.
 
@@ -16,13 +16,13 @@ These docs exist so that you can verify all of that for yourself, decide whether
 
 The docs are split into four guides. Each one is written for a different reader.
 
-**[Principles](/docs/principles/)** explains the rules we will not bend on. One codebase for cloud and self hosted. Two admin surfaces by design. No phone home, ever. Read this first if you are evaluating Uniffy against another tool, because the real differences usually live here.
+**[Principles](/docs/principles/)** explains the rules we will not bend on: one codebase for cloud and self hosted, two admin surfaces by design, and no phone home, ever. Read this first if you are evaluating Uniffy against another tool, because the real differences usually live here.
 
-**[User Guide](/docs/user/)** is for everyone who opens the app on a normal day. Notes, files, chat, mentions, agents, calendar. How the product actually feels in use.
+**[User Guide](/docs/user/)** is for everyone who opens the app on a normal day. It covers notes, files, chat, mentions, agents, calendar, and how the product feels in use.
 
-**[Administration Guide](/docs/administration/)** is for org owners and admins. Members, permissions, SSO, the audit log, encryption. The settings that decide how your tenant behaves.
+**[Administration Guide](/docs/administration/)** is for org owners and admins. It holds the settings that decide how your tenant behaves: members, permissions, SSO, the audit log, encryption.
 
-**[Deployment Guide](/docs/deployment/)** is for the operator running Uniffy on their own hardware. Install, configure, upgrade, back up. Every setting Uniffy reads at startup and what each one does.
+**[Deployment Guide](/docs/deployment/)** is for the operator running Uniffy on their own hardware. Install, configure, upgrade, back up. It also lists every setting Uniffy reads at startup and what each one does.
 
 ## Where to start
 

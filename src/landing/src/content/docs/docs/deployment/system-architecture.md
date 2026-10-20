@@ -73,7 +73,7 @@ RPCs use HTTP POST with JSON or binary protobuf bodies. File downloads and video
 | `/livekit/` | LiveKit 7880, prefix stripped | HTTP/1.1 | Calls signaling WebSocket. |
 | everything else | frontend | HTTP/1.1 | Static assets and the single page app fallback. |
 
-The request timeout on these routes is zero and buffering is off. An agent answer is one HTTP response that streams for as long as the agent thinks. A proxy timeout or a buffer anywhere in this path turns streaming features into silent hangs, which is why the traffic plane ships as part of the product instead of as a suggestion.
+The request timeout on these routes is zero and buffering is off. An agent answer is one HTTP response that streams for as long as the agent thinks. A proxy timeout or a buffer anywhere in this path turns streaming features into silent hangs. That is why the traffic plane ships as part of the product.
 
 ## Worker fleet split
 
@@ -131,17 +131,17 @@ The bundled CloudNativePG cluster ships sane parameters; for an external Postgre
 
 ### Meilisearch
 
-The search index, and nothing but an index. The backend writes to it during normal operation and can rebuild it from Postgres entirely through a background job. Treat it as reproducible: losing the Meilisearch volume costs a reindex window, not data.
+The search index, and nothing but an index. The backend writes to it during normal operation and can rebuild it from Postgres entirely through a background job. Treat it as reproducible. Losing the Meilisearch volume costs a reindex window, not data.
 
 ### Valkey
 
-Carries four loads: the job queue, pub/sub fan out for realtime, a hot cache, and the **edit buffer**. Cache reads run under a 150ms deadline, so a slow Valkey degrades into cache misses instead of stalling user requests, and authorization never reads from it; permission decisions come from Postgres every time.
+Carries four loads: the job queue, pub/sub fan out for realtime, a hot cache, and the **edit buffer**. Cache reads run under a 150ms deadline, so a slow Valkey degrades into cache misses instead of stalling user requests. Authorization never reads from it; permission decisions come from Postgres every time.
 
 The edit buffer is where live edits wait for their save. When someone types in a note, a task or an event description, the backend checks their access in Postgres, validates the edit, appends it to a per document stream in Valkey and confirms it. Collaborators on every backend pod see it at once. About ten seconds after the first unsaved edit, a core worker folds what that document collected into Postgres in one transaction and trims what it saved. A large burst is saved sooner. Lists, search and notifications follow the saved state, so they trail the editors by those seconds.
 
-That makes Valkey part of how editing works. A slow or unreachable Valkey pauses saving and collaboration: editors keep typing, keep their edits on the device and show Saving unavailable until it answers again. Losing Valkey data loses the server's copy of the edits it had not saved yet, and editors still holding those edits send them again. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) covers what each persistence setting can lose.
+That makes Valkey part of how editing works. A slow or unreachable Valkey pauses saving and collaboration. Editors keep typing, keep their edits on the device and show Saving unavailable until it answers again. Losing Valkey data loses the server's copy of the edits it had not saved yet, and editors still holding those edits send them again. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) covers what each persistence setting can lose.
 
-The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup, and again whenever Valkey comes back as a different instance, and backends report the result on `/healthz`; [Configure Uniffy](/docs/deployment/configure/#valkey) has the details.
+The buffer adds one requirement on Valkey: an eviction policy outside `allkeys-*`. Every backend and worker checks it at startup and again whenever Valkey comes back as a different instance. Backends report the result on `/healthz`. [Configure Uniffy](/docs/deployment/configure/#valkey) has the details.
 
 Live edits in the buffer are encrypted with your organization's key. That holds in memory, in Valkey's persistence files, and on the way from one backend to another. The key never reaches Valkey. Valkey still sees which documents change, who changes them, when, and how much. Queues, caches and the messages backends send each other are not encrypted. So Valkey still belongs in the same trust zone as Postgres.
 
@@ -151,7 +151,7 @@ LiveKit keeps its room registry in a separate Valkey database (db 1) so registry
 
 ### Object storage
 
-Any S3 compatible service, always yours on the cluster path. Every upload and download flows through the backend, which checks permissions per request; browsers never talk to the storage endpoint, so it stays on a private network with no CORS and no public exposure. File bytes ride backend bandwidth, which is why upload heavy orgs scale backend pods, not storage networking.
+Any S3 compatible service, always yours on the cluster path. Every upload and download flows through the backend, which checks permissions per request. Browsers never talk to the storage endpoint, so it stays on a private network with no CORS and no public exposure. File bytes ride backend bandwidth, which is why upload heavy orgs scale backend pods, not storage networking.
 
 Storage includes uploaded originals, retained file versions, thumbnails, and completed playback copies. Budget for those copies alongside original uploads. Worker scratch holds temporary conversion outputs and other temporary work; it is not the file store.
 
@@ -171,9 +171,9 @@ Storage includes uploaded originals, retained file versions, thumbnails, and com
 
 ### Scaling LiveKit
 
-The unit of LiveKit scaling is the room, not the participant. Raising `livekit.replicas` puts the pods in distributed mode over the shared Valkey registry and spreads rooms across them, so many concurrent calls scale horizontally. One giant call does not: a room is homed on a single pod, and its ceiling is that pod's CPU and bandwidth. If your usage pattern is all hands meetings rather than many small calls, scale the LiveKit pods vertically and put them on your fastest network nodes.
+The unit of LiveKit scaling is the room. Raising `livekit.replicas` puts the pods in distributed mode over the shared Valkey registry and spreads rooms across them, so many concurrent calls scale horizontally. One giant call does not. A room is homed on a single pod, and its ceiling is that pod's CPU and bandwidth. If your usage pattern is all hands meetings rather than many small calls, scale the LiveKit pods vertically and put them on your fastest network nodes.
 
-Bandwidth math is what actually bites. An SFU forwards every publisher's stream to every subscriber, so a 20 person call with cameras on multiplies quickly, and screen shares are the expensive stream. The org level screen share quality ceiling (`CALLS_DEFAULT_SCREEN_SHARE_QUALITY`, default `BALANCED`) exists exactly to protect a modest media node; raise it when the node has bandwidth to spare, not before. For load numbers per core, defer to LiveKit's own benchmarks; our wiring adds STUNner in the media path, which shifts relay bandwidth onto the gateway pods, and those scale horizontally as ordinary stateless workloads.
+Bandwidth math is what actually bites. An SFU forwards every publisher's stream to every subscriber, so a 20 person call with cameras on multiplies quickly, and screen shares are the expensive stream. The org level screen share quality ceiling (`CALLS_DEFAULT_SCREEN_SHARE_QUALITY`, default `BALANCED`) exists to protect a modest media node; raise it when the node has bandwidth to spare, not before. For load numbers per core, defer to LiveKit's own benchmarks. Our wiring adds STUNner in the media path, which shifts relay bandwidth onto the gateway pods. Those scale horizontally as ordinary stateless workloads.
 
 ## Network ports
 

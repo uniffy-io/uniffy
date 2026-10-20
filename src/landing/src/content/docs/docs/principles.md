@@ -6,7 +6,7 @@ sidebar:
   order: 1
 ---
 
-We built Uniffy around a few rules that we will not bend on. Every feature in the product has to satisfy all of them. This page walks through what they are and why we picked them. Read it before you compare Uniffy to anything else. The real differences usually live here, not in the feature list.
+We built Uniffy around a few rules that we will not bend on. Every feature in the product has to satisfy all of them. Read this page before you compare Uniffy to anything else. The real differences usually live here, not in the feature list.
 
 Each principle below is collapsed. Click a title to read it.
 
@@ -15,7 +15,7 @@ Each principle below is collapsed. Click a title to read it.
 <details class="principle">
 <summary>One codebase, one product</summary>
 
-Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out. No enterprise tier. No private fork that only paying customers get. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
+Cloud and self hosted ship from the same commit. There is no "Community Edition" with features stripped out, no enterprise tier, and no private fork that only paying customers get. The instance running at `cloud.uniffy.io` is exactly the code you can pull from GitHub and run on your own servers.
 
 Two things follow from that.
 
@@ -23,7 +23,7 @@ You can audit the code that processes your data. There is no closed binary in th
 
 Features cannot quietly drift from open to closed. Whatever ships goes into the public tree the same day. If we ever change our minds, you will see the commit.
 
-One concrete consequence shows up the moment you log in as an administrator. You will see two distinct surfaces, an org admin view for your tenant and a platform operator view for the deployment, even when you are the same person wearing both hats. That is more complex than one combined admin page, and we did it on purpose. The admin guide covers what lives on each surface.
+One consequence shows up the moment you log in as an administrator. You will see two distinct surfaces, an org admin view for your tenant and a platform operator view for the deployment, even when you are the same person wearing both hats. That is more complex than one combined admin page, and we did it on purpose. The admin guide covers what lives on each surface.
 
 </details>
 
@@ -32,11 +32,11 @@ One concrete consequence shows up the moment you log in as an administrator. You
 
 We do not measure what you do inside Uniffy. We do not record which pages you visit, which buttons you click, how long you spend on a note, or which agents you talk to. None of that data is generated, none of it is stored, none of it is sent anywhere. There is no event pipeline because there are no events.
 
-We do not analyze the content of your workspace either. Your notes, your files, your chat messages are yours. We do not read them to improve search ranking. We do not feed them into any training pipeline of our own or anyone else's. We do not aggregate them into trends.
+We do not analyze the content of your workspace either. Your notes, your files, your chat messages are yours. We do not read them to improve search ranking, feed them into any training pipeline of our own or anyone else's, or aggregate them into trends.
 
-The app does not set cookies. None. No session cookie, no preference cookie, no tracking cookie, no consent banner because there is nothing to consent to. There are no third party scripts loaded into the front end that could drop their own. No Google Analytics. No Hotjar. No Sentry, no LogRocket, no Mixpanel, no Segment, no Facebook pixel. The browser tab that runs Uniffy looks the same to your network the first time you open it and the hundredth time.
+The app does not set cookies. None. No session cookie, no preference cookie, no tracking cookie, no consent banner because there is nothing to consent to. There are no third party scripts loaded into the front end that could drop their own. That means no Google Analytics, Hotjar, Sentry, LogRocket, Mixpanel, Segment, or Facebook pixel. The browser tab that runs Uniffy looks the same to your network the first time you open it and the hundredth time.
 
-If you are curious what we actually know about your usage, here is the full list. The fact that your account exists. The timestamp of your last login, so the product can show "last seen". Aggregate counts that fit on a billing page, like total storage used and number of agent runs this month. That is the entire list.
+We know three things about your usage: that your account exists, when you last logged in (so the product can show "last seen"), and aggregate counts that fit on a billing page, like total storage used and number of agent runs this month.
 
 </details>
 
@@ -45,20 +45,20 @@ If you are curious what we actually know about your usage, here is the full list
 
 Uniffy is a place for your team to work. It is not a place for you to watch them work.
 
-There is no location tracking on the mobile app. No productivity score. No active hours dashboard. No "focus time" report that ranks your team by how long they typed today. The product does not collect that data, does not surface it to admins, and does not expose it through any API.
+There is no location tracking on the mobile app, no productivity score, no active hours dashboard, and no "focus time" report that ranks your team by how long they typed today. The product does not collect that data, does not surface it to admins, and does not expose it through any API.
 
 Some workplace tools have grown a whole surveillance product alongside the real product. Microsoft 365 ships a Productivity Score that tells managers who is "active" and who is not. Other suites log every keystroke, every idle minute, every meeting a person attended. We will not build any of that. Not for cloud, not for self hosted, not as a paid add on, not behind a feature flag.
 
-If you are evaluating Uniffy and you want or need this, **Uniffy is not for you**.
+If you are evaluating Uniffy and you want or need this, Uniffy is not for you.
 
 </details>
 
 <details class="principle">
 <summary>No telemetry, ever</summary>
 
-The product does not send telemetry. We do not collect usage events. We do not collect crash reports. We do not pull fonts or assets from a CDN. Everything the app needs is bundled into it.
+The product does not send telemetry. We do not collect usage events or crash reports, and we do not pull fonts or assets from a CDN. Everything the app needs is bundled into it.
 
-Self hosted Uniffy is free at any size. Your instance never calls us. Not on install, not once a day, not ever. A deployment with no outbound route to the internet is a fully supported configuration, not a special arrangement. The [licensing page](/docs/deployment/licensing/) in the deployment guide has the details.
+Self hosted Uniffy is free at any size. Your instance never calls us, not on install, not once a day, not ever. A deployment with no outbound route to the internet is a fully supported configuration. The [licensing page](/docs/deployment/licensing/) in the deployment guide has the details.
 
 If we ever ship an optional analytics opt in, it will be off by default and clearly labeled. If you cannot find the switch, the feature does not exist.
 
@@ -75,7 +75,7 @@ If your organization decides AI is not for you, you do nothing. The agents page 
 
 When you do turn AI on, you pick the provider and the keys. Anthropic, OpenAI, Google, or a self hosted Ollama or vLLM endpoint. Your keys, your billing relationship, your choice of where the prompts go. We do not pool tenants behind a shared key, and we never read what flows through.
 
-The switch lives in the admin pages, not buried inside a personal setting. One person granting AI access to themselves is not enough. The org has to consciously opt in.
+The switch lives in the admin pages. One person cannot grant AI access to themselves. The organization has to opt in.
 
 </details>
 
@@ -84,7 +84,7 @@ The switch lives in the admin pages, not buried inside a personal setting. One p
 
 On cloud, we host your data but we do not get to read it. Being a platform administrator on our side does not let us into any tenant's notes, files, or messages. There is no master key we keep behind the scenes. There is no support back door.
 
-The only way for us to see what is inside your organization is if you, the owner, hand us a temporary key. When our support team needs to look at something to help with an issue, we ask. The request shows up in your admin pages. You decide whether to approve it, what scope to allow, and for how long. You can revoke it at any moment. When the window closes, our access ends.
+The only way for us to see what is inside your organization is a **support session** that you, the owner, approve. When our support team needs to look at something to help with an issue, we ask. The request shows up in your admin pages. You decide whether to approve it, what scope to allow, and for how long. You can revoke it at any moment. When the session closes, our access ends.
 
 If you do not approve, we do not look. The incident gets solved on whatever signals do not require reading your workspace, which is usually plenty.
 

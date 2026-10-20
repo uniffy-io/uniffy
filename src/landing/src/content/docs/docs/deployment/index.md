@@ -18,11 +18,11 @@ Every release ships a **pinset**: the chart version, the image digests, and the 
 
 Every image in the pinset is signed, and the pinset file itself is signed. You can refuse anything we did not build, by hand or with an admission policy in your cluster. [Verify a Release](/docs/deployment/verify/) has the commands.
 
-The edge that fronts Uniffy has a strict contract. It must speak HTTP/2 in cleartext to the backend, pass websockets untouched, and carry streams that never time out and never buffer. We ship and test that contract as Envoy Gateway resources, and calls media relays through STUNner. Other Gateway API implementations may meet the contract on paper. We do not test them and we do not support them. If calls are off, STUNner is optional; Envoy Gateway is not.
+The edge that fronts Uniffy has a strict contract. It must speak HTTP/2 in cleartext to the backend, pass websockets untouched, and carry streams that never time out and never buffer. We ship and test that contract as Envoy Gateway resources, and media for calls relays through STUNner. Other Gateway API implementations may meet the contract on paper. We do not test them and we do not support them. If calls are off, STUNner is optional; Envoy Gateway is not.
 
 ## Fully isolated deployments
 
-Uniffy never calls home, fetches nothing from third party CDNs at runtime, and keeps telemetry off by default. A deployment that is fully isolated from the internet is a supported configuration, not a special case. The VM installer takes an offline bundle, and the cluster path ships a mirror script for your private registry.
+Uniffy never calls home, fetches nothing from third party CDNs at runtime, and keeps telemetry off by default. A deployment that is fully isolated from the internet is a supported configuration. The VM installer takes an offline bundle, and the cluster path ships a mirror script for your private registry.
 
 ## What is here
 
@@ -39,4 +39,4 @@ Uniffy never calls home, fetches nothing from third party CDNs at runtime, and k
 - [Account Recovery](/docs/deployment/recovery/): the break glass command for a locked out admin, and [unsaved edits after a Valkey restart](/docs/deployment/recovery/#unsaved-edits-after-a-valkey-restart), including planned Valkey maintenance.
 - [Licensing](/docs/deployment/licensing/): what open source means here.
 
-When you evaluate Uniffy against anything else, ask the other vendor one question. If I run this on my own hardware, fully isolated, do I get the same product you sell in your cloud? Our answer is yes, and these pages are the proof.
+When you evaluate Uniffy against anything else, ask the other vendor one question. If I run this on my own hardware, fully isolated, do I get the same product you sell in your cloud? Our answer is yes.

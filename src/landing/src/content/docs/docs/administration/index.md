@@ -6,7 +6,7 @@ sidebar:
   order: 0
 ---
 
-This guide is for the people who run an organization on Uniffy. Owners and admins. It covers the admin pages, where you manage one tenant. Your tenant.
+This guide is for the owners and admins who run an organization on Uniffy. It covers the admin pages, where you manage one tenant, your own.
 
 If you run a whole deployment and look after more than one organization, that is a different job. The platform pages cover it, and [Admins and Operators](/docs/deployment/admins-and-operators/) in the deployment guide explains where one job ends and the other begins.
 

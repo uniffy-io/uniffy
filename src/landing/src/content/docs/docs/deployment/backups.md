@@ -25,7 +25,7 @@ Media scratch is disposable. Pending video work can restart from object storage 
 
 ## Valkey and edits not yet saved
 
-Valkey is more than queues and caches. When someone types in a note, a task or an event description, the server accepts the edit into Valkey first and writes it to PostgreSQL about ten seconds after the first unsaved edit, later when the workers fall behind. Collaborators see the edit at once. The chip in the editor reads Synced while the edit waits and Saved once PostgreSQL holds it.
+When someone types in a note, a task or an event description, the server accepts the edit into Valkey first and writes it to PostgreSQL about ten seconds after the first unsaved edit, later when the workers fall behind. Collaborators see the edit at once. The chip in the editor reads Synced while the edit waits and Saved once PostgreSQL holds it.
 
 So losing Valkey's data can cost the server its copy of the edits waiting for their save. Normally that is the last ten seconds or so of each document being edited, more while saves fall behind. Which events lose them depends on the persistence Valkey runs with. Uniffy reads that setting at startup and logs the loss window it implies, but never changes it.
 
@@ -53,7 +53,7 @@ Edits waiting in Valkey are encrypted with your organization's key, in memory an
 
 ## Continuous Postgres backups to S3
 
-Optional, and the first optional thing you should turn on. When Postgres is bundled, the chart configures CloudNativePG to archive write ahead logs to an S3 bucket continuously and take a base backup on schedule. Continuous archiving means **point in time recovery**: you can restore to any moment inside the retention window, not just to last night.
+Optional, and the first optional thing you should turn on. When Postgres is bundled, the chart configures CloudNativePG to archive write ahead logs to an S3 bucket continuously and take a base backup on schedule. Continuous archiving gives you **point in time recovery**, so you can restore to any moment inside the retention window.
 
 ```yaml
 postgres:
@@ -73,28 +73,28 @@ kubectl -n uniffy create secret generic uniffy-pg-backup-s3 \
   --from-literal=ACCESS_SECRET_KEY='...'
 ```
 
-Use a dedicated bucket, never the file storage bucket. Different lifecycle, different credentials, and ideally a different failure domain: backups in the same account with the same keys as the data they protect are one leaked credential away from being deleted together. Write only credentials on this bucket are worth the extra provider clicks.
+Use a dedicated bucket, never the file storage bucket. Give it a different lifecycle, different credentials, and ideally a different failure domain. Backups in the same account with the same keys as the data they protect are one leaked credential away from being deleted together. Write only credentials on this bucket are worth the extra provider clicks.
 
 This applies to bundled Postgres only. If you brought an external database, its backup regime belongs to whoever runs it, and the master key ritual below still applies to you.
 
 ## On the VM
 
-The same values work in `/etc/uniffy/values.yaml`, then `sudo uniffy-k3s upgrade` applies them. One rule matters more here than anywhere: the bucket must be off the machine. Any S3 provider, another building, another company, anywhere that is not this VM.
+The same values work in `/etc/uniffy/values.yaml`, then `sudo uniffy-k3s upgrade` applies them. The bucket must live off the machine: any S3 provider, another building, another company, anywhere that is not this VM.
 
-Local dumps under `/var/backups/uniffy/` live on the same disk as the database. They help recover from a bad upgrade, but cannot survive a dead machine. Keep the Postgres archive off the VM.
+Local dumps under `/var/backups/uniffy/` live on the same disk as the database. They help recover from a bad upgrade, but cannot survive a dead machine.
 
 Back up the bundled object store separately through volume snapshots or a file bucket backup. Keep those backups off the VM too. PostgreSQL archiving does not include uploaded files or completed playback copies. A media worker's temporary scratch volume needs no snapshot.
 
 ## The master key
 
-`APP_MASTER_KEY` never changes after install, so this is a ritual, not a schedule:
+`APP_MASTER_KEY` never changes after install, so backing it up is a one time ritual:
 
 ```bash
 kubectl -n uniffy get secret uniffy-secret \
   -o jsonpath='{.data.APP_MASTER_KEY}' | base64 -d
 ```
 
-Print it, store it in your password manager or offline vault, and confirm the copy against the running secret. Losing it does not break the app today; it breaks the restore you will attempt in two years. That failure mode is silent until the worst moment, which is why the installer shouts about it and this page repeats it.
+Print it, store it in your password manager or offline vault, and confirm the copy against the running secret. Losing it does not break the app today; it breaks the restore you will attempt in two years. That failure stays silent until the worst moment, which is why the installer shouts about it.
 
 ## Restore
 
@@ -120,4 +120,4 @@ The pre upgrade dump is the faster path when the database is minutes old and the
 
 `kubectl -n uniffy get backups` shows the base backups CloudNativePG has taken and whether the last one completed. Check it after turning on backups, then schedule a quarterly restore drill in a separate namespace or VM.
 
-Log in, open a note, download a stored file, and play a video from the restored object store. Check an encrypted credential too. A backup you have never restored is an assumption, not proof that your data can return.
+Log in, open a note, download a stored file, and play a video from the restored object store. Check an encrypted credential too.

@@ -22,7 +22,7 @@ Each release publishes three application images under `ghcr.io/uniffy-io`:
 
 Each image digest in the pinset is signed, and carries its SBOMs as attestations. The signatures live in the registry next to the image and in the public Sigstore transparency log. GitHub records a build provenance attestation for the same digests.
 
-All of it is produced by one thing: the release workflow in the `uniffy-io/uniffy` repository, running for a version tag, after the full test suite passed for that exact commit. That workflow is the identity you verify against.
+The release workflow in the `uniffy-io/uniffy` repository produces all of it. It runs for a version tag, after the full test suite passed for that exact commit. That workflow is the identity you verify against.
 
 ## The identity
 
@@ -79,7 +79,7 @@ You get two attestations back, one for `linux/amd64` and one for `linux/arm64`. 
 
 ## With the GitHub CLI
 
-If you have `gh` and access to the repository, one command covers the image and the pinset file:
+If you have `gh` and access to the repository, `gh attestation verify` covers both the image and the pinset file:
 
 ```bash
 gh attestation verify oci://ghcr.io/uniffy-io/uniffy:1.0.0 --owner uniffy-io
@@ -90,7 +90,7 @@ It checks the same build provenance the release workflow recorded. Use whichever
 
 ## In the cluster
 
-Checking by hand proves the release once. An admission policy proves every pod, every restart, forever. With [Kyverno](https://kyverno.io) 1.19 or newer, this policy refuses any image in the `uniffy` namespace that we did not sign from a release tag, and rewrites tags to the verified digest on the way in:
+Checking by hand proves the release once. An admission policy repeats the check for every pod, on every restart. With [Kyverno](https://kyverno.io) 1.19 or newer, this policy refuses any image in the `uniffy` namespace that we did not sign from a release tag, and rewrites tags to the verified digest on the way in:
 
 ```yaml
 apiVersion: policies.kyverno.io/v1
@@ -137,10 +137,10 @@ Verification needs the Sigstore trust root. On a machine with internet access, r
 
 ## What this proves, and what it does not
 
-A valid signature proves the digest was built by our release workflow, from a tagged commit on our main branch, after every test passed for that commit. A stolen registry token cannot forge it. A tampered mirror cannot forge it. A laptop cannot forge it. Someone who moves the `1.4.0` tag to a different image gets a digest that fails your policy.
+A valid signature proves the digest was built by our release workflow, from a tagged commit on our main branch, after every test passed for that commit. Nobody can forge it with a stolen registry token, a tampered mirror, or a laptop. Someone who moves the `1.4.0` tag to a different image gets a digest that fails your policy.
 
 It does not prove the code is free of bugs, and it does not protect you from us being compromised. If someone took over our GitHub organization, they could push a tag and cut a signed release. What limits that is process on our side: branch protection, review, and the fact that every signing event is public in the transparency log, where we and anyone else can watch for a release we did not make.
 
 Your side of that bargain is digests. Install from the pinset, pin the digests in your values, and an existing deployment never changes without you changing it. Upgrades are a decision you make with a new, verified `images.txt` in hand.
 
-When you evaluate another vendor, ask them for the identity string. If they cannot hand you one line that lets you refuse every image they did not build, the signatures are decoration.
+When you evaluate another vendor, ask them for the identity string. If they cannot hand you one line that lets you refuse every image they did not build, their signatures give you nothing to enforce.

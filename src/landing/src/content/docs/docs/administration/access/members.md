@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-The Members page decides who reaches your organization and what they can do once they are in. Owners and admins can open it. Members cannot.
+On the Members page you decide who reaches your organization and what they can do once they are in. Owners and admins can open it. Members cannot.
 
 ![Members page showing the three counter cards, the search and role filter, and the roster with a role dropdown on every row](/docs/admin/members.png)
 
@@ -43,7 +43,7 @@ The cap is enforced on the server, so it holds no matter which client they use. 
 
 ## Invalidating a member's caches
 
-This forces that member's app to drop everything it has cached and reload from the server on its next request. Reach for it when someone reports stale data after a large change.
+Invalidating caches forces that member's app to drop everything it has cached and reload from the server on its next request. Reach for it when someone reports stale data after a large change.
 
 ## Inviting
 
