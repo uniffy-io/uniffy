@@ -39,7 +39,7 @@ dependencies = [
   "sqlalchemy>=2.0.54",
   "granian>=2.8.3",
   "aioboto3>=13.0.0",
-  "aiohttp>=3.14.3",
+  "aiohttp>=3.14.5",
   "types-aiobotocore[s3]>=3.9.1",
   # Background jobs: arq is vendored under uniffy.vendor.arq (valkey-backed); it needs click.
   "valkey[libvalkey]>=6.1.1",
@@ -95,7 +95,7 @@ dev = [
 # Security floors for transitive packages the image scanner flagged; the
 # lock cannot resolve below them even when a direct dependency would allow it.
 constraint-dependencies = [
-  "aiohttp>=3.14.3",
+  "aiohttp>=3.14.5",
   "anyio>=4.14.2",
   "httpx2>=2.13.0",
   "lxml>=6.1.3",
