@@ -199,13 +199,15 @@ export function ChannelView({
     }
   }, [effectiveChannelId, currentUserId, channelMessages, dispatch]);
 
+  // Nobody else is in a self conversation to watch the owner type.
+  const isSelfDm = !!activeChannel?.isSelfDm;
   const handleTyping = useCallback(() => {
-    if (!effectiveChannelId) return;
+    if (!effectiveChannelId || isSelfDm) return;
     const now = Date.now();
     if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) return;
     lastTypingSentRef.current = now;
     dispatch(sendTyping(effectiveChannelId));
-  }, [effectiveChannelId, dispatch]);
+  }, [effectiveChannelId, isSelfDm, dispatch]);
 
   if (!activeChannel) {
     return (
@@ -254,6 +256,7 @@ export function ChannelView({
       // one channel's text into another and corrupt its draft.
       key={`${organizationId}:${effectiveChannelId ?? "none"}`}
       channelName={channelDisplayName}
+      placeholder={activeChannel.isSelfDm ? "Jot down a note, link, or file..." : undefined}
       channelId={effectiveChannelId ?? undefined}
       organizationId={organizationId ?? undefined}
       onSend={handleSend}

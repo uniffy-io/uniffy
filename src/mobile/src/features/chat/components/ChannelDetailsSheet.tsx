@@ -39,11 +39,12 @@ import type { ChatMemberSubject } from "@features/chat/useChatMutations";
 import { usePresences } from "@shared/presence/usePresence";
 import { AgentMemoryPanel } from "@features/agents/components/AgentMemoryPanel";
 import type { MemorySubject } from "@features/agents/memorySerializer";
-import type {
-  SerializedChannel,
-  SerializedMember,
-  SerializedCategory,
-  NotificationLevel,
+import {
+  selfConversationLabel,
+  type SerializedChannel,
+  type SerializedMember,
+  type SerializedCategory,
+  type NotificationLevel,
 } from "@features/chat/chatSerializer";
 
 const NOTIFICATION_LEVELS: { key: NotificationLevel; label: string }[] = [
@@ -181,7 +182,9 @@ export function ChannelDetailsSheet({
             ) : (
               <View style={styles.titleRow}>
                 <Text style={[styles.title, { color: T.textBright }]} numberOfLines={1}>
-                  {channel.displayName}
+                  {channel.isSelfDm
+                    ? selfConversationLabel(selfMember?.displayName || channel.name)
+                    : channel.displayName}
                 </Text>
                 {canRename ? (
                   <TouchableOpacity
@@ -197,15 +200,19 @@ export function ChannelDetailsSheet({
               </View>
             )}
             <Text style={[styles.subtitle, { color: T.textDim }]}>
-              {channel.channelType === "PUBLIC"
-                ? "Public channel"
-                : channel.channelType === "PRIVATE"
-                  ? "Private channel"
-                  : channel.channelType === "GROUP_DM"
-                    ? "Group message"
-                    : "Direct message"}
-              {" · "}
-              {channel.memberCount} {channel.memberCount === 1 ? "member" : "members"}
+              {channel.isSelfDm
+                ? "Only you can see this conversation"
+                : channel.channelType === "PUBLIC"
+                  ? "Public channel"
+                  : channel.channelType === "PRIVATE"
+                    ? "Private channel"
+                    : channel.channelType === "GROUP_DM"
+                      ? "Group message"
+                      : "Direct message"}
+              {channel.isSelfDm ? null : " · "}
+              {channel.isSelfDm
+                ? null
+                : `${channel.memberCount} ${channel.memberCount === 1 ? "member" : "members"}`}
               {channel.createdAtIso ? ` · Created ${formatDateShort(channel.createdAtIso)}` : null}
             </Text>
           </View>

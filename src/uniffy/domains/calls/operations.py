@@ -109,6 +109,8 @@ class CallOperations:
         await self.access.check_access(user_id, organization_id, channel)
         if channel.is_archived:
             raise ValidationError("channel", "Channel is archived")
+        if channel.is_self_dm:
+            raise ValidationError("channel", "There is nobody to call in your own conversation")
         await self._require_calls_enabled(organization_id)
         await self._require_not_in_another_call(user_id, organization_id, exclude_channel=channel_id)
 

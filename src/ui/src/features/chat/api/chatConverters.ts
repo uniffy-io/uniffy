@@ -84,6 +84,7 @@ export function channelToPlain(proto: ProtoChatChannel): ChatChannel {
     memberCount: proto.memberCount,
     dmMemberIds: Array.from(proto.dmMemberIds),
     isAgentDm: proto.isAgentDm,
+    isSelfDm: proto.isSelfDm,
     customName: proto.customName ?? undefined,
     agentId: proto.agentId ?? undefined,
     agentIsRetired: proto.agentIsRetired,

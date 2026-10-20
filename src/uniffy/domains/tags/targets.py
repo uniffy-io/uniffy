@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.agents.operations import AgentOperations
@@ -103,3 +103,7 @@ class TagTargetAccess:
         access = ChatAccessChecker(self.session)
         channel = await access.get_channel(channel_id, organization_id)
         await access.require_send(actor_id, channel)
+        if content_type == ContentType.CHAT and channel.is_self_dm:
+            # Chat moderators see every CHAT assignment, so a tagged self conversation
+            # would surface to them; DMs carry no channel tags anyway.
+            raise ValidationError("content", "Your own conversation cannot be tagged")

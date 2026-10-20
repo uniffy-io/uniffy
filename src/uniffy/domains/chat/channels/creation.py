@@ -9,6 +9,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import (
     NotFoundError,
+    ValidationError,
 )
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
@@ -82,6 +83,8 @@ class ChannelCreation:
     ) -> StagedChatChannelCreate:
         """Create a channel with stats row and initial membership."""
         await self.access.require_org_member(user_id, organization_id)
+        if is_default and channel_type != ChannelType.PUBLIC:
+            raise ValidationError("is_default", "Only public channels can be default channels")
         initial_member_ids = list(dict.fromkeys(member_ids or []))
         await self._require_active_user_subjects(organization_id, initial_member_ids)
         if category_id is not None:

@@ -1,12 +1,16 @@
 """Focused chat channel direct behavior."""
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import aliased
 
 from uniffy.core.errors import (
+    NotFoundError,
+    PermissionDeniedError,
     ValidationError,
 )
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
@@ -15,6 +19,7 @@ from uniffy.core.models.chat.channel_member import (
     ChatChannelMember,
 )
 from uniffy.core.models.chat.message import SenderType
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.types import (
     SubjectType,
     generate_id,
@@ -44,6 +49,8 @@ class DirectChannels:
     ) -> ChatChannel:
         """Create or find existing DM (1:1) / GROUP_DM (3+)."""
         await self.access.require_org_member(user_id, organization_id)
+        if set(target_user_ids) == {user_id}:
+            return await self.open_self_dm(user_id, organization_id)
         await self._require_active_user_subjects(organization_id, target_user_ids)
         all_user_ids = sorted(set([user_id] + target_user_ids))
 
@@ -79,6 +86,9 @@ class DirectChannels:
         user_a: UUID,
         user_b: UUID,
     ) -> ChatChannel | None:
+        if user_a == user_b:
+            # Both joins would hit the same member row and match any DM the user is in.
+            raise ValueError("A DM lookup needs two distinct participants")
         m1 = aliased(ChatChannelMember)
         m2 = aliased(ChatChannelMember)
 
@@ -140,6 +150,9 @@ class DirectChannels:
         b: ChatSubject,
     ) -> ChatChannel | None:
         """Existing DIRECT channel between two polymorphic subjects (USER/AGENT pair)."""
+        if a == b:
+            # Both joins would hit the same member row and match any DM the subject is in.
+            raise ValueError("A DM lookup needs two distinct participants")
         m1 = aliased(ChatChannelMember)
         m2 = aliased(ChatChannelMember)
 
@@ -191,11 +204,13 @@ class DirectChannels:
         by sorted subject tuple.
         """
         await self.access.require_org_member(user_id, organization_id)
+        actor_subject = ChatSubject.user(user_id)
+        if subjects and all(s == actor_subject for s in subjects):
+            return await self.open_self_dm(user_id, organization_id)
         await self._require_active_user_subjects(
             organization_id,
             [s.subject_id for s in subjects if s.subject_type == SubjectType.USER],
         )
-        actor_subject = ChatSubject.user(user_id)
         dedup = {s.as_key: s for s in subjects}
         dedup[actor_subject.as_key] = actor_subject
         participants = sorted(dedup.values(), key=lambda s: s.as_key)
@@ -283,3 +298,93 @@ class DirectChannels:
             added=True,
         )
         return channel
+
+    async def open_self_dm(self, user_id: UUID, organization_id: UUID) -> ChatChannel:
+        """Return the caller's one-person conversation, creating it on first open."""
+        # Removal locks this membership before cleanup, so it cannot miss a concurrent insert.
+        membership_id = await self.session.scalar(
+            select(OrganizationMember.id)
+            .where(
+                OrganizationMember.user_id == user_id,
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+            )
+            .with_for_update(read=True)
+        )
+        if membership_id is None:
+            raise PermissionDeniedError("access", "organization")
+        await self.access.require_org_member(user_id, organization_id)
+        existing = await self._find_self_dm(organization_id, user_id)
+        if existing is not None:
+            return existing
+
+        await check_chat_mutation_limit(
+            CHANNEL_CREATE,
+            user_id=user_id,
+            organization_id=organization_id,
+        )
+
+        actor_subject = ChatSubject.user(user_id)
+        channel_id = generate_id()
+        name = await self._build_dm_name_from_subjects([actor_subject])
+        now = datetime.now(UTC)
+        # Concurrent first opens (two tabs, web plus mobile) race on the one-per-member
+        # index; the loser reads the winner's row. The id-derived slug keeps the slug
+        # constraint out of that race, since only the arbiter index may conflict.
+        inserted_id = (
+            await self.session.execute(
+                pg_insert(ChatChannel)
+                .values(
+                    id=channel_id,
+                    organization_id=organization_id,
+                    owner_id=user_id,
+                    name=name,
+                    slug=f"{slugify(name) or 'self'}-{slug_suffix(channel_id)}",
+                    description="",
+                    channel_type=ChannelType.DIRECT,
+                    is_archived=False,
+                    is_default=False,
+                    is_deleted=False,
+                    icon="",
+                    is_agent_dm=False,
+                    is_self_dm=True,
+                    created_at=now,
+                    updated_at=now,
+                )
+                .on_conflict_do_nothing(
+                    index_elements=[ChatChannel.organization_id, ChatChannel.owner_id],
+                    index_where=and_(ChatChannel.is_self_dm, ~ChatChannel.is_deleted),
+                )
+                .returning(ChatChannel.id)
+            )
+        ).scalar_one_or_none()
+
+        if inserted_id is None:
+            winner = await self._find_self_dm(organization_id, user_id)
+            if winner is None:
+                raise NotFoundError("channel", "self")
+            return winner
+
+        self.session.add(ChatChannelStats(channel_id=channel_id, member_count=1))
+        self.session.add(self._build_member_row(channel_id, actor_subject, ChannelRole.OWNER))
+        await self.session.commit()
+
+        channel = await self._find_self_dm(organization_id, user_id)
+        if channel is None:
+            raise NotFoundError("channel", channel_id)
+        # The owner's other tabs and devices learn about the row here.
+        await self._publish_channel_created(channel.id)
+        return channel
+
+    async def _find_self_dm(self, organization_id: UUID, user_id: UUID) -> ChatChannel | None:
+        result = await self.session.execute(
+            select(ChatChannel)
+            .where(
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.owner_id == user_id,
+                ChatChannel.is_self_dm.is_(True),
+                ChatChannel.is_deleted.is_(False),
+            )
+            .execution_options(populate_existing=True)
+        )
+        return result.scalar_one_or_none()

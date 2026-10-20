@@ -44,7 +44,12 @@ import { ChannelNextMeeting } from "@/features/chat/components/channel/ChannelNe
 import { selectPinnedCountForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { Input } from "@/components/ui/input";
 import { renameAgentChat, jumpToChannelMessage } from "@/features/chat/store/chatThunks";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import {
+  getChannelDisplayName,
+  getDmDisplayName,
+  getDmPeerUserId,
+} from "@/features/chat/utils/channelDisplay";
+import { SubjectAvatarById } from "@/components/subject";
 import { TagChip } from "@/features/tags";
 import {
   prejoinOpened,
@@ -130,16 +135,13 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
   const isDm = activeChannel?.channelType === "DIRECT" || activeChannel?.channelType === "GROUP_DM";
   const isOneOnOneDm = activeChannel?.channelType === "DIRECT";
   const isAgentDm = !!activeChannel?.isAgentDm;
+  const isSelfDm = !!activeChannel?.isSelfDm;
 
-  const dmPeerUserId = useMemo(() => {
-    if (!activeChannel || !isOneOnOneDm || isAgentDm) return "";
-    const peer = (activeChannel.dmMemberIds ?? []).find((id) => !!id && id !== currentUserId);
-    if (peer) return peer;
-    if (activeChannel.ownerId && activeChannel.ownerId !== currentUserId) {
-      return activeChannel.ownerId;
-    }
-    return "";
-  }, [activeChannel, isOneOnOneDm, isAgentDm, currentUserId]);
+  // Their own status beside their own name repeats what the avatar menu shows.
+  const dmPeerUserId = useMemo(
+    () => (activeChannel && !isSelfDm ? getDmPeerUserId(activeChannel, currentUserId) : ""),
+    [activeChannel, isSelfDm, currentUserId],
+  );
 
   const agent = useAppSelector((state) =>
     isAgentDm && activeChannel?.agentId
@@ -152,11 +154,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
 
   const headerName = useMemo(() => {
     if (!activeChannel) return "";
-    if (isAgentDm) return getChannelDisplayName(activeChannel);
-    if (!isDm || !currentUserName) return activeChannel.name;
-    const parts = activeChannel.name.split(", ").filter((n) => n !== currentUserName);
-    return parts.length > 0 ? parts.join(", ") : activeChannel.name;
-  }, [isDm, isAgentDm, activeChannel, currentUserName]);
+    if (!isDm) return activeChannel.name;
+    return getDmDisplayName(activeChannel, currentUserName);
+  }, [isDm, activeChannel, currentUserName]);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -299,6 +299,9 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
             size="sm"
           />
         )}
+        {isSelfDm && (
+          <SubjectAvatarById userId={currentUserId} displayName={currentUserName} size="sm" />
+        )}
         {isAgentDm && isEditingName ? (
           <Input
             ref={nameInputRef}
@@ -345,7 +348,7 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
-          {!isAgentDm && !inCallHere && (
+          {!isAgentDm && !isSelfDm && !inCallHere && (
             <button
               type="button"
               onClick={() => dispatch(prejoinOpened({ channelId: activeChannel.id }))}

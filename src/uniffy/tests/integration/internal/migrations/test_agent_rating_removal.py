@@ -14,7 +14,7 @@ from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
 from uniffy.core.models.agents.run_log import AgentRunLog
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
-from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.models.login.organization import Organization
@@ -27,6 +27,7 @@ from uniffy.domains.chat.messages import handlers as messages
 from uniffy.domains.chat.threads import handlers as threads
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
+    _insert_chat_channel,
     _migrate_to,
     _provision_to,
     _query,
@@ -68,19 +69,18 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 ),
                 {"id": version_id, "skill": skill_id},
             )
-            channel = ChatChannel(
+            channel_id = await _insert_chat_channel(
+                session,
                 organization_id=org.id,
                 owner_id=user.id,
                 name="History",
-                slug="history",
                 channel_type=ChannelType.PUBLIC,
             )
-            session.add_all([
-                channel,
+            session.add(
                 OrganizationMember(
                     organization_id=org.id, user_id=user.id, role=OrganizationRole.ADMIN
-                ),
-            ])
+                )
+            )
             await session.flush()
             conversation = AgentSession(
                 organization_id=org.id,
@@ -89,7 +89,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 kind=AgentSessionKind.DIRECT,
             )
             root = ChatMessage(
-                channel_id=channel.id,
+                channel_id=channel_id,
                 sender_id=user.id,
                 sender_type=SenderType.USER,
                 content="Please summarize.",
@@ -103,7 +103,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 thinking=[{"content": "Reasoning"}],
             )
             chat_reply = ChatMessage(
-                channel_id=channel.id,
+                channel_id=channel_id,
                 sender_id=agent_id,
                 sender_type=SenderType.AGENT,
                 root_id=root.id,
@@ -179,6 +179,20 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             } == before
             assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]
 
+            config = Config(str(ALEMBIC_INI_PATH))
+            config.attributes["configure_logger"] = False
+            command.downgrade(config, "097")
+            assert _query("SELECT count(*) FROM agents_message_feedback") == [(0,)]
+            assert {
+                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                for table, columns in projections.items()
+            } == before
+            _migrate_to("098")
+            assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
+
+            # The history readers are head code, so they read a head schema.
+            _migrate_to("head")
+
             @asynccontextmanager
             async def open_history():
                 async with AsyncSession(engine) as history:
@@ -207,7 +221,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             thread = await threads.ThreadHandlers().get_thread_messages(
                 GetThreadMessagesRequest(
                     organization_id=str(org.id),
-                    channel_id=str(channel.id),
+                    channel_id=str(channel_id),
                     root_message_id=str(root.id),
                 ),
                 None,
@@ -226,16 +240,5 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             assert enriched[0].reactions[0].count == 1
             assert enriched[0].reactions[0].current_user_reacted
             await session.rollback()
-
-            config = Config(str(ALEMBIC_INI_PATH))
-            config.attributes["configure_logger"] = False
-            command.downgrade(config, "097")
-            assert _query("SELECT count(*) FROM agents_message_feedback") == [(0,)]
-            assert {
-                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
-                for table, columns in projections.items()
-            } == before
-            _migrate_to("098")
-            assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
     finally:
         await engine.dispose()

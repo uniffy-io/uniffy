@@ -479,6 +479,12 @@ export const selectDirectMessages = createSelector([selectChannels], (channels) 
     .sort(sortByLastActivity),
 );
 
+/** The viewer's own conversation once it exists; the sidebar shows a placeholder until then. */
+export const selectSelfDm = createSelector(
+  [selectChannels],
+  (channels) => channels.find((c) => c.isSelfDm) ?? null,
+);
+
 export const selectAgentChats = createSelector([selectChannels], (channels) =>
   channels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
 );

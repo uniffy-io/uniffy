@@ -60,6 +60,7 @@ const (
 	ChatService_GetChannelResources_FullMethodName              = "/chat.v1.ChatService/GetChannelResources"
 	ChatService_ConvertGroupDmToChannel_FullMethodName          = "/chat.v1.ChatService/ConvertGroupDmToChannel"
 	ChatService_ChangeChannelVisibility_FullMethodName          = "/chat.v1.ChatService/ChangeChannelVisibility"
+	ChatService_OpenSelfChat_FullMethodName                     = "/chat.v1.ChatService/OpenSelfChat"
 	ChatService_CreateAgentChat_FullMethodName                  = "/chat.v1.ChatService/CreateAgentChat"
 	ChatService_RenameAgentChat_FullMethodName                  = "/chat.v1.ChatService/RenameAgentChat"
 	ChatService_ListAgentChats_FullMethodName                   = "/chat.v1.ChatService/ListAgentChats"
@@ -149,6 +150,9 @@ type ChatServiceClient interface {
 	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
 	// channel's history is re-indexed so search visibility follows the new type.
 	ChangeChannelVisibility(ctx context.Context, in *ChangeChannelVisibilityRequest, opts ...grpc.CallOption) (*ChangeChannelVisibilityResponse, error)
+	// The caller's one-person conversation, created on first open. Idempotent:
+	// every call returns the same channel until it is deleted.
+	OpenSelfChat(ctx context.Context, in *OpenSelfChatRequest, opts ...grpc.CallOption) (*OpenSelfChatResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error)
 	RenameAgentChat(ctx context.Context, in *RenameAgentChatRequest, opts ...grpc.CallOption) (*RenameAgentChatResponse, error)
@@ -633,6 +637,16 @@ func (c *chatServiceClient) ChangeChannelVisibility(ctx context.Context, in *Cha
 	return out, nil
 }
 
+func (c *chatServiceClient) OpenSelfChat(ctx context.Context, in *OpenSelfChatRequest, opts ...grpc.CallOption) (*OpenSelfChatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OpenSelfChatResponse)
+	err := c.cc.Invoke(ctx, ChatService_OpenSelfChat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *chatServiceClient) CreateAgentChat(ctx context.Context, in *CreateAgentChatRequest, opts ...grpc.CallOption) (*CreateAgentChatResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateAgentChatResponse)
@@ -954,6 +968,9 @@ type ChatServiceServer interface {
 	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
 	// channel's history is re-indexed so search visibility follows the new type.
 	ChangeChannelVisibility(context.Context, *ChangeChannelVisibilityRequest) (*ChangeChannelVisibilityResponse, error)
+	// The caller's one-person conversation, created on first open. Idempotent:
+	// every call returns the same channel until it is deleted.
+	OpenSelfChat(context.Context, *OpenSelfChatRequest) (*OpenSelfChatResponse, error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error)
 	RenameAgentChat(context.Context, *RenameAgentChatRequest) (*RenameAgentChatResponse, error)
@@ -1150,6 +1167,9 @@ func (UnimplementedChatServiceServer) ConvertGroupDmToChannel(context.Context, *
 }
 func (UnimplementedChatServiceServer) ChangeChannelVisibility(context.Context, *ChangeChannelVisibilityRequest) (*ChangeChannelVisibilityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangeChannelVisibility not implemented")
+}
+func (UnimplementedChatServiceServer) OpenSelfChat(context.Context, *OpenSelfChatRequest) (*OpenSelfChatResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OpenSelfChat not implemented")
 }
 func (UnimplementedChatServiceServer) CreateAgentChat(context.Context, *CreateAgentChatRequest) (*CreateAgentChatResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateAgentChat not implemented")
@@ -1988,6 +2008,24 @@ func _ChatService_ChangeChannelVisibility_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatService_OpenSelfChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenSelfChatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatServiceServer).OpenSelfChat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatService_OpenSelfChat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatServiceServer).OpenSelfChat(ctx, req.(*OpenSelfChatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ChatService_CreateAgentChat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateAgentChatRequest)
 	if err := dec(in); err != nil {
@@ -2626,6 +2664,10 @@ var ChatService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChangeChannelVisibility",
 			Handler:    _ChatService_ChangeChannelVisibility_Handler,
+		},
+		{
+			MethodName: "OpenSelfChat",
+			Handler:    _ChatService_OpenSelfChat_Handler,
 		},
 		{
 			MethodName: "CreateAgentChat",

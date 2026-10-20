@@ -41,7 +41,7 @@ import {
   resolveThreadForMessage,
   jumpToChannelMessage,
 } from "@/features/chat/store/chatThunks";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { getChannelDisplayName, getDmDisplayName } from "@/features/chat/utils/channelDisplay";
 import {
   saveLastOpenedChannel,
   loadLastOpenedChannel,
@@ -93,6 +93,7 @@ export function ChatPage() {
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const currentUserName = useAppSelector((state) => state.auth.user?.fullName ?? "");
   const channels = useAppSelector(selectChannels);
   const channelsLoaded = useAppSelector(selectChannelsLoaded);
   const channelRevision = useAppSelector(
@@ -188,7 +189,10 @@ export function ChatPage() {
     }
     recordRecentItem(organizationId, userId, {
       urn: `urn:uniffy:content:${routeChannel.isAgentDm ? "AGENT_CHAT" : "CHAT"}:${routeChannel.id}`,
-      title: getChannelDisplayName(routeChannel),
+      title:
+        routeChannel.channelType === "DIRECT" || routeChannel.channelType === "GROUP_DM"
+          ? getDmDisplayName(routeChannel, currentUserName)
+          : getChannelDisplayName(routeChannel),
       type: routeChannel.isAgentDm ? SearchResultType.AGENT_CHAT : SearchResultType.CHAT,
       url: `/chat/${routeChannel.id}`,
     });
@@ -209,7 +213,9 @@ export function ChatPage() {
       : isDraftsRoute
         ? "Drafts"
         : routeChannel
-          ? `#${getChannelDisplayName(routeChannel)}`
+          ? routeChannel.channelType === "DIRECT" || routeChannel.channelType === "GROUP_DM"
+            ? getDmDisplayName(routeChannel, currentUserName)
+            : `#${getChannelDisplayName(routeChannel)}`
           : "Chat";
   useDocumentTitle(pageTitle);
 

@@ -58,6 +58,7 @@ import {
   useJoinChannel,
   useCreateCategory,
   useCreateDm,
+  useOpenSelfChat,
   useUnarchiveChannel,
   useUpdateCategory,
   useDeleteCategory,
@@ -77,6 +78,8 @@ import { useDirectory } from "@shared/directory/useDirectory";
 import { usePresences } from "@shared/presence/usePresence";
 import { useAuth } from "@core/providers/AuthContext";
 import {
+  dmPeerId,
+  selfConversationLabel,
   type SerializedChannel,
   type SerializedThreadInboxItem,
   type SerializedCategory,
@@ -130,6 +133,7 @@ export function ChatListScreen() {
   const joinChannel = useJoinChannel();
   const createCategory = useCreateCategory();
   const createDm = useCreateDm();
+  const openSelfChat = useOpenSelfChat();
   const { canManageChat } = useChatPermissions();
   const unarchiveChannel = useUnarchiveChannel();
   const archivedQuery = useArchivedChannels(!collapsed.archived);
@@ -235,31 +239,44 @@ export function ChatListScreen() {
     [deleteAgentFolder],
   );
 
-  const { uncategorized, dms } = useMemo(() => {
+  // The self conversation is pinned first in the DM section, so it leaves the list.
+  const { uncategorized, dms, selfDm } = useMemo(() => {
     const reg: SerializedChannel[] = [];
     const dm: SerializedChannel[] = [];
+    let self: SerializedChannel | null = null;
     for (const c of channels) {
       if (c.isAgentDm) continue;
-      if (c.channelType === "DIRECT" || c.channelType === "GROUP_DM") dm.push(c);
+      if (c.isSelfDm) self = c;
+      else if (c.channelType === "DIRECT" || c.channelType === "GROUP_DM") dm.push(c);
       else if (!c.categoryId) reg.push(c);
     }
-    return { uncategorized: reg, dms: dm };
+    return { uncategorized: reg, dms: dm, selfDm: self };
   }, [channels]);
 
   const { user } = useAuth();
+  const selfPeer = useMemo(() => {
+    const ownName = user?.fullName || user?.username || "";
+    return {
+      name: selfConversationLabel(ownName),
+      avatarName: ownName,
+      avatarUrl: user?.avatarUrl || undefined,
+    };
+  }, [user?.fullName, user?.username, user?.avatarUrl]);
   const dmPeerIds = useMemo(() => {
     const ids = new Set<string>();
     for (const c of channels) {
-      if (c.channelType !== "DIRECT") continue;
-      for (const memberId of c.dmMemberIds) if (memberId !== user?.id) ids.add(memberId);
+      if (c.isSelfDm) continue;
+      const peerId = dmPeerId(c, user?.id ?? "");
+      if (peerId) ids.add(peerId);
     }
     return [...ids];
   }, [channels, user?.id]);
   const presenceByUser = usePresences(dmPeerIds);
   const dmPresence = useCallback(
     (channel: SerializedChannel) => {
-      if (channel.channelType !== "DIRECT") return null;
-      const peerId = channel.dmMemberIds.find((memberId) => memberId !== user?.id);
+      // No presence dot on the viewer's own row: it would only ever say "online".
+      if (channel.isSelfDm) return null;
+      const peerId = dmPeerId(channel, user?.id ?? "");
       return peerId ? (presenceByUser[peerId] ?? "offline") : null;
     },
     [presenceByUser, user?.id],
@@ -267,15 +284,31 @@ export function ChatListScreen() {
   const directory = useDirectory();
   const dmPeer = useCallback(
     (channel: SerializedChannel) => {
-      if (channel.channelType !== "DIRECT") return null;
-      const peerId = channel.dmMemberIds.find((memberId) => memberId !== user?.id);
+      if (channel.isSelfDm) return selfPeer;
+      const peerId = dmPeerId(channel, user?.id ?? "");
       if (!peerId) return null;
       const subject = directory.byId.get(peerId);
       if (!subject?.name) return null;
       return { name: subject.name, avatarUrl: subject.avatarUrl };
     },
-    [directory.byId, user?.id],
+    [directory.byId, user?.id, selfPeer],
   );
+  const openOwnConversation = useCallback(() => {
+    if (selfDm) {
+      setNewDmOpen(false);
+      openChannel(selfDm.id);
+      return;
+    }
+    openSelfChat.mutate(undefined, {
+      onSuccess: (channelId) => {
+        if (channelId) {
+          setNewDmOpen(false);
+          openChannel(channelId);
+        }
+      },
+      onError: () => Alert.alert("Could not open conversation", "Please try again."),
+    });
+  }, [selfDm, openChannel, openSelfChat]);
 
   const categorized = useMemo(() => {
     const cats = categories.data ?? [];
@@ -473,8 +506,6 @@ export function ChatListScreen() {
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={T.accent} />
         </View>
-      ) : channels.length === 0 && agentChats.length === 0 ? (
-        <EmptyChannels T={T} />
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -580,12 +611,30 @@ export function ChatListScreen() {
 
           <CategorySection
             label="Direct Messages"
-            count={dms.length}
+            count={dms.length + 1}
             collapsed={!!collapsed.dms}
             onToggle={() => toggle("dms")}
             T={T}
             onAdd={() => setNewDmOpen(true)}
           >
+            {selfDm ? (
+              <ChannelRow
+                channel={selfDm}
+                T={T}
+                onPress={openOwnConversation}
+                presence={null}
+                peer={selfPeer}
+              />
+            ) : (
+              <SelfConversationPlaceholderRow
+                label={selfPeer.name}
+                avatarName={selfPeer.avatarName}
+                avatarUrl={selfPeer.avatarUrl}
+                pending={openSelfChat.isPending}
+                T={T}
+                onPress={openOwnConversation}
+              />
+            )}
             {dms.map((c) => (
               <ChannelRow
                 onJoinCall={callsAvailable ? joinCallOn : undefined}
@@ -598,6 +647,8 @@ export function ChatListScreen() {
               />
             ))}
           </CategorySection>
+
+          {channels.length === 0 && agentChats.length === 0 ? <EmptyChannels T={T} /> : null}
 
           <CategorySection
             label="Archived"
@@ -749,16 +800,22 @@ export function ChatListScreen() {
       <NewDmModal
         visible={newDmOpen}
         T={T}
-        pending={createDm.isPending}
+        pending={createDm.isPending || openSelfChat.isPending}
         onClose={() => setNewDmOpen(false)}
-        onCreate={(userIds) =>
-          createDm.mutate(userIds, {
+        currentUserId={user?.id ?? ""}
+        onCreate={(userIds) => {
+          const recipients = userIds.filter((id) => id !== user?.id);
+          if (recipients.length === 0) {
+            openOwnConversation();
+            return;
+          }
+          createDm.mutate(recipients, {
             onSuccess: (res) => {
               setNewDmOpen(false);
               if (res.channel?.id) openChannel(res.channel.id);
             },
-          })
-        }
+          });
+        }}
       />
     </View>
   );
@@ -940,12 +997,14 @@ function NewDmModal({
   visible,
   T,
   pending,
+  currentUserId,
   onClose,
   onCreate,
 }: {
   visible: boolean;
   T: ThemeColors;
   pending: boolean;
+  currentUserId: string;
   onClose: () => void;
   onCreate: (userIds: string[]) => void;
 }) {
@@ -961,13 +1020,16 @@ function NewDmModal({
       );
   }, [directory.subjects, search]);
 
-  const atCap = selected.size >= NEW_DM_MAX_RECIPIENTS;
+  // Picking yourself alone opens your own conversation; beside others you are implicit.
+  const recipientCount = [...selected].filter((id) => id !== currentUserId).length;
+  const atCap = recipientCount >= NEW_DM_MAX_RECIPIENTS;
 
   const toggleUser = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
+      const others = [...prev].filter((selectedId) => selectedId !== currentUserId).length;
       if (next.has(id)) next.delete(id);
-      else if (prev.size < NEW_DM_MAX_RECIPIENTS) next.add(id);
+      else if (id === currentUserId || others < NEW_DM_MAX_RECIPIENTS) next.add(id);
       return next;
     });
 
@@ -1002,7 +1064,8 @@ function NewDmModal({
         style={styles.dmList}
         renderItem={({ item }) => {
           const active = selected.has(item.id);
-          const blocked = atCap && !active;
+          const isSelf = item.id === currentUserId;
+          const blocked = atCap && !active && !isSelf;
           return (
             <TouchableOpacity
               style={[styles.dmRow, { borderBottomColor: T.border, opacity: blocked ? 0.4 : 1 }]}
@@ -1013,7 +1076,7 @@ function NewDmModal({
               <Avatar name={item.name} avatarUrl={item.avatarUrl} size={36} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.dmName, { color: T.textBright }]} numberOfLines={1}>
-                  {item.name}
+                  {isSelf ? selfConversationLabel(item.name) : item.name}
                 </Text>
                 {item.email ? (
                   <Text style={[styles.dmEmail, { color: T.textDim }]} numberOfLines={1}>
@@ -1058,8 +1121,8 @@ function NewDmModal({
         <Text style={[styles.modalCtaText, { color: selected.size > 0 ? "#fff" : T.textDim }]}>
           {pending
             ? "Starting..."
-            : selected.size > 1
-              ? `Start group chat (${selected.size})`
+            : recipientCount > 1
+              ? `Start group chat (${recipientCount})`
               : "Start chat"}
         </Text>
       </TouchableOpacity>
@@ -1306,6 +1369,45 @@ function ArchivedChannelRow({
   );
 }
 
+/** Stands in for the self conversation until the first open creates it. */
+function SelfConversationPlaceholderRow({
+  label,
+  avatarName,
+  avatarUrl,
+  pending,
+  T,
+  onPress,
+}: {
+  label: string;
+  avatarName: string;
+  avatarUrl?: string;
+  pending: boolean;
+  T: ThemeColors;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.channelRow}
+      onPress={onPress}
+      disabled={pending}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${label}`}
+    >
+      <View style={styles.channelGlyph}>
+        <Avatar name={avatarName} avatarUrl={avatarUrl} size={24} />
+      </View>
+      <Text
+        style={[styles.channelTitle, { color: T.text, fontFamily: FONT.regular }]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      {pending ? <ActivityIndicator size="small" color={T.textDim} /> : null}
+    </TouchableOpacity>
+  );
+}
+
 function ChannelRow({
   channel,
   T,
@@ -1321,7 +1423,7 @@ function ChannelRow({
   onLongPress?: () => void;
   onJoinCall?: (channel: SerializedChannel) => void;
   presence?: string | null;
-  peer?: { name: string; avatarUrl?: string } | null;
+  peer?: { name: string; avatarName?: string; avatarUrl?: string } | null;
 }) {
   const hasUnread = channel.unreadCount > 0;
   const liveCall = useActiveCall(channel.id);
@@ -1340,7 +1442,7 @@ function ChannelRow({
       <View style={styles.channelGlyph}>
         {peer ? (
           <Avatar
-            name={peer.name}
+            name={peer.avatarName ?? peer.name}
             avatarUrl={peer.avatarUrl}
             size={24}
             presence={presence}

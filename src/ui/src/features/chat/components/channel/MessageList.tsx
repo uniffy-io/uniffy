@@ -26,7 +26,11 @@ import { selectJumpToMessageId, clearJumpToMessage } from "@/features/chat/store
 import { MessageItem } from "@/features/chat/components/channel/MessageItem";
 import { TypingIndicator } from "@/features/chat/components/channel/TypingIndicator";
 import { NewMessagesPill } from "@/features/chat/components/channel/NewMessagesPill";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import {
+  getChannelDisplayName,
+  getDmDisplayName,
+  getDmPeerUserId,
+} from "@/features/chat/utils/channelDisplay";
 import type { ChatMessage } from "@/features/chat/types";
 
 const GROUPING_THRESHOLD_MS = 5 * 60 * 1000;
@@ -597,52 +601,48 @@ export function MessageList({ channelId: channelIdProp }: MessageListProps) {
   const isDirect = activeChannel.channelType === "DIRECT";
   const isGroupDm = activeChannel.channelType === "GROUP_DM";
   const isDm = isDirect || isGroupDm;
-  const peerNames = (() => {
-    if (!isDm) return "";
-    const raw = getChannelDisplayName(activeChannel);
-    if (!currentUserName) return raw;
-    const others = raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter((n) => n && n !== currentUserName);
-    return others.length > 0 ? others.join(", ") : raw;
-  })();
-  const peerUserId = (() => {
-    if (!isDirect) return "";
-    return (activeChannel.dmMemberIds ?? []).find((id) => id && id !== (currentUserId ?? "")) ?? "";
-  })();
+  const isSelfDm = activeChannel.isSelfDm;
+  const peerNames = isDm ? getDmDisplayName(activeChannel, currentUserName) : "";
+  const peerUserId = isDirect ? getDmPeerUserId(activeChannel, currentUserId ?? "") : "";
 
-  const heading = isDm
-    ? `This is the start of your conversation with ${peerNames}`
-    : `This is the start of #${getChannelDisplayName(activeChannel)}`;
+  const heading = isSelfDm
+    ? "This is your own space"
+    : isDm
+      ? `This is the start of your conversation with ${peerNames}`
+      : `This is the start of #${getChannelDisplayName(activeChannel)}`;
 
-  const eyebrow = isDirect
-    ? "Private conversation"
-    : isGroupDm
-      ? "Group conversation"
-      : isPrivate
-        ? "Private channel"
-        : "Team channel";
+  const eyebrow = isSelfDm
+    ? "Only you"
+    : isDirect
+      ? "Private conversation"
+      : isGroupDm
+        ? "Group conversation"
+        : isPrivate
+          ? "Private channel"
+          : "Team channel";
 
-  const description = isDirect
-    ? "Just the two of you. Say hello."
-    : isGroupDm
-      ? `Group conversation with ${activeChannel.memberCount} people.`
-      : activeChannel.description || "Start connecting with your team.";
+  const description = isSelfDm
+    ? "Park links, files, drafts, and reminders here. Nobody else can see this conversation."
+    : isDirect
+      ? "Just the two of you. Say hello."
+      : isGroupDm
+        ? `Group conversation with ${activeChannel.memberCount} people.`
+        : activeChannel.description || "Start connecting with your team.";
 
-  const accent: ReactNode =
-    isDirect && peerUserId ? (
-      <DmPairAccent
-        selfId={currentUserId ?? ""}
-        selfName={currentUserName}
-        peerId={peerUserId}
-        peerName={peerNames}
-      />
-    ) : isPrivate ? (
-      <Lock size={48} className="text-muted-foreground/30" />
-    ) : (
-      <Hash size={48} className="text-muted-foreground/30" />
-    );
+  const accent: ReactNode = isSelfDm ? (
+    <HeroAvatar userId={currentUserId ?? ""} displayName={currentUserName} />
+  ) : isDirect && peerUserId ? (
+    <DmPairAccent
+      selfId={currentUserId ?? ""}
+      selfName={currentUserName}
+      peerId={peerUserId}
+      peerName={peerNames}
+    />
+  ) : isPrivate ? (
+    <Lock size={48} className="text-muted-foreground/30" />
+  ) : (
+    <Hash size={48} className="text-muted-foreground/30" />
+  );
 
   if (rootMessages.length === 0) {
     if ((!hasLoaded && !initialLoadFailed) || isLoadingMore) {

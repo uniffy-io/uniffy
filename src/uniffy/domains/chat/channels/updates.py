@@ -67,6 +67,9 @@ class ChannelUpdates:
     ) -> ChatChannel:
         """Update channel metadata; slug stays fixed, only non-None kwargs apply."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
+        if channel.is_self_dm:
+            # Its name, defaults, and tags are fixed; a default flag would auto-join new members.
+            raise ValidationError("channel", "Your own conversation cannot be edited")
         is_elevated = await self.access.require_elevated(
             user_id,
             organization_id,
@@ -74,6 +77,12 @@ class ChannelUpdates:
         )
         if not is_elevated:
             raise PermissionDeniedError("update", "channel")
+
+        if is_default is not None:
+            # Default enrollment and visibility must agree even during concurrent updates.
+            channel = await lock_channel_visibility(self.session, channel_id, organization_id)
+            if is_default and channel.channel_type != ChannelType.PUBLIC:
+                raise ValidationError("is_default", "Only public channels can be default channels")
 
         changed_keys: list[str] = []
         if name is not None and channel.name != name:
@@ -126,6 +135,8 @@ class ChannelUpdates:
     ) -> ChatChannel:
         """Owner-only GROUP_DM -> PUBLIC/PRIVATE channel; members and history carry over."""
         channel = await self.get_by_id(user_id, organization_id, channel_id)
+        if channel.is_self_dm:
+            raise ValidationError("channel", "Your own conversation cannot become a channel")
         if channel.channel_type != ChannelType.GROUP_DM:
             raise ValidationError("channel", "Only group chats can be converted to a channel")
         if target_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE):

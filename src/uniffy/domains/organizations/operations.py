@@ -39,7 +39,10 @@ from uniffy.domains.chat.channels import stage_default_channel_memberships
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.channels.state import StagedChatChannelCreate
 from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
-from uniffy.domains.chat.search import enqueue_chat_search_acl_refresh
+from uniffy.domains.chat.search import (
+    enqueue_chat_search_acl_refresh,
+    remove_channel_message_documents,
+)
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
 from uniffy.domains.files.filters.presets import create_default_presets
@@ -597,7 +600,17 @@ class OrganizationOperations:
     ) -> bool:
         await self.require_org_admin(admin_user_id, org_id)
 
-        membership = await self.get_membership(target_user_id, org_id)
+        membership = (
+            await self._session.execute(
+                select(OrganizationMember)
+                .where(
+                    OrganizationMember.user_id == target_user_id,
+                    OrganizationMember.organization_id == org_id,
+                )
+                .with_for_update(key_share=True)
+                .execution_options(populate_existing=True)
+            )
+        ).scalar_one_or_none()
         if not membership:
             return False
 
@@ -649,6 +662,15 @@ class OrganizationOperations:
                 organization_id=str(org_id),
                 user_id=str(target_user_id),
             )
+
+        for channel_id in chat_cleanup.deleted_self_dm_ids:
+            try:
+                await remove_channel_message_documents(search_indexer, channel_id)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Self conversation deleted with stale search documents",
+                    channel_id=str(channel_id),
+                )
 
         if chat_cleanup.channel_ids:
             private_channel_ids = set(chat_cleanup.private_channel_ids)

@@ -38,8 +38,11 @@ export function MeetingChannelPicker({
   const { channels, isLoading } = useChannels();
   const createChannel = useCreateChannel();
 
-  // Agent DMs and archived rooms are never valid meeting targets.
-  const bindable = useMemo(() => channels.filter((c) => !c.isAgentDm && !c.isArchived), [channels]);
+  // Agent DMs, self conversations, and archived rooms are never valid meeting targets.
+  const bindable = useMemo(
+    () => channels.filter((c) => !c.isAgentDm && !c.isSelfDm && !c.isArchived),
+    [channels],
+  );
   const selected = useMemo(
     () => (selectedChannelId ? (channels.find((c) => c.id === selectedChannelId) ?? null) : null),
     [channels, selectedChannelId],

@@ -102,9 +102,7 @@ class ChannelProjection:
         content: ChatChannel,
     ) -> None:
         """Channel admins/owners, org admins, or chat domain admins can edit."""
-        if await self.access.is_org_admin(user_id, organization_id):
-            return
-        if await self.access.is_chat_domain_admin(user_id, organization_id):
+        if await self._moderates(user_id, organization_id, content):
             return
         member = await self.access.get_membership(content.id, user_id)
         if not member or member.role == ChannelRole.MEMBER:
@@ -117,13 +115,24 @@ class ChannelProjection:
         content: ChatChannel,
     ) -> None:
         """Only channel owner, org admin, or chat domain admin can delete."""
-        if await self.access.is_org_admin(user_id, organization_id):
-            return
-        if await self.access.is_chat_domain_admin(user_id, organization_id):
+        if await self._moderates(user_id, organization_id, content):
             return
         member = await self.access.get_membership(content.id, user_id)
         if not member or member.role != ChannelRole.OWNER:
             raise PermissionDeniedError("delete", "channel")
+
+    async def _moderates(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        channel: ChatChannel,
+    ) -> bool:
+        # A self conversation is its owner's alone; moderation never reaches it.
+        if channel.is_self_dm:
+            return False
+        return await self.access.is_org_admin(
+            user_id, organization_id
+        ) or await self.access.is_chat_domain_admin(user_id, organization_id)
 
     async def _index_for_search(
         self,

@@ -48,6 +48,8 @@ async def resolve_chat_resources(
                     ChatChannel.channel_type,
                     ChatChannel.is_deleted,
                     ChatChannel.is_agent_dm,
+                    ChatChannel.is_self_dm,
+                    ChatChannel.owner_id,
                 ).where(
                     ChatChannel.organization_id == subject.organization_id,
                     ChatChannel.id.in_(channel_ids),
@@ -78,7 +80,9 @@ async def resolve_chat_resources(
             is_active_member=subject.is_active_member,
             is_moderator=subject.is_chat_moderator,
             channel_type=channel.channel_type,
-            has_membership=channel.id in memberships,
+            has_membership=channel.id in memberships
+            and (not channel.is_self_dm or channel.owner_id == subject.user_id),
+            is_self_dm=channel.is_self_dm,
         )
         target = None
         if channel.channel_type == ChannelType.PRIVATE and not channel.is_agent_dm:

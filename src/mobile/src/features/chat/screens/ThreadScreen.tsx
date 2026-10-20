@@ -114,6 +114,7 @@ export function ChatThreadScreen() {
   const alsoSendLabel = useMemo(() => {
     const c = channelQuery.data;
     if (!c) return "Also send to channel";
+    if (c.isSelfDm) return "Also send to your own conversation";
     const isDm = c.channelType === "DIRECT" || c.channelType === "GROUP_DM";
     return `Also send to ${isDm ? c.displayName || "the chat" : `#${c.name}`}`;
   }, [channelQuery.data]);

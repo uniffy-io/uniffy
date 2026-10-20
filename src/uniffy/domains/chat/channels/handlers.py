@@ -45,6 +45,8 @@ from uniffy_proto.chat.v1.chat_pb import (
     MarkChannelUnreadResponse,
     MarkThreadReadRequest,
     MarkThreadReadResponse,
+    OpenSelfChatRequest,
+    OpenSelfChatResponse,
     RemoveMembersRequest,
     RemoveMembersResponse,
     RenameAgentChatRequest,
@@ -81,7 +83,7 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChannelRole
 from uniffy.core.models.chat.channel_member import ChatChannelMember as ChatChannelMemberModel
 from uniffy.core.models.tags.tag import Tag
@@ -243,8 +245,6 @@ class ChannelHandlers:
                 access = ChatAccessChecker(session)
                 ops = ChatChannelOperations(session, access, self.storage, self.search_indexer)
 
-                from uniffy.core.models.chat.channel import ChannelType
-
                 if channel_type in (ChannelType.DIRECT, ChannelType.GROUP_DM):
                     channel = await ops.create_dm_with_subjects(
                         user_id=user_id,
@@ -276,10 +276,6 @@ class ChannelHandlers:
                             subjects=agent_subjects,
                         )
 
-                from sqlalchemy import select
-
-                from uniffy.core.models.chat.channel import ChatChannelStats
-
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
@@ -310,10 +306,6 @@ class ChannelHandlers:
                 access = ChatAccessChecker(session)
                 ops = ChatChannelOperations(session, access, self.storage, self.search_indexer)
                 channel = await ops.get_by_id(user_id, org_id, channel_id)
-
-                from sqlalchemy import select
-
-                from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
@@ -386,10 +378,6 @@ class ChannelHandlers:
                 )
                 channel = await ops.update(user_id, org_id, channel_id, **updates)
 
-                from sqlalchemy import select
-
-                from uniffy.core.models.chat.channel import ChatChannelStats
-
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
@@ -429,8 +417,6 @@ class ChannelHandlers:
                     custom_name=custom_name,
                 )
 
-                from uniffy.core.models.chat.channel import ChatChannelStats
-
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
@@ -448,6 +434,40 @@ class ChannelHandlers:
                     )
                 )
         except (NotFoundError, PermissionDeniedError, ValidationError, ConflictError) as e:
+            _handle_error(e)
+
+    async def open_self_chat(
+        self,
+        request: OpenSelfChatRequest,
+        ctx: RequestContext,
+    ) -> OpenSelfChatResponse:
+        user_id = current_user_id()
+        try:
+            org_id = resolve_organization_id(request.organization_id)
+        except ValueError:
+            raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id")
+
+        try:
+            async with open_session() as session:
+                ops = ChatChannelOperations(
+                    session, storage=self.storage, search_indexer=self.search_indexer
+                )
+                channel = await ops.open_self_dm(user_id, org_id)
+                stats = (
+                    await session.execute(
+                        select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
+                    )
+                ).scalar_one_or_none()
+                return OpenSelfChatResponse(
+                    channel=channel_to_proto(
+                        channel,
+                        stats,
+                        current_user_role=ChannelRole.OWNER,
+                        is_member=True,
+                        dm_member_ids=[str(user_id)],
+                    )
+                )
+        except (NotFoundError, PermissionDeniedError, ValidationError) as e:
             _handle_error(e)
 
     async def rename_agent_chat(
@@ -475,8 +495,6 @@ class ChannelHandlers:
                     channel_id=channel_id,
                     custom_name=custom_name,
                 )
-
-                from uniffy.core.models.chat.channel import ChatChannelStats
 
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
@@ -857,10 +875,6 @@ class ChannelHandlers:
                 )
                 channel = await ops.join_channel(user_id, org_id, channel_id)
 
-                from sqlalchemy import select
-
-                from uniffy.core.models.chat.channel import ChatChannelStats
-
                 stats_result = await session.execute(
                     select(ChatChannelStats).where(ChatChannelStats.channel_id == channel.id)
                 )
@@ -1127,6 +1141,8 @@ class ChannelHandlers:
                 access = ChatAccessChecker(session)
                 channel = await access.get_channel(channel_id, org_id)
                 await access.require_send(user_id, channel)
+                if channel.is_self_dm:
+                    return SetTypingResponse()
                 members = await fetch_channel_members(session, channel_id)
                 member_ids = [
                     UUID(member["user_id"])

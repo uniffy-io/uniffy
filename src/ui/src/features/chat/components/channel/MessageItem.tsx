@@ -132,6 +132,10 @@ function MessageItemInner({
   const isAgentDmChannel = useAppSelector(
     (state) => state.chatChannels.byId[message.channelId]?.isAgentDm === true,
   );
+  // Every message in a self conversation is the viewer's own, so a presence dot says nothing.
+  const isSelfDmChannel = useAppSelector(
+    (state) => state.chatChannels.byId[message.channelId]?.isSelfDm === true,
+  );
   const agent = useAppSelector((state) => state.agents.agents[message.senderId] ?? null);
   const senderName =
     (isAgent ? agent?.name : null) ?? message.senderName ?? (isAgent ? "Agent" : "Unknown User");
@@ -457,7 +461,7 @@ function MessageItemInner({
                 displayName={senderName}
                 avatarUrl={message.senderAvatarUrl}
                 size="md"
-                showPresence
+                showPresence={!isSelfDmChannel}
               />
             )}
           </div>

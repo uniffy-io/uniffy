@@ -46,6 +46,8 @@ export interface ChatChannel {
   memberCount: number;
   dmMemberIds: string[];
   isAgentDm: boolean;
+  /** The viewer's own one-person conversation: locked shape, owner-only. */
+  isSelfDm: boolean;
   customName?: string;
   agentId?: string;
   /** The bound agent was deleted: history reads, the composer is closed. */

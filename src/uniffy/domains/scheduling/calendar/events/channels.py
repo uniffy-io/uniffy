@@ -48,6 +48,8 @@ class ChannelBindingOperations:
         if channel.is_archived:
             raise ValidationError("channel_id", "Channel is archived.")
         await checker.check_access(user_id, organization_id, channel)
+        if channel.is_self_dm:
+            raise ValidationError("channel_id", "Your own conversation cannot host a meeting.")
 
     async def _apply_channel_binding_update(
         self,

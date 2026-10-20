@@ -1,6 +1,7 @@
 """Organization-scoped cleanup for polymorphic chat membership rows."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import delete, func, select, update
@@ -18,6 +19,7 @@ from uniffy.domains.chat.search import record_chat_search_acl_refresh
 class ChatMembershipCleanup:
     channel_ids: tuple[UUID, ...]
     private_channel_ids: tuple[UUID, ...]
+    deleted_self_dm_ids: tuple[UUID, ...]
 
 
 async def cleanup_chat_membership_for_organization(
@@ -44,8 +46,27 @@ async def cleanup_chat_membership_for_organization(
     private_channel_ids = tuple(
         channel_id for channel_id, channel_type in rows if channel_type != ChannelType.PUBLIC
     )
+    # The self conversation has no other member, so it would stay behind memberless.
+    now = datetime.now(UTC)
+    deleted_self_dm_ids = tuple(
+        (
+            await session.execute(
+                update(ChatChannel)
+                .where(
+                    ChatChannel.organization_id == organization_id,
+                    ChatChannel.owner_id == user_id,
+                    ChatChannel.is_self_dm.is_(True),
+                    ChatChannel.is_deleted.is_(False),
+                )
+                .values(is_deleted=True, deleted_at=now, updated_at=now)
+                .returning(ChatChannel.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
     if not channel_ids:
-        return ChatMembershipCleanup((), ())
+        return ChatMembershipCleanup((), (), deleted_self_dm_ids)
 
     thread_ids = select(ChatThread.root_message_id).where(ChatThread.channel_id.in_(channel_ids))
     await session.execute(
@@ -81,4 +102,4 @@ async def cleanup_chat_membership_for_organization(
             channel_id=channel_id,
         )
 
-    return ChatMembershipCleanup(channel_ids, private_channel_ids)
+    return ChatMembershipCleanup(channel_ids, private_channel_ids, deleted_self_dm_ids)
