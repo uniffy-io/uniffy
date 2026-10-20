@@ -29,9 +29,9 @@ Every file upload and download flows through the Uniffy backend, which checks pe
 
 ## The traffic plane is not negotiable
 
-Uniffy's edge must speak HTTP/2 in cleartext to the backend, pass websockets, and carry streams with no timeout and no buffering. The chart ships that contract as Envoy Gateway route resources, and calls media relays through STUNner. Both are required. The single escape hatch: disable calls and STUNner becomes optional.
+Uniffy's edge must speak HTTP/2 in cleartext to the backend, pass websockets, and carry streams with no timeout and no buffering. The chart ships that contract as Envoy Gateway route resources. Calls relay their media through STUNner. Both are required. STUNner becomes optional only if you disable calls.
 
-This does not mean replacing your ingress. Envoy Gateway claims only its own GatewayClass and coexists with whatever already runs on the cluster. Run it dedicated to Uniffy. If policy requires your corporate edge in front, put it in front as a TCP or TLS passthrough and let our gateway stay the last hop that speaks to Uniffy. And if a service mesh injects sidecars by default, exclude the uniffy namespace; a proxy inside the proxy contract helps nobody.
+You keep your ingress. Envoy Gateway claims only its own GatewayClass and coexists with whatever already runs on the cluster. Run it dedicated to Uniffy. If policy requires your corporate edge in front, put it in front as a TCP or TLS passthrough and let our gateway stay the last hop that speaks to Uniffy. And if a service mesh injects sidecars by default, exclude the uniffy namespace; a proxy inside the proxy contract helps nobody.
 
 ## Two load balancers, two DNS records
 
@@ -40,11 +40,11 @@ The VM path hides this; a cluster cannot.
 - The HTTP gateway takes 80 and 443. DNS: `uniffy.example.com` to this LoadBalancer.
 - The STUNner media gateway takes 3478 over UDP and TCP. DNS: `turn.example.com` to this LoadBalancer.
 
-Point the TURN record at the HTTP LoadBalancer and you get the worst failure mode we know: the app works perfectly and calls silently do not. On EKS the media service needs an NLB, since the classic load balancer does not do UDP. On bare metal, MetalLB provides both addresses.
+Point the TURN record at the HTTP LoadBalancer and you get the worst failure mode we know. The app works perfectly and calls silently do not. On EKS the media service needs an NLB, since the classic load balancer does not do UDP. On bare metal, MetalLB provides both addresses.
 
 ## Install the platform components
 
-Versions below come from the pinset of chart 1.0.0. Newer is not better here; tested together is better.
+Versions below come from the pinset of chart 1.0.0, tested together. Use them even when a newer release is out.
 
 ```bash
 helm upgrade --install envoy-gateway oci://docker.io/envoyproxy/gateway-helm \
@@ -68,7 +68,7 @@ Envoy Gateway owns the Gateway API CRDs; the STUNner operator is configured to s
 
 Four decisions. Everything else is a value with a sane default.
 
-**Postgres.** Bundled by default: the chart creates a CloudNativePG cluster with three instances, and anything under `postgres.parameters` lands in `postgresql.conf`, so tuning needs no chart surgery. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [System Architecture](/docs/deployment/system-architecture/).
+**Postgres.** Bundled by default. The chart creates a CloudNativePG cluster with three instances, and anything under `postgres.parameters` lands in `postgresql.conf`, so tuning needs no chart surgery. To bring your own instead, it must be PostgreSQL 18 with the `pg_trgm`, `uuid-ossp`, and `unaccent` extensions available, and enough connections. Each backend or worker pod holds up to 100; the budget formula is in [System Architecture](/docs/deployment/system-architecture/).
 
 **Gateway.** The chart creates its own Gateway by default. If you already run Envoy Gateway with a shared Gateway, point the chart at it with a parent reference instead.
 
@@ -207,9 +207,9 @@ Expose port 9093 through an internal metrics Service and select it with a Servic
 
 Uniffy itself is configured through environment variables, and [Configure Uniffy](/docs/deployment/configure/) documents every one. The chart splits them into two groups.
 
-**Chart owned.** Everything that wires the services the chart itself runs: the base URL and CORS origins derived from `hostname`, the connection settings for Postgres, Valkey, Meilisearch, LiveKit, and TURN, plus `WORKERS=1` and JSON logging. The chart renders these and a hand written value colliding with them fails the render loudly rather than silently losing. Your storage endpoint, your mail server, and the bootstrap identities are not plumbing the chart can know; they ride under `config:` like any other setting, with their secrets in `uniffy-secret`.
+**Chart owned.** Everything that wires the services the chart itself runs: the base URL and CORS origins derived from `hostname`, the connection settings for Postgres, Valkey, Meilisearch, LiveKit, and TURN, plus `WORKERS=1` and JSON logging. The chart renders these, and a hand written value that collides with one fails the render loudly instead of silently losing to it. Your storage endpoint, your mail server, and the bootstrap identities are not plumbing the chart can know; they ride under `config:` like any other setting, with their secrets in `uniffy-secret`.
 
-**Yours.** Everything that is policy rather than plumbing goes under `config:` in your values and lands in the app's environment as written. Secrets never go here: values files live in git, and a password in `config:` is a password in your history.
+**Yours.** Everything that is policy rather than plumbing goes under `config:` in your values and lands in the app's environment as written. Secrets never go here. Values files live in git, and a password in `config:` is a password in your history.
 
 **Secrets** carry credentials. The credentials the chart knows about live in `uniffy-secret`. For anything sensitive beyond that list, create a Secret and name it under `configSecrets:`. The chart attaches these to the backend and worker Deployments it renders. Attach the same references to a media Deployment managed outside the chart:
 
@@ -223,11 +223,11 @@ kubectl -n uniffy create secret generic uniffy-extra-secrets \
   --from-literal=SOME_SENSITIVE_SETTING='...'
 ```
 
-Sources apply in order and later wins: `config:`, then `uniffy-secret`, then `configSecrets` entries in list order. That precedence is what makes an external secret manager clean: point ExternalSecrets, a Vault agent, or SOPS at materializing the Secret, list its name, and a key there overrides the same key anywhere earlier, rotation included.
+Sources apply in order and later wins: `config:`, then `uniffy-secret`, then `configSecrets` entries in list order. That precedence keeps an external secret manager simple. Have ExternalSecrets, a Vault agent, or SOPS materialize the Secret, then list its name. A key there overrides the same key anywhere earlier, rotation included.
 
 Changing `config:` and running `helm upgrade` restarts affected chart workloads through a configuration checksum. That checksum only covers what the chart renders. Restart a separately managed media Deployment when its settings change. When an external manager rotates a Secret, restart every Deployment that reads it, or use your secret operator's reload mechanism. The same `config:` block works in `/etc/uniffy/values.yaml` on the VM path.
 
-Three blocks cover most real deployments.
+Three blocks cover most deployments.
 
 Bootstrap policy for a company install. Invitation only registration, a named organization, and the operator role split from the daily admin account:
 
@@ -247,7 +247,7 @@ config:
   TRUSTED_PROXY_HOPS: "2"    # Cloudflare plus the gateway
 ```
 
-Tuning for how your organization actually uses Uniffy. Agent heavy teams raise the egress fleet's concurrency, orgs with huge channels lift the typing indicator cutoff, compliance teams turn on the per upload audit row:
+Tuning for how your organization uses Uniffy. Agent heavy teams raise the egress fleet's concurrency, orgs with huge channels lift the typing indicator cutoff, compliance teams turn on the per upload audit row:
 
 ```yaml
 config:
@@ -256,7 +256,7 @@ config:
   AUDIT_EVENTS_FILE_UPLOADED: "true"
 ```
 
-One family deserves respect before you touch it: `DB_POOL_SIZE` and `DB_MAX_OVERFLOW` multiply across every backend and worker pod into your Postgres connection budget. The formula and the defaults are in [System Architecture](/docs/deployment/system-architecture/); raise replicas or pool sizes with the formula open, not from memory.
+Be careful with `DB_POOL_SIZE` and `DB_MAX_OVERFLOW`. They multiply across every backend and worker pod into your Postgres connection budget. The formula and the defaults are in [System Architecture](/docs/deployment/system-architecture/); raise replicas or pool sizes with the formula open, not from memory.
 
 ## Verify
 
@@ -266,16 +266,16 @@ curl -f https://uniffy.example.com/healthz
 helm test uniffy -n uniffy
 ```
 
-The chart's test suite checks the pieces that fail quietly: the h2c path to the backend, the websocket route, and a TURN allocation against `turn.example.com:3478` with a minted credential. Green tests mean chat streams and calls media both actually flow. Then sign in with the initial admin credentials and change the password.
+The chart's test suite checks the pieces that fail quietly: the h2c path to the backend, the websocket route, and a TURN allocation against `turn.example.com:3478` with a minted credential. Green tests mean chat streams and call media both flow. Then sign in with the initial admin credentials and change the password.
 
-Check media processing separately. Upload a video that needs conversion on your browser, wait for its playback copy, then play and seek it. Download it and confirm you still get the original upload. Check media worker logs and metrics if processing stays pending. [Video playback](/docs/user/video/) explains the behavior users should see.
+Check media processing separately. Upload a video that needs conversion before your browser can play it, wait for its playback copy, then play and seek it. Download it and confirm you still get the original upload. Check media worker logs and metrics if processing stays pending. [Video playback](/docs/user/video/) explains the behavior users should see.
 
 Before any of this, [verify the release](/docs/deployment/verify/). The pinset file and every image in it are signed; ten seconds with cosign tells you the digests you are about to run are the ones we published.
 
 ## Day two
 
 - [Upgrades](/docs/deployment/upgrades/): pinsets, the maintenance window, and why the Postgres dump comes first.
-- [Backups and Restore](/docs/deployment/backups/): protect Postgres, object storage, and `APP_MASTER_KEY`. Temporary media scratch needs no backup.
+- [Backups and Restore](/docs/deployment/backups/): protect Postgres, object storage, and `APP_MASTER_KEY`. Temporary media scratch needs no backup. Confirm a restore works before people depend on the deployment.
 - Monitoring: scrape the backend and all three worker fleets. Media exposes `/metrics` on port 9093. Include its ServiceMonitor when managing it separately from the chart.
 - [Harden the Edge](/docs/deployment/hardening/): one chart value keeps the operator API off the internet. Do it the same week.
 
@@ -297,5 +297,3 @@ global:
 Charts install from local files the same way, so a cluster with no internet path runs the same pinset as everyone else. [Verify a Release](/docs/deployment/verify/) covers checking the signatures against your own registry, with or without a connection.
 
 Mirror all three application images, including `uniffy-media-worker`. Update a separately managed media Deployment to use the mirrored image too; chart settings cannot change that manifest for you.
-
-Treat a successful login as the start of verification. Confirm calls, background processing, and restore procedures before people depend on the deployment.

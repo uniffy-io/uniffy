@@ -5,13 +5,13 @@ sidebar:
   order: 2
 ---
 
-The audit log answers questions after the fact. Who removed that person. When did sharing change on that project. Which admin rotated the encryption key. Who was signing in from that address.
+The audit log answers questions after the fact. Who removed that person? When did sharing change on that project? Which admin rotated the encryption key? Who was signing in from that address?
 
 ![Audit log page showing the filter rail, the action filter, and the event table](/docs/admin/audit-logs.png)
 
 Owners and admins read it. A regular member sees nothing here, not even entries about their own activity.
 
-Entries cannot be edited or deleted. Not by a member, not by an admin, not by you. Once something is recorded it stays recorded, which is the only thing that makes a log worth consulting.
+No one can edit or delete an entry, owners and admins included. Once something is recorded it stays recorded.
 
 ## What each entry shows
 
@@ -27,7 +27,7 @@ When someone acts on behalf of another person, both names appear. When Uniffy su
 
 ## What Uniffy never records
 
-**What people read.** Opening a note or viewing a file is not recorded. The log tracks change, not who looked at what. It is not a surveillance tool and we will not turn it into one.
+**What people read.** Opening a note or viewing a file is not recorded. The log is not a surveillance tool and we will not turn it into one.
 
 **What people write.** The log records that a channel was created, or that an admin deleted a message. It never stores the message.
 
@@ -134,7 +134,7 @@ These are the groupings you see under **Filter by action**. A handful of the eve
 | Domain admin granted | Someone gets admin rights over one feature area |
 | Domain admin revoked | Those rights are taken away |
 
-If you sync people from a company directory, those events are recorded too. Identity source **created**, **updated**, **deleted**, and **sync completed**. None of them are in the filter dropdown yet.
+If you sync people from a company directory, those events are recorded too: identity source **created**, **updated**, **deleted**, and **sync completed**. None of them are in the filter dropdown yet.
 
 ### Sharing
 

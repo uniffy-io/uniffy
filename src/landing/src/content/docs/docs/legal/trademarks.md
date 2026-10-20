@@ -38,7 +38,7 @@ above.
 - Do not alter a mark: no recoloring into the Uniffy palette, no cropping,
   distorting, rotating, or adding effects. Marks that ship monochrome are
   rendered in a single current text color so they stay legible on both themes,
-  which is the one-color usage brand guidelines normally permit.
+  which is the one color usage brand guidelines normally permit.
 - Do not use a provider mark as the identity of a Uniffy feature. This includes
   agent avatars, section icons, and anywhere it reads as our branding. Marks
   appear only where they identify that provider's own service: provider keys,

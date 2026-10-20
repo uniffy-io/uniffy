@@ -1,6 +1,6 @@
 ---
 title: Upgrades
-description: How Uniffy upgrades work on both install paths. Pinsets, forward only migrations, automatic dumps before every upgrade, and what rollback honestly means.
+description: How Uniffy upgrades work on both install paths. Pinsets, forward only migrations, automatic dumps before every upgrade, and why rollback means restoring the database.
 sidebar:
   label: Upgrades
   order: 3
@@ -23,7 +23,7 @@ Two rules ride on that:
 
 Both paths take a Postgres dump before touching anything, automatically. On the VM the last two dumps are kept under `/var/backups/uniffy/`, oldest deleted first. On a cluster the dump lands where your chart values point it.
 
-The dump is not bureaucracy. It is the rollback. Read on. It is also not a backup regime: that is continuous archiving to S3, on its own page, [Backups and Restore](/docs/deployment/backups/).
+If an upgrade goes wrong, this dump is how you roll back. It does not replace backups. Those come from continuous archiving to S3, covered in [Backups and Restore](/docs/deployment/backups/).
 
 ## Upgrading the VM install
 
@@ -33,7 +33,7 @@ sudo uniffy-k3s upgrade --version 1.2.0  # to a specific one
 sudo uniffy-k3s upgrade --infra          # also moves the platform components to the new pinset
 ```
 
-What it does, in order: fetches and verifies the target pinset, refuses downgrades and major jumps, dumps Postgres, upgrades the chart, waits for health, and confirms the running version. Expect about a minute of downtime while the backend restarts and migrations run. That is a design choice on this path: one replica and a short pause beat the complexity that avoiding the pause costs.
+What it does, in order: fetches and verifies the target pinset, refuses downgrades and major jumps, dumps Postgres, upgrades the chart, waits for health, and confirms the running version. Expect about a minute of downtime while the backend restarts and migrations run. That is a deliberate choice on this path. One replica and a short pause beat the complexity that avoiding the pause costs.
 
 Your edited settings survive. The installer keeps its values under `/etc/uniffy/` and every upgrade rereads them.
 
@@ -60,7 +60,7 @@ curl -f https://uniffy.example.com/healthz
 helm test uniffy -n uniffy
 ```
 
-The first new backend pod runs the migrations on boot; the rest join once it is healthy. We do not promise zero downtime upgrades today, and we would rather say so than sell you a rolling upgrade that gambles on old pods tolerating a new schema. If the window matters to you, upgrades are fast: the window is the backend restart plus the migration time, minutes not hours.
+The first new backend pod runs the migrations on boot; the rest join once it is healthy. We do not promise zero downtime upgrades today, and we would rather say so than sell you a rolling upgrade that gambles on old pods tolerating a new schema. If the window matters to you, upgrades are fast. The window is the backend restart plus the migration time, minutes not hours.
 
 Use the Deployment names from your rendered manifests if they differ. Update any separately managed media Deployment to the verified media image before checking its rollout. Let backend migrations finish before workers consume jobs against the new schema.
 
@@ -83,10 +83,10 @@ Before ending the maintenance window, upload a video that needs conversion. Conf
 - First choice: fix forward. Patch releases exist for exactly this, and shipping one is fast.
 - Real rollback: restore. Roll the chart back and restore the pre upgrade dump. That is why the dump is automatic and why the upgrade output prints the restore command next to it.
 
-This is also why the tooling refuses downgrades: it will not offer a button that leads to the unsupported state.
+This is also why the tooling refuses downgrades. It will not offer a button that leads to the unsupported state.
 
 ## Finding out about releases
 
 Uniffy never calls home, so nothing in your deployment checks for updates on its own. The running version is visible on the platform pages, and releases are announced on the GitHub releases feed, which works fine in a feed reader. If you want a check anyway, there is an opt in setting that fetches a static version file over plain HTTPS and nothing else. It is off by default and stays off.
 
-Upgrade on your schedule with a verified dump in hand. A healthy backend alone is not enough: every worker fleet must be running the same release and processing its jobs.
+When you do upgrade, a healthy backend alone does not mean you are done. Every worker fleet must be running the same release and processing its jobs.

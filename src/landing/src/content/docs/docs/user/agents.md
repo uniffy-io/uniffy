@@ -5,9 +5,7 @@ sidebar:
   order: 3
 ---
 
-An agent in Uniffy is someone you message in chat, and it can read exactly what you can read. Not one note more.
-
-That sentence is the whole product decision. Everything below is what follows from it.
+An agent in Uniffy is someone you message in chat. It can read exactly what you can read, and not one note more.
 
 ## Where you meet an agent
 
@@ -17,15 +15,15 @@ There is no separate AI panel to learn and no second inbox to check. An agent sh
 
 An org admin can turn agents off for the whole organization. When that happens they disappear from the pickers and stop answering, and nothing else about chat changes.
 
-## It borrows your access, it never holds its own
+## It runs with your access
 
 Every action an agent takes runs as you. When it reads a note, the same permission check runs that would run if you clicked the note yourself. When it creates a task, the task is created by you.
 
 So an agent cannot become a way around sharing. If a file is private to a colleague, the agent tells you it cannot reach it instead of guessing at the contents. If you were just granted access to a project, the agent has it too, in the same instant. Nothing is cached ahead of the check, so a revoke lands immediately.
 
-This also means two people asking the same agent the same question can correctly get different answers. That is not a bug. You are asking through your own eyes.
+Two people asking the same agent the same question can get different answers, and both are correct. Each answer draws only on what that person can open.
 
-One carve out, stated plainly. When your organization connects an outside service, GitHub for example, the agent calls it with that connection's credential, not with anything of yours. Its reach there is whatever the connection can reach, and it is identical for every member who asks. The current GitHub tools only read.
+There is one carve out. When your organization connects an outside service, GitHub for example, the agent calls it with that connection's credential, not with anything of yours. Its reach there is whatever the connection can reach, and it is identical for every member who asks. The current GitHub tools only read.
 
 ## What an agent makes belongs to you
 
@@ -35,11 +33,11 @@ If you want something visible to the whole organization, say so. Ask it to creat
 
 ## Destructive actions stop and ask
 
-Some actions cannot be walked back, so they do not happen silently. Deleting a note, a file, a task, a project, a calendar event or a scheduled task, and cancelling a room booking, all pause and show you an approve or reject card naming the exact action. Nothing happens until you press one of them.
+Some actions cannot be walked back, so they do not happen silently. Deleting a note, a file, a task, a project, a calendar event or a scheduled task, and canceling a room booking, all pause and show you an approve or reject card naming the exact action. Nothing happens until you press one of them.
 
 Everything else runs as asked. Reading, searching, creating, editing, and moving do not interrupt you.
 
-## What it can actually do
+## What it can do
 
 An agent works your workspace through tools, and the tools are the same features you use. Notes, files, projects, tasks, calendar, rooms, people, search, and image generation. It can also read and write its own memory, pull up a skill, and set up a schedule for itself.
 
@@ -67,19 +65,19 @@ Memory in a shared space belongs to that space. What an agent learns in a channe
 
 While an agent is answering you can watch it think, and you can watch it work. The thinking pane shows the reasoning the model exposed, with how long it took. The tool pane names every tool call, in order, with whether it succeeded, and refusals show up as refusals rather than being smoothed over in the reply.
 
-Both panes are still there after a reload. The record of how an answer was reached does not evaporate when you close the tab.
+Both panes are still there after a reload, or after you close the tab and come back.
 
 ## Tune one conversation without touching everyone else
 
 You can change the model an agent uses for your conversation, and adjust its knobs, from the composer. That override belongs to that one conversation. The agent your colleagues talk to is unchanged.
 
-Long conversations show a context meter. When it fills you can compact the history, which summarises the old part and keeps going, or reset it and start clean. Compaction also happens on its own in the background before you hit a wall.
+Long conversations show a context meter. When it fills you can compact the history, which summarizes the old part and keeps going, or reset it and start clean. Compaction also happens on its own in the background before you hit a wall.
 
 ## Scheduled runs
 
 An agent can be put on a schedule, so a summary lands every Monday without anyone asking for it.
 
-A scheduled run happens when nobody is there to approve anything, so it runs with the permissions of the person who owns the schedule and only theirs. Whoever rewrites the prompt becomes that person. This is deliberate: a schedule must never become a way to run something as a colleague with more access than you.
+A scheduled run happens when nobody is there to approve anything, so it runs with the permissions of the person who owns the schedule and only theirs. Whoever rewrites the prompt becomes that person. We did this on purpose. A schedule must never become a way to run something as a colleague with more access than you.
 
 ## Images
 
@@ -99,4 +97,4 @@ An agent that gets retired keeps its name and picture on every message it ever s
 
 ## The question to take elsewhere
 
-Most workspaces let their assistant read the workspace. The question worth asking is narrower than "does it have AI". Ask what happens when a colleague shares a document with everyone except you, and then you ask the assistant about it. In Uniffy the answer is that it cannot read it either, and it will say so.
+When you evaluate another workspace, skip "does it have AI". Ask what happens when a colleague shares a document with everyone except you, and then you ask the assistant about it. In Uniffy the agent cannot read it either, and it says so.
