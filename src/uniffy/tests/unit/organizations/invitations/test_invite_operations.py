@@ -14,7 +14,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.audit.actions import Action
-from uniffy.core.models.login.organization_member import OrganizationRole
+from uniffy.core.models.login.organization_member import (
+    OrganizationMemberSource,
+    OrganizationRole,
+)
 from uniffy.core.types import generate_id
 from uniffy.domains.organizations.invitations.errors import (
     InvitationAlreadyUsedError,
@@ -166,6 +169,9 @@ class TestInviteExistingUser:
         assert result.outcome is InviteOutcome.ADDED
         assert result.member is membership
         org_ops.stage_member.assert_awaited_once()
+        staged = org_ops.stage_member.await_args.kwargs
+        assert staged["source"] is OrganizationMemberSource.ADDED
+        assert staged["invited_by_user_id"] == inviter_id
         org_ops.finish_member_add_after_commit.assert_awaited_once()
         # Template enqueued is the courtesy notice, not the accept link.
         queue.enqueue_job.assert_awaited()
@@ -296,3 +302,67 @@ class TestAcceptRejectsConflict:
                 user_agent="pytest",
                 search_indexer=MagicMock(),
             )
+
+
+class TestAcceptStagesInvitedMembership:
+    async def test_membership_records_invite_source_and_inviter(self) -> None:
+        inviter_id = generate_id()
+        inv = _Invitation(
+            organization_id=generate_id(),
+            email="new@acme.io",
+            role=OrganizationRole.MEMBER,
+            invited_by_user_id=inviter_id,
+            token_hash=_hash_token("raw"),
+            expires_at=datetime.now(UTC) + timedelta(days=1),
+        )
+        new_user = _FakeUser(id=generate_id(), email="new@acme.io", username="new_user")
+        outcome = object()
+        staged_auth = SimpleNamespace(
+            enrollment_required=False,
+            session_id=generate_id(),
+            outcome=outcome,
+        )
+        # Order: load invitation, email free, username free.
+        session = _make_session([
+            _result(scalar=inv),
+            _result(scalar=None),
+            _result(scalar=None),
+        ])
+        org_ops_patch, org_ops = _patch_org_ops(
+            get_by_id_returns=_FakeOrg(id=inv.organization_id),
+            stage_member_returns=SimpleNamespace(
+                membership=SimpleNamespace(id=generate_id()),
+                organization_slug="acme",
+            ),
+        )
+        module = "uniffy.domains.organizations.invitations.operations"
+
+        with (
+            _patch_audit(),
+            org_ops_patch,
+            patch(f"{module}.check_rate_limit", new=AsyncMock()),
+            patch(f"{module}.client_ip_for_rate_limit", return_value=None),
+            patch(f"{module}.stage_invited_user", new=AsyncMock(return_value=new_user)),
+            patch(
+                f"{module}.stage_invitation_authentication",
+                new=AsyncMock(return_value=staged_auth),
+            ),
+        ):
+            result = await InvitationOperations(session).accept(
+                raw_token="raw",
+                username="new_user",
+                password="Passw0rd!ok",
+                full_name=None,
+                user_agent="pytest",
+                search_indexer=MagicMock(),
+            )
+
+        assert result is outcome
+        org_ops.stage_member.assert_awaited_once()
+        staged = org_ops.stage_member.await_args.kwargs
+        assert staged["user_id"] == new_user.id
+        assert staged["source"] is OrganizationMemberSource.INVITE
+        assert staged["invited_by_user_id"] == inviter_id
+        assert inv.accepted_by_user_id == new_user.id
+        session.commit.assert_awaited_once()
+        org_ops.finish_member_add_after_commit.assert_awaited_once()

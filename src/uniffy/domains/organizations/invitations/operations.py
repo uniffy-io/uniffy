@@ -26,6 +26,7 @@ from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
+    OrganizationMemberSource,
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
@@ -152,6 +153,8 @@ class InvitationOperations:
                     org_id=org_id,
                     role=role,
                     actor_user_id=inviter_id,
+                    source=OrganizationMemberSource.ADDED,
+                    invited_by_user_id=inviter_id,
                 )
                 await write_audit_event(
                     self._session,
@@ -419,6 +422,8 @@ class InvitationOperations:
                 org_id=invitation.organization_id,
                 role=invitation.role,
                 actor_user_id=invitation.invited_by_user_id,
+                source=OrganizationMemberSource.INVITE,
+                invited_by_user_id=invitation.invited_by_user_id,
             )
 
             invitation.accepted_at = datetime.now(UTC)

@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from uniffy.core.models.login.organization_member import OrganizationMemberSource
 from uniffy.core.search import SearchIndexer
 from uniffy.domains.organizations import operations as organization_operations
 from uniffy.domains.platform import bootstrap
@@ -56,5 +57,6 @@ async def test_empty_deployment_passes_runtime_dependencies_to_organization_owne
         owner_user_id=session.add.call_args_list[0].args[0].id,
         plan="enterprise",
         search_indexer=search_indexer,
+        owner_source=OrganizationMemberSource.BOOTSTRAP,
     )
     operations.create.assert_awaited_once()

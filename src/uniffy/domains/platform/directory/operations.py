@@ -36,7 +36,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.rate_limit import check_rate_limit
-from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.realtime.publisher import publish_membership_revoke_safe, publish_token_revoke
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
@@ -512,7 +512,7 @@ class PlatformDirectoryOperations:
     async def suspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Block sign-in and revoke every member's existing JWTs."""
+        """Cut every member off from this org only; their sessions in other orgs stay valid."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "suspend"),
@@ -536,7 +536,7 @@ class PlatformDirectoryOperations:
         org.suspension_reason = reason
         self._session.add(org)
 
-        bumped_user_ids = await self._bump_member_token_versions(org.id)
+        member_ids = await self._active_member_ids(org.id)
 
         await write_audit_event(
             self._session,
@@ -547,25 +547,23 @@ class PlatformDirectoryOperations:
             resource_id=org.id,
             details={
                 "reason": reason,
-                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
+                "members_notified": _audit_user_ids(member_ids),
             },
         )
         await self._session.commit()
 
-        for member_id in bumped_user_ids:
-            await invalidate_user_profile(member_id)
-
         await self._call_lifecycle.end_for_organization(
             self._session, org.id, CallEndReason.ORG_SUSPENDED
         )
-        await self._publish_member_token_revokes(bumped_user_ids)
+        for member_id in member_ids:
+            await publish_membership_revoke_safe(member_id, org.id)
 
         return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def unsuspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Clear the suspension flag; existing JWTs stay revoked."""
+        """Clear the suspension flag; members' existing sessions regain access."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -629,7 +627,7 @@ class PlatformDirectoryOperations:
         org.purge_warning_sent_at = None
         self._session.add(org)
 
-        bumped_user_ids = await self._bump_member_token_versions(org.id)
+        member_ids = await self._active_member_ids(org.id)
 
         await write_audit_event(
             self._session,
@@ -641,17 +639,16 @@ class PlatformDirectoryOperations:
             details={
                 "reason": reason,
                 "purge_at": _purge_at_from(org.deleted_at).isoformat() if org.deleted_at else None,
-                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
+                "members_notified": _audit_user_ids(member_ids),
             },
         )
         await self._session.commit()
 
-        for member_id in bumped_user_ids:
-            await invalidate_user_profile(member_id)
         await self._call_lifecycle.end_for_organization(
             self._session, org.id, CallEndReason.ORG_DELETED
         )
-        await self._publish_member_token_revokes(bumped_user_ids)
+        for member_id in member_ids:
+            await publish_membership_revoke_safe(member_id, org.id)
 
         await self._enqueue_org_deleted_emails(org, reason)
 
@@ -1405,8 +1402,7 @@ class PlatformDirectoryOperations:
             for oid, role, joined_at, is_active, name, slug, is_suspended, deleted_at in rows
         ]
 
-    async def _bump_member_token_versions(self, org_id: UUID) -> list[UUID]:
-        """Bump ``token_version`` on every active member; return ids bumped."""
+    async def _active_member_ids(self, org_id: UUID) -> list[UUID]:
         rows = (
             await self._session.execute(
                 select(OrganizationMember.user_id)
@@ -1414,28 +1410,7 @@ class PlatformDirectoryOperations:
                 .where(OrganizationMember.is_active.is_(True))
             )
         ).all()
-        user_ids = [row[0] for row in rows]
-        if not user_ids:
-            return []
-        users = (
-            (await self._session.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()
-        )
-        for u in users:
-            u.token_version += 1
-            self._session.add(u)
-        return [u.id for u in users]
-
-    async def _publish_member_token_revokes(self, user_ids: list[UUID]) -> None:
-        if not user_ids:
-            return
-        users = (
-            await self._session.execute(
-                select(User.id, User.token_version).where(User.id.in_(user_ids))
-            )
-        ).all()
-        for uid, version in users:
-            await mark_token_version_revoked(uid, int(version))
-            await _safe_publish_token_revoke(uid, int(version))
+        return [row[0] for row in rows]
 
     async def _enqueue_org_deleted_emails(self, org: Organization, reason: str) -> None:
         if org.deleted_at is None:

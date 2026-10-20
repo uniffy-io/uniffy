@@ -105,6 +105,21 @@ class AccessGates:
         for handle in affected:
             await self._close_handle(handle, WS_CLOSE_TOKEN_REVOKED, "session revoked")
 
+    async def close_user_org_handles(self, user_id: UUID, organization_id: UUID) -> None:
+        """Detach the user's documents in one organization; the reauth watchdog closes the socket."""
+        affected = [
+            (session, handle)
+            for session in self._sessions.values()
+            if session.organization_id == organization_id
+            for handle in session.clients.values()
+            if handle.user_id == user_id and not handle.closed
+        ]
+        for session, handle in affected:
+            REALTIME_PERMISSION_REJECTIONS_TOTAL.labels(
+                content_type=session.key[0].value, reason="membership_revoked"
+            ).inc()
+            await self._close_handle(handle, WS_CLOSE_FORBIDDEN, "not a member")
+
     async def _resolve_outbound_audience(
         self,
         key: DocKey,

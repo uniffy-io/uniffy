@@ -20,9 +20,14 @@ from uniffy.core.jobs import enqueue_job
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.login.organization_member import (
+    OrganizationMember,
+    OrganizationMemberSource,
+    OrganizationRole,
+)
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.realtime.publisher import publish_membership_revoke_safe
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.domains.agents.bootstrap import (
@@ -89,6 +94,7 @@ class OrganizationOperations:
         actor_user_id: UUID | None = None,
         *,
         search_indexer: SearchIndexer,
+        owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
     ) -> Organization:
         try:
             staged = await self.stage_organization(
@@ -98,6 +104,7 @@ class OrganizationOperations:
                 domain=domain,
                 plan=plan,
                 actor_user_id=actor_user_id,
+                owner_source=owner_source,
             )
             await self._session.commit()
         except Exception:
@@ -120,6 +127,8 @@ class OrganizationOperations:
         domain: str | None = None,
         plan: str = "free",
         actor_user_id: UUID | None = None,
+        *,
+        owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
     ) -> StagedOrganizationCreate:
         org = Organization(
             name=name,
@@ -140,6 +149,7 @@ class OrganizationOperations:
                 user_id=owner_user_id,
                 organization_id=org.id,
                 role=OrganizationRole.OWNER,
+                source=owner_source,
             ),
             IdentitySource(
                 organization_id=org.id,
@@ -292,6 +302,7 @@ class OrganizationOperations:
             .join(OrganizationMember, Organization.id == OrganizationMember.organization_id)
             .where(OrganizationMember.user_id == user_id)
             .where(OrganizationMember.is_active.is_(True))
+            .where(Organization.deleted_at.is_(None))
             .order_by(Organization.name)
         )
         return [(row[0], row[1]) for row in result.all()]
@@ -439,6 +450,9 @@ class OrganizationOperations:
         org_id: UUID,
         role: OrganizationRole = OrganizationRole.MEMBER,
         actor_user_id: UUID | None = None,
+        *,
+        source: OrganizationMemberSource = OrganizationMemberSource.ADDED,
+        invited_by_user_id: UUID | None = None,
     ) -> StagedOrganizationMembership:
         org = (
             await self._session.execute(
@@ -457,12 +471,18 @@ class OrganizationOperations:
                     user_id=user_id,
                     organization_id=org_id,
                     role=role,
+                    source=source,
+                    invited_by_user_id=invited_by_user_id,
                 )
                 self._session.add(membership)
             else:
                 membership = existing
                 membership.is_active = True
                 membership.role = role
+                membership.source = source
+                membership.invited_by_user_id = invited_by_user_id
+                membership.removed_at = None
+                membership.removed_by_user_id = None
                 membership.updated_at = datetime.now(UTC)
 
             await write_audit_event(
@@ -472,7 +492,11 @@ class OrganizationOperations:
                 action=Action.ORGANIZATION_MEMBER_ADDED,
                 resource_type=AuditResourceType.USER,
                 resource_id=user_id,
-                details={"role": role.value},
+                details={
+                    "role": role.value,
+                    "source": source.value,
+                    "reactivated": existing is not None,
+                },
             )
             await self._session.flush()
         else:
@@ -616,6 +640,8 @@ class OrganizationOperations:
 
         if membership.role == OrganizationRole.OWNER:
             raise PermissionDeniedError("Cannot remove organization owner")
+        if not membership.is_active:
+            return False
 
         await self._session.execute(
             sql_delete(DomainAdmin).where(
@@ -630,7 +656,12 @@ class OrganizationOperations:
             organization_id=org_id,
             user_id=target_user_id,
         )
-        await self._session.delete(membership)
+        # The row stays as history; re-adding through stage_member reactivates it.
+        removed_at = datetime.now(UTC)
+        membership.is_active = False
+        membership.removed_at = removed_at
+        membership.removed_by_user_id = admin_user_id
+        membership.updated_at = removed_at
 
         await write_audit_event(
             self._session,
@@ -644,6 +675,7 @@ class OrganizationOperations:
 
         await self._session.commit()
 
+        await publish_membership_revoke_safe(target_user_id, org_id)
         await call_lifecycle.evict_user(
             self._session,
             target_user_id,

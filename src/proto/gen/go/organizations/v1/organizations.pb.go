@@ -160,10 +160,12 @@ func (x *ListMyOrganizationsResponse) GetOrganizations() []*MyOrganization {
 }
 
 type MyOrganization struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Organization  *v1.OrganizationInfo   `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
-	Role          v1.OrganizationRole    `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.OrganizationRole" json:"role,omitempty"`
-	JoinedAt      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Organization *v1.OrganizationInfo   `protobuf:"bytes,1,opt,name=organization,proto3" json:"organization,omitempty"`
+	Role         v1.OrganizationRole    `protobuf:"varint,2,opt,name=role,proto3,enum=common.v1.OrganizationRole" json:"role,omitempty"`
+	JoinedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=joined_at,json=joinedAt,proto3" json:"joined_at,omitempty"`
+	// Listed but cannot be entered until a platform operator lifts the suspension.
+	Suspended     bool `protobuf:"varint,4,opt,name=suspended,proto3" json:"suspended,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -217,6 +219,13 @@ func (x *MyOrganization) GetJoinedAt() *timestamppb.Timestamp {
 		return x.JoinedAt
 	}
 	return nil
+}
+
+func (x *MyOrganization) GetSuspended() bool {
+	if x != nil {
+		return x.Suspended
+	}
+	return false
 }
 
 type OrganizationDetail struct {
@@ -2739,11 +2748,12 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"$organizations/v1/organizations.proto\x12\x10organizations.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1c\n" +
 	"\x1aListMyOrganizationsRequest\"e\n" +
 	"\x1bListMyOrganizationsResponse\x12F\n" +
-	"\rorganizations\x18\x01 \x03(\v2 .organizations.v1.MyOrganizationR\rorganizations\"\xbb\x01\n" +
+	"\rorganizations\x18\x01 \x03(\v2 .organizations.v1.MyOrganizationR\rorganizations\"\xd9\x01\n" +
 	"\x0eMyOrganization\x12?\n" +
 	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\x12/\n" +
 	"\x04role\x18\x02 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x127\n" +
-	"\tjoined_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt\"\xb6\x01\n" +
+	"\tjoined_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\bjoinedAt\x12\x1c\n" +
+	"\tsuspended\x18\x04 \x01(\bR\tsuspended\"\xb6\x01\n" +
 	"\x12OrganizationDetail\x12?\n" +
 	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\x12!\n" +
 	"\fmember_count\x18\x02 \x01(\x05R\vmemberCount\x12\x1f\n" +

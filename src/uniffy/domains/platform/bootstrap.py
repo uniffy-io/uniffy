@@ -34,6 +34,7 @@ async def _bootstrap_deployment_locked(
     # Lazy imports avoid the auth-module circular dependency.
     from uniffy.core.auth.passwords.crypto import hash_password
     from uniffy.core.models import Organization, User
+    from uniffy.core.models.login.organization_member import OrganizationMemberSource
     from uniffy.infrastructure.database.session import open_session
 
     logger.info("Checking deployment state...")
@@ -116,6 +117,7 @@ async def _bootstrap_deployment_locked(
                 owner_user_id=admin_user.id,
                 plan="enterprise",
                 search_indexer=search_indexer,
+                owner_source=OrganizationMemberSource.BOOTSTRAP,
             )
             logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
 

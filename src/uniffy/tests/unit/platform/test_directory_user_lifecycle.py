@@ -1,12 +1,13 @@
-"""Operator-side account lifecycle: activation, identity edits, member caps."""
+"""Operator-side account lifecycle: activation, identity edits, org shutdown, member caps."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.audit.writer import email_hash
 from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.models.calls import CallEndReason
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.domains.organizations.operations import OrganizationOperations
@@ -229,28 +230,48 @@ class TestUpdateUserAuditAndRevocation:
         session.commit.assert_not_awaited()
 
 
-class TestOrganizationDeletion:
-    async def test_member_ids_are_serialized_in_the_audit_payload(self) -> None:
+_ORG_SLUG = "e2e-tenant"
+
+
+class TestOrganizationShutdown:
+    @pytest.mark.parametrize(
+        ("method", "extra_kwargs", "end_reason"),
+        [
+            ("suspend_organization", {}, CallEndReason.ORG_SUSPENDED),
+            ("delete_organization", {"confirm_slug": _ORG_SLUG}, CallEndReason.ORG_DELETED),
+        ],
+    )
+    async def test_members_are_notified_without_a_token_version_bump(
+        self,
+        method: str,
+        extra_kwargs: dict[str, str],
+        end_reason: CallEndReason,
+    ) -> None:
         actor_id = generate_id()
         organization_id = generate_id()
-        member_id = generate_id()
+        members = [_make_user(email="a@example.com"), _make_user(email="b@example.com")]
+        events: list[str] = []
         session = MagicMock()
         session.add = MagicMock()
-        session.commit = AsyncMock()
+        session.execute = AsyncMock(
+            return_value=MagicMock(all=lambda: [(member.id,) for member in members])
+        )
+        session.commit = AsyncMock(side_effect=lambda: events.append("commit"))
+        call_lifecycle = AsyncMock()
 
-        ops = PlatformDirectoryOperations(session, AsyncMock())
+        ops = PlatformDirectoryOperations(session, call_lifecycle)
         ops._user_ops.require_system_admin = AsyncMock(return_value=_make_user())
         org = MagicMock(
             id=organization_id,
-            slug="e2e-tenant",
+            slug=_ORG_SLUG,
             deleted_at=None,
+            is_suspended=False,
         )
         ops._require_org = AsyncMock(return_value=org)
-        ops._bump_member_token_versions = AsyncMock(return_value=[member_id])
-        ops._publish_member_token_revokes = AsyncMock()
         ops._enqueue_org_deleted_emails = AsyncMock()
         ops.get_organization = AsyncMock(return_value="detail")
         audit = AsyncMock()
+        publish = AsyncMock(side_effect=lambda *_: events.append("publish"))
 
         with (
             patch(
@@ -262,22 +283,29 @@ class TestOrganizationDeletion:
                 audit,
             ),
             patch(
-                "uniffy.domains.platform.directory.operations.invalidate_user_profile",
-                AsyncMock(),
+                "uniffy.domains.platform.directory.operations.publish_membership_revoke_safe",
+                publish,
             ),
         ):
-            result = await ops.delete_organization(
+            result = await getattr(ops, method)(
                 user_id=actor_id,
                 organization_id=organization_id,
-                confirm_slug=org.slug,
                 reason="E2E cleanup",
+                **extra_kwargs,
             )
 
         assert result == "detail"
-        assert audit.await_args.kwargs["details"]["member_token_versions_bumped"] == [
-            str(member_id)
+        assert audit.await_args.kwargs["details"]["members_notified"] == [
+            str(member.id) for member in members
         ]
         session.commit.assert_awaited_once()
+        assert all(member.token_version == 1 for member in members)
+        assert not any(isinstance(c.args[0], User) for c in session.add.call_args_list)
+        assert publish.await_args_list == [call(member.id, organization_id) for member in members]
+        assert events == ["commit", "publish", "publish"]
+        call_lifecycle.end_for_organization.assert_awaited_once_with(
+            session, organization_id, end_reason
+        )
 
 
 class TestCreateUserTransaction:

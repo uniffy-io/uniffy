@@ -63,6 +63,8 @@ message MyOrganization {
   common.v1.OrganizationInfo organization = 1;
   common.v1.OrganizationRole role = 2;
   google.protobuf.Timestamp joined_at = 3;
+  // Listed but cannot be entered until a platform operator lifts the suspension.
+  bool suspended = 4;
 }
 
 message OrganizationDetail {

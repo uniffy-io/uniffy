@@ -5,6 +5,7 @@ import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { setCredentials } from "@/features/auth/store/authSlice";
@@ -26,7 +27,6 @@ import {
   Buildings,
   SignOut,
   ArrowRight,
-  Plus,
   CircleNotch,
   ShieldWarning,
   WarningCircle,
@@ -288,26 +288,15 @@ export function OrganizationPicker() {
                 <Buildings className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="text-foreground font-medium mb-1">No workspaces yet</p>
-              <p className="text-sm text-muted-foreground mb-6">
+              <p className={cn("text-sm text-muted-foreground", user?.isSystemAdmin && "mb-6")}>
                 {user?.isSystemAdmin
                   ? "You are a platform operator with no tenant membership. Open the platform console to manage the deployment."
-                  : "You are not a member of any organization."}
+                  : "Ask an organization admin to invite you."}
               </p>
-              {user?.isSystemAdmin ? (
-                <div className="flex flex-col gap-2">
-                  <Button variant="default" className="gap-2" onClick={() => navigate("/platform")}>
-                    <ShieldWarning className="h-4 w-4" weight="duotone" />
-                    Open platform console
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Create New Organization
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="outline" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create New Organization
+              {user?.isSystemAdmin && (
+                <Button variant="default" className="gap-2" onClick={() => navigate("/platform")}>
+                  <ShieldWarning className="h-4 w-4" weight="duotone" />
+                  Open platform console
                 </Button>
               )}
             </Card>
@@ -342,17 +331,22 @@ export function OrganizationPicker() {
               {organizations.map((myOrg, index) => {
                 const slug = myOrg.organization?.slug || "";
                 const isSelecting = selectingSlug === slug;
+                const isSuspended = myOrg.suspended;
 
                 return (
                   <button
                     key={myOrg.organization?.id}
-                    onClick={() => handleSelectOrg(slug)}
-                    disabled={selectingSlug !== null}
+                    type="button"
+                    onClick={isSuspended ? undefined : () => handleSelectOrg(slug)}
+                    disabled={!isSuspended && selectingSlug !== null}
+                    aria-disabled={isSuspended ? "true" : undefined}
                     className={cn(
-                      "w-full text-left rounded-xl transition-shadow duration-150 group cursor-pointer opacity-0",
-                      isSelecting
-                        ? "bg-primary/5 shadow-edge-primary"
-                        : "bg-surface shadow-edge hover:shadow-edge-strong",
+                      "w-full text-left rounded-xl transition-shadow duration-150 group opacity-0",
+                      isSuspended
+                        ? "bg-muted shadow-edge cursor-not-allowed"
+                        : isSelecting
+                          ? "bg-primary/5 shadow-edge-primary cursor-pointer"
+                          : "bg-surface shadow-edge hover:shadow-edge-strong cursor-pointer",
                       selectingSlug !== null && !isSelecting && "opacity-60",
                     )}
                     style={{
@@ -361,14 +355,22 @@ export function OrganizationPicker() {
                   >
                     <div className="flex items-center gap-4 p-4">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm"
+                        className={cn(
+                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm",
+                          isSuspended && "grayscale opacity-60",
+                        )}
                         style={getAvatarGradientStyle(myOrg.organization?.name || "?")}
                       >
                         {getInitials(myOrg.organization?.name || "?")}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-foreground truncate">
+                        <div
+                          className={cn(
+                            "font-semibold text-sm truncate",
+                            isSuspended ? "text-muted-foreground" : "text-foreground",
+                          )}
+                        >
                           {myOrg.organization?.name}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
@@ -380,11 +382,16 @@ export function OrganizationPicker() {
                           >
                             {getRoleLabel(myOrg.role)}
                           </span>
+                          {isSuspended && (
+                            <Badge variant="outline" className="px-2 text-muted-foreground">
+                              Suspended
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex-shrink-0">
-                        {isSelecting ? (
+                        {isSuspended ? null : isSelecting ? (
                           <CircleNotch
                             className="h-5 w-5 text-primary"
                             style={{
