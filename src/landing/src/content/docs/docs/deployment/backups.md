@@ -1,6 +1,6 @@
 ---
-title: Backups and Restore
-description: Continuous Postgres backups to S3 with point in time recovery, the master key ritual, what Valkey persistence means for edits not yet saved, what not to bother backing up, and the restore procedures for both install paths.
+title: Back up and restore Uniffy
+description: Protect Uniffy databases, files, encryption keys, and unsaved edits. Set up PostgreSQL backups and restore a VM or Kubernetes deployment.
 sidebar:
   label: Backups and Restore
   order: 5

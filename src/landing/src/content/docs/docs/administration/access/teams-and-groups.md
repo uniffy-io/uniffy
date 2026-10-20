@@ -1,7 +1,8 @@
 ---
-title: Teams and groups
-description: Model your org structure with teams, keep access groups as sharing lists, and know which admin page owns which job. Names are unique per organization.
+title: Manage teams and sharing groups
+description: Model your Uniffy organization with teams and sharing groups. Learn how team leads differ from managers and what changes when a directory controls membership.
 sidebar:
+  label: Teams and groups
   order: 2
 ---
 

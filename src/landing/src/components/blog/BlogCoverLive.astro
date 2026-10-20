@@ -1,0 +1,35 @@
+---
+import BlogCover from "@/components/blog/BlogCover.astro";
+import type { Accent } from "@/lib/blog";
+
+interface Props {
+  seed: string;
+  accent: Accent;
+  number?: string;
+  cover?: ImageMetadata;
+  coverAlt?: string;
+  sizes?: string;
+  class?: string;
+}
+
+const { seed, accent, number, cover, coverAlt, sizes, class: className = "" } = Astro.props;
+---
+
+{
+  cover ? (
+    <BlogCover class={className} seed={seed} accent={accent} number={number} cover={cover} coverAlt={coverAlt} sizes={sizes} eager />
+  ) : (
+    <div class={`relative overflow-hidden ${className}`}>
+      <BlogCover class="absolute inset-0 h-full w-full" seed={seed} accent={accent} number={number} eager />
+      <canvas data-network-canvas class="absolute inset-0 h-full w-full" aria-hidden="true"></canvas>
+    </div>
+  )
+}
+
+<script>
+  import { setupHeroNetwork } from "@/scripts/heroNetwork";
+
+  for (const canvas of document.querySelectorAll<HTMLCanvasElement>("[data-network-canvas]")) {
+    setupHeroNetwork(canvas, "full");
+  }
+</script>

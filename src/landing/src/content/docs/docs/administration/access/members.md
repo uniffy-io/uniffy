@@ -1,7 +1,8 @@
 ---
-title: Members
-description: Invite, promote, demote, and remove people in your organization. Manage outstanding invitations and per member agent quotas.
+title: Manage members and invitations
+description: Invite and remove Uniffy members, assign organization roles, and set agent spend quotas. Understand inactive accounts and what membership changes affect.
 sidebar:
+  label: Members
   order: 1
 ---
 

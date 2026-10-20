@@ -41,6 +41,10 @@
 
   --sl-content-width: 56rem;
   --sl-sidebar-width: 17rem;
+  /* The shared header row is 3.5rem plus its 1px bottom border. */
+  --sl-nav-height: calc(3.5rem + 1px);
+  /* The mobile table of contents is hidden, so reserve no space for it. */
+  --sl-mobile-toc-height: 0rem;
 }
 
 :root[data-theme="light"] {
@@ -78,10 +82,14 @@
   color: #ffffff;
 }
 
+/* Starlight's fixed bar only reserves space; the shared site header inside it
+   draws the row, border, and blur, so docs match every other page exactly. */
 header.header {
-  padding-inline: 0;
-  background-color: #0d111e;
-  border-bottom: 1px solid var(--sl-color-hairline);
+  display: block;
+  height: var(--sl-nav-height);
+  padding: 0;
+  background-color: transparent;
+  border-bottom: 0;
 }
 
 .sidebar-pane {
@@ -100,9 +108,6 @@ mobile-starlight-toc {
   display: none !important;
 }
 
-.site-header > .max-w-7xl {
-  margin-inline: auto;
-}
 
 html {
   font-family: var(--sl-font);

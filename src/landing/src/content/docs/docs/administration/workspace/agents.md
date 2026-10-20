@@ -1,7 +1,8 @@
 ---
-title: Agents
-description: Turn agents on for your organization, hold the provider keys, set the default model, and cap what agents are allowed to spend.
+title: Manage AI providers and budgets
+description: Configure Uniffy AI provider keys, default models, budgets, member quotas, and rate limits. Monitor usage and control how agent runs recover from failures.
 sidebar:
+  label: Agents
   order: 1
 ---
 

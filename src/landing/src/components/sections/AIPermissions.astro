@@ -72,7 +72,7 @@ const demo: DemoLine[] = [
     kind: "user",
     sender: "Teddy Ivanova",
     initials: "TI",
-    avatarColor: "bg-emerald-500",
+    avatarColor: "bg-emerald-700",
     time: "11:02",
     text: "What's left in the agent runtime work? Pull the latest plan and the open tasks.",
   },
@@ -92,7 +92,7 @@ const demo: DemoLine[] = [
     kind: "user",
     sender: "Teddy Ivanova",
     initials: "TI",
-    avatarColor: "bg-emerald-500",
+    avatarColor: "bg-emerald-700",
     time: "11:03",
     text: "Mark the retries task done and bin the old runtime draft.",
   },
@@ -142,13 +142,13 @@ const demo: DemoLine[] = [
       {providers.map((p) => (
         <span class={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 ${p.featured ? "border-accent/40 bg-accent/10 text-accent-strong" : "border-night-hairline bg-night-soft text-night-soft-text"}`}>
           <span>{p.name}</span>
-          <span class={p.featured ? "text-accent-strong/70" : "text-night-faint"}>&middot; {p.note}</span>
+          <span class={p.featured ? "text-accent-strong" : "text-night-faint"}>&middot; {p.note}</span>
         </span>
       ))}
       </div>
     </div>
 
-    <div class="mt-12 grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-stretch md:mt-16">
+    <div data-nosnippet class="mt-12 grid gap-5 sm:gap-6 lg:grid-cols-2 lg:items-stretch md:mt-16">
     <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-night-hairline bg-night-soft shadow-2xl shadow-black/40">
       <div class="flex items-center justify-between border-b border-night-hairline bg-night-band px-5 py-3">
         <div class="flex items-center gap-2.5">
@@ -226,7 +226,7 @@ const demo: DemoLine[] = [
                           {tc.detail && (
                             <>
                               <span class="opacity-50">&middot;</span>
-                              <span class="opacity-80">{tc.detail}</span>
+                              <span>{tc.detail}</span>
                             </>
                           )}
                         </span>
@@ -293,7 +293,7 @@ const demo: DemoLine[] = [
             <p class="font-mono text-[11px] text-night-faint">EngineeringAgent &middot; saved 2m ago</p>
           </div>
         </div>
-        <span class="hidden font-mono text-[11px] text-accent sm:inline">Edit</span>
+        <span class="hidden font-mono text-[11px] text-accent-strong sm:inline">Edit</span>
       </div>
 
       <div class="flex-1 divide-y divide-night-hairline/60">

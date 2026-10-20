@@ -1,6 +1,6 @@
 ---
-title: Account Recovery
-description: Disable two factor authentication on a user account when no admin can perform the reset from inside the app. Self hosted only, command line, audit logged. Also what happens to edits not yet saved when Valkey restarts, and what each live editing close code means.
+title: Recover account access and troubleshoot live editing
+description: Reset two factor authentication on self hosted Uniffy when no admin can help. Troubleshoot unsaved edits after Valkey restarts and live editing close codes.
 sidebar:
   label: Account Recovery
   order: 11

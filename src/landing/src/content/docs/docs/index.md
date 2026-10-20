@@ -1,6 +1,6 @@
 ---
-title: Introduction
-description: What Uniffy is, where the docs live, and which page to open first based on what you came here to do.
+title: Uniffy workspace overview
+description: Explore Uniffy documentation for users, organization admins, and self hosted operators. Find guides to sharing, AI agents, deployment, and privacy.
 sidebar:
   label: Overview
   order: 0

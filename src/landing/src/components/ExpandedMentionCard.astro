@@ -19,6 +19,7 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
 ---
 
 <div
+  data-nosnippet
   data-card-type={card.type}
   class={`expanded-mention-card ${variantClass} group relative block w-80 overflow-hidden rounded-xl border border-hairline bg-paper shadow-[0_1px_2px_rgba(10,10,10,0.04),0_4px_12px_-4px_rgba(10,10,10,0.06)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-ink/15 hover:shadow-[0_2px_4px_rgba(10,10,10,0.04),0_24px_48px_-16px_rgba(10,10,10,0.18),0_8px_24px_-12px_rgba(10,10,10,0.1)] ${className}`}
 >
@@ -555,7 +556,12 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
     --color-ink: #e6edf3;
     --color-ink-soft: #c9d1d9;
     --color-ink-muted: #8b949e;
-    --color-ink-faint: #6e7681;
+    --color-ink-faint: var(--color-night-faint);
+    --color-violet-600: var(--color-violet-400);
+    --color-blue-600: var(--color-blue-400);
+    --color-rose-600: var(--color-rose-400);
+    --color-fuchsia-600: var(--color-fuchsia-400);
+    --color-emerald-600: var(--color-emerald-400);
     --color-hairline: rgba(255, 255, 255, 0.08);
     --color-hairline-strong: rgba(255, 255, 255, 0.14);
   }
@@ -577,6 +583,9 @@ const presenceStyles: Record<string, { dot: string; label: string; text: string 
     line-height: 1.2;
   }
   .card-dark .border-t.bg-paper-soft .text-ink-muted {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--color-night-muted);
+  }
+  .card-dark .text-accent {
+    color: var(--color-accent-strong);
   }
 </style>

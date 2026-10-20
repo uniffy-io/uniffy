@@ -1,6 +1,6 @@
 ---
-title: Principles
-description: The rules we built Uniffy around. One codebase for cloud and self hosted, no analytics, no surveillance, no telemetry, AI on your terms.
+title: Privacy and deployment principles
+description: Read Uniffy's commitments on privacy, optional AI, and one codebase for cloud and self hosted deployments. No analytics, surveillance, or phone home.
 sidebar:
   label: Principles
   order: 1

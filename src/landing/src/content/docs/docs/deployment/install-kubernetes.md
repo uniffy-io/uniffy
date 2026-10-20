@@ -1,6 +1,6 @@
 ---
-title: Install on Kubernetes
-description: Deploy Uniffy on your own Kubernetes cluster with the Helm chart. Prerequisites, the traffic plane contract, the decisions that are yours, and the ones that are not.
+title: Install Uniffy on Kubernetes
+description: Deploy Uniffy with Helm on your Kubernetes cluster. Configure storage, secrets, networking, and media workers, then verify application and call traffic.
 sidebar:
   label: Install on Kubernetes
   order: 2

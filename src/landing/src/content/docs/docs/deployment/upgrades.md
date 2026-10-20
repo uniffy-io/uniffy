@@ -1,6 +1,6 @@
 ---
-title: Upgrades
-description: How Uniffy upgrades work on both install paths. Pinsets, forward only migrations, automatic dumps before every upgrade, and why rollback means restoring the database.
+title: Upgrade Uniffy on a VM or Kubernetes
+description: Upgrade self hosted Uniffy with a verified backup and matching release images. Follow VM and Kubernetes procedures and understand database rollback limits.
 sidebar:
   label: Upgrades
   order: 3

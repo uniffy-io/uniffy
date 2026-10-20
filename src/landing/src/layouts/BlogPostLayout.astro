@@ -1,0 +1,588 @@
+---
+import type { MarkdownHeading } from "astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import AuthorLine from "@/components/blog/AuthorLine.astro";
+import BlogCoverLive from "@/components/blog/BlogCoverLive.astro";
+import BlogCta from "@/components/blog/BlogCta.astro";
+import PostCard from "@/components/blog/PostCard.astro";
+import ReadingProgress from "@/components/blog/ReadingProgress.astro";
+import ShareRow from "@/components/blog/ShareRow.astro";
+import TagChip from "@/components/blog/TagChip.astro";
+import { accentFor, authorOf, formatDate, postUrl, readingMinutes, type Post } from "@/lib/blog";
+
+interface Neighbor {
+  post: Post;
+  number: string;
+}
+
+interface Props {
+  post: Post;
+  number: string;
+  headings: MarkdownHeading[];
+  neighbors: Neighbor[];
+}
+
+const { post, number, headings, neighbors } = Astro.props;
+const accent = accentFor(post);
+const author = authorOf(post);
+const minutes = readingMinutes(post.body);
+const siteUrl = Astro.site!;
+const url = new URL(postUrl(post), siteUrl).href;
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const showToc = toc.length >= 2;
+const publishedAt = post.data.publishedAt;
+const updatedAt =
+  post.data.updatedAt && post.data.updatedAt.getTime() > publishedAt.getTime() ? post.data.updatedAt : undefined;
+const image = post.data.cover ? post.data.cover.src : "/og.png";
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: publishedAt.toISOString(),
+  dateModified: (updatedAt ?? publishedAt).toISOString(),
+  author: { "@type": author.schemaType, name: author.name, url: author.url },
+  publisher: {
+    "@type": "Organization",
+    name: "Uniffy",
+    url: siteUrl.href,
+    logo: new URL("/web-app-manifest-512x512.png", siteUrl).href,
+  },
+  image: new URL(image, siteUrl).href,
+  mainEntityOfPage: url,
+  url,
+  keywords: post.data.tags.join(", "),
+  isPartOf: { "@type": "Blog", name: "Uniffy Blog", url: new URL("/blog/", siteUrl).href },
+};
+---
+
+<BaseLayout
+  title={`${post.data.title} | Uniffy`}
+  description={post.data.description}
+  image={image}
+  ogType="article"
+  article={{
+    publishedTime: publishedAt.toISOString(),
+    modifiedTime: updatedAt?.toISOString(),
+    tags: post.data.tags,
+  }}
+  jsonLd={jsonLd}
+  noindex={post.data.draft}
+>
+  <ReadingProgress />
+
+  <article>
+    <header class="post-hero relative overflow-hidden px-5 pt-10 pb-10 sm:px-6 md:px-10 md:pt-16 md:pb-14">
+      <div class="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div class="post-hero__grid absolute inset-0"></div>
+        <div class="post-hero__aurora" style={`--hero-rgb:${accent.rgb}`}></div>
+      </div>
+
+      <div class="relative mx-auto max-w-7xl lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-center lg:gap-12 xl:grid-cols-[minmax(0,1fr)_24rem] xl:gap-16">
+        <div class="max-w-3xl">
+        <a
+          href="/blog/"
+          class="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors hover:text-night-text"
+        >
+          <svg viewBox="0 0 256 256" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+            <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
+          </svg>
+          Blog
+        </a>
+
+        <div class="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-night-faint">
+          <span class="text-accent-strong">No. {number}</span>
+          {post.data.tags.length > 0 && <span aria-hidden="true">&middot;</span>}
+          {post.data.tags.map((tag) => <TagChip tag={tag} />)}
+          <span aria-hidden="true">&middot;</span>
+          <time datetime={publishedAt.toISOString()}>{formatDate(publishedAt)}</time>
+          <span aria-hidden="true">&middot;</span>
+          <span>{minutes} min read</span>
+          {post.data.draft && (
+            <span class="rounded-full border border-brand-orange/50 bg-brand-orange/10 px-2 py-0.5 text-brand-orange">Draft</span>
+          )}
+        </div>
+
+        <h1 class="post-hero__title mt-5 font-sans font-semibold text-night-text">{post.data.title}</h1>
+
+        <p class="mt-6 max-w-2xl text-lg leading-relaxed text-night-soft-text sm:text-xl">{post.data.description}</p>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+          <AuthorLine author={author} accentHex={accent.hex} link />
+          {updatedAt && (
+            <p class="font-mono text-[11px] uppercase tracking-[0.12em] text-night-faint">
+              Updated <time datetime={updatedAt.toISOString()}>{formatDate(updatedAt)}</time>
+            </p>
+          )}
+        </div>
+        </div>
+
+        <div class={post.data.cover ? "mt-10 lg:mt-0" : "hidden lg:block"}>
+          <BlogCoverLive
+            class="aspect-[16/10] rounded-2xl border border-night-hairline shadow-2xl shadow-black/50 lg:aspect-square"
+            seed={post.id}
+            accent={accent}
+            number={number}
+            cover={post.data.cover}
+            coverAlt={post.data.coverAlt}
+            sizes="(min-width: 1280px) 24rem, (min-width: 1024px) 21rem, 100vw"
+          />
+        </div>
+      </div>
+    </header>
+
+    <div class="bg-night-gradient px-5 py-12 sm:px-6 md:px-10 md:py-16">
+      <div class="post-body mx-auto max-w-[44rem] xl:grid xl:max-w-7xl xl:grid-cols-[12rem_minmax(0,44rem)_14rem] xl:justify-center xl:gap-14">
+        <aside class="hidden xl:block">
+          <div class="sticky top-24">
+            <p class="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-night-faint">Share</p>
+            <ShareRow url={url} title={post.data.title} vertical />
+          </div>
+        </aside>
+
+        <div class="min-w-0">
+          {showToc && (
+            <details class="post-toc-mobile mb-10 rounded-xl border border-night-hairline bg-night-soft xl:hidden">
+              <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted">
+                On this page
+                <svg viewBox="0 0 256 256" class="post-toc-mobile__caret h-3.5 w-3.5 transition-transform" fill="currentColor" aria-hidden="true">
+                  <path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z" />
+                </svg>
+              </summary>
+              <ol class="post-toc border-t border-night-hairline px-4 py-3">
+                {toc.map((heading) => (
+                  <li class:list={[heading.depth === 3 && "post-toc__sub"]}>
+                    <a href={`#${heading.slug}`}>{heading.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
+
+          <div class="blog-prose" data-blog-prose>
+            <slot />
+          </div>
+
+          <footer class="mt-14 border-t border-night-hairline pt-8">
+            <div class="flex flex-wrap items-center justify-between gap-6">
+              <div class="flex flex-wrap items-center gap-2">
+                {post.data.tags.map((tag) => <TagChip tag={tag} />)}
+              </div>
+              <div class="flex items-center gap-3 xl:hidden">
+                <span class="font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-night-faint">Share</span>
+                <ShareRow url={url} title={post.data.title} />
+              </div>
+            </div>
+            <div class="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-night-hairline bg-night-soft px-5 py-4">
+              <AuthorLine author={author} accentHex={accent.hex} link />
+              <a
+                href="/blog/rss.xml"
+                class="inline-flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors hover:text-night-text"
+              >
+                <svg viewBox="0 0 256 256" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+                  <path d="M106.91,149.09A71.53,71.53,0,0,1,128,200a8,8,0,0,1-16,0,56,56,0,0,0-56-56,8,8,0,0,1,0-16A71.53,71.53,0,0,1,106.91,149.09ZM56,80a8,8,0,0,0,0,16A104,104,0,0,1,160,200a8,8,0,0,0,16,0A120,120,0,0,0,56,80Zm118.79,1.21A166.9,166.9,0,0,0,56,32a8,8,0,0,0,0,16A151,151,0,0,1,163.48,92.52,151,151,0,0,1,208,200a8,8,0,0,0,16,0A166.9,166.9,0,0,0,174.79,81.21ZM60,184a12,12,0,1,0,12,12A12,12,0,0,0,60,184Z" />
+                </svg>
+                Subscribe
+              </a>
+            </div>
+          </footer>
+        </div>
+
+        <aside class="hidden xl:block">
+          {showToc && (
+            <nav class="sticky top-24" aria-label="On this page">
+              <p class="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-night-faint">On this page</p>
+              <ol class="post-toc post-toc--rail border-l border-night-hairline" data-post-toc>
+                {toc.map((heading) => (
+                  <li class:list={[heading.depth === 3 && "post-toc__sub"]}>
+                    <a href={`#${heading.slug}`} data-toc-link={heading.slug}>{heading.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+        </aside>
+      </div>
+    </div>
+  </article>
+
+  {neighbors.length > 0 && (
+    <section class="border-t border-night-hairline bg-night-gradient px-5 py-14 sm:px-6 md:px-10 md:py-20">
+      <div class="mx-auto max-w-7xl">
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="font-mono text-xs font-bold uppercase tracking-[0.18em] text-night-faint">Keep reading</h2>
+          <a href="/blog/" class="font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors hover:text-night-text">
+            All posts &rarr;
+          </a>
+        </div>
+        <div class="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2">
+          {neighbors.map((neighbor, index) => (
+            <PostCard post={neighbor.post} number={neighbor.number} index={index} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <BlogCta />
+</BaseLayout>
+
+<style>
+  .post-hero {
+    background-color: #0a0d1a;
+  }
+  .post-hero::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      rgba(105, 74, 255, 0.7) 0%,
+      rgba(253, 126, 234, 0.6) 40%,
+      rgba(255, 85, 0, 0.55) 70%,
+      rgba(1, 183, 127, 0.6) 100%
+    );
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  .post-hero__grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.028) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.028) 1px, transparent 1px);
+    background-size: 60px 60px;
+    background-position: center;
+    -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 30%, #000 20%, transparent 80%);
+    mask-image: radial-gradient(ellipse 60% 70% at 50% 30%, #000 20%, transparent 80%);
+  }
+  .post-hero__aurora {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 60vw;
+    height: 60vw;
+    max-width: 820px;
+    max-height: 820px;
+    border-radius: 9999px;
+    transform: translate(-50%, -55%);
+    background: radial-gradient(circle, rgba(var(--hero-rgb), 0.26) 0%, rgba(var(--hero-rgb), 0) 68%);
+    filter: blur(90px);
+  }
+  .post-hero__title {
+    font-size: clamp(2rem, 5.2vw, 3.5rem);
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+
+  .post-toc-mobile[open] .post-toc-mobile__caret {
+    transform: rotate(180deg);
+  }
+  .post-toc-mobile summary::-webkit-details-marker {
+    display: none;
+  }
+</style>
+
+<style is:global>
+  .post-toc a {
+    display: block;
+    padding: 0.3rem 0;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--color-night-muted);
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+  .post-toc a:hover {
+    color: var(--color-night-text);
+  }
+  .post-toc__sub a {
+    padding-left: 0.9rem;
+    font-size: 0.75rem;
+  }
+  .post-toc--rail a {
+    margin-left: -1px;
+    padding-left: 0.9rem;
+    border-left: 1px solid transparent;
+  }
+  .post-toc--rail .post-toc__sub a {
+    padding-left: 1.7rem;
+  }
+  .post-toc--rail a.is-active {
+    color: var(--color-accent-strong);
+    border-left-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* Starlight's code block theme reads these variables from :root; the docs
+     stylesheet that defines them is not loaded outside the docs. */
+  :root {
+    --__sl-font: var(--font-sans);
+    --__sl-font-mono: var(--font-mono);
+    --sl-color-text: #e6edf3;
+    --sl-color-white: #e6edf3;
+    --sl-color-black: #0d111e;
+    --sl-color-gray-1: #c9d1d9;
+    --sl-color-gray-2: #8b949e;
+    --sl-color-gray-3: #6e7681;
+    --sl-color-gray-4: #444c56;
+    --sl-color-gray-5: #30363d;
+    --sl-color-gray-6: #1c2128;
+    --sl-color-gray-7: #151b23;
+    --sl-color-accent: #694aff;
+    --sl-color-accent-high: #c4bbff;
+    --sl-color-bg: #0d111e;
+    --sl-text-code: 0.875rem;
+    --sl-line-height: 1.65;
+  }
+
+  .blog-prose {
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    font-weight: 430;
+    color: var(--color-night-soft-text);
+  }
+  @media (min-width: 640px) {
+    .blog-prose {
+      font-size: 1.125rem;
+    }
+  }
+  .blog-prose > * + * {
+    margin-top: 1.25em;
+  }
+  .blog-prose > *:first-child {
+    margin-top: 0;
+  }
+  .blog-prose h2,
+  .blog-prose h3,
+  .blog-prose h4 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    color: var(--color-night-text);
+    scroll-margin-top: 5.5rem;
+    text-wrap: balance;
+  }
+  .blog-prose h2 {
+    margin-top: 2.6em;
+    font-size: 1.625rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+  .blog-prose h3 {
+    margin-top: 2em;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+  .blog-prose h4 {
+    margin-top: 1.75em;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+  .blog-prose h2 + *,
+  .blog-prose h3 + *,
+  .blog-prose h4 + * {
+    margin-top: 0.75em;
+  }
+  .blog-prose a {
+    color: var(--color-accent-strong);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: rgba(155, 138, 255, 0.45);
+    text-underline-offset: 0.2em;
+    transition:
+      color 0.15s ease,
+      text-decoration-color 0.15s ease;
+  }
+  .blog-prose a:hover {
+    color: #c4bbff;
+    text-decoration-color: currentColor;
+  }
+  .blog-prose strong {
+    color: var(--color-night-text);
+    font-weight: 600;
+  }
+  .blog-prose em {
+    font-style: italic;
+  }
+  .blog-prose ul,
+  .blog-prose ol {
+    padding-left: 1.5rem;
+  }
+  .blog-prose ul {
+    list-style: disc;
+  }
+  .blog-prose ol {
+    list-style: decimal;
+  }
+  .blog-prose li + li {
+    margin-top: 0.5em;
+  }
+  .blog-prose li > ul,
+  .blog-prose li > ol {
+    margin-top: 0.5em;
+  }
+  .blog-prose ul > li::marker {
+    color: var(--color-accent-strong);
+  }
+  .blog-prose ol > li::marker {
+    color: var(--color-night-faint);
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  .blog-prose blockquote {
+    margin: 2em 0;
+    padding: 0.25rem 0 0.25rem 1.5rem;
+    border-left: 2px solid var(--color-accent);
+    font-size: 1.15em;
+    line-height: 1.6;
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    color: var(--color-night-text);
+  }
+  .blog-prose blockquote p + p {
+    margin-top: 0.75em;
+  }
+  .blog-prose hr {
+    margin: 3em 0;
+    height: 1px;
+    border: 0;
+    background: linear-gradient(90deg, transparent, var(--color-night-hairline-strong), transparent);
+  }
+  .blog-prose code:not(pre code):not(.expressive-code *) {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    padding: 0.1em 0.4em;
+    border: 1px solid var(--color-night-hairline);
+    border-radius: 4px;
+    background: var(--color-night-band);
+    color: var(--color-night-text);
+    overflow-wrap: anywhere;
+  }
+  .blog-prose kbd {
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    padding: 0.1em 0.45em;
+    border: 1px solid var(--color-night-hairline-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    background: var(--color-night-soft);
+    color: var(--color-night-text);
+  }
+  .blog-prose pre:not(.expressive-code *) {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--color-night-hairline);
+    border-radius: 0.75rem;
+    background: var(--color-night-soft);
+    font-size: 0.875rem;
+    line-height: 1.65;
+    overflow-x: auto;
+  }
+  .blog-prose .expressive-code {
+    --ec-brdRad: 0.625rem;
+    margin-top: 1.75em;
+    margin-bottom: 1.75em;
+  }
+  .blog-prose img,
+  .blog-prose video {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-night-hairline);
+    border-radius: 0.75rem;
+    background: var(--color-night-soft);
+  }
+  .blog-prose p:has(> img:only-child),
+  .blog-prose p:has(> img:first-child + em:last-child) {
+    margin-top: 2em;
+    margin-bottom: 2em;
+  }
+  .blog-prose p > img + em {
+    display: block;
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-style: normal;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--color-night-faint);
+  }
+  .blog-prose table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+  .blog-prose th,
+  .blog-prose td {
+    padding: 0.65rem 0.85rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--color-night-hairline);
+  }
+  .blog-prose th {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-night-faint);
+    border-bottom-color: var(--color-night-hairline-strong);
+    white-space: nowrap;
+  }
+  .blog-prose tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .blog-prose td code {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .blog-prose td:first-child,
+  .blog-prose th:first-child {
+    padding-left: 0;
+  }
+  .blog-prose td:last-child,
+  .blog-prose th:last-child {
+    padding-right: 0;
+  }
+</style>
+
+<script>
+  function setupTocSpy() {
+    const prose = document.querySelector<HTMLElement>("[data-blog-prose]");
+    const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-toc-link]"));
+    if (!prose || links.length === 0) return;
+
+    const byId = new Map(links.map((link) => [link.dataset.tocLink!, link]));
+    const headings = Array.from(prose.querySelectorAll<HTMLElement>("h2[id], h3[id]")).filter((h) => byId.has(h.id));
+    if (headings.length === 0) return;
+
+    const setActive = (id: string) => {
+      for (const [linkId, link] of byId) link.classList.toggle("is-active", linkId === id);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length > 0) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-15% 0px -70% 0px", threshold: [0, 1] },
+    );
+    headings.forEach((heading) => observer.observe(heading));
+    setActive(headings[0].id);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupTocSpy, { once: true });
+  } else {
+    setupTocSpy();
+  }
+</script>

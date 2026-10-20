@@ -1,6 +1,6 @@
 ---
-title: Behind an Edge
-description: Running Cloudflare, a CDN, a WAF, or a corporate load balancer in front of Uniffy. What must pass untouched, what to switch off, and where the TURN record must never point.
+title: Configure reverse proxies and Cloudflare
+description: Run Uniffy behind Cloudflare, a WAF, or a load balancer. Configure DNS, TLS, streaming, WebSockets, client addresses, and TURN routing.
 sidebar:
   label: Behind an Edge
   order: 10

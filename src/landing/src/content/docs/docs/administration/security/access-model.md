@@ -1,7 +1,8 @@
 ---
-title: Access and privacy
-description: What an admin can and cannot see. You run the organization, but you cannot open your members' private content.
+title: Admin permissions and content privacy
+description: Understand Uniffy's admin access boundaries. Private content stays private, with separate rules for chat moderation and audited support sessions.
 sidebar:
+  label: Access and privacy
   order: 1
 ---
 

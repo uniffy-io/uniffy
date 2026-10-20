@@ -26,6 +26,7 @@ const columns: { title: string; links: FooterLink[] }[] = [
     title: "Resources",
     links: [
       { href: "/docs/", label: "Docs" },
+      { href: "/blog/", label: "Blog" },
       { href: "/faq", label: "FAQ" },
       { href: "https://feedback.uniffy.io", label: "Feedback", external: true },
       { href: "https://status.uniffy.io", label: "Status", external: true },
@@ -64,9 +65,9 @@ const columns: { title: string; links: FooterLink[] }[] = [
       {
         columns.map((col) => (
           <div>
-            <h4 class="text-xs font-medium uppercase tracking-wider text-night-faint">
+            <h2 class="text-xs font-medium uppercase tracking-wider text-night-faint">
               {col.title}
-            </h4>
+            </h2>
             <ul class="mt-4 space-y-3">
               {col.links.map((link) => (
                 <li>

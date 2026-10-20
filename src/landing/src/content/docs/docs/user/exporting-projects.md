@@ -1,7 +1,8 @@
 ---
-title: Exporting projects
-description: Take your tasks out of Uniffy as a CSV file. One project or many, the whole thing or exactly what a view shows, with sprints, activity and comments when you want them.
+title: Export projects and tasks to CSV
+description: Export Uniffy tasks from a saved view, one project, or several projects. Include sprints, activity, and comments in a downloadable bundle.
 sidebar:
+  label: Exporting projects
   order: 6
 ---
 

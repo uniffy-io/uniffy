@@ -57,7 +57,9 @@ export default defineConfig({
       ],
       disable404Route: true,
     }),
-    sitemap(),
+    sitemap({
+      filter: (page) => new URL(page).pathname.replace(/\/$/, "") !== "/cloud",
+    }),
   ],
   vite: {
     plugins: [tailwindcss()],

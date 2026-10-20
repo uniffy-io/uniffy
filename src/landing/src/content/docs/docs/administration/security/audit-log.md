@@ -1,6 +1,6 @@
 ---
 title: Audit log
-description: The record of who did what in your organization. Who can read it, what each entry shows, what Uniffy never records, and the full list of events you can filter on.
+description: Review and export your Uniffy organization's audit log. Find recorded events, retention rules, who can read entries, and which sensitive data stays out.
 sidebar:
   order: 2
 ---

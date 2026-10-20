@@ -1,0 +1,49 @@
+---
+import type { Author } from "@/data/blog/authors";
+
+interface Props {
+  author: Author;
+  accentHex?: string;
+  meta?: string;
+  link?: boolean;
+  compact?: boolean;
+  class?: string;
+}
+
+const { author, accentHex = "#694aff", meta, link = false, compact = false, class: className = "" } = Astro.props;
+---
+
+<div class:list={["flex items-center", compact ? "gap-2.5" : "gap-3", className]}>
+  <span
+    class:list={[
+      "author-avatar grid shrink-0 place-items-center rounded-full font-sans font-bold text-white",
+      compact ? "h-7 w-7 text-[10px]" : "h-10 w-10 text-xs",
+    ]}
+    style={`--author-accent:${accentHex}`}
+    aria-hidden="true"
+  >
+    {author.initials}
+  </span>
+  <div class="min-w-0 leading-tight">
+    <p class:list={["truncate font-semibold text-night-text", compact ? "text-xs" : "text-sm"]}>
+      {link && author.url ? (
+        <a href={author.url} target="_blank" rel="noreferrer" class="relative z-10 hover:text-accent-strong">{author.name}</a>
+      ) : (
+        author.name
+      )}
+    </p>
+    {!compact && (
+      <p class="truncate font-mono text-[11px] text-night-faint">
+        {author.role}
+        {meta && <Fragment> &middot; {meta}</Fragment>}
+      </p>
+    )}
+  </div>
+</div>
+
+<style>
+  .author-avatar {
+    background: linear-gradient(135deg, var(--author-accent) 0%, rgba(255, 255, 255, 0.18) 140%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
+</style>

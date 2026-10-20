@@ -1,6 +1,6 @@
 ---
-title: Admins and Operators
-description: The two admin jobs in a Uniffy deployment. What an org admin runs, what the platform operator runs, the wall between them, and whether to hold both roles in one account.
+title: Organization admins and platform operators
+description: Understand Uniffy's organization admin and platform operator roles. Learn their access boundaries and when to use separate accounts in a self hosted deployment.
 sidebar:
   label: Admins and Operators
   order: 8

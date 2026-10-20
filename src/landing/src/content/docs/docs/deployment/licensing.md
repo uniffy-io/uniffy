@@ -1,6 +1,6 @@
 ---
-title: Licensing
-description: How Uniffy licensing works. Open source under the Functional Source License, free to self host with no user limit, and every release becomes Apache 2.0 after two years.
+title: Uniffy licensing and self hosting
+description: Understand Uniffy's Functional Source License, free self hosting with no user limit, and each release's conversion to Apache 2.0 after two years.
 sidebar:
   label: Licensing
   order: 12

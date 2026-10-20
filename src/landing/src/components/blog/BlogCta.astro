@@ -1,0 +1,46 @@
+---
+---
+
+<section class="border-t border-night-hairline bg-night-gradient px-5 py-16 sm:px-6 md:px-10 md:py-24">
+  <div class="blog-cta relative mx-auto max-w-7xl overflow-hidden rounded-3xl border border-night-hairline bg-night-soft px-6 py-12 sm:px-10 sm:py-16 md:px-16 md:py-20">
+    <div class="blog-cta__aurora pointer-events-none absolute" aria-hidden="true"></div>
+    <div class="relative flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+      <div class="max-w-2xl">
+        <p class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-accent-strong">Try it</p>
+        <h2 class="mt-4 font-sans text-3xl font-semibold tracking-[-0.025em] text-night-text text-balance sm:text-4xl md:text-[2.75rem] md:leading-[1.08]">
+          The product we write about is one click away.
+        </h2>
+        <p class="mt-4 max-w-xl text-base leading-relaxed text-night-soft-text sm:text-lg">
+          Free to self host with no user limit. Or start on cloud and have a workspace for your team in a minute.
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <a
+          href="/cloud"
+          class="inline-flex items-center gap-2 rounded-full bg-paper px-6 py-3 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+        >
+          Start free
+          <span aria-hidden>&rarr;</span>
+        </a>
+        <a
+          href="/docs/deployment/"
+          class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-6 py-3 text-sm font-medium text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+        >
+          Self host
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .blog-cta__aurora {
+    right: -10%;
+    top: -60%;
+    width: 60%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(105, 74, 255, 0.28) 0%, rgba(253, 126, 234, 0.08) 45%, rgba(13, 17, 30, 0) 70%);
+    filter: blur(40px);
+  }
+</style>

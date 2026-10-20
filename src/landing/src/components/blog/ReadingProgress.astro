@@ -1,0 +1,40 @@
+---
+---
+
+<div class="reading-progress" aria-hidden="true"></div>
+
+<style>
+  /* Scroll driven, no script. Browsers without animation-timeline get no bar. */
+  .reading-progress {
+    position: fixed;
+    top: 3.5rem;
+    left: 0;
+    right: 0;
+    z-index: 49;
+    height: 2px;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: linear-gradient(
+      90deg,
+      rgba(105, 74, 255, 0.95) 0%,
+      rgba(253, 126, 234, 0.9) 45%,
+      rgba(255, 85, 0, 0.85) 75%,
+      rgba(1, 183, 127, 0.9) 100%
+    );
+    animation: reading-progress linear both;
+    animation-timeline: scroll(root);
+    pointer-events: none;
+  }
+
+  @keyframes reading-progress {
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  @supports not (animation-timeline: scroll()) {
+    .reading-progress {
+      display: none;
+    }
+  }
+</style>

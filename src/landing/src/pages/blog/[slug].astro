@@ -1,0 +1,41 @@
+---
+import { render } from "astro:content";
+import BlogPostLayout from "@/layouts/BlogPostLayout.astro";
+import { entryNumbers, getPosts, type Post } from "@/lib/blog";
+
+interface Neighbor {
+  post: Post;
+  number: string;
+}
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  const numbers = entryNumbers(posts);
+  const neighbor = (post: Post | undefined): Neighbor | undefined =>
+    post ? { post, number: numbers.get(post.id)! } : undefined;
+
+  return posts.map((post, index) => ({
+    params: { slug: post.id },
+    props: {
+      post,
+      number: numbers.get(post.id)!,
+      neighbors: [neighbor(posts[index + 1]), neighbor(posts[index - 1])].filter(
+        (entry): entry is Neighbor => entry !== undefined,
+      ),
+    },
+  }));
+}
+
+interface Props {
+  post: Post;
+  number: string;
+  neighbors: Neighbor[];
+}
+
+const { post, number, neighbors } = Astro.props;
+const { Content, headings } = await render(post);
+---
+
+<BlogPostLayout post={post} number={number} headings={headings} neighbors={neighbors}>
+  <Content />
+</BlogPostLayout>
