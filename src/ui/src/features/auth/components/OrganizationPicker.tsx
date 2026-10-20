@@ -132,18 +132,12 @@ export function OrganizationPicker() {
         if (!current?.refreshToken || current.user?.id !== user?.id)
           throw new Error("Session changed");
         const client = createClient(AuthService, publicUnaryTransport);
-        const response = await client.switchOrganization({
+        const r = await client.refreshToken({
           refreshToken: current.refreshToken,
           organizationSlug: orgSlug,
         });
         if (readStoredAuth()?.refreshToken !== current.refreshToken)
           throw new Error("Session changed");
-        const r = response.authResult;
-        if (!r) {
-          setError("Failed to switch to organization.");
-          setSelectingSlug(null);
-          return;
-        }
 
         clearSessionCaches(dispatch);
         dispatch(resetOrganizationScope());

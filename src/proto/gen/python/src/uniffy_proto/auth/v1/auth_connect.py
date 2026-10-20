@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import auth_pb
-from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, SwitchOrganizationRequest, SwitchOrganizationResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
+from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -48,7 +48,8 @@ class AuthService(Protocol):
 
     async def refresh_token(self, request: RefreshTokenRequest, ctx: RequestContext[RefreshTokenRequest, RefreshTokenResponse], /) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -79,14 +80,6 @@ class AuthService(Protocol):
     async def revoke_other_sessions(self, request: RevokeOtherSessionsRequest, ctx: RequestContext[RevokeOtherSessionsRequest, RevokeOtherSessionsResponse], /) -> RevokeOtherSessionsResponse:
         """
         Revoke all sessions except the current one
-        """
-        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
-
-    async def switch_organization(self, request: SwitchOrganizationRequest, ctx: RequestContext[SwitchOrganizationRequest, SwitchOrganizationResponse], /) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -235,16 +228,6 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.revoke_other_sessions,
-                ),
-                "/auth.v1.AuthService/SwitchOrganization": Endpoint.unary(
-                    method=MethodInfo(
-                        name="SwitchOrganization",
-                        service_name="auth.v1.AuthService",
-                        input=SwitchOrganizationRequest,
-                        output=SwitchOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.switch_organization,
                 ),
                 "/auth.v1.AuthService/GetCacheKeySeed": Endpoint.unary(
                     method=MethodInfo(
@@ -400,7 +383,8 @@ class AuthServiceClient(ConnectClient):
         timeout_ms: int | None = None,
     ) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         return await self.execute_unary(
             request=request,
@@ -524,31 +508,6 @@ class AuthServiceClient(ConnectClient):
                 service_name="auth.v1.AuthService",
                 input=RevokeOtherSessionsRequest,
                 output=RevokeOtherSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
-    async def switch_organization(
-        self,
-        request: SwitchOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SwitchOrganization",
-                service_name="auth.v1.AuthService",
-                input=SwitchOrganizationRequest,
-                output=SwitchOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -760,7 +719,8 @@ class AuthServiceSync(Protocol):
 
     def refresh_token(self, request: RefreshTokenRequest, ctx: RequestContext[RefreshTokenRequest, RefreshTokenResponse], /) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -791,14 +751,6 @@ class AuthServiceSync(Protocol):
     def revoke_other_sessions(self, request: RevokeOtherSessionsRequest, ctx: RequestContext[RevokeOtherSessionsRequest, RevokeOtherSessionsResponse], /) -> RevokeOtherSessionsResponse:
         """
         Revoke all sessions except the current one
-        """
-        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
-
-    def switch_organization(self, request: SwitchOrganizationRequest, ctx: RequestContext[SwitchOrganizationRequest, SwitchOrganizationResponse], /) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -945,16 +897,6 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.revoke_other_sessions,
-                ),
-                "/auth.v1.AuthService/SwitchOrganization": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="SwitchOrganization",
-                        service_name="auth.v1.AuthService",
-                        input=SwitchOrganizationRequest,
-                        output=SwitchOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.switch_organization,
                 ),
                 "/auth.v1.AuthService/GetCacheKeySeed": EndpointSync.unary(
                     method=MethodInfo(
@@ -1108,7 +1050,8 @@ class AuthServiceClientSync(ConnectClientSync):
         timeout_ms: int | None = None,
     ) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         return self.execute_unary(
             request=request,
@@ -1227,30 +1170,6 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=RevokeOtherSessionsRequest,
                 output=RevokeOtherSessionsResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-    def switch_organization(
-        self,
-        request: SwitchOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SwitchOrganization",
-                service_name="auth.v1.AuthService",
-                input=SwitchOrganizationRequest,
-                output=SwitchOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

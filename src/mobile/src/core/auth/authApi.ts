@@ -16,12 +16,8 @@ export const authApi = {
   register: (email: string, username: string, password: string, fullName?: string) =>
     publicAuthClient.register({ email, username, password, fullName }),
 
-  refreshToken: (refreshToken: string) => publicAuthClient.refreshToken({ refreshToken }),
-
-  // Mints a fresh session bound to the target org (also the first bind after a
-  // no-org login). RefreshToken deliberately rejects a cross-org slug.
-  switchOrganization: (refreshToken: string, organizationSlug: string) =>
-    publicAuthClient.switchOrganization({ refreshToken, organizationSlug }),
+  refreshToken: (refreshToken: string, organizationSlug?: string) =>
+    publicAuthClient.refreshToken({ refreshToken, organizationSlug }),
 
   verifyMfa: (challengeToken: string, code: string, method: string) =>
     publicMfaClient.verifyMfa({ challengeToken, code, method }),

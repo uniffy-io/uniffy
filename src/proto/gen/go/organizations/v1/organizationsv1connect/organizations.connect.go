@@ -36,6 +36,9 @@ const (
 	// OrganizationsServiceListMyOrganizationsProcedure is the fully-qualified name of the
 	// OrganizationsService's ListMyOrganizations RPC.
 	OrganizationsServiceListMyOrganizationsProcedure = "/organizations.v1.OrganizationsService/ListMyOrganizations"
+	// OrganizationsServiceResolveContentOrganizationProcedure is the fully-qualified name of the
+	// OrganizationsService's ResolveContentOrganization RPC.
+	OrganizationsServiceResolveContentOrganizationProcedure = "/organizations.v1.OrganizationsService/ResolveContentOrganization"
 	// OrganizationsServiceGetOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's GetOrganization RPC.
 	OrganizationsServiceGetOrganizationProcedure = "/organizations.v1.OrganizationsService/GetOrganization"
@@ -102,6 +105,10 @@ const (
 type OrganizationsServiceClient interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(context.Context, *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
@@ -148,6 +155,12 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			httpClient,
 			baseURL+OrganizationsServiceListMyOrganizationsProcedure,
 			connect.WithSchema(organizationsServiceMethods.ByName("ListMyOrganizations")),
+			connect.WithClientOptions(opts...),
+		),
+		resolveContentOrganization: connect.NewClient[v1.ResolveContentOrganizationRequest, v1.ResolveContentOrganizationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceResolveContentOrganizationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("ResolveContentOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
@@ -275,32 +288,39 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 
 // organizationsServiceClient implements OrganizationsServiceClient.
 type organizationsServiceClient struct {
-	listMyOrganizations      *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
-	getOrganization          *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
-	updateOrganization       *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
-	getOrganizationOverview  *connect.Client[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse]
-	listMembers              *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
-	addMember                *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
-	updateMemberRole         *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
-	removeMember             *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
-	inviteMember             *connect.Client[v1.InviteMemberRequest, v1.InviteMemberResponse]
-	listInvitations          *connect.Client[v1.ListInvitationsRequest, v1.ListInvitationsResponse]
-	revokeInvitation         *connect.Client[v1.RevokeInvitationRequest, v1.RevokeInvitationResponse]
-	resendInvitation         *connect.Client[v1.ResendInvitationRequest, v1.ResendInvitationResponse]
-	getSecuritySettings      *connect.Client[v1.GetSecuritySettingsRequest, v1.GetSecuritySettingsResponse]
-	updateSecuritySettings   *connect.Client[v1.UpdateSecuritySettingsRequest, v1.UpdateSecuritySettingsResponse]
-	getPermissionDefaults    *connect.Client[v1.GetPermissionDefaultsRequest, v1.GetPermissionDefaultsResponse]
-	updatePermissionDefaults *connect.Client[v1.UpdatePermissionDefaultsRequest, v1.UpdatePermissionDefaultsResponse]
-	grantDomainAdmin         *connect.Client[v1.GrantDomainAdminRequest, v1.GrantDomainAdminResponse]
-	revokeDomainAdmin        *connect.Client[v1.RevokeDomainAdminRequest, v1.RevokeDomainAdminResponse]
-	listDomainAdmins         *connect.Client[v1.ListDomainAdminsRequest, v1.ListDomainAdminsResponse]
-	getUserDomainAdmins      *connect.Client[v1.GetUserDomainAdminsRequest, v1.GetUserDomainAdminsResponse]
-	rotateEncryptionKey      *connect.Client[v1.RotateEncryptionKeyRequest, v1.RotateEncryptionKeyResponse]
+	listMyOrganizations        *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
+	resolveContentOrganization *connect.Client[v1.ResolveContentOrganizationRequest, v1.ResolveContentOrganizationResponse]
+	getOrganization            *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
+	updateOrganization         *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	getOrganizationOverview    *connect.Client[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse]
+	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
+	addMember                  *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
+	updateMemberRole           *connect.Client[v1.UpdateMemberRoleRequest, v1.UpdateMemberRoleResponse]
+	removeMember               *connect.Client[v1.RemoveMemberRequest, v1.RemoveMemberResponse]
+	inviteMember               *connect.Client[v1.InviteMemberRequest, v1.InviteMemberResponse]
+	listInvitations            *connect.Client[v1.ListInvitationsRequest, v1.ListInvitationsResponse]
+	revokeInvitation           *connect.Client[v1.RevokeInvitationRequest, v1.RevokeInvitationResponse]
+	resendInvitation           *connect.Client[v1.ResendInvitationRequest, v1.ResendInvitationResponse]
+	getSecuritySettings        *connect.Client[v1.GetSecuritySettingsRequest, v1.GetSecuritySettingsResponse]
+	updateSecuritySettings     *connect.Client[v1.UpdateSecuritySettingsRequest, v1.UpdateSecuritySettingsResponse]
+	getPermissionDefaults      *connect.Client[v1.GetPermissionDefaultsRequest, v1.GetPermissionDefaultsResponse]
+	updatePermissionDefaults   *connect.Client[v1.UpdatePermissionDefaultsRequest, v1.UpdatePermissionDefaultsResponse]
+	grantDomainAdmin           *connect.Client[v1.GrantDomainAdminRequest, v1.GrantDomainAdminResponse]
+	revokeDomainAdmin          *connect.Client[v1.RevokeDomainAdminRequest, v1.RevokeDomainAdminResponse]
+	listDomainAdmins           *connect.Client[v1.ListDomainAdminsRequest, v1.ListDomainAdminsResponse]
+	getUserDomainAdmins        *connect.Client[v1.GetUserDomainAdminsRequest, v1.GetUserDomainAdminsResponse]
+	rotateEncryptionKey        *connect.Client[v1.RotateEncryptionKeyRequest, v1.RotateEncryptionKeyResponse]
 }
 
 // ListMyOrganizations calls organizations.v1.OrganizationsService.ListMyOrganizations.
 func (c *organizationsServiceClient) ListMyOrganizations(ctx context.Context, req *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error) {
 	return c.listMyOrganizations.CallUnary(ctx, req)
+}
+
+// ResolveContentOrganization calls
+// organizations.v1.OrganizationsService.ResolveContentOrganization.
+func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Context, req *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error) {
+	return c.resolveContentOrganization.CallUnary(ctx, req)
 }
 
 // GetOrganization calls organizations.v1.OrganizationsService.GetOrganization.
@@ -408,6 +428,10 @@ func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, re
 type OrganizationsServiceHandler interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(context.Context, *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
@@ -450,6 +474,12 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		OrganizationsServiceListMyOrganizationsProcedure,
 		svc.ListMyOrganizations,
 		connect.WithSchema(organizationsServiceMethods.ByName("ListMyOrganizations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceResolveContentOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceResolveContentOrganizationProcedure,
+		svc.ResolveContentOrganization,
+		connect.WithSchema(organizationsServiceMethods.ByName("ResolveContentOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	organizationsServiceGetOrganizationHandler := connect.NewUnaryHandler(
@@ -576,6 +606,8 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		switch r.URL.Path {
 		case OrganizationsServiceListMyOrganizationsProcedure:
 			organizationsServiceListMyOrganizationsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceResolveContentOrganizationProcedure:
+			organizationsServiceResolveContentOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetOrganizationProcedure:
 			organizationsServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceUpdateOrganizationProcedure:
@@ -627,6 +659,10 @@ type UnimplementedOrganizationsServiceHandler struct{}
 
 func (UnimplementedOrganizationsServiceHandler) ListMyOrganizations(context.Context, *connect.Request[v1.ListMyOrganizationsRequest]) (*connect.Response[v1.ListMyOrganizationsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ListMyOrganizations is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) ResolveContentOrganization(context.Context, *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ResolveContentOrganization is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {

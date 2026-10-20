@@ -204,8 +204,8 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       const client = createClient(AuthService, refreshTransport);
-      // Refresh stays in whichever org the session is bound to server-side;
-      // org switches go through AuthService.SwitchOrganization, not a slug here.
+      // A refresh may name the org it wants minted. None here, so the token
+      // lands in the org this session last minted for.
       const response = await client.refreshToken({ refreshToken: current.refreshToken });
       if (readStoredAuth()?.refreshToken !== current.refreshToken) return null;
 

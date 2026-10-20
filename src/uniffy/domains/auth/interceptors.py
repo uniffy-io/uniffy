@@ -23,7 +23,6 @@ PUBLIC_METHODS: frozenset[str] = frozenset({
     "auth.v1.AuthService/Login",
     "auth.v1.AuthService/RefreshToken",
     "auth.v1.AuthService/GetAuthConfig",
-    "auth.v1.AuthService/SwitchOrganization",
     "auth.v1.AuthService/GetInvitation",
     "auth.v1.AuthService/AcceptInvitation",
     "auth.v1.AuthService/SendPasswordReset",

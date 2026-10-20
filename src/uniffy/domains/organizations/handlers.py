@@ -39,6 +39,8 @@ from uniffy_proto.organizations.v1.organizations_pb import (
     RemoveMemberResponse,
     ResendInvitationRequest,
     ResendInvitationResponse,
+    ResolveContentOrganizationRequest,
+    ResolveContentOrganizationResponse,
     RevokeDomainAdminRequest,
     RevokeDomainAdminResponse,
     RevokeInvitationRequest,
@@ -68,6 +70,7 @@ from uniffy.core.converters import (
     member_info_to_proto,
     org_info_to_proto,
     org_role_from_proto,
+    org_role_to_proto,
 )
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
@@ -90,6 +93,7 @@ from uniffy.domains.organizations.invitations import (
 )
 from uniffy.domains.organizations.invitations.converters import invitation_to_proto
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.organizations.resolve import resolve_content_organization
 from uniffy.domains.organizations.security import SecurityOperations
 from uniffy.infrastructure.database import open_session
 
@@ -118,6 +122,33 @@ class OrganizationsHandlers:
         except Exception as e:
             logger.exception(f"Error listing user organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        ctx: RequestContext,
+    ) -> ResolveContentOrganizationResponse:
+        user_id = current_user_id()
+
+        try:
+            async with open_session() as session:
+                resolved = await resolve_content_organization(session, user_id, request.urn)
+                response = (
+                    None
+                    if resolved is None
+                    else ResolveContentOrganizationResponse(
+                        organization=org_info_to_proto(resolved[0]),
+                        role=org_role_to_proto(resolved[1].role),
+                    )
+                )
+        except Exception as e:
+            logger.exception(f"Error resolving content organization: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+        # Unknown, unviewable and foreign-tenant content share one answer so none can be told apart.
+        if response is None:
+            raise ConnectError(Code.NOT_FOUND, "Content not found")
+        return response
 
     async def get_organization(
         self,

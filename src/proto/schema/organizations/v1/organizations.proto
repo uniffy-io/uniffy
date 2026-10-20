@@ -12,6 +12,10 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/organizations/v1;organ
 service OrganizationsService {
   // User's organizations
   rpc ListMyOrganizations(ListMyOrganizationsRequest) returns (ListMyOrganizationsResponse);
+  // Finds which of the caller's own organizations owns the content behind a
+  // URN. Unknown content, content the caller cannot view, and content outside
+  // the caller's memberships all return the same NOT_FOUND error.
+  rpc ResolveContentOrganization(ResolveContentOrganizationRequest) returns (ResolveContentOrganizationResponse);
 
   // Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
   // is the platform surface: superadmin.v1.SystemOrganizationsService.
@@ -65,6 +69,15 @@ message MyOrganization {
   google.protobuf.Timestamp joined_at = 3;
   // Listed but cannot be entered until a platform operator lifts the suspension.
   bool suspended = 4;
+}
+
+message ResolveContentOrganizationRequest {
+  string urn = 1;
+}
+
+message ResolveContentOrganizationResponse {
+  common.v1.OrganizationInfo organization = 1;
+  common.v1.OrganizationRole role = 2;
 }
 
 message OrganizationDetail {

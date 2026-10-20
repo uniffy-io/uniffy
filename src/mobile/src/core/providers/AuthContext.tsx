@@ -350,9 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) throw new Error("No refresh token");
 
-    const response = await authApi.switchOrganization(refreshToken, slug);
-    const result = response.authResult;
-    if (!result) throw new Error("Unexpected switch organization response");
+    const result = await authApi.refreshToken(refreshToken, slug);
 
     setAccessToken(result.accessToken);
     setAssetCookie(result.assetCookie);

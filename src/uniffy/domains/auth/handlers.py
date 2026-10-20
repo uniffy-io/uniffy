@@ -39,8 +39,6 @@ from uniffy_proto.auth.v1.auth_pb import (
     RotateCacheKeySeedResponse,
     SendPasswordResetRequest,
     SendPasswordResetResponse,
-    SwitchOrganizationRequest,
-    SwitchOrganizationResponse,
     VerifyPasswordResetTokenRequest,
     VerifyPasswordResetTokenResponse,
 )
@@ -274,7 +272,6 @@ class AuthHandlers:
         request: RefreshTokenRequest,
         ctx: RequestContext,
     ) -> RefreshTokenResponse:
-        """Refresh access token."""
         try:
             async with open_session() as session:
                 auth_ops = AuthOperations(session, self.call_lifecycle)
@@ -303,36 +300,6 @@ class AuthHandlers:
             raise ConnectError(Code.UNAUTHENTICATED, str(e))
         except Exception as e:
             logger.exception(f"Token refresh error: {e}")
-            raise ConnectError(Code.INTERNAL, "Internal server error")
-
-    async def switch_organization(
-        self,
-        request: SwitchOrganizationRequest,
-        ctx: RequestContext,
-    ) -> SwitchOrganizationResponse:
-        """Move the current session into a different organization."""
-        if not request.refresh_token:
-            raise ConnectError(Code.INVALID_ARGUMENT, "refresh_token is required")
-        if not request.organization_slug:
-            raise ConnectError(Code.INVALID_ARGUMENT, "organization_slug is required")
-        try:
-            user_agent = request_user_agent(ctx)
-            async with open_session() as session:
-                auth_ops = AuthOperations(session, self.call_lifecycle)
-                result = await auth_ops.switch_organization(
-                    refresh_token=request.refresh_token,
-                    organization_slug=request.organization_slug,
-                    user_agent=user_agent,
-                )
-                auth_result = _auth_result_to_proto(result)
-                auth_result.asset_cookie = _set_asset_cookie(ctx, result)
-                return SwitchOrganizationResponse(auth_result=auth_result)
-        except AuthenticationError as e:
-            raise ConnectError(Code.PERMISSION_DENIED, str(e))
-        except TokenError as e:
-            raise ConnectError(Code.UNAUTHENTICATED, str(e))
-        except Exception as e:
-            logger.exception(f"Switch organization error: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_current_user(

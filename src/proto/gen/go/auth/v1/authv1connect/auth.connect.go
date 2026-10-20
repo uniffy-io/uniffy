@@ -54,9 +54,6 @@ const (
 	// AuthServiceRevokeOtherSessionsProcedure is the fully-qualified name of the AuthService's
 	// RevokeOtherSessions RPC.
 	AuthServiceRevokeOtherSessionsProcedure = "/auth.v1.AuthService/RevokeOtherSessions"
-	// AuthServiceSwitchOrganizationProcedure is the fully-qualified name of the AuthService's
-	// SwitchOrganization RPC.
-	AuthServiceSwitchOrganizationProcedure = "/auth.v1.AuthService/SwitchOrganization"
 	// AuthServiceGetCacheKeySeedProcedure is the fully-qualified name of the AuthService's
 	// GetCacheKeySeed RPC.
 	AuthServiceGetCacheKeySeedProcedure = "/auth.v1.AuthService/GetCacheKeySeed"
@@ -89,7 +86,8 @@ type AuthServiceClient interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	// Login with email and password
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	// Get current authenticated user info
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -101,10 +99,6 @@ type AuthServiceClient interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
@@ -182,12 +176,6 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 			connect.WithClientOptions(opts...),
 		),
-		switchOrganization: connect.NewClient[v1.SwitchOrganizationRequest, v1.SwitchOrganizationResponse](
-			httpClient,
-			baseURL+AuthServiceSwitchOrganizationProcedure,
-			connect.WithSchema(authServiceMethods.ByName("SwitchOrganization")),
-			connect.WithClientOptions(opts...),
-		),
 		getCacheKeySeed: connect.NewClient[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse](
 			httpClient,
 			baseURL+AuthServiceGetCacheKeySeedProcedure,
@@ -249,7 +237,6 @@ type authServiceClient struct {
 	listSessions             *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
 	revokeSession            *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
 	revokeOtherSessions      *connect.Client[v1.RevokeOtherSessionsRequest, v1.RevokeOtherSessionsResponse]
-	switchOrganization       *connect.Client[v1.SwitchOrganizationRequest, v1.SwitchOrganizationResponse]
 	getCacheKeySeed          *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
 	rotateCacheKeySeed       *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
 	getAuthConfig            *connect.Client[v1.GetAuthConfigRequest, v1.GetAuthConfigResponse]
@@ -300,11 +287,6 @@ func (c *authServiceClient) RevokeOtherSessions(ctx context.Context, req *connec
 	return c.revokeOtherSessions.CallUnary(ctx, req)
 }
 
-// SwitchOrganization calls auth.v1.AuthService.SwitchOrganization.
-func (c *authServiceClient) SwitchOrganization(ctx context.Context, req *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error) {
-	return c.switchOrganization.CallUnary(ctx, req)
-}
-
 // GetCacheKeySeed calls auth.v1.AuthService.GetCacheKeySeed.
 func (c *authServiceClient) GetCacheKeySeed(ctx context.Context, req *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {
 	return c.getCacheKeySeed.CallUnary(ctx, req)
@@ -351,7 +333,8 @@ type AuthServiceHandler interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	// Login with email and password
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	// Get current authenticated user info
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -363,10 +346,6 @@ type AuthServiceHandler interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
@@ -440,12 +419,6 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
-	authServiceSwitchOrganizationHandler := connect.NewUnaryHandler(
-		AuthServiceSwitchOrganizationProcedure,
-		svc.SwitchOrganization,
-		connect.WithSchema(authServiceMethods.ByName("SwitchOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
 	authServiceGetCacheKeySeedHandler := connect.NewUnaryHandler(
 		AuthServiceGetCacheKeySeedProcedure,
 		svc.GetCacheKeySeed,
@@ -512,8 +485,6 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRevokeSessionHandler.ServeHTTP(w, r)
 		case AuthServiceRevokeOtherSessionsProcedure:
 			authServiceRevokeOtherSessionsHandler.ServeHTTP(w, r)
-		case AuthServiceSwitchOrganizationProcedure:
-			authServiceSwitchOrganizationHandler.ServeHTTP(w, r)
 		case AuthServiceGetCacheKeySeedProcedure:
 			authServiceGetCacheKeySeedHandler.ServeHTTP(w, r)
 		case AuthServiceRotateCacheKeySeedProcedure:
@@ -569,10 +540,6 @@ func (UnimplementedAuthServiceHandler) RevokeSession(context.Context, *connect.R
 
 func (UnimplementedAuthServiceHandler) RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.RevokeOtherSessions is not implemented"))
-}
-
-func (UnimplementedAuthServiceHandler) SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.SwitchOrganization is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {

@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import organizations_pb
-from .organizations_pb import AddMemberRequest, AddMemberResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
+from .organizations_pb import AddMemberRequest, AddMemberResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, ResolveContentOrganizationRequest, ResolveContentOrganizationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -31,6 +31,14 @@ class OrganizationsService(Protocol):
     async def list_my_organizations(self, request: ListMyOrganizationsRequest, ctx: RequestContext[ListMyOrganizationsRequest, ListMyOrganizationsResponse], /) -> ListMyOrganizationsResponse:
         """
         User's organizations
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def resolve_content_organization(self, request: ResolveContentOrganizationRequest, ctx: RequestContext[ResolveContentOrganizationRequest, ResolveContentOrganizationResponse], /) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -142,6 +150,16 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_my_organizations,
+                ),
+                "/organizations.v1.OrganizationsService/ResolveContentOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResolveContentOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ResolveContentOrganizationRequest,
+                        output=ResolveContentOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.resolve_content_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganization": Endpoint.unary(
                     method=MethodInfo(
@@ -374,6 +392,31 @@ class OrganizationsServiceClient(ConnectClient):
                 service_name="organizations.v1.OrganizationsService",
                 input=ListMyOrganizationsRequest,
                 output=ListMyOrganizationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveContentOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=ResolveContentOrganizationRequest,
+                output=ResolveContentOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -808,6 +851,14 @@ class OrganizationsServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def resolve_content_organization(self, request: ResolveContentOrganizationRequest, ctx: RequestContext[ResolveContentOrganizationRequest, ResolveContentOrganizationResponse], /) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def get_organization(self, request: GetOrganizationRequest, ctx: RequestContext[GetOrganizationRequest, GetOrganizationResponse], /) -> GetOrganizationResponse:
         """
         Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
@@ -914,6 +965,16 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_my_organizations,
+                ),
+                "/organizations.v1.OrganizationsService/ResolveContentOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResolveContentOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ResolveContentOrganizationRequest,
+                        output=ResolveContentOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.resolve_content_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganization": EndpointSync.unary(
                     method=MethodInfo(
@@ -1146,6 +1207,30 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=ListMyOrganizationsRequest,
                 output=ListMyOrganizationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveContentOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=ResolveContentOrganizationRequest,
+                output=ResolveContentOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -19,27 +19,28 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrganizationsService_ListMyOrganizations_FullMethodName      = "/organizations.v1.OrganizationsService/ListMyOrganizations"
-	OrganizationsService_GetOrganization_FullMethodName          = "/organizations.v1.OrganizationsService/GetOrganization"
-	OrganizationsService_UpdateOrganization_FullMethodName       = "/organizations.v1.OrganizationsService/UpdateOrganization"
-	OrganizationsService_GetOrganizationOverview_FullMethodName  = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
-	OrganizationsService_ListMembers_FullMethodName              = "/organizations.v1.OrganizationsService/ListMembers"
-	OrganizationsService_AddMember_FullMethodName                = "/organizations.v1.OrganizationsService/AddMember"
-	OrganizationsService_UpdateMemberRole_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateMemberRole"
-	OrganizationsService_RemoveMember_FullMethodName             = "/organizations.v1.OrganizationsService/RemoveMember"
-	OrganizationsService_InviteMember_FullMethodName             = "/organizations.v1.OrganizationsService/InviteMember"
-	OrganizationsService_ListInvitations_FullMethodName          = "/organizations.v1.OrganizationsService/ListInvitations"
-	OrganizationsService_RevokeInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/RevokeInvitation"
-	OrganizationsService_ResendInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/ResendInvitation"
-	OrganizationsService_GetSecuritySettings_FullMethodName      = "/organizations.v1.OrganizationsService/GetSecuritySettings"
-	OrganizationsService_UpdateSecuritySettings_FullMethodName   = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
-	OrganizationsService_GetPermissionDefaults_FullMethodName    = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
-	OrganizationsService_UpdatePermissionDefaults_FullMethodName = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
-	OrganizationsService_GrantDomainAdmin_FullMethodName         = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
-	OrganizationsService_RevokeDomainAdmin_FullMethodName        = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
-	OrganizationsService_ListDomainAdmins_FullMethodName         = "/organizations.v1.OrganizationsService/ListDomainAdmins"
-	OrganizationsService_GetUserDomainAdmins_FullMethodName      = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
-	OrganizationsService_RotateEncryptionKey_FullMethodName      = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
+	OrganizationsService_ListMyOrganizations_FullMethodName        = "/organizations.v1.OrganizationsService/ListMyOrganizations"
+	OrganizationsService_ResolveContentOrganization_FullMethodName = "/organizations.v1.OrganizationsService/ResolveContentOrganization"
+	OrganizationsService_GetOrganization_FullMethodName            = "/organizations.v1.OrganizationsService/GetOrganization"
+	OrganizationsService_UpdateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateOrganization"
+	OrganizationsService_GetOrganizationOverview_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
+	OrganizationsService_ListMembers_FullMethodName                = "/organizations.v1.OrganizationsService/ListMembers"
+	OrganizationsService_AddMember_FullMethodName                  = "/organizations.v1.OrganizationsService/AddMember"
+	OrganizationsService_UpdateMemberRole_FullMethodName           = "/organizations.v1.OrganizationsService/UpdateMemberRole"
+	OrganizationsService_RemoveMember_FullMethodName               = "/organizations.v1.OrganizationsService/RemoveMember"
+	OrganizationsService_InviteMember_FullMethodName               = "/organizations.v1.OrganizationsService/InviteMember"
+	OrganizationsService_ListInvitations_FullMethodName            = "/organizations.v1.OrganizationsService/ListInvitations"
+	OrganizationsService_RevokeInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/RevokeInvitation"
+	OrganizationsService_ResendInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/ResendInvitation"
+	OrganizationsService_GetSecuritySettings_FullMethodName        = "/organizations.v1.OrganizationsService/GetSecuritySettings"
+	OrganizationsService_UpdateSecuritySettings_FullMethodName     = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
+	OrganizationsService_GetPermissionDefaults_FullMethodName      = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
+	OrganizationsService_UpdatePermissionDefaults_FullMethodName   = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
+	OrganizationsService_GrantDomainAdmin_FullMethodName           = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
+	OrganizationsService_RevokeDomainAdmin_FullMethodName          = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
+	OrganizationsService_ListDomainAdmins_FullMethodName           = "/organizations.v1.OrganizationsService/ListDomainAdmins"
+	OrganizationsService_GetUserDomainAdmins_FullMethodName        = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
+	OrganizationsService_RotateEncryptionKey_FullMethodName        = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -48,6 +49,10 @@ const (
 type OrganizationsServiceClient interface {
 	// User's organizations
 	ListMyOrganizations(ctx context.Context, in *ListMyOrganizationsRequest, opts ...grpc.CallOption) (*ListMyOrganizationsResponse, error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(ctx context.Context, in *ResolveContentOrganizationRequest, opts ...grpc.CallOption) (*ResolveContentOrganizationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
@@ -91,6 +96,16 @@ func (c *organizationsServiceClient) ListMyOrganizations(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListMyOrganizationsResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_ListMyOrganizations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Context, in *ResolveContentOrganizationRequest, opts ...grpc.CallOption) (*ResolveContentOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveContentOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ResolveContentOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -303,6 +318,10 @@ func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, in
 type OrganizationsServiceServer interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *ListMyOrganizationsRequest) (*ListMyOrganizationsResponse, error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
@@ -344,6 +363,9 @@ type UnimplementedOrganizationsServiceServer struct{}
 
 func (UnimplementedOrganizationsServiceServer) ListMyOrganizations(context.Context, *ListMyOrganizationsRequest) (*ListMyOrganizationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMyOrganizations not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveContentOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
@@ -440,6 +462,24 @@ func _OrganizationsService_ListMyOrganizations_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OrganizationsServiceServer).ListMyOrganizations(ctx, req.(*ListMyOrganizationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ResolveContentOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveContentOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ResolveContentOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ResolveContentOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ResolveContentOrganization(ctx, req.(*ResolveContentOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -814,6 +854,10 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListMyOrganizations",
 			Handler:    _OrganizationsService_ListMyOrganizations_Handler,
+		},
+		{
+			MethodName: "ResolveContentOrganization",
+			Handler:    _OrganizationsService_ResolveContentOrganization_Handler,
 		},
 		{
 			MethodName: "GetOrganization",
