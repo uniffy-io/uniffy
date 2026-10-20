@@ -1,0 +1,68 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import BlogCta from "@/components/blog/BlogCta.astro";
+import BlogHero from "@/components/blog/BlogHero.astro";
+import PostCard from "@/components/blog/PostCard.astro";
+import TagChip from "@/components/blog/TagChip.astro";
+import { collectTags, entryNumbers, getPosts, tagSlug, type Post, type TagSummary } from "@/lib/blog";
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  const numbers = entryNumbers(posts);
+  const tags = collectTags(posts);
+
+  return tags.map((summary) => ({
+    params: { tag: summary.slug },
+    props: {
+      tag: summary.tag,
+      tags,
+      numbers,
+      posts: posts.filter((post) => post.data.tags.some((tag) => tagSlug(tag) === summary.slug)),
+    },
+  }));
+}
+
+interface Props {
+  tag: string;
+  tags: TagSummary[];
+  numbers: Map<string, string>;
+  posts: Post[];
+}
+
+const { tag, tags, numbers, posts } = Astro.props;
+const count = posts.length;
+const description = `${count} ${count === 1 ? "post" : "posts"} tagged ${tag} on the Uniffy blog.`;
+---
+
+<BaseLayout title={`Uniffy | Blog | ${tag}`} description={description}>
+  <BlogHero kicker={Astro.params.tag!} title={tag} intro={`${count} ${count === 1 ? "post" : "posts"} on ${tag}. Newest first.`}>
+    <a
+      href="/blog/"
+      class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+    >
+      <svg viewBox="0 0 256 256" class="h-3.5 w-3.5" fill="currentColor" aria-hidden="true">
+        <path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" />
+      </svg>
+      All posts
+    </a>
+  </BlogHero>
+
+  <section class="bg-night-gradient px-5 py-12 sm:px-6 md:px-10 md:py-16">
+    <div class="mx-auto max-w-7xl">
+      <nav class="flex flex-wrap items-center gap-2" aria-label="Tags">
+        <TagChip tag="All" href="/blog/" />
+        {tags.map((summary) => (
+          <TagChip tag={summary.tag} count={summary.count} active={summary.tag === tag} />
+        ))}
+      </nav>
+
+      <div class="mt-10 grid gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+        {posts.map((post, index) => (
+          <PostCard post={post} number={numbers.get(post.id)!} index={index} eager={index < 3} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <BlogCta />
+</BaseLayout>

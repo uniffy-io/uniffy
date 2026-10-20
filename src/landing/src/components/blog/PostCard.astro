@@ -1,0 +1,111 @@
+---
+import AuthorLine from "@/components/blog/AuthorLine.astro";
+import BlogCover from "@/components/blog/BlogCover.astro";
+import TagChip from "@/components/blog/TagChip.astro";
+import { accentFor, authorOf, formatDate, postUrl, readingMinutes, type Post } from "@/lib/blog";
+
+interface Props {
+  post: Post;
+  number: string;
+  index?: number;
+  eager?: boolean;
+}
+
+const { post, number, index = 0, eager = false } = Astro.props;
+const accent = accentFor(post);
+const author = authorOf(post);
+const url = postUrl(post);
+const minutes = readingMinutes(post.body);
+---
+
+<article class="post-card group relative flex flex-col" style={`--i:${Math.min(index, 11)}`}>
+  <div class="post-card__frame overflow-hidden rounded-xl border border-night-hairline transition-[border-color,transform,box-shadow] duration-500 ease-out group-hover:-translate-y-1 group-hover:border-night-hairline-strong group-hover:shadow-[0_28px_56px_-28px_rgba(0,0,0,0.85)]">
+    <BlogCover
+      class="aspect-[16/10]"
+      seed={post.id}
+      accent={accent}
+      number={number}
+      cover={post.data.cover}
+      coverAlt={post.data.coverAlt}
+      eager={eager}
+    />
+  </div>
+
+  <div class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-night-faint">
+    {post.data.tags.slice(0, 2).map((tag) => <TagChip tag={tag} />)}
+    <time datetime={post.data.publishedAt.toISOString()}>{formatDate(post.data.publishedAt)}</time>
+    <span aria-hidden="true">&middot;</span>
+    <span>{minutes} min read</span>
+    {post.data.draft && <span class="text-brand-orange">Draft</span>}
+  </div>
+
+  <h3 class="mt-3 font-sans text-xl font-semibold leading-snug tracking-tight text-night-text text-balance sm:text-[1.35rem]">
+    <a href={url} class="post-card__link">{post.data.title}</a>
+  </h3>
+
+  <p class="post-card__excerpt mt-2.5 text-[0.95rem] leading-relaxed text-night-soft-text">{post.data.description}</p>
+
+  <div class="mt-5 flex items-center justify-between gap-4 border-t border-night-hairline/70 pt-4">
+    <AuthorLine author={author} accentHex={accent.hex} compact />
+    <span class="post-card__arrow inline-flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-night-muted transition-colors duration-200 group-hover:text-accent-strong">
+      Read
+      <svg viewBox="0 0 256 256" class="h-3.5 w-3.5 transition-transform duration-300" fill="currentColor" aria-hidden="true">
+        <path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z" />
+      </svg>
+    </span>
+  </div>
+</article>
+
+<style>
+  /* The title link covers the whole card; tag chips sit above it on z-10. */
+  .post-card__link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: 0.75rem;
+  }
+  .post-card__link:focus-visible {
+    outline: none;
+  }
+  .post-card__link:focus-visible::after {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 6px;
+  }
+
+  .post-card__excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .post-card {
+    animation: post-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--i) * 70ms);
+  }
+  @keyframes post-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .group:hover .post-card__arrow svg {
+    transform: translateX(3px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-card {
+      animation: none;
+    }
+    .post-card__frame,
+    .post-card__arrow svg {
+      transition: none;
+    }
+  }
+</style>

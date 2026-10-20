@@ -1,0 +1,115 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import BlogCta from "@/components/blog/BlogCta.astro";
+import BlogHero from "@/components/blog/BlogHero.astro";
+import FeaturedPost from "@/components/blog/FeaturedPost.astro";
+import PostCard from "@/components/blog/PostCard.astro";
+import TagChip from "@/components/blog/TagChip.astro";
+import { collectTags, entryNumbers, getPosts } from "@/lib/blog";
+
+const posts = await getPosts();
+const numbers = entryNumbers(posts);
+const [featured, ...rest] = posts;
+const tags = collectTags(posts);
+const siteUrl = Astro.site!;
+const description =
+  "Engineering notes, product decisions, and the reasoning behind them, written by the people building Uniffy.";
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  name: "Uniffy Blog",
+  url: new URL("/blog/", siteUrl).href,
+  description,
+  publisher: { "@type": "Organization", name: "Uniffy", url: siteUrl.href },
+};
+---
+
+<BaseLayout title="Uniffy | Blog" description={description} jsonLd={jsonLd}>
+  <BlogHero
+    kicker="blog"
+    title="Notes from the build."
+    intro="What we are building, what we got wrong, and why we made the calls we made. Written by the people doing the work, not a content team. We post when there is something worth saying."
+  >
+    <a
+      href="/blog/rss.xml"
+      class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-paper backdrop-blur-sm transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+    >
+      <svg viewBox="0 0 256 256" class="h-3.5 w-3.5 text-brand-orange" fill="currentColor" aria-hidden="true">
+        <path d="M106.91,149.09A71.53,71.53,0,0,1,128,200a8,8,0,0,1-16,0,56,56,0,0,0-56-56,8,8,0,0,1,0-16A71.53,71.53,0,0,1,106.91,149.09ZM56,80a8,8,0,0,0,0,16A104,104,0,0,1,160,200a8,8,0,0,0,16,0A120,120,0,0,0,56,80Zm118.79,1.21A166.9,166.9,0,0,0,56,32a8,8,0,0,0,0,16A151,151,0,0,1,163.48,92.52,151,151,0,0,1,208,200a8,8,0,0,0,16,0A166.9,166.9,0,0,0,174.79,81.21ZM60,184a12,12,0,1,0,12,12A12,12,0,0,0,60,184Z" />
+      </svg>
+      RSS feed
+    </a>
+  </BlogHero>
+
+  <section class="bg-night-gradient px-5 py-12 sm:px-6 md:px-10 md:py-16">
+    <div class="mx-auto max-w-7xl">
+      {featured && <FeaturedPost post={featured} number={numbers.get(featured.id)!} />}
+
+      {rest.length > 0 && (
+        <Fragment>
+          <div class="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-night-hairline pt-8 md:mt-20">
+            <h2 class="font-mono text-xs font-bold uppercase tracking-[0.18em] text-night-faint">
+              All posts <span class="text-night-muted">&middot; {posts.length}</span>
+            </h2>
+            {tags.length > 0 && (
+              <nav class="flex flex-wrap items-center gap-2" aria-label="Tags">
+                <TagChip tag="All" href="/blog/" active />
+                {tags.map((tag) => <TagChip tag={tag.tag} count={tag.count} />)}
+              </nav>
+            )}
+          </div>
+
+          <div class="mt-8 grid gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3">
+            {rest.map((post, index) => (
+              <PostCard post={post} number={numbers.get(post.id)!} index={index} eager={index < 3} />
+            ))}
+          </div>
+        </Fragment>
+      )}
+
+      {posts.length === 0 && (
+        <div class="blog-empty relative mx-auto max-w-2xl overflow-hidden rounded-3xl border border-night-hairline bg-night-soft px-6 py-14 text-center sm:px-12">
+          <div class="blog-empty__aurora pointer-events-none absolute" aria-hidden="true"></div>
+          <p class="relative font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-accent-strong">No. 001 &middot; in progress</p>
+          <h2 class="relative mt-4 font-sans text-2xl font-semibold tracking-tight text-night-text text-balance sm:text-3xl">
+            The first post is being written.
+          </h2>
+          <p class="relative mx-auto mt-4 max-w-md text-base leading-relaxed text-night-soft-text">
+            Subscribe to the feed and it lands there the moment it goes out. Until then, the code is the blog.
+          </p>
+          <div class="relative mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="/blog/rss.xml"
+              class="inline-flex items-center gap-2 rounded-full bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
+            >
+              RSS feed
+            </a>
+            <a
+              href="https://github.com/uniffy-io/uniffy"
+              target="_blank"
+              rel="noreferrer"
+              class="inline-flex items-center gap-2 rounded-full border border-paper/25 bg-paper/[0.05] px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:border-paper/50 hover:bg-paper/[0.1]"
+            >
+              Watch on GitHub
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <BlogCta />
+</BaseLayout>
+
+<style>
+  .blog-empty__aurora {
+    left: 50%;
+    top: -70%;
+    width: 80%;
+    aspect-ratio: 1;
+    border-radius: 9999px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(105, 74, 255, 0.22) 0%, rgba(13, 17, 30, 0) 68%);
+    filter: blur(50px);
+  }
+</style>

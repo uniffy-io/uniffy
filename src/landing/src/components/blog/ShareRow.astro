@@ -1,0 +1,127 @@
+---
+interface Props {
+  url: string;
+  title: string;
+  vertical?: boolean;
+  class?: string;
+}
+
+const { url, title, vertical = false, class: className = "" } = Astro.props;
+const encodedUrl = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+
+const targets = [
+  {
+    label: "Share on X",
+    href: `https://x.com/intent/post?text=${encodedTitle}&url=${encodedUrl}`,
+    path: "M214.75,211.71l-62.6-98.38,61.77-67.95a8,8,0,0,0-11.84-10.76L143.24,99.34,102.75,35.71A8,8,0,0,0,96,32H48a8,8,0,0,0-6.75,12.3l62.6,98.37-61.77,68a8,8,0,1,0,11.84,10.76l58.84-64.72,40.49,63.63A8,8,0,0,0,160,224h48a8,8,0,0,0,6.75-12.29ZM164.39,208,62.57,48h29L193.43,208Z",
+  },
+  {
+    label: "Share on Bluesky",
+    href: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}`,
+    path: "M232.7,50.48C229,45.7,221.84,40,209,40c-16.85,0-38.46,11.28-57.81,30.16A140.07,140.07,0,0,0,136,87.53V56a8,8,0,0,0-16,0V87.53a140.07,140.07,0,0,0-15.15-17.37C85.49,51.28,63.88,40,47,40,34.16,40,27,45.7,23.3,50.48c-6.82,8.77-12.18,24.08-.21,71.2,6.05,23.83,19.51,33,30.63,36.42A44,44,0,0,0,128,205.27a44,44,0,0,0,74.28-47.17c11.12-3.4,24.57-12.59,30.63-36.42C239.63,95.24,244.85,66.1,232.7,50.48ZM92,208A28.12,28.12,0,0,1,88.86,152a8,8,0,1,0-1.76-15.9A43.64,43.64,0,0,0,66.36,144c-8.43.09-22-3.57-27.76-26.26C35.72,106.39,27,71.86,35.94,60.3,37.37,58.46,40.09,56,47,56c27.27,0,73,44.88,73,71.67V180A28,28,0,0,1,92,208ZM217.4,117.74c-5.77,22.69-19.33,26.34-27.77,26.26a43.6,43.6,0,0,0-20.74-7.95,8,8,0,1,0-1.76,15.9A28.11,28.11,0,1,1,136,180V127.67C136,100.88,181.69,56,209,56c6.95,0,9.66,2.46,11.1,4.3C229.05,71.86,220.28,106.39,217.4,117.74Z",
+  },
+  {
+    label: "Share on LinkedIn",
+    href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+    path: "M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z",
+  },
+];
+---
+
+<div class:list={["share-row flex items-center gap-2", vertical && "flex-col items-start", className]}>
+  <button
+    type="button"
+    data-copy-link
+    data-url={url}
+    class="share-btn group relative grid h-9 w-9 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors duration-200 hover:border-night-hairline-strong hover:text-night-text"
+    aria-label="Copy link"
+    title="Copy link"
+  >
+    <svg viewBox="0 0 256 256" class="share-btn__icon h-4 w-4" fill="currentColor" aria-hidden="true">
+      <path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z" />
+    </svg>
+    <svg viewBox="0 0 256 256" class="share-btn__check h-4 w-4 text-brand-green" fill="currentColor" aria-hidden="true">
+      <path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z" />
+    </svg>
+    <span class="share-btn__toast" aria-live="polite"></span>
+  </button>
+  {targets.map((target) => (
+    <a
+      href={target.href}
+      target="_blank"
+      rel="noreferrer noopener"
+      class="share-btn grid h-9 w-9 place-items-center rounded-md border border-night-hairline text-night-muted transition-colors duration-200 hover:border-night-hairline-strong hover:text-night-text"
+      aria-label={target.label}
+      title={target.label}
+    >
+      <svg viewBox="0 0 256 256" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+        <path d={target.path} />
+      </svg>
+    </a>
+  ))}
+</div>
+
+<style>
+  .share-btn__check {
+    display: none;
+  }
+  .share-btn[data-copied] .share-btn__icon {
+    display: none;
+  }
+  .share-btn[data-copied] .share-btn__check {
+    display: block;
+  }
+  .share-btn[data-copied] {
+    border-color: rgba(1, 183, 127, 0.6);
+  }
+  .share-btn__toast {
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 0.4rem);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-brand-green);
+    pointer-events: none;
+  }
+  .share-btn__toast:empty {
+    display: none;
+  }
+</style>
+
+<script>
+  function setupCopyButtons() {
+    const buttons = document.querySelectorAll<HTMLButtonElement>("[data-copy-link]");
+    for (const button of buttons) {
+      const toast = button.querySelector<HTMLElement>(".share-btn__toast");
+      let timer = 0;
+      button.addEventListener("click", async () => {
+        const url = button.dataset.url ?? window.location.href;
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          // Clipboard access can be refused; a selectable fallback would be noise here.
+          return;
+        }
+        button.setAttribute("data-copied", "");
+        if (toast) toast.textContent = "Copied";
+        window.clearTimeout(timer);
+        timer = window.setTimeout(() => {
+          button.removeAttribute("data-copied");
+          if (toast) toast.textContent = "";
+        }, 1600);
+      });
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupCopyButtons, { once: true });
+  } else {
+    setupCopyButtons();
+  }
+</script>

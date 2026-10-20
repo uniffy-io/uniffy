@@ -1,0 +1,28 @@
+---
+import { tagUrl } from "@/lib/blog";
+
+interface Props {
+  tag: string;
+  href?: string;
+  active?: boolean;
+  count?: number;
+  class?: string;
+}
+
+const { tag, href = tagUrl(tag), active = false, count, class: className = "" } = Astro.props;
+---
+
+<a
+  href={href}
+  aria-current={active ? "page" : undefined}
+  class:list={[
+    "tag-chip relative z-10 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] transition-colors duration-200",
+    active
+      ? "border-accent/60 bg-accent/15 text-accent-strong"
+      : "border-night-hairline bg-night/60 text-night-muted hover:border-night-hairline-strong hover:text-night-text",
+    className,
+  ]}
+>
+  {tag}
+  {count !== undefined && <span class:list={[active ? "text-accent-strong/80" : "text-night-faint"]}>{count}</span>}
+</a>
