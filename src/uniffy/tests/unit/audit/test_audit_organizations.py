@@ -1,13 +1,9 @@
-"""Audit emissions for the organizations domain.
-
-Covers create / update on the org row plus add_member /
-update_member_role / remove_member and the settings JSONB merge path.
-DB calls are mocked.
-"""
+"""Organization mutations record their audit facts in the owning transaction."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
@@ -21,7 +17,7 @@ def _audit_rows(session: MagicMock) -> list:
     return [
         call.args[0]
         for call in session.add.call_args_list
-        if call.args and call.args[0].__class__.__name__ == "AuditEvent"
+        if call.args and isinstance(call.args[0], AuditEvent)
     ]
 
 
@@ -110,7 +106,7 @@ async def test_add_member_emits_member_added() -> None:
     assert len(added) == 1
     assert added[0].actor_user_id == actor
     assert added[0].resource_id == target
-    assert added[0].details["role"] == "ADMIN"
+    assert added[0].details["role"] == OrganizationRole.ADMIN.value
     session.commit.assert_not_awaited()
 
 
@@ -150,8 +146,8 @@ async def test_update_member_role_emits_role_changed_with_previous_role() -> Non
     assert len(rows) == 1
     row = rows[0]
     assert row.action == Action.ORGANIZATION_MEMBER_ROLE_CHANGED
-    assert row.details["previous_role"] == "MEMBER"
-    assert row.details["new_role"] == "ADMIN"
+    assert row.details["previous_role"] == OrganizationRole.MEMBER.value
+    assert row.details["new_role"] == OrganizationRole.ADMIN.value
 
 
 async def test_remove_member_emits_member_removed_with_previous_role() -> None:
@@ -165,7 +161,9 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     )
 
     session = MagicMock()
-    session.execute = AsyncMock(return_value=MagicMock())
+    session.execute = AsyncMock(
+        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=membership))
+    )
     session.add = MagicMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()
@@ -173,11 +171,6 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
 
     with (
         patch.object(OrganizationOperations, "require_org_admin", AsyncMock(return_value=None)),
-        patch.object(
-            OrganizationOperations,
-            "get_membership",
-            AsyncMock(return_value=membership),
-        ),
         patch(
             "uniffy.domains.organizations.operations.UserDirectoryProjection.remove_from_organization",
             AsyncMock(),
@@ -194,5 +187,5 @@ async def test_remove_member_emits_member_removed_with_previous_role() -> None:
     rows = _audit_rows(session)
     removed = [r for r in rows if r.action == Action.ORGANIZATION_MEMBER_REMOVED]
     assert len(removed) == 1
-    assert removed[0].details["previous_role"] == "MEMBER"
+    assert removed[0].details["previous_role"] == OrganizationRole.MEMBER.value
     assert removed[0].actor_user_id == admin

@@ -278,6 +278,28 @@ export const createChannel = createAsyncThunk<
   }
 });
 
+/** Find or create the viewer's own conversation; repeat calls return the same channel. */
+export const openSelfChat = createAsyncThunk<
+  ChatChannel,
+  void,
+  { state: RootState; rejectValue: string }
+>("chat/openSelfChat", async (_, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const organizationId = getOrganizationId(getState());
+    const response = await chatApi.openSelfChat({ organizationId });
+    if (!response.channel) {
+      return rejectWithValue("Failed to open your conversation");
+    }
+    const plain = channelToPlain(response.channel);
+    dispatch(addChannel(plain));
+    return plain;
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to open your conversation",
+    );
+  }
+});
+
 export const createAgentChat = createAsyncThunk<
   ChatChannel,
   { agentId: string; customName?: string },

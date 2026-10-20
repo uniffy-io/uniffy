@@ -75,6 +75,10 @@ service ChatService {
   // channel's history is re-indexed so search visibility follows the new type.
   rpc ChangeChannelVisibility(ChangeChannelVisibilityRequest) returns (ChangeChannelVisibilityResponse) {}
 
+  // The caller's one-person conversation, created on first open. Idempotent:
+  // every call returns the same channel until it is deleted.
+  rpc OpenSelfChat(OpenSelfChatRequest) returns (OpenSelfChatResponse) {}
+
   // Named agent chats - multiple chats per (user, agent) pair, each renamable.
   rpc CreateAgentChat(CreateAgentChatRequest) returns (CreateAgentChatResponse) {}
   rpc RenameAgentChat(RenameAgentChatRequest) returns (RenameAgentChatResponse) {}
@@ -291,6 +295,9 @@ message ChatChannel {
   // The bound agent was deleted, so this chat is frozen: history reads, sends
   // are refused. Only meaningful on is_agent_dm channels.
   bool agent_is_retired = 38;
+  // A DIRECT channel whose only member is its owner: their private scratch
+  // pad. Members, type, and name are locked; only the owner can read it.
+  bool is_self_dm = 39;
 }
 
 // ThreadInfo holds thread metadata embedded in root messages.
@@ -946,6 +953,14 @@ message GetChannelResourcesResponse {
 }
 
 // NAMED AGENT CHAT REQUESTS/RESPONSES
+
+message OpenSelfChatRequest {
+  string organization_id = 1;
+}
+
+message OpenSelfChatResponse {
+  ChatChannel channel = 1;
+}
 
 message CreateAgentChatRequest {
   string organization_id = 1;

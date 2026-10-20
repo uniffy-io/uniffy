@@ -162,11 +162,13 @@ class ChatCategoryOperations(ChatCategoryReader):
             if category.scalar_one_or_none() is None:
                 raise NotFoundError("category", category_id)
 
+        # Categories group shared channels; a self conversation stays out of reach.
         channel = await self.session.execute(
             select(ChatChannel.id).where(
                 ChatChannel.id == channel_id,
                 ChatChannel.organization_id == organization_id,
                 ChatChannel.is_deleted.is_(False),
+                ChatChannel.is_self_dm.is_(False),
             )
         )
         if channel.scalar_one_or_none() is None:

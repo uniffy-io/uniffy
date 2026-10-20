@@ -14,7 +14,7 @@ from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, SkillSurface
 from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation, SkillInvocationStatus
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
-from uniffy.core.models.chat.channel import ChannelType, ChatChannel
+from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -23,7 +23,10 @@ from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, generate_id
 from uniffy.domains.agents.skills.metrics import SkillMetricsReader
 from uniffy.infrastructure.database.session import get_database_url
-from uniffy.tests.integration.internal.migrations.test_migration_run import _provision_to
+from uniffy.tests.integration.internal.migrations.test_migration_run import (
+    _insert_chat_channel,
+    _provision_to,
+)
 
 
 async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_database):
@@ -70,31 +73,31 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
                 agent_id=agent.id,
                 kind=AgentSessionKind.DIRECT,
             )
-            channel = ChatChannel(
+            session.add_all([*versions, conversation])
+            await session.flush()
+            channel_id = await _insert_chat_channel(
+                session,
                 organization_id=org.id,
                 owner_id=admin.id,
                 name="Chat",
-                slug="chat",
                 channel_type=ChannelType.PRIVATE,
             )
-            foreign_channel = ChatChannel(
+            foreign_channel_id = await _insert_chat_channel(
+                session,
                 organization_id=other.id,
                 owner_id=admin.id,
                 name="Foreign",
-                slug="foreign",
                 channel_type=ChannelType.PRIVATE,
             )
-            session.add_all([*versions, conversation, channel, foreign_channel])
-            await session.flush()
             reply = AgentMessage(session_id=conversation.id, role=AgentMessageRole.ASSISTANT)
             chat_reply = ChatMessage(
-                channel_id=channel.id,
+                channel_id=channel_id,
                 sender_id=agent.id,
                 sender_type=SenderType.AGENT,
                 content="Private chat",
             )
             foreign_reply = ChatMessage(
-                channel_id=foreign_channel.id,
+                channel_id=foreign_channel_id,
                 sender_id=agent.id,
                 sender_type=SenderType.AGENT,
                 content="Foreign chat",
@@ -122,7 +125,7 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
                 organization_id=org.id,
                 user_id=admin.id,
                 agent_id=agent.id,
-                channel_id=channel.id,
+                channel_id=channel_id,
                 model="fixture",
                 duration_ms=120,
                 input_tokens=100,
@@ -146,7 +149,7 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
                 observation(
                     surface=SkillSurface.CHAT,
                     session_id=None,
-                    channel_id=channel.id,
+                    channel_id=channel_id,
                     response_message_id=chat_reply.id,
                     run_log_id=run.id,
                     tool_error_count=2,
@@ -163,7 +166,7 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
                     versions[1],
                     surface=SkillSurface.CHAT,
                     session_id=None,
-                    channel_id=foreign_channel.id,
+                    channel_id=foreign_channel_id,
                     response_message_id=foreign_reply.id,
                     run_log_id=run.id,
                 ),

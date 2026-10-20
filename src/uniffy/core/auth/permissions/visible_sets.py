@@ -314,6 +314,9 @@ def _chat_branch(
     predicates = [TagAssignment.content_type == ContentType.CHAT.value]
     if candidate_tag_ids is not None:
         predicates.append(TagAssignment.tag_id.in_(candidate_tag_ids))
+    member_subq = select(ChatChannelMember.channel_id).where(
+        ChatChannelMember.user_id == user_id,
+    )
     if chat_moderator:
         return (
             select(TagAssignment.tag_id.label("tag_id"))
@@ -322,13 +325,15 @@ def _chat_branch(
                 *predicates,
                 ChatChannel.organization_id == organization_id,
                 ChatChannel.is_deleted == False,  # noqa: E712
+                # Moderation never reaches someone else's self conversation.
+                or_(
+                    ChatChannel.is_self_dm == False,  # noqa: E712
+                    ChatChannel.id.in_(member_subq),
+                ),
             )
             .distinct()
         )
 
-    member_subq = select(ChatChannelMember.channel_id).where(
-        ChatChannelMember.user_id == user_id,
-    )
     return (
         select(TagAssignment.tag_id.label("tag_id"))
         .join(ChatChannel, ChatChannel.id == _content_id_from_urn_expr())

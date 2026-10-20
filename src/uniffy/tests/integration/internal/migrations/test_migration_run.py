@@ -10,12 +10,17 @@ that reaches for `gen_random_uuid()` or a trigram index has to find the
 extension already there.
 """
 
+from uuid import UUID
+
 import psycopg2
 from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from uniffy.core.models.chat.channel import ChannelType
+from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import (
     ALEMBIC_INI_PATH,
     _build_sync_db_url,
@@ -57,6 +62,35 @@ def _execute(sql: str) -> None:
         conn.commit()
     finally:
         conn.close()
+
+
+async def _insert_chat_channel(
+    session: AsyncSession,
+    *,
+    organization_id: UUID,
+    owner_id: UUID,
+    name: str,
+    channel_type: ChannelType,
+) -> UUID:
+    """Write the channel row an older revision has; the head model carries later columns."""
+    channel_id = generate_id()
+    await session.execute(
+        text(
+            "INSERT INTO chat_channels (id, organization_id, owner_id, name, slug, description, "
+            "channel_type, is_archived, is_default, is_deleted, icon, is_agent_dm, created_at, "
+            "updated_at) VALUES (:id, :org, :owner, :name, :slug, '', CAST(:type AS channeltype), "
+            "false, false, false, '', false, now(), now())"
+        ),
+        {
+            "id": channel_id,
+            "org": organization_id,
+            "owner": owner_id,
+            "name": name,
+            "slug": name.lower(),
+            "type": channel_type.value,
+        },
+    )
+    return channel_id
 
 
 def _migrate_to(revision: str) -> None:

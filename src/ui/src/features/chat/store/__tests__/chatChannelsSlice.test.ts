@@ -98,6 +98,7 @@ const channel: ChatChannel = {
   memberCount: 1,
   dmMemberIds: [],
   isAgentDm: false,
+  isSelfDm: false,
   agentFolderId: null,
   tagIds: [],
 };

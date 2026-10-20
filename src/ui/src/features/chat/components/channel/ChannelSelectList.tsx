@@ -2,7 +2,12 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Check, Hash, Lock, MagnifyingGlass } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
 import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import {
+  getChannelDisplayName,
+  getDmDisplayName,
+  getDmPeerUserId,
+  selfConversationLabel,
+} from "@/features/chat/utils/channelDisplay";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarById } from "@/components/subject";
 import { Input } from "@/components/ui/input";
@@ -15,6 +20,8 @@ interface ChannelSelectListProps {
   selectedChannelId?: string | null;
   autoFocus?: boolean;
   listClassName?: string;
+  /** Pin the viewer's own conversation first, whether or not it exists yet. */
+  selfConversation?: { selected: boolean; onSelect: () => void };
 }
 
 export function ChannelSelectList({
@@ -23,18 +30,31 @@ export function ChannelSelectList({
   selectedChannelId,
   autoFocus = false,
   listClassName,
+  selfConversation,
 }: ChannelSelectListProps) {
   const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const channels = useAppSelector(selectChannels);
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
+  const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");
+  const selfLabel = selfConversationLabel(currentUserName);
+  const pinSelf = !!selfConversation;
 
   const filteredChannels = useMemo(() => {
     const query = search.toLowerCase();
     return channels
       .filter((c) => (filterChannel ? filterChannel(c) : true))
-      .filter((c) => !query || getChannelDisplayName(c).toLowerCase().includes(query));
-  }, [channels, filterChannel, search]);
+      .filter((c) => !(pinSelf && c.isSelfDm))
+      .filter(
+        (c) =>
+          !query ||
+          getDmDisplayName(c, currentUserName).toLowerCase().includes(query) ||
+          getChannelDisplayName(c).toLowerCase().includes(query),
+      );
+  }, [channels, filterChannel, search, pinSelf, currentUserName]);
+
+  const showSelf = pinSelf && (!search || selfLabel.toLowerCase().includes(search.toLowerCase()));
 
   const channelGroups = useMemo(() => {
     const regular = filteredChannels.filter(
@@ -55,6 +75,9 @@ export function ChannelSelectList({
     const isDm = channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM";
     const Icon = isPrivate ? Lock : Hash;
     const isSelected = selectedChannelId === channel.id;
+    const label = isDm
+      ? getDmDisplayName(channel, currentUserName)
+      : getChannelDisplayName(channel);
 
     return (
       <button
@@ -70,9 +93,13 @@ export function ChannelSelectList({
       >
         {!isDm && <Icon size={14} className="text-muted-foreground shrink-0" />}
         {isDm && (
-          <SubjectAvatarById userId={channel.ownerId} displayName={channel.name} size="xs" />
+          <SubjectAvatarById
+            userId={getDmPeerUserId(channel, currentUserId) || channel.ownerId}
+            displayName={label}
+            size="xs"
+          />
         )}
-        <span className="truncate text-foreground flex-1">{getChannelDisplayName(channel)}</span>
+        <span className="truncate text-foreground flex-1">{label}</span>
         {isSelected && <Check size={14} className="text-primary shrink-0" />}
       </button>
     );
@@ -99,6 +126,23 @@ export function ChannelSelectList({
       </div>
 
       <div className={cn("overflow-y-auto flex-1", listClassName)}>
+        {showSelf && selfConversation && (
+          <button
+            type="button"
+            onClick={selfConversation.onSelect}
+            className={cn(
+              "flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted cursor-pointer w-full text-left transition-colors",
+              selfConversation.selected && "bg-primary/10",
+            )}
+            data-selected={selfConversation.selected ? "true" : "false"}
+            data-testid="chat-channel-select-self"
+          >
+            <SubjectAvatarById userId={currentUserId} displayName={currentUserName} size="xs" />
+            <span className="truncate text-foreground flex-1">{selfLabel}</span>
+            {selfConversation.selected && <Check size={14} className="text-primary shrink-0" />}
+          </button>
+        )}
+
         {channelGroups.regular.length > 0 && (
           <div>
             <div className="px-3 py-1 text-[10px] uppercase font-medium tracking-wider text-muted-foreground">
@@ -122,7 +166,7 @@ export function ChannelSelectList({
           </div>
         )}
 
-        {filteredChannels.length === 0 && (
+        {filteredChannels.length === 0 && !showSelf && (
           <div className="px-3 py-4 text-center text-sm text-muted-foreground">
             No channels found
           </div>

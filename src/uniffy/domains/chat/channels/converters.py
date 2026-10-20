@@ -115,6 +115,7 @@ def channel_to_proto(
         proto.category_id = str(channel.category_id)
 
     proto.is_agent_dm = channel.is_agent_dm
+    proto.is_self_dm = channel.is_self_dm
     if channel.custom_name is not None:
         proto.custom_name = channel.custom_name
     if channel.agent_id is not None:

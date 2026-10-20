@@ -56,9 +56,9 @@ export function MeetingChannelPicker({
     dispatch(fetchChannels());
   }, [dispatch]);
 
-  // Bindable targets are real conversations, never agent DMs or archived rooms.
+  // Bindable targets are real conversations, never agent DMs, self conversations, or archived rooms.
   const bindableChannels = useMemo(
-    () => channels.filter((c) => !c.isAgentDm && !c.isArchived),
+    () => channels.filter((c) => !c.isAgentDm && !c.isSelfDm && !c.isArchived),
     [channels],
   );
 

@@ -65,6 +65,8 @@ class ChannelSubjects:
         """
         channel = await self.get_by_id(user_id, organization_id, channel_id)
 
+        if channel.is_self_dm:
+            raise ValidationError("channel", "Cannot add members to your own conversation")
         if channel.channel_type == ChannelType.DIRECT:
             raise ValidationError("channel", "Cannot add members to a 1:1 DM")
 

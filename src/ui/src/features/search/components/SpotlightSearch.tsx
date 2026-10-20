@@ -32,7 +32,7 @@ import {
   recentItemToSearchResult,
 } from "@/features/search/utils/recentItems";
 import { selectDirectMessages } from "@/features/chat/store/chatChannelsSlice";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { getDmDisplayName, getDmPeerUserId } from "@/features/chat/utils/channelDisplay";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SUBJECT_TYPE } from "@/components/subject/types";
 
@@ -54,6 +54,7 @@ export function SpotlightSearch() {
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const currentUserName = useAppSelector((state) => state.auth.user?.fullName ?? "");
   const directMessages = useAppSelector(selectDirectMessages);
 
   const recentResults = useMemo(() => {
@@ -62,7 +63,7 @@ export function SpotlightSearch() {
   }, [isOpen, organizationId, userId]);
 
   const peopleDms = useMemo(
-    () => directMessages.filter((c) => c.channelType === "DIRECT").slice(0, 4),
+    () => directMessages.filter((c) => c.channelType === "DIRECT" && !c.isSelfDm).slice(0, 4),
     [directMessages],
   );
 
@@ -371,11 +372,8 @@ export function SpotlightSearch() {
                     </p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {peopleDms.map((channel) => {
-                        const otherId =
-                          channel.dmMemberIds.find((id) => id !== userId) ??
-                          channel.dmMemberIds[0] ??
-                          "";
-                        const name = getChannelDisplayName(channel);
+                        const otherId = getDmPeerUserId(channel, userId ?? "");
+                        const name = getDmDisplayName(channel, currentUserName);
                         return (
                           <button
                             key={channel.id}

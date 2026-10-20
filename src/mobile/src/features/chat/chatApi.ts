@@ -38,6 +38,7 @@ import {
   DeleteDraftRequestSchema,
   ListDraftsRequestSchema,
   CreateAgentChatRequestSchema,
+  OpenSelfChatRequestSchema,
   RenameAgentChatRequestSchema,
   ListAgentChatsRequestSchema,
   StopAgentRunRequestSchema,
@@ -144,6 +145,8 @@ export const chatApi = {
     client.deleteDraft({ ...req, clientSessionId }),
   listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) => client.listDrafts(req),
 
+  openSelfChat: (req: MessageInitShape<typeof OpenSelfChatRequestSchema>) =>
+    client.openSelfChat(req),
   createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     client.createAgentChat(req),
   renameAgentChat: (req: MessageInitShape<typeof RenameAgentChatRequestSchema>) =>

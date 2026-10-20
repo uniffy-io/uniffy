@@ -46,6 +46,7 @@ import {
   selectAgentFolders,
   selectArchivedChannels,
   selectArchivedLoaded,
+  selectSelfDm,
   sortByLastActivity,
   sortByRootActivity,
 } from "@/features/chat/store/chatChannelsSlice";
@@ -80,6 +81,8 @@ import { selectCategories, setCategories } from "@/features/chat/store/chatChann
 import { reorderCategoriesThunk } from "@/features/chat/store/chatThunks";
 import { ChannelListItem } from "@/features/chat/components/sidebar/ChannelListItem";
 import { DirectMessageListItem } from "@/features/chat/components/sidebar/DirectMessageListItem";
+import { SelfConversationListItem } from "@/features/chat/components/sidebar/SelfConversationListItem";
+import { selfConversationLabel } from "@/features/chat/utils/channelDisplay";
 import { CategorySection } from "@/features/chat/components/sidebar/CategorySection";
 import { useChatPermissions } from "@/features/chat/hooks/useChatPermissions";
 import { cn } from "@/shared/utils/cn";
@@ -230,6 +233,8 @@ export function ChatSidebar() {
   const archivedNextCursor = useAppSelector((state) => state.chatChannels.archivedNextCursor);
   const archivedSectionCollapsed = useAppSelector((state) => state.chatUi.archivedSectionCollapsed);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
+  const currentUserName = useAppSelector((state) => state.auth.user?.fullName ?? "");
+  const selfDm = useAppSelector(selectSelfDm);
   const allChannelMembers = useAppSelector((state) => state.chatChannels.channelMembers);
 
   const isChannelMuted = useCallback(
@@ -273,13 +278,24 @@ export function ChatSidebar() {
     [filteredChannels],
   );
 
+  // The self conversation is pinned above this list, so it is left out here.
   const directMessages = useMemo(
     () =>
       filteredChannels
-        .filter((c) => !c.isAgentDm && (c.channelType === "DIRECT" || c.channelType === "GROUP_DM"))
+        .filter(
+          (c) =>
+            !c.isAgentDm &&
+            !c.isSelfDm &&
+            (c.channelType === "DIRECT" || c.channelType === "GROUP_DM"),
+        )
         .sort(sortByLastActivity),
     [filteredChannels],
   );
+
+  const showSelfDm = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return !query || selfConversationLabel(currentUserName).toLowerCase().includes(query);
+  }, [searchQuery, currentUserName]);
 
   const agentChats = useMemo(
     () => filteredChannels.filter((c) => c.isAgentDm).sort(sortByLastActivity),
@@ -751,6 +767,16 @@ export function ChatSidebar() {
 
           {!dmSectionCollapsed && (
             <div className="space-y-px">
+              {showSelfDm && (
+                <SelfConversationListItem
+                  channel={selfDm}
+                  isActive={!!selfDm && selfDm.id === activeChannelId}
+                  unreadCount={selfDm ? (unreadCounts[selfDm.id] ?? 0) : 0}
+                  isMuted={selfDm ? isChannelMuted(selfDm.id) : false}
+                  hasDraft={selfDm ? draftChannels.has(selfDm.id) : false}
+                  onSelect={handleChannelSelect}
+                />
+              )}
               {directMessages.map((channel) => (
                 <DirectMessageListItem
                   key={channel.id}

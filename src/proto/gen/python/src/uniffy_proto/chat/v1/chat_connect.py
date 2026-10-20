@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import chat_pb
-from .chat_pb import AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, ChangeChannelVisibilityRequest, ChangeChannelVisibilityResponse, CompactChannelAgentContextRequest, CompactChannelAgentContextResponse, ConvertGroupDmToChannelRequest, ConvertGroupDmToChannelResponse, CreateAgentChatRequest, CreateAgentChatResponse, CreateAgentFolderRequest, CreateAgentFolderResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteAgentFolderRequest, DeleteAgentFolderResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteDraftRequest, DeleteDraftResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, ForwardMessageRequest, ForwardMessageResponse, GetChannelAgentConfigRequest, GetChannelAgentConfigResponse, GetChannelAgentContextStatsBatchRequest, GetChannelAgentContextStatsBatchResponse, GetChannelAgentContextStatsRequest, GetChannelAgentContextStatsResponse, GetChannelPendingApprovalsRequest, GetChannelPendingApprovalsResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetChatPolicyRequest, GetChatPolicyResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessageRevisionsRequest, GetMessageRevisionsResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListAgentChatsRequest, ListAgentChatsResponse, ListAgentFoldersRequest, ListAgentFoldersResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, ListDraftsRequest, ListDraftsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkChannelUnreadRequest, MarkChannelUnreadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, RenameAgentChatRequest, RenameAgentChatResponse, RenameAgentFolderRequest, RenameAgentFolderResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, ResetChannelAgentContextRequest, ResetChannelAgentContextResponse, RespondToAgentConfirmationRequest, RespondToAgentConfirmationResponse, SaveDraftRequest, SaveDraftResponse, SendMessageRequest, SendMessageResponse, SetAgentChatFolderRequest, SetAgentChatFolderResponse, SetTypingRequest, SetTypingResponse, StopAgentRunRequest, StopAgentRunResponse, UnarchiveChannelRequest, UnarchiveChannelResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelAgentConfigRequest, UpdateChannelAgentConfigResponse, UpdateChannelMemberRequest, UpdateChannelMemberResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateChatPolicyRequest, UpdateChatPolicyResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateMessageRequest, UpdateMessageResponse
+from .chat_pb import AddMembersRequest, AddMembersResponse, AddReactionRequest, AddReactionResponse, ArchiveChannelRequest, ArchiveChannelResponse, ChangeChannelVisibilityRequest, ChangeChannelVisibilityResponse, CompactChannelAgentContextRequest, CompactChannelAgentContextResponse, ConvertGroupDmToChannelRequest, ConvertGroupDmToChannelResponse, CreateAgentChatRequest, CreateAgentChatResponse, CreateAgentFolderRequest, CreateAgentFolderResponse, CreateCategoryRequest, CreateCategoryResponse, CreateChannelRequest, CreateChannelResponse, DeleteAgentFolderRequest, DeleteAgentFolderResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteChannelRequest, DeleteChannelResponse, DeleteDraftRequest, DeleteDraftResponse, DeleteMessageRequest, DeleteMessageResponse, FollowThreadRequest, FollowThreadResponse, ForwardMessageRequest, ForwardMessageResponse, GetChannelAgentConfigRequest, GetChannelAgentConfigResponse, GetChannelAgentContextStatsBatchRequest, GetChannelAgentContextStatsBatchResponse, GetChannelAgentContextStatsRequest, GetChannelAgentContextStatsResponse, GetChannelPendingApprovalsRequest, GetChannelPendingApprovalsResponse, GetChannelRequest, GetChannelResourcesRequest, GetChannelResourcesResponse, GetChannelResponse, GetChatPolicyRequest, GetChatPolicyResponse, GetMembersRequest, GetMembersResponse, GetMessageRequest, GetMessageResponse, GetMessageRevisionsRequest, GetMessageRevisionsResponse, GetMessagesRequest, GetMessagesResponse, GetPinnedMessagesRequest, GetPinnedMessagesResponse, GetThreadMessagesRequest, GetThreadMessagesResponse, GetThreadRequest, GetThreadResponse, GetThreadsInboxRequest, GetThreadsInboxResponse, GetUnreadCountsRequest, GetUnreadCountsResponse, JoinChannelRequest, JoinChannelResponse, LeaveChannelRequest, LeaveChannelResponse, ListAgentChatsRequest, ListAgentChatsResponse, ListAgentFoldersRequest, ListAgentFoldersResponse, ListCategoriesRequest, ListCategoriesResponse, ListChannelsRequest, ListChannelsResponse, ListDraftsRequest, ListDraftsResponse, MarkChannelReadRequest, MarkChannelReadResponse, MarkChannelUnreadRequest, MarkChannelUnreadResponse, MarkThreadReadRequest, MarkThreadReadResponse, MoveChannelToCategoryRequest, MoveChannelToCategoryResponse, OpenSelfChatRequest, OpenSelfChatResponse, PinMessageRequest, PinMessageResponse, RemoveMembersRequest, RemoveMembersResponse, RemoveReactionRequest, RemoveReactionResponse, RenameAgentChatRequest, RenameAgentChatResponse, RenameAgentFolderRequest, RenameAgentFolderResponse, ReorderCategoriesRequest, ReorderCategoriesResponse, ResetChannelAgentContextRequest, ResetChannelAgentContextResponse, RespondToAgentConfirmationRequest, RespondToAgentConfirmationResponse, SaveDraftRequest, SaveDraftResponse, SendMessageRequest, SendMessageResponse, SetAgentChatFolderRequest, SetAgentChatFolderResponse, SetTypingRequest, SetTypingResponse, StopAgentRunRequest, StopAgentRunResponse, UnarchiveChannelRequest, UnarchiveChannelResponse, UnfollowThreadRequest, UnfollowThreadResponse, UnpinMessageRequest, UnpinMessageResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateChannelAgentConfigRequest, UpdateChannelAgentConfigResponse, UpdateChannelMemberRequest, UpdateChannelMemberResponse, UpdateChannelRequest, UpdateChannelResponse, UpdateChatPolicyRequest, UpdateChatPolicyResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateMessageRequest, UpdateMessageResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -187,6 +187,13 @@ class ChatService(Protocol):
         """
         Switch an existing channel between PUBLIC and PRIVATE (owner only). The
         channel's history is re-indexed so search visibility follows the new type.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def open_self_chat(self, request: OpenSelfChatRequest, ctx: RequestContext[OpenSelfChatRequest, OpenSelfChatResponse], /) -> OpenSelfChatResponse:
+        """
+        The caller's one-person conversation, created on first open. Idempotent:
+        every call returns the same channel until it is deleted.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -759,6 +766,16 @@ class ChatServiceASGIApplication(ConnectASGIApplication[ChatService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.change_channel_visibility,
+                ),
+                "/chat.v1.ChatService/OpenSelfChat": Endpoint.unary(
+                    method=MethodInfo(
+                        name="OpenSelfChat",
+                        service_name="chat.v1.ChatService",
+                        input=OpenSelfChatRequest,
+                        output=OpenSelfChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.open_self_chat,
                 ),
                 "/chat.v1.ChatService/CreateAgentChat": Endpoint.unary(
                     method=MethodInfo(
@@ -1893,6 +1910,30 @@ class ChatServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def open_self_chat(
+        self,
+        request: OpenSelfChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> OpenSelfChatResponse:
+        """
+        The caller's one-person conversation, created on first open. Idempotent:
+        every call returns the same channel until it is deleted.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="OpenSelfChat",
+                service_name="chat.v1.ChatService",
+                input=OpenSelfChatRequest,
+                output=OpenSelfChatResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def create_agent_chat(
         self,
         request: CreateAgentChatRequest,
@@ -2640,6 +2681,13 @@ class ChatServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def open_self_chat(self, request: OpenSelfChatRequest, ctx: RequestContext[OpenSelfChatRequest, OpenSelfChatResponse], /) -> OpenSelfChatResponse:
+        """
+        The caller's one-person conversation, created on first open. Idempotent:
+        every call returns the same channel until it is deleted.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def create_agent_chat(self, request: CreateAgentChatRequest, ctx: RequestContext[CreateAgentChatRequest, CreateAgentChatResponse], /) -> CreateAgentChatResponse:
         """
         Named agent chats - multiple chats per (user, agent) pair, each renamable.
@@ -3207,6 +3255,16 @@ class ChatServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.change_channel_visibility,
+                ),
+                "/chat.v1.ChatService/OpenSelfChat": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="OpenSelfChat",
+                        service_name="chat.v1.ChatService",
+                        input=OpenSelfChatRequest,
+                        output=OpenSelfChatResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.open_self_chat,
                 ),
                 "/chat.v1.ChatService/CreateAgentChat": EndpointSync.unary(
                     method=MethodInfo(
@@ -4295,6 +4353,29 @@ class ChatServiceClientSync(ConnectClientSync):
                 service_name="chat.v1.ChatService",
                 input=ChangeChannelVisibilityRequest,
                 output=ChangeChannelVisibilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def open_self_chat(
+        self,
+        request: OpenSelfChatRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> OpenSelfChatResponse:
+        """
+        The caller's one-person conversation, created on first open. Idempotent:
+        every call returns the same channel until it is deleted.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="OpenSelfChat",
+                service_name="chat.v1.ChatService",
+                input=OpenSelfChatRequest,
+                output=OpenSelfChatResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

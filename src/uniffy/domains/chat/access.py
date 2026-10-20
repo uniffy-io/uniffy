@@ -63,10 +63,19 @@ class ChatAccessChecker:
         is_moderator: bool,
         channel_type: ChannelType,
         has_membership: bool,
+        is_self_dm: bool,
     ) -> bool:
+        # Moderation protects other participants; a self conversation has none, and
+        # its content is one person's own notes, so only its owner may read it.
+        if is_self_dm:
+            return is_active_member and has_membership
         return is_active_member and (
             is_moderator or channel_type == ChannelType.PUBLIC or has_membership
         )
+
+    @staticmethod
+    def owns_self_dm(channel: ChatChannel, user_id: UUID) -> bool:
+        return channel.is_self_dm and channel.owner_id == user_id
 
     async def get_channel(self, channel_id: UUID, organization_id: UUID) -> ChatChannel:
         if channel_id in self._channel_cache:
@@ -155,17 +164,25 @@ class ChatAccessChecker:
         channel: ChatChannel,
     ) -> None:
         await self.require_org_member(user_id, organization_id)
-        is_moderator = await self.is_org_admin(
-            user_id, organization_id
-        ) or await self.is_chat_domain_admin(user_id, organization_id)
-        has_membership = False
-        if not is_moderator and channel.channel_type != ChannelType.PUBLIC:
-            has_membership = await self.get_membership(channel.id, user_id) is not None
+        if channel.is_self_dm:
+            is_moderator = False
+            has_membership = (
+                self.owns_self_dm(channel, user_id)
+                and await self.get_membership(channel.id, user_id) is not None
+            )
+        else:
+            is_moderator = await self.is_org_admin(
+                user_id, organization_id
+            ) or await self.is_chat_domain_admin(user_id, organization_id)
+            has_membership = False
+            if not is_moderator and channel.channel_type != ChannelType.PUBLIC:
+                has_membership = await self.get_membership(channel.id, user_id) is not None
         if not self.can_view_from_facts(
             is_active_member=True,
             is_moderator=is_moderator,
             channel_type=channel.channel_type,
             has_membership=has_membership,
+            is_self_dm=channel.is_self_dm,
         ):
             raise PermissionDeniedError("access", "channel")
 
@@ -241,6 +258,11 @@ class ChatAccessChecker:
                 )
             )
         ).all()
+        if channel.is_self_dm:
+            allowed = {
+                row.user_id for row in rows if row.channel_member and row.user_id == channel.owner_id
+            }
+            return [user_id for user_id in candidates if user_id in allowed]
         allowed = {
             row.user_id
             for row in rows
@@ -290,7 +312,12 @@ class ChatAccessChecker:
                 if channel.channel_type not in PERSONAL_CHANNEL_TYPES
             )
 
-        membership_required_ids = [channel.id for channel in channels if channel.id not in allowed]
+        membership_required_ids = [
+            channel.id
+            for channel in channels
+            if channel.id not in allowed
+            and (not channel.is_self_dm or self.owns_self_dm(channel, user_id))
+        ]
         if membership_required_ids:
             member_ids = (
                 await self.session.execute(
@@ -318,7 +345,7 @@ class ChatAccessChecker:
             raise ValidationError("channel", "Channel is archived")
 
         member = await self.get_membership(channel.id, user_id)
-        if not member:
+        if not member or (channel.is_self_dm and not self.owns_self_dm(channel, user_id)):
             raise PermissionDeniedError("send", "Must join channel to send messages")
         return member
 
@@ -328,14 +355,28 @@ class ChatAccessChecker:
         organization_id: UUID,
         channel_id: UUID,
     ) -> bool:
-        """User has admin/owner of the channel or org."""
+        """User has admin/owner of the channel, or moderates chat outside self conversations."""
         await self.require_org_member(user_id, organization_id)
-        if await self.is_org_admin(user_id, organization_id):
-            return True
-        if await self.is_chat_domain_admin(user_id, organization_id):
+        is_moderator = await self.is_org_admin(
+            user_id, organization_id
+        ) or await self.is_chat_domain_admin(user_id, organization_id)
+        if is_moderator and not await self._is_self_dm(channel_id, organization_id):
             return True
         member = await self.get_membership(channel_id, user_id)
         return bool(member and member.role in (ChannelRole.ADMIN, ChannelRole.OWNER))
+
+    async def _is_self_dm(self, channel_id: UUID, organization_id: UUID) -> bool:
+        cached = self._channel_cache.get(channel_id)
+        if cached is not None:
+            return cached.is_self_dm
+        return bool(
+            await self.session.scalar(
+                select(ChatChannel.is_self_dm).where(
+                    ChatChannel.id == channel_id,
+                    ChatChannel.organization_id == organization_id,
+                )
+            )
+        )
 
     def invalidate_membership(
         self,

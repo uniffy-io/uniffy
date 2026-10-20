@@ -21,7 +21,6 @@ from uniffy.core.models.chat.channel_member import (
 )
 from uniffy.core.models.chat.message import ChatMessage
 from uniffy.core.models.files.attachment import Attachment
-from uniffy.core.search.engine import SearchTerm, all_of
 from uniffy.core.types import (
     ContentType,
     SubjectType,
@@ -31,6 +30,7 @@ from uniffy.domains.chat.cache import (
     invalidate_cached_dm_peers,
     invalidate_cached_member_ids,
 )
+from uniffy.domains.chat.search import remove_channel_message_documents
 from uniffy.domains.chat.streaming.events import CHANNEL_UPDATED
 from uniffy.domains.chat.streaming.publisher import publish_channel_event_to_members
 from uniffy.domains.chat.subjects import ChatSubject
@@ -186,13 +186,7 @@ class ChannelLifecycle:
             urn_type = ContentType.AGENT_CHAT if channel.is_agent_dm else ContentType.CHAT
             urn = f"urn:uniffy:content:{urn_type.value}:{channel.id}"
             await self.search_indexer.remove(urn)
-            # Cascade: drop chat_message docs under this channel so global search excludes them.
-            await self.search_indexer.remove_by_filter(
-                all_of(
-                    SearchTerm("entity_type", "chat_message"),
-                    SearchTerm("metadata.channel_id", str(channel.id)),
-                )
-            )
+            await remove_channel_message_documents(self.search_indexer, channel.id)
         except Exception:
             logger.warning(f"Search remove failed for channel {channel.id}")
 
@@ -274,6 +268,8 @@ class ChannelLifecycle:
 
         if channel.is_default:
             raise ValidationError("channel", "Cannot leave a default channel")
+        if channel.is_self_dm:
+            raise ValidationError("channel", "Cannot leave your own conversation")
         if channel.channel_type == ChannelType.DIRECT:
             raise ValidationError("channel", "Cannot leave a direct message")
 

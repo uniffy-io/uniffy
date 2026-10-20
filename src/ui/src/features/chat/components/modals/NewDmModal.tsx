@@ -3,14 +3,15 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X, MagnifyingGlass, Check, PaperPlaneTilt } from "@phosphor-icons/react";
 import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { controlShellClass } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { SubjectAvatar } from "@/components/subject";
 import { cn } from "@/shared/utils/cn";
 import { closeNewDmModal } from "@/features/chat/store/chatUiSlice";
-import { createChannel } from "@/features/chat/store/chatThunks";
+import { createChannel, openSelfChat } from "@/features/chat/store/chatThunks";
+import { selfConversationLabel } from "@/features/chat/utils/channelDisplay";
 import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
 import { GROUP_DM_MAX_PARTICIPANTS, NEW_DM_MAX_RECIPIENTS } from "@/features/chat/utils/limits";
 import { ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
@@ -20,12 +21,17 @@ export function NewDmModal() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
 
   const [query, setQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Subject[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedUserIds = selectedUsers.map((s) => s.id);
+  // Picking yourself alone opens your own conversation; beside others you are implicit.
+  const recipients = selectedUsers.filter((s) => s.id !== currentUserId);
+  const onlySelf = selectedUsers.length > 0 && recipients.length === 0;
+  const atCap = recipients.length >= NEW_DM_MAX_RECIPIENTS;
 
   const { results, loading, search } = useSubjectSearch({
     subjectTypes: "users",
@@ -47,17 +53,21 @@ export function NewDmModal() {
     dispatch(closeNewDmModal());
   }, [dispatch]);
 
-  const handleToggleUser = useCallback((subject: Subject) => {
-    setSelectedUsers((prev) => {
-      if (prev.find((s) => s.id === subject.id)) {
-        return prev.filter((s) => s.id !== subject.id);
-      }
-      if (prev.length >= NEW_DM_MAX_RECIPIENTS) return prev;
-      return [...prev, subject];
-    });
-    setQuery("");
-    inputRef.current?.focus();
-  }, []);
+  const handleToggleUser = useCallback(
+    (subject: Subject) => {
+      setSelectedUsers((prev) => {
+        if (prev.find((s) => s.id === subject.id)) {
+          return prev.filter((s) => s.id !== subject.id);
+        }
+        const recipientCount = prev.filter((s) => s.id !== currentUserId).length;
+        if (subject.id !== currentUserId && recipientCount >= NEW_DM_MAX_RECIPIENTS) return prev;
+        return [...prev, subject];
+      });
+      setQuery("");
+      inputRef.current?.focus();
+    },
+    [currentUserId],
+  );
 
   const handleRemoveUser = useCallback((id: string) => {
     setSelectedUsers((prev) => prev.filter((s) => s.id !== id));
@@ -69,10 +79,12 @@ export function NewDmModal() {
 
     setIsSubmitting(true);
     try {
-      const channelType = selectedUsers.length === 1 ? ChannelType.DIRECT : ChannelType.GROUP_DM;
-      const result = await dispatch(
-        createChannel({ name: "", channelType, memberIds: selectedUserIds }),
-      ).unwrap();
+      const channelType = recipients.length === 1 ? ChannelType.DIRECT : ChannelType.GROUP_DM;
+      const result = onlySelf
+        ? await dispatch(openSelfChat()).unwrap()
+        : await dispatch(
+            createChannel({ name: "", channelType, memberIds: recipients.map((s) => s.id) }),
+          ).unwrap();
 
       navigate(`/chat/${result.id}`);
       handleClose();
@@ -113,7 +125,7 @@ export function NewDmModal() {
                 key={`u-${subject.id}`}
                 className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 text-xs font-medium"
               >
-                {subject.name}
+                {subject.id === currentUserId ? selfConversationLabel(subject.name) : subject.name}
                 <button
                   type="button"
                   onClick={() => handleRemoveUser(subject.id)}
@@ -132,7 +144,7 @@ export function NewDmModal() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={selectedUsers.length === 0 ? "Search people..." : "Add more..."}
-                disabled={isSubmitting || selectedUsers.length >= NEW_DM_MAX_RECIPIENTS}
+                disabled={isSubmitting || atCap}
                 className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
                 data-testid="chat-new-dm-search-input"
               />
@@ -140,12 +152,14 @@ export function NewDmModal() {
           </div>
           {selectedUsers.length > 0 && (
             <p className="text-xs text-muted-foreground mt-1.5" data-testid="chat-new-dm-hint">
-              {selectedUsers.length === 1
-                ? "Press Enter or click below to start a conversation"
-                : `Group conversation with ${selectedUsers.length + 1} of ${GROUP_DM_MAX_PARTICIPANTS} participants`}
+              {onlySelf
+                ? "Opens your own conversation for notes, links, and files"
+                : recipients.length === 1
+                  ? "Press Enter or click below to start a conversation"
+                  : `Group conversation with ${recipients.length + 1} of ${GROUP_DM_MAX_PARTICIPANTS} participants`}
             </p>
           )}
-          {selectedUsers.length >= NEW_DM_MAX_RECIPIENTS && (
+          {atCap && (
             <p
               className="text-xs text-amber-700 dark:text-amber-400 mt-1"
               data-testid="chat-new-dm-cap-notice"
@@ -180,7 +194,9 @@ export function NewDmModal() {
                       <SubjectAvatar subject={subject} size="md" showPresence />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
-                          {subject.name}
+                          {subject.id === currentUserId
+                            ? selfConversationLabel(subject.name)
+                            : subject.name}
                         </p>
                         {subject.email && (
                           <p className="text-xs text-muted-foreground truncate">{subject.email}</p>
@@ -228,7 +244,7 @@ export function NewDmModal() {
             data-testid="chat-new-dm-submit"
           >
             <PaperPlaneTilt size={16} />
-            {selectedUsers.length <= 1 ? "Start conversation" : "Create group"}
+            {recipients.length <= 1 ? "Start conversation" : "Create group"}
           </Button>
         </ModalFooter>
       </div>

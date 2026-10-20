@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, DateTime, ForeignKey, Index, UniqueConstraint, text
 from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
@@ -22,7 +22,17 @@ class ChatChannel(SQLModel, table=True):
     """A persistent conversation container; counters live in ChatChannelStats."""
 
     __tablename__ = "chat_channels"
-    __table_args__ = (UniqueConstraint("organization_id", "slug", name="uq_chat_channels_org_slug"),)
+    __table_args__ = (
+        UniqueConstraint("organization_id", "slug", name="uq_chat_channels_org_slug"),
+        # One live self conversation per member; concurrent first opens converge on it.
+        Index(
+            "uq_chat_channels_self_dm",
+            "organization_id",
+            "owner_id",
+            unique=True,
+            postgresql_where=text("is_self_dm AND NOT is_deleted"),
+        ),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
@@ -46,6 +56,8 @@ class ChatChannel(SQLModel, table=True):
         sa_column=Column(ForeignKey("chat_channel_categories.id", ondelete="SET NULL"), index=True),
     )
     is_agent_dm: bool = Field(default=False, nullable=False)
+    # A DIRECT channel whose only member is its owner: their private scratch pad.
+    is_self_dm: bool = Field(default=False, nullable=False)
     custom_name: str | None = Field(default=None, max_length=200, nullable=True)
     agent_id: UUID | None = Field(
         default=None,

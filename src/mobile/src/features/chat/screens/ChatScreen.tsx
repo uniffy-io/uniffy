@@ -145,8 +145,10 @@ import {
 } from "@shared/mentions/broadcastMentions";
 import type { SerializedSearchResult } from "@features/search/searchSerializer";
 import {
+  dmPeerId,
   editWindowAllows,
   resolveChannelTitle,
+  selfConversationLabel,
   type SerializedMessage,
   type SerializedReaction,
 } from "@features/chat/chatSerializer";
@@ -593,13 +595,15 @@ export function ChatConversationScreen() {
   );
 
   const lastTypingSentRef = useRef(0);
+  // Nobody else is in a self conversation to watch the owner type.
+  const isSelfDm = !!channel?.isSelfDm;
   useEffect(() => {
-    if (!draft || !organizationId) return;
+    if (!draft || !organizationId || isSelfDm) return;
     const now = Date.now();
     if (now - lastTypingSentRef.current < 3000) return;
     lastTypingSentRef.current = now;
     chatApi.setTyping({ organizationId, channelId }).catch(() => {});
-  }, [draft, organizationId, channelId]);
+  }, [draft, organizationId, channelId, isSelfDm]);
 
   const { flushOnSend } = useDraftSync({
     channelId,
@@ -610,15 +614,35 @@ export function ChatConversationScreen() {
   });
 
   const dmPeer = useMemo(() => {
-    if (!channel || channel.isAgentDm || channel.channelType !== "DIRECT") return null;
-    const peerId = channel.dmMemberIds.find((id) => id !== user?.id);
+    if (!channel) return null;
+    if (channel.isSelfDm) {
+      const ownName = user?.fullName || user?.username || "";
+      return {
+        name: selfConversationLabel(ownName),
+        avatarName: ownName,
+        avatarUrl: user?.avatarUrl || undefined,
+      };
+    }
+    const peerId = dmPeerId(channel, user?.id ?? "");
     if (!peerId) return null;
     const member = membersQuery.data?.find((m) => m.subjectId === peerId);
     const subject = directory.byId.get(peerId);
     const name = member?.displayName || subject?.name || "";
     if (!name) return null;
-    return { name, avatarUrl: member?.avatarUrl ?? subject?.avatarUrl ?? undefined };
-  }, [channel, membersQuery.data, directory.byId, user?.id]);
+    return {
+      name,
+      avatarName: name,
+      avatarUrl: member?.avatarUrl ?? subject?.avatarUrl ?? undefined,
+    };
+  }, [
+    channel,
+    membersQuery.data,
+    directory.byId,
+    user?.id,
+    user?.fullName,
+    user?.username,
+    user?.avatarUrl,
+  ]);
 
   // An agent run stamps every turn it writes with the trigger message as its
   // reply target (see the agent runtime writers), so in an agent chat the quote
@@ -633,9 +657,11 @@ export function ChatConversationScreen() {
   }, [channel, dmPeer, membersQuery.data, user?.id]);
 
   const subtitle = channel
-    ? channel.channelType === "DIRECT"
-      ? "Direct message"
-      : `${channel.memberCount} ${channel.memberCount === 1 ? "member" : "members"}`
+    ? channel.isSelfDm
+      ? "Only you"
+      : channel.channelType === "DIRECT"
+        ? "Direct message"
+        : `${channel.memberCount} ${channel.memberCount === 1 ? "member" : "members"}`
     : undefined;
 
   const insertAtCursor = useCallback((text: string, padBefore: boolean) => {
@@ -965,7 +991,7 @@ export function ChatConversationScreen() {
               isOwn={message.senderId === user?.id}
               layout={chatLayout}
               senderPresence={
-                message.senderType === "USER"
+                message.senderType === "USER" && !isSelfDm
                   ? (presenceByUser[message.senderId] ?? "offline")
                   : null
               }
@@ -1032,6 +1058,7 @@ export function ChatConversationScreen() {
       openThread,
       threadRootContentById,
       presenceByUser,
+      isSelfDm,
       hideReplyContext,
       startReply,
       jumpToReplyContext,
@@ -1066,12 +1093,15 @@ export function ChatConversationScreen() {
           translucent
           leading={
             dmPeer ? (
-              <Avatar name={dmPeer.name} avatarUrl={dmPeer.avatarUrl} size={30} circle />
+              <Avatar name={dmPeer.avatarName} avatarUrl={dmPeer.avatarUrl} size={30} circle />
             ) : undefined
           }
           rightActions={
             <>
-              {(callsAvailable || callsDisabledMessage) && channel && !channel.isAgentDm ? (
+              {(callsAvailable || callsDisabledMessage) &&
+              channel &&
+              !channel.isAgentDm &&
+              !channel.isSelfDm ? (
                 <TouchableOpacity
                   onPress={() => {
                     // The button stays put when calls are off so there is
@@ -1165,6 +1195,14 @@ export function ChatConversationScreen() {
             <Text style={[styles.emptySub, { color: T.textDim }]}>
               {(channel.agentId && agentById.get(channel.agentId)?.description) ||
                 "Ask anything - replies land here as chat messages"}
+            </Text>
+          </View>
+        ) : isSelfDm ? (
+          <View style={styles.emptyWrap}>
+            <ChatCircle size={40} color={T.accent} weight="duotone" />
+            <Text style={[styles.emptyTitle, { color: T.textBright }]}>This is your own space</Text>
+            <Text style={[styles.emptySub, { color: T.textDim }]}>
+              Park links, files, drafts, and reminders here. Nobody else can see this conversation.
             </Text>
           </View>
         ) : (
@@ -1345,7 +1383,13 @@ export function ChatConversationScreen() {
               selectionRef.current = e.nativeEvent.selection;
               setCursor(e.nativeEvent.selection.start);
             }}
-            placeholder={editing ? "Edit message" : `Message ${title}`}
+            placeholder={
+              editing
+                ? "Edit message"
+                : isSelfDm
+                  ? "Jot down a note, link, or file"
+                  : `Message ${title}`
+            }
             canSend={canSend}
             editing={!!editing}
             onSend={handleSend}

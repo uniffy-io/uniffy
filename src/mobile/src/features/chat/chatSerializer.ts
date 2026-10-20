@@ -65,6 +65,8 @@ export interface SerializedChannel {
   isArchived: boolean;
   isDefault: boolean;
   isAgentDm: boolean;
+  /** The viewer's own one-person conversation: locked shape, owner-only. */
+  isSelfDm: boolean;
   customName: string | null;
   agentId: string | null;
   categoryId: string | null;
@@ -207,6 +209,7 @@ export function channelToPlain(proto: ProtoChatChannel): SerializedChannel {
     isArchived: proto.isArchived,
     isDefault: proto.isDefault,
     isAgentDm: proto.isAgentDm,
+    isSelfDm: proto.isSelfDm,
     customName,
     agentId: proto.agentId || null,
     categoryId: proto.categoryId || null,
@@ -458,12 +461,32 @@ export function revisionToPlain(proto: {
   };
 }
 
+/** How a member's own conversation reads everywhere: "Ada Lovelace (you)". */
+export function selfConversationLabel(fullName: string): string {
+  const name = fullName.trim();
+  return name ? `${name} (you)` : "You";
+}
+
+/** The person a 1:1 human DM is with; the viewer in their own conversation, else null. */
+export function dmPeerId(
+  channel: Pick<SerializedChannel, "channelType" | "isAgentDm" | "isSelfDm" | "dmMemberIds">,
+  currentUserId: string,
+): string | null {
+  if (channel.isSelfDm) return currentUserId || null;
+  if (channel.channelType !== "DIRECT" || channel.isAgentDm) return null;
+  return channel.dmMemberIds.find((memberId) => !!memberId && memberId !== currentUserId) ?? null;
+}
+
 /** Resolve the human-facing title for a channel given the viewer + members. */
 export function resolveChannelTitle(
   channel: SerializedChannel,
   members: SerializedMember[] | undefined,
   currentUserId: string,
 ): string {
+  if (channel.isSelfDm) {
+    const me = (members ?? []).find((m) => m.subjectId === currentUserId);
+    return selfConversationLabel(me?.displayName || channel.name);
+  }
   if (channel.customName) return channel.customName;
   if (channel.channelType === "DIRECT" || channel.channelType === "GROUP_DM") {
     const others = (members ?? []).filter((m) => m.subjectId !== currentUserId);

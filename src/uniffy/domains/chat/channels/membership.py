@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.errors import PermissionDeniedError
-from uniffy.core.models.chat.channel import ChatChannel, ChatChannelStats
+from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
 from uniffy.core.types import SubjectType
 
@@ -23,11 +23,15 @@ async def stage_default_channel_memberships(
     default_channel_ids = list(
         (
             await session.execute(
-                select(ChatChannel.id).where(
+                select(ChatChannel.id)
+                .where(
                     ChatChannel.organization_id == organization_id,
                     ChatChannel.is_default.is_(True),
+                    ChatChannel.channel_type == ChannelType.PUBLIC,
                     ChatChannel.is_deleted.is_(False),
                 )
+                .order_by(ChatChannel.id)
+                .with_for_update(read=True)
             )
         ).scalars()
     )

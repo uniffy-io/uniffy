@@ -11,6 +11,7 @@ import {
   DeleteChannelRequestSchema,
   ListChannelsRequestSchema,
   CreateAgentChatRequestSchema,
+  OpenSelfChatRequestSchema,
   RenameAgentChatRequestSchema,
   ListAgentChatsRequestSchema,
   JoinChannelRequestSchema,
@@ -96,6 +97,8 @@ export const chatApi = {
   listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
     chatClient.listChannels(req),
 
+  openSelfChat: (req: MessageInitShape<typeof OpenSelfChatRequestSchema>) =>
+    chatClient.openSelfChat(req),
   createAgentChat: (req: MessageInitShape<typeof CreateAgentChatRequestSchema>) =>
     chatClient.createAgentChat(req),
   renameAgentChat: (req: MessageInitShape<typeof RenameAgentChatRequestSchema>) =>

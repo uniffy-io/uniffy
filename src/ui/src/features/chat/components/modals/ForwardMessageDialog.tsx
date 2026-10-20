@@ -1,12 +1,12 @@
 import { useState, useCallback } from "react";
 import { Paperclip } from "@phosphor-icons/react";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { ChannelSelectList } from "@/features/chat/components/channel/ChannelSelectList";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
-import { forwardMessage } from "@/features/chat/store/chatThunks";
+import { forwardMessage, openSelfChat, unarchiveChannel } from "@/features/chat/store/chatThunks";
 import { formatMessageTimestamp } from "@/features/chat/utils/messageTime";
 import { cn } from "@/shared/utils/cn";
 import type { ChatChannel, ChatMessage } from "@/features/chat/types";
@@ -20,7 +20,17 @@ interface ForwardMessageDialogProps {
 export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMessageDialogProps) {
   const dispatch = useAppDispatch();
   const [targetChannelId, setTargetChannelId] = useState<string | null>(null);
+  // The self conversation may not exist yet; it is created only when the forward is sent.
+  const [toSelf, setToSelf] = useState(false);
   const [comment, setComment] = useState("");
+  const selfDm = useAppSelector((state) =>
+    Object.values(state.chatChannels.byId).find(
+      (channel) => channel.isSelfDm && !channel.isDeleted,
+    ),
+  );
+  const sourceIsSelfDm = useAppSelector(
+    (state) => state.chatChannels.byId[message.channelId]?.isSelfDm === true,
+  );
   const [isSending, setIsSending] = useState(false);
 
   const filterChannel = useCallback(
@@ -32,15 +42,39 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
     [message.channelId],
   );
 
+  const handleSelectChannel = useCallback((channelId: string) => {
+    setToSelf(false);
+    setTargetChannelId(channelId);
+  }, []);
+
+  const handleSelectSelf = useCallback(() => {
+    setTargetChannelId(null);
+    setToSelf(true);
+  }, []);
+
+  const hasTarget = toSelf || !!targetChannelId;
+  const restoreSelf = toSelf && selfDm?.isArchived === true;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!targetChannelId || isSending) return;
+    if (!hasTarget || isSending) return;
     setIsSending(true);
     try {
+      let channelId = targetChannelId;
+      if (toSelf) {
+        const channel = await dispatch(openSelfChat()).unwrap();
+        if (channel.isArchived) {
+          // A newly discovered archive needs explicit consent before restoration.
+          if (!restoreSelf || selfDm?.id !== channel.id) return;
+          await dispatch(unarchiveChannel(channel.id)).unwrap();
+        }
+        channelId = channel.id;
+      }
+      if (!channelId) return;
       await dispatch(
         forwardMessage({
           sourceMessageId: message.id,
-          targetChannelId,
+          targetChannelId: channelId,
           comment: comment.trim(),
         }),
       ).unwrap();
@@ -97,12 +131,20 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
                 )}
               >
                 <ChannelSelectList
-                  onSelect={setTargetChannelId}
+                  onSelect={handleSelectChannel}
                   filterChannel={filterChannel}
                   selectedChannelId={targetChannelId}
+                  selfConversation={
+                    sourceIsSelfDm ? undefined : { selected: toSelf, onSelect: handleSelectSelf }
+                  }
                   autoFocus
                 />
               </div>
+              {restoreSelf && (
+                <p role="status" className="mt-2 text-sm text-muted-foreground">
+                  Your conversation is archived. Restore it to forward this message.
+                </p>
+              )}
             </div>
 
             <div>
@@ -130,11 +172,11 @@ export function ForwardMessageDialog({ message, senderName, onClose }: ForwardMe
             </Button>
             <Button
               type="submit"
-              disabled={!targetChannelId || isSending}
+              disabled={!hasTarget || isSending}
               loading={isSending}
               data-testid="chat-forward-submit"
             >
-              Forward
+              {restoreSelf ? "Restore and forward" : "Forward"}
             </Button>
           </ModalFooter>
         </form>

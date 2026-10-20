@@ -11,7 +11,7 @@ import { setActiveThread } from "@/features/chat/store/chatThreadsSlice";
 import { closeThreadPanel, openThreadPanel } from "@/features/chat/store/chatUiSlice";
 import { deleteDraftOnServer, fetchThreadRoot } from "@/features/chat/store/chatThunks";
 import { selectDraftRows, type ChatDraftRow } from "@/features/chat/store/chatDraftsSlice";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { getChannelDisplayName, getDmDisplayName } from "@/features/chat/utils/channelDisplay";
 import type { ChatChannel } from "@/features/chat/types";
 
 const PREVIEW_LENGTH = 160;
@@ -30,7 +30,12 @@ function DraftRow({
   const isDm = channel?.channelType === "DIRECT" || channel?.channelType === "GROUP_DM";
   const isPrivate = channel?.channelType === "PRIVATE";
   const ChannelIcon = !channel || isDm ? ChatTeardrop : isPrivate ? Lock : Hash;
-  const name = channel ? getChannelDisplayName(channel) : "Conversation";
+  const currentUserName = useAppSelector((state) => state.auth.user?.fullName ?? "");
+  const name = !channel
+    ? "Conversation"
+    : isDm
+      ? getDmDisplayName(channel, currentUserName)
+      : getChannelDisplayName(channel);
   const preview = stripMarkdownAndTruncate(draft.content, PREVIEW_LENGTH);
 
   return (

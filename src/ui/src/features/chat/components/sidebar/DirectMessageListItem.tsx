@@ -5,7 +5,7 @@ import { useChannelPrefetch } from "@/features/chat/hooks/useChannelPrefetch";
 import { cn } from "@/shared/utils/cn";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { type ChatChannel } from "@/features/chat/types";
-import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import { getDmDisplayName, getDmPeerUserId } from "@/features/chat/utils/channelDisplay";
 import { openRenameAgentChatDialog } from "@/features/chat/store/chatUiSlice";
 import { SubjectAvatar, SubjectAvatarById } from "@/components/subject";
 import { SUBJECT_TYPE, type Subject } from "@/components/subject/types";
@@ -36,28 +36,19 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
   const hasUnread = unreadCount > 0;
   const isGroupDm = channel.channelType === "GROUP_DM";
   const isAgentDm = channel.isAgentDm;
+  const isSelfDm = channel.isSelfDm;
   const currentUserName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
 
-  const displayName = useMemo(() => {
-    if (isAgentDm) {
-      return getChannelDisplayName(channel);
-    }
-    if (!currentUserName) return channel.name;
-    const parts = channel.name.split(", ").filter((n) => n !== currentUserName);
-    return parts.length > 0 ? parts.join(", ") : channel.name;
-  }, [channel, currentUserName, isAgentDm]);
+  const displayName = useMemo(
+    () => getDmDisplayName(channel, currentUserName),
+    [channel, currentUserName],
+  );
 
   const otherUserId = useMemo(() => {
-    if (isGroupDm) return "";
     if (isAgentDm) return channel.agentId ?? "";
-    const peer = (channel.dmMemberIds ?? []).find((id) => !!id && id !== currentUserId);
-    if (peer) return peer;
-    if (channel.ownerId && channel.ownerId !== currentUserId) {
-      return channel.ownerId;
-    }
-    return "";
-  }, [channel.dmMemberIds, channel.ownerId, channel.agentId, currentUserId, isGroupDm, isAgentDm]);
+    return getDmPeerUserId(channel, currentUserId);
+  }, [channel, currentUserId, isAgentDm]);
 
   const agent = useAppSelector((state) =>
     isAgentDm && channel.agentId ? (state.agents.agents[channel.agentId] ?? null) : null,
@@ -117,7 +108,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
                 : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
         )}
         data-testid={`chat-sidebar-dm-${channel.id}`}
-        data-dm-kind={isGroupDm ? "group" : isAgentDm ? "agent" : "user"}
+        data-dm-kind={isGroupDm ? "group" : isAgentDm ? "agent" : isSelfDm ? "self" : "user"}
         data-active={isActive ? "true" : "false"}
         data-muted={isMuted ? "true" : "false"}
         data-unread={hasUnread ? "true" : "false"}
@@ -145,9 +136,9 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             ) : (
               <SubjectAvatarById
                 userId={otherUserId}
-                displayName={displayName}
+                displayName={isSelfDm ? currentUserName : displayName}
                 size="sm"
-                showPresence
+                showPresence={!isSelfDm}
               />
             )}
           </div>
@@ -171,7 +162,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             />
           )}
 
-          {!isGroupDm && !isAgentDm && otherUserId && (
+          {!isGroupDm && !isAgentDm && !isSelfDm && otherUserId && (
             <CustomStatusDisplay userId={otherUserId} className="text-sm" compact />
           )}
 

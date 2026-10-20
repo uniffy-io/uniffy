@@ -418,6 +418,22 @@ export function useCreateDm() {
   });
 }
 
+/** Find or create the viewer's own conversation; resolves to its channel id. */
+export function useOpenSelfChat() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<string> => {
+      const res = await chatApi.openSelfChat({ organizationId: organizationId! });
+      return res.channel?.id ?? "";
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chat", "channels", organizationId] });
+    },
+  });
+}
+
 export function useCreateCategory() {
   const { organizationId } = useAuth();
   const queryClient = useQueryClient();

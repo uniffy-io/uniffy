@@ -142,6 +142,9 @@ const (
 	// ChatServiceChangeChannelVisibilityProcedure is the fully-qualified name of the ChatService's
 	// ChangeChannelVisibility RPC.
 	ChatServiceChangeChannelVisibilityProcedure = "/chat.v1.ChatService/ChangeChannelVisibility"
+	// ChatServiceOpenSelfChatProcedure is the fully-qualified name of the ChatService's OpenSelfChat
+	// RPC.
+	ChatServiceOpenSelfChatProcedure = "/chat.v1.ChatService/OpenSelfChat"
 	// ChatServiceCreateAgentChatProcedure is the fully-qualified name of the ChatService's
 	// CreateAgentChat RPC.
 	ChatServiceCreateAgentChatProcedure = "/chat.v1.ChatService/CreateAgentChat"
@@ -279,6 +282,9 @@ type ChatServiceClient interface {
 	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
 	// channel's history is re-indexed so search visibility follows the new type.
 	ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error)
+	// The caller's one-person conversation, created on first open. Idempotent:
+	// every call returns the same channel until it is deleted.
+	OpenSelfChat(context.Context, *connect.Request[v1.OpenSelfChatRequest]) (*connect.Response[v1.OpenSelfChatResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -602,6 +608,12 @@ func NewChatServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(chatServiceMethods.ByName("ChangeChannelVisibility")),
 			connect.WithClientOptions(opts...),
 		),
+		openSelfChat: connect.NewClient[v1.OpenSelfChatRequest, v1.OpenSelfChatResponse](
+			httpClient,
+			baseURL+ChatServiceOpenSelfChatProcedure,
+			connect.WithSchema(chatServiceMethods.ByName("OpenSelfChat")),
+			connect.WithClientOptions(opts...),
+		),
 		createAgentChat: connect.NewClient[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse](
 			httpClient,
 			baseURL+ChatServiceCreateAgentChatProcedure,
@@ -804,6 +816,7 @@ type chatServiceClient struct {
 	getChannelResources              *connect.Client[v1.GetChannelResourcesRequest, v1.GetChannelResourcesResponse]
 	convertGroupDmToChannel          *connect.Client[v1.ConvertGroupDmToChannelRequest, v1.ConvertGroupDmToChannelResponse]
 	changeChannelVisibility          *connect.Client[v1.ChangeChannelVisibilityRequest, v1.ChangeChannelVisibilityResponse]
+	openSelfChat                     *connect.Client[v1.OpenSelfChatRequest, v1.OpenSelfChatResponse]
 	createAgentChat                  *connect.Client[v1.CreateAgentChatRequest, v1.CreateAgentChatResponse]
 	renameAgentChat                  *connect.Client[v1.RenameAgentChatRequest, v1.RenameAgentChatResponse]
 	listAgentChats                   *connect.Client[v1.ListAgentChatsRequest, v1.ListAgentChatsResponse]
@@ -1037,6 +1050,11 @@ func (c *chatServiceClient) ChangeChannelVisibility(ctx context.Context, req *co
 	return c.changeChannelVisibility.CallUnary(ctx, req)
 }
 
+// OpenSelfChat calls chat.v1.ChatService.OpenSelfChat.
+func (c *chatServiceClient) OpenSelfChat(ctx context.Context, req *connect.Request[v1.OpenSelfChatRequest]) (*connect.Response[v1.OpenSelfChatResponse], error) {
+	return c.openSelfChat.CallUnary(ctx, req)
+}
+
 // CreateAgentChat calls chat.v1.ChatService.CreateAgentChat.
 func (c *chatServiceClient) CreateAgentChat(ctx context.Context, req *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
 	return c.createAgentChat.CallUnary(ctx, req)
@@ -1224,6 +1242,9 @@ type ChatServiceHandler interface {
 	// Switch an existing channel between PUBLIC and PRIVATE (owner only). The
 	// channel's history is re-indexed so search visibility follows the new type.
 	ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error)
+	// The caller's one-person conversation, created on first open. Idempotent:
+	// every call returns the same channel until it is deleted.
+	OpenSelfChat(context.Context, *connect.Request[v1.OpenSelfChatRequest]) (*connect.Response[v1.OpenSelfChatResponse], error)
 	// Named agent chats - multiple chats per (user, agent) pair, each renamable.
 	CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error)
 	RenameAgentChat(context.Context, *connect.Request[v1.RenameAgentChatRequest]) (*connect.Response[v1.RenameAgentChatResponse], error)
@@ -1543,6 +1564,12 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(chatServiceMethods.ByName("ChangeChannelVisibility")),
 		connect.WithHandlerOptions(opts...),
 	)
+	chatServiceOpenSelfChatHandler := connect.NewUnaryHandler(
+		ChatServiceOpenSelfChatProcedure,
+		svc.OpenSelfChat,
+		connect.WithSchema(chatServiceMethods.ByName("OpenSelfChat")),
+		connect.WithHandlerOptions(opts...),
+	)
 	chatServiceCreateAgentChatHandler := connect.NewUnaryHandler(
 		ChatServiceCreateAgentChatProcedure,
 		svc.CreateAgentChat,
@@ -1783,6 +1810,8 @@ func NewChatServiceHandler(svc ChatServiceHandler, opts ...connect.HandlerOption
 			chatServiceConvertGroupDmToChannelHandler.ServeHTTP(w, r)
 		case ChatServiceChangeChannelVisibilityProcedure:
 			chatServiceChangeChannelVisibilityHandler.ServeHTTP(w, r)
+		case ChatServiceOpenSelfChatProcedure:
+			chatServiceOpenSelfChatHandler.ServeHTTP(w, r)
 		case ChatServiceCreateAgentChatProcedure:
 			chatServiceCreateAgentChatHandler.ServeHTTP(w, r)
 		case ChatServiceRenameAgentChatProcedure:
@@ -2006,6 +2035,10 @@ func (UnimplementedChatServiceHandler) ConvertGroupDmToChannel(context.Context, 
 
 func (UnimplementedChatServiceHandler) ChangeChannelVisibility(context.Context, *connect.Request[v1.ChangeChannelVisibilityRequest]) (*connect.Response[v1.ChangeChannelVisibilityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.ChangeChannelVisibility is not implemented"))
+}
+
+func (UnimplementedChatServiceHandler) OpenSelfChat(context.Context, *connect.Request[v1.OpenSelfChatRequest]) (*connect.Response[v1.OpenSelfChatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("chat.v1.ChatService.OpenSelfChat is not implemented"))
 }
 
 func (UnimplementedChatServiceHandler) CreateAgentChat(context.Context, *connect.Request[v1.CreateAgentChatRequest]) (*connect.Response[v1.CreateAgentChatResponse], error) {
