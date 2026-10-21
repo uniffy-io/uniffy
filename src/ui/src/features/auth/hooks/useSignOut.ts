@@ -37,7 +37,12 @@ import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
  */
 export type SessionCacheBoundary =
   | { reason: "switch" }
-  | { reason: "lost-grant"; organizationId?: string; userId?: string }
+  | {
+      reason: "lost-grant";
+      organizationId?: string;
+      userId?: string;
+      preserveCurrentScope?: boolean;
+    }
   | { reason: "sign-out"; userId?: string };
 
 /**
@@ -49,8 +54,10 @@ export async function clearSessionCaches(
   dispatch: AppDispatch,
   boundary: SessionCacheBoundary,
 ): Promise<void> {
-  clearLibraryScope(dispatch);
-  clearBlobCache();
+  if (boundary.reason !== "lost-grant" || !boundary.preserveCurrentScope) {
+    clearLibraryScope(dispatch);
+    clearBlobCache();
+  }
   const work: Promise<unknown>[] = [];
   if (boundary.reason === "switch") {
     uploadService.resetForScope();

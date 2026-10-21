@@ -63,13 +63,29 @@ export function createAuthInterceptor({ retryOn401 }: { retryOn401: boolean }): 
       req.header.set("User-Agent", userAgent);
     }
 
+    const checkMembership = (err: unknown) => {
+      if (token && isMembershipDenial(err))
+        void refreshAfterMembershipDenial(token).catch(() => {});
+    };
     try {
-      return await next(req);
+      const response = await next(req);
+      if (!response.stream) return response;
+      const messages = response.message;
+      return {
+        ...response,
+        message: (async function* () {
+          try {
+            yield* messages;
+          } catch (err) {
+            checkMembership(err);
+            throw err;
+          }
+        })(),
+      };
     } catch (err) {
       // A removal from the organization would otherwise show only at the next expiry refresh.
       // The refusal still reaches the caller; the refresh resets the app if the grant is gone.
-      if (token && isMembershipDenial(err))
-        void refreshAfterMembershipDenial(token).catch(() => {});
+      checkMembership(err);
       if (!retryOn401 || !(err instanceof ConnectError) || err.code !== Code.Unauthenticated) {
         throw err;
       }

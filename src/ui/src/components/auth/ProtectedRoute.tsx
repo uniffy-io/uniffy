@@ -46,14 +46,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       takePendingOrganizationLost(userId);
       const lost = (event as CustomEvent<OrganizationLostDetail>).detail?.organizationId;
       if (lost && readTabOrganization(userId)?.id === lost) clearTabOrganization(userId);
-      void clearSessionCaches(dispatch, { reason: "lost-grant", organizationId: lost, userId });
+      void clearSessionCaches(dispatch, {
+        reason: "lost-grant",
+        organizationId: lost,
+        userId,
+        preserveCurrentScope: Boolean(
+          lost && currentOrganizationId && currentOrganizationId !== lost,
+        ),
+      });
       toast.warning("Your access to that organization ended.");
     };
     window.addEventListener(ORGANIZATION_LOST_EVENT, handleLost);
-    // A reload notices the loss before this shell mounts. Replay it, unless the tab has entered
-    // another organization since, whose memory is not the lost one's.
+    // Device cleanup still belongs to the lost organization after this tab enters another one.
     const pending = takePendingOrganizationLost(userId);
-    if (pending && (!currentOrganizationId || currentOrganizationId === pending.organizationId)) {
+    if (pending) {
       window.dispatchEvent(
         new CustomEvent<OrganizationLostDetail>(ORGANIZATION_LOST_EVENT, { detail: pending }),
       );

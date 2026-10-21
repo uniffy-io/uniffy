@@ -39,8 +39,7 @@ function refusal(code: Code, detail?: Uint8Array): ConnectError {
 const membershipRefusal = () =>
   refusal(Code.PermissionDenied, errorInfo("membership_required", "uniffy"));
 
-/** The auth server behind the refresh endpoint; every answer keeps the organization. */
-function refreshEndpoint() {
+function refreshEndpoint(organizationId = "org") {
   const endpoint = { requests: 0 };
   secure.set("uniffy_refresh_token", "refresh");
   vi.stubGlobal("fetch", async () => {
@@ -48,7 +47,7 @@ function refreshEndpoint() {
     const issued = create(RefreshTokenResponseSchema, {
       accessToken: `fresh-${endpoint.requests}`,
       refreshToken: `refresh-${endpoint.requests}`,
-      organizationId: "org",
+      organizationId,
       organizationSlug: "org",
     });
     return new Response(toBinary(RefreshTokenResponseSchema, issued), {
@@ -123,4 +122,92 @@ it("leaves a permission denial without the membership reason alone", async () =>
   await expect(call()).rejects.toBeInstanceOf(ConnectError);
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(refresh.requests).toBe(0);
+});
+
+async function interceptedStream(messages: AsyncIterable<unknown>) {
+  const { createAuthInterceptor } = await import("@core/api/authInterceptor");
+  const next = vi.fn(async () => ({
+    stream: true,
+    message: messages,
+    header: new Headers(),
+    trailer: new Headers(),
+  }));
+  const response = await createAuthInterceptor({ retryOn401: false })(next as never)({
+    stream: true,
+    header: new Headers(),
+  } as never);
+  if (!response.stream) throw new Error("Expected streaming response");
+  return { iterator: response.message[Symbol.asyncIterator](), next };
+}
+
+it("refreshes and announces lost access when a running stream loses membership", async () => {
+  const refresh = refreshEndpoint("");
+  const { setAccessToken, setStoredOrgId, getStoredOrgId } = await import("@core/auth/auth");
+  const { refreshAfterMembershipDenial } = await import("@core/auth/refresh");
+  const { onOrganizationLost } = await import("@core/auth/sessionEvents");
+  const lost = vi.fn();
+  const unsubscribe = onOrganizationLost(lost);
+  setAccessToken("token");
+  await setStoredOrgId("org", "org");
+  const error = membershipRefusal();
+  const message = create(RefreshTokenResponseSchema);
+  const closed = vi.fn();
+  const stream = await interceptedStream(
+    (async function* () {
+      try {
+        yield message;
+        throw error;
+      } finally {
+        closed();
+      }
+    })(),
+  );
+
+  expect(await stream.iterator.next()).toEqual({ done: false, value: message });
+  expect(refresh.requests).toBe(0);
+  await expect(stream.iterator.next()).rejects.toBe(error);
+  await refreshAfterMembershipDenial("token");
+  expect(refresh.requests).toBe(1);
+  expect(lost).toHaveBeenCalledOnce();
+  expect(await getStoredOrgId()).toBeNull();
+  expect(stream.next).toHaveBeenCalledOnce();
+  expect(closed).toHaveBeenCalledOnce();
+  unsubscribe();
+});
+
+it.each([Code.PermissionDenied, Code.Unauthenticated, Code.Unavailable, Code.Canceled])(
+  "propagates stream error %s without refreshing or replaying the request",
+  async (code) => {
+    const refresh = refreshEndpoint();
+    (await import("@core/auth/auth")).setAccessToken("token");
+    const error = refusal(code);
+    const stream = await interceptedStream(
+      (async function* () {
+        yield create(RefreshTokenResponseSchema);
+        throw error;
+      })(),
+    );
+    await stream.iterator.next();
+    await expect(stream.iterator.next()).rejects.toBe(error);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(refresh.requests).toBe(0);
+    expect(stream.next).toHaveBeenCalledOnce();
+  },
+);
+
+it("closes the underlying stream when its consumer stops reading", async () => {
+  const closed = vi.fn();
+  const stream = await interceptedStream(
+    (async function* () {
+      try {
+        yield create(RefreshTokenResponseSchema);
+        yield create(RefreshTokenResponseSchema);
+      } finally {
+        closed();
+      }
+    })(),
+  );
+  await stream.iterator.next();
+  await stream.iterator.return?.();
+  expect(closed).toHaveBeenCalledOnce();
 });

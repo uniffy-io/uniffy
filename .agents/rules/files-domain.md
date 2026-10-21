@@ -82,7 +82,12 @@ Persistence + resume (`uploadStore.ts`, one IndexedDB DB `uniffy-uploads` with `
   tab resumes only records whose `ownerTabId` is its own.
 - Recording's streaming uploader writes per-part into the same DB's `chunks` store, stamped with the tab's
   scope; its recovery (`recoverOrphanedRecordings`) stays separate - streaming has a different shape than
-  whole-blob uploads - and resumes only chunks of the tab's scope, once per scope. Chunks rest unencrypted.
+  whole-blob uploads - and resumes only chunks of the tab's scope after encryption is ready. Chunks use
+  AES-GCM with additional data `uniffy-recording-v1|<userId>|<organizationId>|<uploadId>|<partNumber>`.
+  No key or scope means memory-only buffering. Writes and deletion serialize per upload so encryption
+  cannot restore an already-uploaded or cancelled part. Recovery authenticates every buffered part before
+  completing an upload; failed reads and transient upload failures preserve ciphertext for retry.
+  The upload database closes pending chunk writes and participates in device encryption-cache clearing.
 - Server gate: `UploadChunk`, `UploadChunks`, `GetUploadStatus` and `CompleteUpload` require the uploader to be
   an active member of the upload's organization, not just `upload.user_id`. A removed or deactivated member
   gets the same NOT_FOUND as a missing upload, so no File lands in an organization they left. `remove_member`

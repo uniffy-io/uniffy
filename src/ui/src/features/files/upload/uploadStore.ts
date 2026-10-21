@@ -1,9 +1,4 @@
-/**
- * IndexedDB persistence for the upload engine: whole-file metadata + blobs (files/chat/editor, so an
- * upload survives reload and navigation) plus the streaming part-buffer the recording uploader writes
- * through for tab-crash recovery. One database, three stores, so nothing keeps a private upload store.
- * Every row carries the account and organization it belongs to; tabs of other orgs share the database.
- */
+/** Scoped upload metadata and encrypted file and recording bytes for reload recovery. */
 
 import { openDB, type IDBPDatabase } from "idb";
 import { getUploadScope, sameUploadScope } from "@/features/files/upload/uploadScope";
@@ -12,6 +7,7 @@ import {
   decryptBytesFromStorage,
   encryptBytesForStorage,
   isStorageEncryptionReady,
+  registerEncryptedDatabase,
 } from "@/shared/crypto/storageEncryption";
 
 const DB_NAME = "uniffy-uploads";
@@ -50,6 +46,9 @@ async function getDb(): Promise<IDBPDatabase | null> {
   if (typeof indexedDB === "undefined") return null;
   if (dbPromise) return dbPromise;
   dbPromise = openDB(DB_NAME, DB_VERSION, {
+    blocking() {
+      void closeUploadDatabase();
+    },
     upgrade(db) {
       if (!db.objectStoreNames.contains(RECORDS_STORE)) {
         db.createObjectStore(RECORDS_STORE, { keyPath: "id" });
@@ -165,6 +164,7 @@ export async function listIncompleteFor(scope: UploadScope): Promise<UploadRecor
 
 /** Deletes every record, blob and recording chunk whose owner stamp `match` accepts. */
 export async function deleteRowsMatching(match: (owner: StoredRowOwner) => boolean): Promise<void> {
+  await Promise.all(chunkWrites.values());
   const db = await getDb();
   if (!db) return;
   try {
@@ -189,7 +189,8 @@ interface ChunkRow extends StoredRowOwner {
   key: string;
   uploadId: string;
   partNumber: number;
-  blob: Blob;
+  data: ArrayBuffer;
+  type: string;
   size: number;
   createdAt: number;
 }
@@ -207,6 +208,35 @@ function chunkKey(uploadId: string, partNumber: number): string {
   return `${uploadId}:${partNumber.toString().padStart(8, "0")}`;
 }
 
+const chunkAdditionalData = (scope: UploadScope, uploadId: string, partNumber: number) =>
+  new TextEncoder().encode(
+    `uniffy-recording-v1|${scope.userId}|${scope.organizationId}|${uploadId}|${partNumber}`,
+  );
+
+// Encryption must finish in write order, including deletion after upload or cancellation.
+const chunkWrites = new Map<string, Promise<void>>();
+
+async function closeUploadDatabase(): Promise<void> {
+  await Promise.all(chunkWrites.values());
+  (await dbPromise)?.close();
+  dbPromise = null;
+}
+
+registerEncryptedDatabase(DB_NAME, closeUploadDatabase);
+
+function serializeChunkWrite<T>(uploadId: string, write: () => Promise<T>): Promise<T> {
+  const result = (chunkWrites.get(uploadId) ?? Promise.resolve()).then(write);
+  const settled = result.then(
+    () => {},
+    () => {},
+  );
+  chunkWrites.set(uploadId, settled);
+  void settled.then(() => {
+    if (chunkWrites.get(uploadId) === settled) chunkWrites.delete(uploadId);
+  });
+  return result;
+}
+
 // The recording uploader writes while its tab holds one scope, so the tab's scope owns the part.
 export async function putChunk(
   uploadId: string,
@@ -214,72 +244,94 @@ export async function putChunk(
   blob: Blob,
   scope: UploadScope | null = getUploadScope(),
 ): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-  const row: ChunkRow = {
-    key: chunkKey(uploadId, partNumber),
-    uploadId,
-    userId: scope?.userId,
-    organizationId: scope?.organizationId,
-    partNumber,
-    blob,
-    size: blob.size,
-    createdAt: Date.now(),
-  };
-  try {
-    await db.put(CHUNKS_STORE, row);
-    return true;
-  } catch (err) {
-    console.warn("[uploads] IndexedDB put chunk failed", err);
-    return false;
-  }
+  if (!scope || !isStorageEncryptionReady()) return false;
+  const createdAt = Date.now();
+  return serializeChunkWrite(uploadId, async () => {
+    const db = await getDb();
+    if (!db || !isStorageEncryptionReady()) return false;
+    try {
+      const data = await encryptBytesForStorage(
+        new Uint8Array(await blob.arrayBuffer()),
+        chunkAdditionalData(scope, uploadId, partNumber),
+      );
+      const row: ChunkRow = {
+        key: chunkKey(uploadId, partNumber),
+        uploadId,
+        userId: scope.userId,
+        organizationId: scope.organizationId,
+        partNumber,
+        data,
+        type: blob.type,
+        size: blob.size,
+        createdAt,
+      };
+      await db.put(CHUNKS_STORE, row);
+      return true;
+    } catch (err) {
+      console.warn("[uploads] IndexedDB put chunk failed", err);
+      return false;
+    }
+  });
 }
 
 export async function deleteChunk(uploadId: string, partNumber: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  try {
-    await db.delete(CHUNKS_STORE, chunkKey(uploadId, partNumber));
-  } catch (err) {
-    console.warn("[uploads] IndexedDB delete chunk failed", err);
-  }
+  return serializeChunkWrite(uploadId, async () => {
+    const db = await getDb();
+    if (!db) return;
+    try {
+      await db.delete(CHUNKS_STORE, chunkKey(uploadId, partNumber));
+    } catch (err) {
+      console.warn("[uploads] IndexedDB delete chunk failed", err);
+    }
+  });
 }
 
 export async function clearUploadChunks(uploadId: string): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  try {
-    const tx = db.transaction(CHUNKS_STORE, "readwrite");
-    const index = tx.store.index("uploadId");
-    let cursor = await index.openCursor(uploadId);
-    while (cursor) {
-      await cursor.delete();
-      cursor = await cursor.continue();
+  return serializeChunkWrite(uploadId, async () => {
+    const db = await getDb();
+    if (!db) return;
+    try {
+      const tx = db.transaction(CHUNKS_STORE, "readwrite");
+      const index = tx.store.index("uploadId");
+      let cursor = await index.openCursor(uploadId);
+      while (cursor) {
+        await cursor.delete();
+        cursor = await cursor.continue();
+      }
+      await tx.done;
+    } catch (err) {
+      console.warn("[uploads] IndexedDB clear chunks failed", err);
     }
-    await tx.done;
-  } catch (err) {
-    console.warn("[uploads] IndexedDB clear chunks failed", err);
-  }
+  });
 }
 
-export async function loadPendingChunks(uploadId: string): Promise<PersistedChunk[]> {
+export async function loadPendingChunks(
+  uploadId: string,
+  scope: UploadScope | null = getUploadScope(),
+): Promise<PersistedChunk[]> {
+  if (!scope || !isStorageEncryptionReady()) throw new Error("Recording storage is not ready");
+  await chunkWrites.get(uploadId);
   const db = await getDb();
-  if (!db) return [];
-  try {
-    const rows: ChunkRow[] = await db.getAllFromIndex(CHUNKS_STORE, "uploadId", uploadId);
-    return rows
-      .map((row) => ({
-        uploadId: row.uploadId,
-        partNumber: row.partNumber,
-        blob: row.blob,
-        size: row.size,
-        createdAt: row.createdAt,
-      }))
-      .sort((a, b) => a.partNumber - b.partNumber);
-  } catch (err) {
-    console.warn("[uploads] IndexedDB load chunks failed", err);
-    return [];
+  if (!db) throw new Error("Recording storage is unavailable");
+  const rows: ChunkRow[] = await db.getAllFromIndex(CHUNKS_STORE, "uploadId", uploadId);
+  const chunks: PersistedChunk[] = [];
+  for (const row of rows) {
+    if (!sameUploadScope(row, scope) || !(row.data instanceof ArrayBuffer)) {
+      throw new Error("Recording chunk cannot be authenticated");
+    }
+    const bytes = await decryptBytesFromStorage(
+      row.data,
+      chunkAdditionalData(scope, uploadId, row.partNumber),
+    );
+    chunks.push({
+      uploadId: row.uploadId,
+      partNumber: row.partNumber,
+      blob: new Blob([bytes as Uint8Array<ArrayBuffer>], { type: row.type }),
+      size: bytes.byteLength,
+      createdAt: row.createdAt,
+    });
   }
+  return chunks.sort((a, b) => a.partNumber - b.partNumber);
 }
 
 export async function listOrphanedChunkUploads(

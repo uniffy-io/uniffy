@@ -200,7 +200,13 @@ describe("upload purge", () => {
     await engine.putChunk("rec-alice-1", 1, new Blob(["a"]), ALICE_ORG_1);
     await engine.putChunk("rec-alice-2", 1, new Blob(["a"]), ALICE_ORG_2);
     await engine.putChunk("rec-bob-1", 1, new Blob(["b"]), BOB_ORG_1);
-    await engine.putChunk("rec-unowned", 1, new Blob(["c"]), null);
+    const db = await openDB("uniffy-uploads");
+    await db.put("chunks", {
+      key: "rec-unowned:00000001",
+      uploadId: "rec-unowned",
+      blob: new Blob(["c"]),
+    });
+    db.close();
   });
 
   it("purgeUser deletes the account's records, blobs and chunks and unowned rows only", async () => {
@@ -229,6 +235,69 @@ describe("upload purge", () => {
     expect(await rawKeys("records")).toEqual(["alice-2"]);
     expect(await rawKeys("chunks")).toEqual(["rec-alice-2:00000001", "rec-unowned:00000001"]);
   });
+});
+
+describe("recording chunk encryption", () => {
+  it("stores only ciphertext and authenticates scope, upload and part identity", async () => {
+    const blob = new Blob(["private recording"], { type: "video/webm" });
+    expect(await engine.putChunk("recording", 1, blob, ALICE_ORG_1)).toBe(true);
+    const db = await openDB("uniffy-uploads");
+    const row = await db.get("chunks", "recording:00000001");
+    expect(row.blob).toBeUndefined();
+    expect(row.data).toBeInstanceOf(ArrayBuffer);
+    expect(new TextDecoder().decode(row.data)).not.toContain("private recording");
+    const [chunk] = await engine.loadPendingChunks("recording", ALICE_ORG_1);
+    expect(await chunk.blob.text()).toBe("private recording");
+    expect(chunk.blob.type).toBe("video/webm");
+    for (const scope of [ALICE_ORG_2, BOB_ORG_1]) {
+      await db.put("chunks", { ...row, ...scope });
+      await expect(engine.loadPendingChunks("recording", scope)).rejects.toThrow();
+    }
+    await db.put("chunks", { ...row, partNumber: 2 });
+    await expect(engine.loadPendingChunks("recording", ALICE_ORG_1)).rejects.toThrow();
+    await db.put("chunks", { ...row, key: "copied:00000001", uploadId: "copied" });
+    await expect(engine.loadPendingChunks("copied", ALICE_ORG_1)).rejects.toThrow();
+    db.close();
+  });
+
+  it("writes no plaintext fallback without a key or scope", async () => {
+    await engine.listIncompleteFor(ALICE_ORG_1);
+    expect(await engine.putChunk("no-owner", 1, new Blob(["secret"]), null)).toBe(false);
+    engine.teardownStorageEncryption();
+    expect(await engine.putChunk("no-key", 1, new Blob(["secret"]), ALICE_ORG_1)).toBe(false);
+    expect(await rawKeys("chunks")).toEqual([]);
+  });
+
+  it("clears recording bytes with the device encryption cache", async () => {
+    await engine.putChunk("private", 1, new Blob(["secret"]), ALICE_ORG_1);
+    await engine.clearLocalEncryptedStorage();
+    expect(await engine.loadPendingChunks("private", ALICE_ORG_1)).toEqual([]);
+  });
+
+  it.each(["part", "upload", "scope"])(
+    "waits for encryption before %s cleanup",
+    async (cleanup) => {
+      let release!: (value: ArrayBuffer) => void;
+      const blob = new Blob(["buffered"]);
+      const bytes = await blob.arrayBuffer();
+      vi.spyOn(blob, "arrayBuffer").mockReturnValue(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      );
+      const write = engine.putChunk("pending", 1, blob, ALICE_ORG_1);
+      await vi.waitFor(() => expect(blob.arrayBuffer).toHaveBeenCalledOnce());
+      const clear =
+        cleanup === "part"
+          ? engine.deleteChunk("pending", 1)
+          : cleanup === "upload"
+            ? engine.clearUploadChunks("pending")
+            : engine.deleteRowsMatching((owner) => owner.userId === "alice");
+      release(bytes);
+      await Promise.all([write, clear]);
+      expect(await rawKeys("chunks")).toEqual([]);
+    },
+  );
 });
 
 describe("upload blob encryption", () => {
