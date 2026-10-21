@@ -78,4 +78,6 @@ async def test_self_conversation_flag_defaults_existing_rows_and_enforces_one_li
         )
         == []
     )
-    assert _query("SELECT indexname FROM pg_indexes WHERE indexname = 'uq_chat_channels_self_dm'") == []
+    assert (
+        _query("SELECT indexname FROM pg_indexes WHERE indexname = 'uq_chat_channels_self_dm'") == []
+    )

@@ -17,7 +17,7 @@ from uniffy.core.models.agents.skill_version import AgentSkillVersion
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.login.organization import Organization
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.types import DomainType, generate_id
@@ -25,12 +25,14 @@ from uniffy.domains.agents.skills.metrics import SkillMetricsReader
 from uniffy.infrastructure.database.session import get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _insert_chat_channel,
+    _insert_organization_member,
     _provision_to,
 )
 
 
 async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_database):
-    await _provision_to(scratch_database, "098")
+    # The reader runs head models against the schema, so the database must be at head too.
+    await _provision_to(scratch_database, "head")
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
@@ -40,13 +42,10 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
             member = User(username="member", email="member@example.test")
             session.add_all([org, other, admin, member])
             await session.flush()
-            membership = OrganizationMember(
-                organization_id=org.id, user_id=admin.id, role=OrganizationRole.ADMIN
+            admin_membership_id = await _insert_organization_member(
+                session, organization_id=org.id, user_id=admin.id, role=OrganizationRole.ADMIN
             )
-            session.add_all([
-                membership,
-                OrganizationMember(organization_id=org.id, user_id=member.id),
-            ])
+            await _insert_organization_member(session, organization_id=org.id, user_id=member.id)
             agent = Agent(organization_id=org.id, owner_id=admin.id, name="Metrics agent")
             skill = AgentSkill(
                 organization_id=org.id,
@@ -236,7 +235,10 @@ async def test_skill_metrics_exact_versions_scope_and_bounded_pages(scratch_data
             history = await reader.read(**args)
             assert [row["display_name"] for row in history.metrics] == ["Deleted skill"] * 2
             assert [row["invocation_count"] for row in history.metrics] == [3, 5]
-            membership.is_active = False
+            await session.execute(
+                text("UPDATE login_organization_members SET is_active = false WHERE id = :id"),
+                {"id": admin_membership_id},
+            )
             await session.commit()
             with pytest.raises(PermissionDeniedError):
                 await reader.read(**args)

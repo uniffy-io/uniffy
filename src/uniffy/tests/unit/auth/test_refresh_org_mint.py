@@ -4,6 +4,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
+import pytest
 from prometheus_client import REGISTRY
 
 from uniffy.core.audit.actions import Action
@@ -31,6 +32,12 @@ _STORED_REFRESH = "stored-refresh"
 _ORG_CLAIM = "org_id"
 
 Membership = tuple[UUID, str, str, list[str]]
+
+
+@pytest.fixture(autouse=True)
+def _jwt_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The unit tier reads nothing from .env; the tokens minted here need a signing key.
+    monkeypatch.setenv("JWT_SECRET_KEY", "unit-test-secret-of-at-least-32-bytes")
 
 
 def _scalar(value: object) -> MagicMock:

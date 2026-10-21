@@ -18,7 +18,7 @@ from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
 from uniffy.core.models.login.organization import Organization
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.sessions import handlers as sessions
@@ -28,6 +28,7 @@ from uniffy.domains.chat.threads import handlers as threads
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _insert_chat_channel,
+    _insert_organization_member,
     _migrate_to,
     _provision_to,
     _query,
@@ -76,10 +77,8 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 name="History",
                 channel_type=ChannelType.PUBLIC,
             )
-            session.add(
-                OrganizationMember(
-                    organization_id=org.id, user_id=user.id, role=OrganizationRole.ADMIN
-                )
+            await _insert_organization_member(
+                session, organization_id=org.id, user_id=user.id, role=OrganizationRole.ADMIN
             )
             await session.flush()
             conversation = AgentSession(
