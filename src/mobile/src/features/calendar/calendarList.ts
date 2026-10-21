@@ -1,14 +1,18 @@
 import { roleCanEdit } from "@shared/permissions/contentRoles";
 import type {
   CalendarSection,
+  DelegationLevel,
+  SerializedAttendee,
   SerializedCalendar,
   SerializedCategory,
+  SerializedDelegation,
   SerializedEvent,
 } from "@features/calendar/calendarSerializer";
 
 export const CALENDAR_SECTIONS: { section: CalendarSection; title: string }[] = [
   { section: "mine", title: "My calendars" },
   { section: "shared", title: "Shared with me" },
+  { section: "delegated", title: "Delegated to me" },
   { section: "organization", title: "Organization" },
 ];
 
@@ -44,6 +48,7 @@ export function writableCalendars(calendars: readonly SerializedCalendar[]): Ser
 export function calendarHint(calendar: SerializedCalendar): string | undefined {
   if (isOwnDefault(calendar)) return "Default";
   if (calendar.section === "shared") return "Shared with you";
+  if (calendar.section === "delegated") return "As their delegate";
   if (calendar.section === "organization") return "Open to the organization";
   return undefined;
 }
@@ -86,4 +91,18 @@ export function calendarLabel(
     return calendar.ownerName;
   }
   return calendar.name;
+}
+
+export const DELEGATION_LEVEL_LABELS: Record<DelegationLevel, string> = {
+  events: "Events",
+  events_and_private: "Events and private details",
+};
+
+/** Attendees the member may answer for, as a live delegate of theirs; never the organizer. */
+export function answerableAttendees(
+  attendees: readonly SerializedAttendee[],
+  delegationsToMe: readonly SerializedDelegation[],
+): SerializedAttendee[] {
+  const grantors = new Set(delegationsToMe.filter((d) => !d.inactive).map((d) => d.grantorId));
+  return attendees.filter((a) => grantors.has(a.id) && a.role !== "organizer");
 }

@@ -3,7 +3,7 @@
 {% block content %}
 <p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">{{ organization_name }}</p>
 <p style="margin:0 0 4px 0;font-size:18px;font-weight:600;color:#111111;">{{ title }}</p>
-{% if organizer_name %}<p style="margin:0 0 20px 0;color:#4b5563;">Invited by {{ organizer_name }}</p>{% endif %}
+{% if organizer_name %}<p style="margin:0 0 20px 0;color:#4b5563;">Invited by {{ organizer_name }}{% if arranger_name %} (sent by {{ arranger_name }} on their behalf){% endif %}</p>{% endif %}
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px 0;font-size:15px;">
   <tr>
     <td style="padding:0 16px 8px 0;color:#6b7280;vertical-align:top;">When</td>

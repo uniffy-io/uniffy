@@ -206,6 +206,8 @@ const attendeeFromProto = (proto: ProtoAttendee): Attendee => ({
   role: ATTENDEE_ROLE_FROM_PROTO[proto.role] || "required",
   timezone: proto.timezone || undefined,
   invitedViaGroupId: proto.invitedViaGroupId || undefined,
+  respondedById: proto.respondedById || undefined,
+  respondedByName: proto.respondedByName || undefined,
 });
 
 const linkedResourceFromProto = (proto: ProtoLinkedResource): LinkedResource => ({
@@ -246,6 +248,8 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
   calendarId: proto.calendarId,
   categoryId: proto.categoryId || "",
   organizerId: proto.organizerId,
+  arrangedById: proto.arrangedById || undefined,
+  arrangedByName: proto.arrangedByName || undefined,
   attendees: proto.attendees.map(attendeeFromProto),
   recurrence: recurrenceConfigFromProto(proto.recurrence),
   isFocusTime: proto.isFocusTime,
@@ -682,20 +686,23 @@ export const deleteCategory = createAsyncThunk<
 
 export const updateAttendeeStatus = createAsyncThunk<
   { eventId: string; userId: string; status: AttendeeStatus },
-  { eventId: string; status: AttendeeStatus },
+  /** `onBehalfOfUserId` answers for a grantor as their calendar delegate. */
+  { eventId: string; status: AttendeeStatus; onBehalfOfUserId?: string },
   { state: RootState; rejectValue: string }
 >("calendar/updateAttendeeStatus", async (params, { getState, rejectWithValue, dispatch }) => {
   try {
     const organizationId = getOrganizationId(getState());
-    const userId = getState().auth.user?.id;
-    if (!userId) {
+    const currentUserId = getState().auth.user?.id;
+    if (!currentUserId) {
       return rejectWithValue("No user logged in");
     }
+    const userId = params.onBehalfOfUserId ?? currentUserId;
 
     const response = await calendarApi.updateAttendeeStatus({
       eventId: params.eventId,
       organizationId,
       status: ATTENDEE_STATUS_TO_PROTO[params.status],
+      onBehalfOfUserId: params.onBehalfOfUserId,
     });
 
     if (!response.success) {

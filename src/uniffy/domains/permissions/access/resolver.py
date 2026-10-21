@@ -201,7 +201,7 @@ class ResourceAccessResolver:
         )
         for row in rows:
             parent = parent_decisions[ResourceKey(row.content_type, row.content_id)]
-            if not parent.can_view:
+            if not parent.can_read_details:
                 continue
             key = ResourceKey(ContentType.FILE, row.file_id)
             direct = decisions[key]

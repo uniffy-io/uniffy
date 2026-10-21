@@ -18,6 +18,8 @@ export interface EventActivity {
   id: string;
   eventId: string;
   actorId: string;
+  /** The person the actor acted for as their calendar delegate. */
+  onBehalfOfId?: string;
   action: EventActivityAction;
   timestamp: string;
   /** Field the change applies to, for field-scoped actions. */

@@ -1,5 +1,6 @@
 import type {
   Calendar,
+  CalendarDelegation,
   CalendarEvent,
   Category,
   EventActivity,
@@ -9,6 +10,7 @@ import { formatRelativeSeconds } from "@shared/lib/dateFormatting";
 import {
   AttendeeRole,
   AttendeeStatus,
+  CalendarDelegationLevel,
   CalendarListSection,
   DayOfWeek,
   EventStatus,
@@ -39,6 +41,8 @@ export interface SerializedAttendee {
   initials: string;
   status: string;
   role: AttendeeRoleValue;
+  /** The delegate who answered for this attendee, when one did. */
+  respondedByName?: string;
 }
 
 export interface SerializedLinkedResource {
@@ -84,6 +88,8 @@ export interface SerializedEvent {
   categoryId: string;
   /** Event creator; the "Mine" scope matches this or an attendee. */
   organizerId: string;
+  /** The delegate who booked the event for its organizer, when one did. */
+  arrangedByName?: string;
   /** Caller's effective role, advisory only - the backend stays the gate. */
   userRole: ContentRole;
   attendees: SerializedAttendee[];
@@ -116,7 +122,9 @@ export interface SerializedCategory {
   icon?: string;
 }
 
-export type CalendarSection = "mine" | "shared" | "organization";
+export type CalendarSection = "mine" | "shared" | "delegated" | "organization";
+
+export type DelegationLevel = "events" | "events_and_private";
 
 export interface SerializedCalendar {
   id: string;
@@ -132,12 +140,48 @@ export interface SerializedCalendar {
   /** Hidden for the caller only; the server leaves its events out of range reads. */
   isHidden: boolean;
   section: CalendarSection;
+  /** Set when the member reaches this calendar as the owner's delegate. */
+  delegationLevel?: DelegationLevel;
+}
+
+export interface SerializedDelegation {
+  id: string;
+  grantorId: string;
+  grantorName: string;
+  delegateId: string;
+  delegateName: string;
+  level: DelegationLevel;
+  /** Either party is deactivated; the grant confers nothing meanwhile. */
+  inactive: boolean;
+}
+
+export const DELEGATION_LEVEL: Record<number, DelegationLevel> = {
+  [CalendarDelegationLevel.EVENTS]: "events",
+  [CalendarDelegationLevel.EVENTS_AND_PRIVATE]: "events_and_private",
+};
+
+export const DELEGATION_LEVEL_TO_PROTO: Record<DelegationLevel, CalendarDelegationLevel> = {
+  events: CalendarDelegationLevel.EVENTS,
+  events_and_private: CalendarDelegationLevel.EVENTS_AND_PRIVATE,
+};
+
+export function delegationToPlain(delegation: CalendarDelegation): SerializedDelegation {
+  return {
+    id: delegation.id,
+    grantorId: delegation.grantorId,
+    grantorName: delegation.grantorName,
+    delegateId: delegation.delegateId,
+    delegateName: delegation.delegateName,
+    level: DELEGATION_LEVEL[delegation.level] ?? "events",
+    inactive: delegation.inactive,
+  };
 }
 
 const CALENDAR_SECTION: Record<number, CalendarSection> = {
   [CalendarListSection.MINE]: "mine",
   [CalendarListSection.SHARED]: "shared",
   [CalendarListSection.ORGANIZATION]: "organization",
+  [CalendarListSection.DELEGATED]: "delegated",
 };
 
 export function calendarToPlain(calendar: Calendar): SerializedCalendar {
@@ -152,6 +196,10 @@ export function calendarToPlain(calendar: Calendar): SerializedCalendar {
     userRole: calendar.userRole,
     isHidden: calendar.isHidden,
     section: CALENDAR_SECTION[calendar.section] ?? "mine",
+    delegationLevel:
+      calendar.delegationLevel !== undefined
+        ? DELEGATION_LEVEL[calendar.delegationLevel]
+        : undefined,
   };
 }
 
@@ -292,6 +340,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     recurrenceId: event.recurrenceId || undefined,
     categoryId: event.categoryId,
     organizerId: event.organizerId,
+    arrangedByName: event.arrangedById ? event.arrangedByName || "a delegate" : undefined,
     userRole: event.userRole,
     attendees: event.attendees.map((a) => ({
       id: a.id,
@@ -300,6 +349,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
       initials: a.initials,
       status: ATTENDEE_STATUS[a.status] ?? "pending",
       role: ATTENDEE_ROLE[a.role] ?? "required",
+      respondedByName: a.respondedById ? a.respondedByName || "a delegate" : undefined,
     })),
     recurrence: recurrenceToPlain(event.recurrence),
     isRecurring: event.isRecurring,
@@ -359,6 +409,8 @@ export function templateToPlain(template: EventTemplate): SerializedTemplate {
 export interface SerializedActivity {
   id: string;
   actorId: string;
+  /** The person the actor acted for as their calendar delegate. */
+  onBehalfOfId?: string;
   /** Proto EventActivityAction value; the list maps it to a label. */
   action: number;
   atSeconds: number;
@@ -373,6 +425,7 @@ export function activityToPlain(activity: EventActivity): SerializedActivity {
   return {
     id: activity.id,
     actorId: activity.actorId,
+    onBehalfOfId: activity.onBehalfOfUserId || undefined,
     action: activity.action,
     atSeconds,
     timeLabel: formatRelativeSeconds(atSeconds),

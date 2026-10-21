@@ -47,6 +47,7 @@ def _make_ops(
     ops.permission_checker.effective_role = AsyncMock(return_value=effective_role)
     ops.permission_checker.is_blocked = AsyncMock(return_value=is_blocked)
     ops._is_attendee = AsyncMock(return_value=is_attendee)
+    ops._grantor_invited = AsyncMock(return_value=False)
     ops._calendar_derived_role = AsyncMock(return_value=calendar_role)
     return ops
 

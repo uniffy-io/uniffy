@@ -9,6 +9,15 @@ import { AttendeesSelector } from "@/features/calendar/components/modals/Attende
 import type { CalendarEvent, Attendee } from "@/features/calendar/types";
 import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
+import { attendeesAnswerableFor } from "@/features/calendar/utils/delegation";
+
+type RsvpStatus = "accepted" | "tentative" | "declined";
+
+const RSVP_CHOICES: { status: RsvpStatus; label: string; active: string }[] = [
+  { status: "accepted", label: "Accept", active: "status-success border" },
+  { status: "tentative", label: "Maybe", active: "status-warning border" },
+  { status: "declined", label: "Decline", active: "status-error border" },
+];
 
 interface EventPeopleSectionProps {
   event: CalendarEvent;
@@ -19,6 +28,7 @@ interface EventPeopleSectionProps {
 export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectionProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  const delegationsToMe = useAppSelector((state) => state.calendar.delegationsToMe);
 
   // The organizer's own attendance is implied, so RSVP counts exclude them.
   const rsvpSummary = useMemo(() => {
@@ -36,6 +46,12 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
     return event.attendees.find((a) => a.id === currentUserId && a.role !== "organizer") ?? null;
   }, [event.attendees, currentUserId]);
 
+  // Colleagues on this event whose calendar the member runs as their delegate.
+  const answerableFor = useMemo(
+    () => attendeesAnswerableFor(event.attendees, delegationsToMe),
+    [event.attendees, delegationsToMe],
+  );
+
   const invitedViaGroupIds = useMemo(
     () => [...new Set(event.attendees.map((a) => a.invitedViaGroupId).filter(Boolean))] as string[],
     [event.attendees],
@@ -50,8 +66,8 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
     return names;
   }, [viaSubjects]);
 
-  const handleRsvp = (status: "accepted" | "tentative" | "declined") => {
-    dispatch(updateAttendeeStatus({ eventId: event.id, status }));
+  const handleRsvp = (status: RsvpStatus, onBehalfOfUserId?: string) => {
+    dispatch(updateAttendeeStatus({ eventId: event.id, status, onBehalfOfUserId }));
   };
 
   const commitAttendees = (next: Attendee[]) => {
@@ -82,40 +98,29 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
       {currentUserAttendee && event.status !== "cancelled" && (
         <div>
           <SectionLabel>Your Response</SectionLabel>
-          <div className="flex items-center gap-1.5">
-            {[
-              {
-                status: "accepted" as const,
-                label: "Accept",
-                active: "status-success border",
-              },
-              {
-                status: "tentative" as const,
-                label: "Maybe",
-                active: "status-warning border",
-              },
-              {
-                status: "declined" as const,
-                label: "Decline",
-                active: "status-error border",
-              },
-            ].map(({ status, label, active }) => (
-              <button
-                key={status}
-                type="button"
-                onClick={() => handleRsvp(status)}
-                className={cn(
-                  "flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors",
-                  currentUserAttendee.status === status
-                    ? active
-                    : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <RsvpButtons
+            current={currentUserAttendee.status}
+            onPick={(status) => handleRsvp(status)}
+          />
         </div>
+      )}
+
+      {event.status !== "cancelled" &&
+        answerableFor.map((attendee) => (
+          <div key={attendee.id}>
+            <SectionLabel>Respond for {attendee.name}</SectionLabel>
+            <RsvpButtons
+              current={attendee.status}
+              onPick={(status) => handleRsvp(status, attendee.id)}
+              label={`Respond for ${attendee.name}`}
+            />
+          </div>
+        ))}
+
+      {event.arrangedById && (
+        <p className="text-xs text-muted-foreground">
+          Booked by {event.arrangedByName || "a delegate"} on the organizer&apos;s behalf
+        </p>
       )}
 
       <div>
@@ -186,6 +191,11 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
                           via {viaName}
                         </span>
                       )}
+                      {attendee.respondedById && (
+                        <span className="block text-xs text-muted-foreground truncate">
+                          answered by {attendee.respondedByName || "a delegate"}
+                        </span>
+                      )}
                     </div>
                   </div>
                   {attendee.role === "organizer" ? (
@@ -206,6 +216,35 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+interface RsvpButtonsProps {
+  current: Attendee["status"];
+  onPick: (status: RsvpStatus) => void;
+  label?: string;
+}
+
+function RsvpButtons({ current, onPick, label }: RsvpButtonsProps) {
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label={label}>
+      {RSVP_CHOICES.map(({ status, label: choice, active }) => (
+        <button
+          key={status}
+          type="button"
+          onClick={() => onPick(status)}
+          aria-pressed={current === status}
+          className={cn(
+            "flex-1 px-2 py-1 text-xs font-medium rounded-lg border transition-colors",
+            current === status
+              ? active
+              : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          {choice}
+        </button>
+      ))}
     </div>
   );
 }

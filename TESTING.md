@@ -2283,6 +2283,72 @@ public-source address, per the Caddy or nginx snippet in the docs).
       settings, and members pages all work from the denied address.
 - [ ] From an allowed (private/VPN) address, the `/platform` pages work.
 
+## Calendar: delegation
+
+A member (A, the grantor) lets a colleague (B, the delegate) run A's personal calendars. Needs
+A, B, a third member C who organizes meetings, an org admin, a second browser for B,
+`db shell`, and mailcatcher. (both products)
+
+- [ ] A: sidebar row menu on "My Calendar" -> "Delegates...", add B at "Events". B's sidebar
+      gains "Delegated to me" with A's calendars named after A (team calendars are not there);
+      A's events show on B's grid, in search, and in the `@` picker.
+- [ ] A marks one of A's events Private: B sees only "Busy" for it. A raises B to "Events and
+      private details": B now sees its title and description. An event A organizes on C's
+      calendar shows its details to B only at that level.
+- [ ] B creates an event and picks A's calendar in the editor's Calendar field: A is the
+      organizer, the detail reads "Booked by B on the organizer's behalf", the activity log
+      reads "B for A created this event", and an invited attendee's mail in mailcatcher says
+      "Invited by A (sent by B on their behalf)". The event is A's, not B's, in `db shell`
+      (`organizer_id` = A, `arranged_by_id` = B).
+- [ ] B edits the title and cancels the event (Status -> Cancelled); both are attributed "B for
+      A". B cannot delete it, move it to another calendar, open its Share dialog with controls,
+      or rename/reshare A's calendar (no Edit or Share in the delegated row menu).
+- [ ] C invites A to a meeting: it appears on B's grid read-only, and the detail offers
+      "Respond for A". B accepts; A's attendee row shows "Accepted - answered by B", the
+      activity log reads "B for A accepted the invite", and C is notified.
+- [ ] A removes B (Delegates -> trash). Without a reload B's "Delegated to me" section and every
+      A event leave B's grid; a deep link to one of them is not found.
+- [ ] Re-add B, then deactivate B: B reaches nothing; A's Delegates list marks B "Deactivated -
+      has no access for now". Reactivate B: access returns. Repeat deactivating A instead.
+- [ ] B steps down (row menu on A's calendar -> "Stop managing this calendar", then confirm):
+      same as a removal.
+- [ ] B reaches nothing of A's outside the calendar: A's private notes, files, and chats stay
+      invisible to B.
+- [ ] Mobile (B signed in): "Calendars and filters" lists "Delegated to me"; the new-event
+      Calendar row offers A's calendar with "As their delegate"; the detail screen shows
+      "Booked by ..." and a "Respond for A" bar. A opens "Delegates..." from the same sheet,
+      adds, re-levels and removes a delegate. B taps the sign-out icon on A's calendar row and
+      confirms "Stop managing": A's calendar leaves B's sheet and grid.
+
+## Calendar: admin oversight
+
+An org admin controls delegation and sees which calendars are shared beyond their owner, without
+seeing any calendar's events. Needs the org admin, two members with a delegation between them,
+a calendar open to the whole organization with one named member, and a third member. (both
+products)
+
+- [ ] Admin -> Calendar shows a third policy row, "Who can make a colleague their calendar
+      delegate". Set it to "Org and calendar admins": a member's Delegates sheet says only calendar
+      admins may add delegates, existing delegations keep working, the "Events" level can no
+      longer be raised (the server refuses it too), while "Events and private details" can still
+      be lowered and any delegate removed. A `calendar.policy_updated` audit row carries previous and new `delegators`.
+      Restore it to "Every member".
+- [ ] "Calendar delegations" lists every delegation, newest first, with grantor -> delegate,
+      level and date, and pages with "Load more" past 200. Revoke one: the delegate loses access
+      at once, both parties are notified, and the audit log shows "Calendars: Delegate removed"
+      with `by: admin`.
+- [ ] "Shared calendars" lists calendars open to the organization or with named members, with
+      owner, effective access and member counts, and never a calendar set to named members that
+      names nobody. Nothing on the page shows an event.
+- [ ] On an "Everyone in org" calendar, the lock action removes organization-wide access: a
+      member who reached it only through the org loses it; the named member keeps it; the row
+      now reads "Invited people" and the action is gone. The audit log shows "Permissions:
+      Access mode changed" by the admin. The admin still cannot open the calendar's events.
+- [ ] A non-admin (including a calendar domain admin) gets a permission error from all four
+      oversight RPCs.
+- [ ] Responsive: the admin page at 375 px and 768 px has no horizontal scroll; secondary table
+      columns collapse into the first column.
+
 ## Calendar scale guardrails
 
 Read paths that used to cost more than the window they were asked for. Needs an

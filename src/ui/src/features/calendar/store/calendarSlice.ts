@@ -40,13 +40,25 @@ import {
   updateCalendarPolicy,
 } from "@/features/calendar/store/calendarsThunks";
 import type { FreeBusyData, MeetingSuggestion } from "@/features/calendar/types/scheduling";
-import type { CalendarInfo, CalendarPolicyInfo } from "@/features/calendar/types";
+import type {
+  CalendarDelegationInfo,
+  CalendarInfo,
+  CalendarPolicyInfo,
+} from "@/features/calendar/types";
+import {
+  fetchMyDelegations,
+  grantDelegation,
+  revokeDelegation,
+} from "@/features/calendar/store/delegationThunks";
 
 interface CalendarState {
   /** The calendars the member can see, in the server's list order. */
   calendars: Record<string, CalendarInfo>;
   calendarOrder: string[];
   calendarPolicy: CalendarPolicyInfo | null;
+  /** Delegates the member has named, and the colleagues who named the member. */
+  delegationsByMe: CalendarDelegationInfo[];
+  delegationsToMe: CalendarDelegationInfo[];
   /** Latest visibility request per calendar; an older response must not undo a newer click. */
   pendingVisibility: Record<string, string>;
   events: Record<string, CalendarEvent>;
@@ -134,6 +146,8 @@ const initialState: CalendarState = {
   pendingVisibility: {},
   eventsRequestId: null,
   calendarPolicy: null,
+  delegationsByMe: [],
+  delegationsToMe: [],
   events: {},
   visibleEventIds: [],
   categories: createDefaultCategories(),
@@ -334,6 +348,19 @@ const calendarSlice = createSlice({
       })
       .addCase(updateCalendarPolicy.fulfilled, (state, action) => {
         state.calendarPolicy = action.payload;
+      })
+      .addCase(fetchMyDelegations.fulfilled, (state, action) => {
+        state.delegationsByMe = action.payload.grantedByMe;
+        state.delegationsToMe = action.payload.grantedToMe;
+      })
+      .addCase(grantDelegation.fulfilled, (state, action) => {
+        const index = state.delegationsByMe.findIndex((d) => d.id === action.payload.id);
+        if (index >= 0) state.delegationsByMe[index] = action.payload;
+        else state.delegationsByMe.push(action.payload);
+      })
+      .addCase(revokeDelegation.fulfilled, (state, action) => {
+        state.delegationsByMe = state.delegationsByMe.filter((d) => d.id !== action.payload);
+        state.delegationsToMe = state.delegationsToMe.filter((d) => d.id !== action.payload);
       });
 
     builder

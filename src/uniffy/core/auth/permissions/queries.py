@@ -196,43 +196,7 @@ class ContentAccessQuery:
         onto ``build_accessible_filter`` (e.g. domain-membership bypasses) must
         AND this onto that branch.
         """
-        from uniffy.core.models.login.group import Group
-        from uniffy.core.models.login.group_member import GroupMember
-        from uniffy.core.models.permissions.content_member import ContentMember
-
-        now = datetime.now(UTC)
-
-        user_groups_subq = (
-            select(GroupMember.group_id)
-            .join(Group, Group.id == GroupMember.group_id)
-            .where(
-                GroupMember.user_id == user_id,
-                GroupMember.is_active.is_(True),
-                Group.organization_id == organization_id,
-            )
-        )
-
-        blocked_subq = select(ContentMember.content_id).where(
-            ContentMember.organization_id == organization_id,
-            ContentMember.content_type == content_type,
-            ContentMember.role == ContentRole.BLOCKED,
-            or_(
-                ContentMember.expires_at.is_(None),
-                ContentMember.expires_at > now,
-            ),
-            or_(
-                and_(
-                    ContentMember.subject_type == SubjectType.USER,
-                    ContentMember.subject_id == user_id,
-                ),
-                and_(
-                    ContentMember.subject_type == SubjectType.GROUP,
-                    ContentMember.subject_id.in_(user_groups_subq),
-                ),
-            ),
-        )
-
-        return content_id_column.notin_(blocked_subq)
+        return not_blocked_clause(user_id, organization_id, content_type, content_id_column)
 
     async def build_shared_with_me_filter(
         self,
@@ -299,3 +263,49 @@ class ContentAccessQuery:
             baseline_role_column=baseline_role_column,
         )
         return query.where(filter_expr)
+
+
+def not_blocked_clause(
+    user_id: UUID,
+    organization_id: UUID,
+    content_type: ContentType,
+    content_id_column: Any,
+) -> Any:
+    """Session-free form of ``ContentAccessQuery.build_not_blocked_filter``."""
+    from uniffy.core.models.login.group import Group
+    from uniffy.core.models.login.group_member import GroupMember
+    from uniffy.core.models.permissions.content_member import ContentMember
+
+    now = datetime.now(UTC)
+
+    user_groups_subq = (
+        select(GroupMember.group_id)
+        .join(Group, Group.id == GroupMember.group_id)
+        .where(
+            GroupMember.user_id == user_id,
+            GroupMember.is_active.is_(True),
+            Group.organization_id == organization_id,
+        )
+    )
+
+    blocked_subq = select(ContentMember.content_id).where(
+        ContentMember.organization_id == organization_id,
+        ContentMember.content_type == content_type,
+        ContentMember.role == ContentRole.BLOCKED,
+        or_(
+            ContentMember.expires_at.is_(None),
+            ContentMember.expires_at > now,
+        ),
+        or_(
+            and_(
+                ContentMember.subject_type == SubjectType.USER,
+                ContentMember.subject_id == user_id,
+            ),
+            and_(
+                ContentMember.subject_type == SubjectType.GROUP,
+                ContentMember.subject_id.in_(user_groups_subq),
+            ),
+        ),
+    )
+
+    return content_id_column.notin_(blocked_subq)

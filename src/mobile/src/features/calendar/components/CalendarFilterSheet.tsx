@@ -1,6 +1,15 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { Check, Crosshair, Eye, EyeSlash, Prohibit, ShareNetwork } from "phosphor-react-native";
+import { Alert, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import {
+  Check,
+  Crosshair,
+  Eye,
+  EyeSlash,
+  Prohibit,
+  ShareNetwork,
+  SignOut,
+  UserSwitch,
+} from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetSearchBar } from "@shared/components/SheetSearchBar";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -8,6 +17,8 @@ import { FONT } from "@theme/typography";
 import { CALENDAR_SECTIONS } from "@features/calendar/calendarList";
 import type { SerializedCalendar, SerializedCategory } from "@features/calendar/calendarSerializer";
 import { useSetCalendarVisibility } from "@features/calendar/useCalendarMutations";
+import { useMyDelegations, useRevokeDelegation } from "@features/calendar/useCalendarDelegation";
+import { userFacingError } from "@shared/lib/userFacingError";
 import { roleCanManage } from "@shared/permissions/contentRoles";
 
 export interface FilterTag {
@@ -22,6 +33,8 @@ type CalendarFilterSheetProps = {
   calendars: SerializedCalendar[];
   /** Opens sharing for a calendar; members without manage rights get a read-only view. */
   onShareCalendar: (calendar: SerializedCalendar) => void;
+  /** Opens the member's own delegates. */
+  onManageDelegates: () => void;
   categories: SerializedCategory[];
   activeCategoryIds: Set<string>;
   onToggle: (id: string) => void;
@@ -40,6 +53,7 @@ export function CalendarFilterSheet({
   onClose,
   calendars,
   onShareCalendar,
+  onManageDelegates,
   categories,
   activeCategoryIds,
   onToggle,
@@ -54,6 +68,33 @@ export function CalendarFilterSheet({
 }: CalendarFilterSheetProps) {
   const T = useTheme();
   const setVisibility = useSetCalendarVisibility();
+  const { data: delegations } = useMyDelegations();
+  const revokeDelegation = useRevokeDelegation();
+
+  const stopManaging = (calendar: SerializedCalendar) => {
+    const delegation = delegations?.grantedToMe.find((d) => d.grantorId === calendar.ownerId);
+    if (!delegation) return;
+    const grantor = delegation.grantorName;
+    Alert.alert(
+      "Stop managing this calendar?",
+      `You will lose access to ${grantor}'s calendar. Only ${grantor} can make you a delegate again.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Stop managing",
+          style: "destructive",
+          onPress: () =>
+            revokeDelegation.mutate(delegation.id, {
+              onError: (error) =>
+                Alert.alert(
+                  "Could not stop managing",
+                  userFacingError(error, "You still manage this calendar."),
+                ),
+            }),
+        },
+      ],
+    );
+  };
   const anyActive =
     activeCategoryIds.size > 0 || activeTagIds.size > 0 || focusOnly || searchQuery.length > 0;
 
@@ -116,21 +157,47 @@ export function CalendarFilterSheet({
                       color={shown ? calendar.color : T.textDim}
                       weight="duotone"
                     />
-                    <TouchableOpacity
-                      onPress={() => onShareCalendar(calendar)}
-                      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        roleCanManage(calendar.userRole)
-                          ? `Share ${calendar.label}`
-                          : `Who has access to ${calendar.label}`
-                      }
-                    >
-                      <ShareNetwork size={16} color={T.textDim} weight="duotone" />
-                    </TouchableOpacity>
+                    {/* A delegate runs the events, not the calendar's sharing. */}
+                    {section === "delegated" ? (
+                      <TouchableOpacity
+                        onPress={() => stopManaging(calendar)}
+                        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Stop managing ${calendar.label}`}
+                      >
+                        <SignOut size={16} color={T.textDim} weight="duotone" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => onShareCalendar(calendar)}
+                        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          roleCanManage(calendar.userRole)
+                            ? `Share ${calendar.label}`
+                            : `Who has access to ${calendar.label}`
+                        }
+                      >
+                        <ShareNetwork size={16} color={T.textDim} weight="duotone" />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 );
               })}
+              {section === "mine" && (
+                <TouchableOpacity
+                  style={[styles.row, { borderColor: T.border }]}
+                  onPress={onManageDelegates}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Calendar delegates"
+                >
+                  <UserSwitch size={16} color={T.textDim} weight="duotone" />
+                  <Text style={[styles.name, { color: T.textDim }]} numberOfLines={1}>
+                    Delegates...
+                  </Text>
+                </TouchableOpacity>
+              )}
             </React.Fragment>
           );
         })}

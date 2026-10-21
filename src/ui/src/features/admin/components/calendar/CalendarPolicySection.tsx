@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarBlank } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { fetchCalendarPolicy, updateCalendarPolicy } from "@/features/calendar/store";
@@ -16,10 +15,10 @@ const AUDIENCE_OPTIONS: SelectOption<CalendarPolicyAudience>[] = [
 interface PolicyForm {
   teamCalendarCreators: CalendarPolicyAudience;
   orgWideCalendarSharers: CalendarPolicyAudience;
+  delegators: CalendarPolicyAudience;
 }
 
 export function CalendarPolicySection() {
-  useDocumentTitle("Calendar");
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
@@ -36,6 +35,7 @@ export function CalendarPolicySection() {
       ? {
           teamCalendarCreators: policy.teamCalendarCreators,
           orgWideCalendarSharers: policy.orgWideCalendarSharers,
+          delegators: policy.delegators,
         }
       : null);
 
@@ -72,9 +72,9 @@ export function CalendarPolicySection() {
           <h1 className="text-xl md:text-2xl font-bold">Calendar</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Who may set up calendars for a team, and who may open a calendar to the whole
-          organization. Calendar admins are granted on the Domain Admins page. These rules decide
-          who can make the change; they never give anyone access to a calendar.
+          Who may set up calendars for a team, open a calendar to the whole organization, or let a
+          colleague run their calendar. Calendar admins are granted on the Domain Admins page. These
+          rules decide who can make the change; they never give anyone access to a calendar.
         </p>
       </div>
 
@@ -108,6 +108,13 @@ export function CalendarPolicySection() {
             detail="Sharing with specific people and groups stays open to every calendar admin."
             value={form.orgWideCalendarSharers}
             onChange={(value) => setDraft({ ...form, orgWideCalendarSharers: value })}
+            disabled={disabled}
+          />
+          <PolicyRow
+            title="Who can make a colleague their calendar delegate"
+            detail="A delegate books, edits and answers invitations on someone's personal calendar, and is shown as the arranger. Restricting this stops new delegations; existing ones stay until revoked below."
+            value={form.delegators}
+            onChange={(value) => setDraft({ ...form, delegators: value })}
             disabled={disabled}
           />
         </div>

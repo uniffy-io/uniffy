@@ -62,6 +62,10 @@ def _calendar_edit_allowed(monkeypatch):
         "uniffy.domains.scheduling.calendar.events.creation.require_calendar_edit",
         AsyncMock(return_value=ContentRole.OWNER),
     )
+    monkeypatch.setattr(
+        "uniffy.domains.scheduling.calendar.events.creation.booking_organizer",
+        AsyncMock(side_effect=lambda _session, actor_id, *_: actor_id),
+    )
 
 
 def _make_ops() -> CalendarEventOperations:

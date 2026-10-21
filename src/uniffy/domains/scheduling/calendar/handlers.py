@@ -1,8 +1,10 @@
 """Stable calendar RPC handler composition."""
 
+from uniffy.domains.scheduling.calendar.rpc.admin import CalendarOversightHandlers
 from uniffy.domains.scheduling.calendar.rpc.attendees import AttendeeHandlers
 from uniffy.domains.scheduling.calendar.rpc.calendars import CalendarManagementHandlers
 from uniffy.domains.scheduling.calendar.rpc.categories import CategoryHandlers
+from uniffy.domains.scheduling.calendar.rpc.delegation import CalendarDelegationHandlers
 from uniffy.domains.scheduling.calendar.rpc.events import EventMutationHandlers
 from uniffy.domains.scheduling.calendar.rpc.interop import InteropHandlers
 from uniffy.domains.scheduling.calendar.rpc.policy import CalendarPolicyHandlers
@@ -13,6 +15,8 @@ from uniffy.domains.scheduling.calendar.rpc.templates import TemplateHandlers
 class CalendarHandlers(
     CalendarManagementHandlers,
     CalendarPolicyHandlers,
+    CalendarDelegationHandlers,
+    CalendarOversightHandlers,
     EventMutationHandlers,
     EventQueryHandlers,
     InteropHandlers,

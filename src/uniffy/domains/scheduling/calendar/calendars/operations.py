@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
+from uniffy.core.auth.permissions.checker import PermissionChecker
+from uniffy.core.auth.permissions.roles import role_can_edit
 from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.converters.common_proto import content_type_to_proto
 from uniffy.core.errors import PermissionDeniedError, ValidationError
@@ -25,7 +27,10 @@ from uniffy.core.search import SearchIndexer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, CalendarType, ContentRole, ContentType, SubjectType
 from uniffy.domains.permissions.members import ContentMembersOperations
-from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.calendars.access import (
+    calendar_acl_role,
+    require_calendar_edit,
+)
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarListing, CalendarReader
 from uniffy.domains.scheduling.calendar.calendars.relocation import stage_ical_uid_release
 from uniffy.domains.scheduling.calendar.calendars.search import (
@@ -215,7 +220,8 @@ class CalendarOperations(CalendarReader):
         calendar_id: UUID,
         hidden: bool,
     ) -> CalendarListing:
-        await self.get_by_id(user_id, organization_id, calendar_id)
+        # The listing gate also admits calendars the member reaches as a delegate.
+        await self.get_listing(user_id, organization_id, calendar_id)
         now = datetime.now(UTC)
         await self.session.execute(
             pg_insert(CalendarMemberSettings)
@@ -382,6 +388,18 @@ class CalendarOperations(CalendarReader):
         if target_calendar_id == calendar_id:
             raise ValidationError("target_calendar_id", "Choose a different calendar.")
         await require_calendar_edit(self.session, user_id, organization_id, target_calendar_id)
+        # Delegation books in the grantor's name; it does not let a delegate rehome their own
+        # events onto the grantor's calendar.
+        if not role_can_edit(
+            await calendar_acl_role(
+                self.session,
+                PermissionChecker(self.session),
+                user_id,
+                organization_id,
+                target_calendar_id,
+            )
+        ):
+            raise PermissionDeniedError("move events to", ContentType.CALENDAR.value)
         # Override rows move with their series, and deleted rows too, so a
         # restore never lands an event on a calendar that no longer exists.
         await stage_ical_uid_release(
