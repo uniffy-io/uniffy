@@ -278,6 +278,7 @@ class UploadService {
   async recover(scope: UploadScope): Promise<void> {
     const current: UploadScope = { userId: scope.userId, organizationId: scope.organizationId };
     setUploadScope(current);
+    if (!isStorageEncryptionReady()) return;
     const generation = this.generation;
     const live = () => generation === this.generation && getUploadScope() === current;
     const hasWebLocks = lockManager() !== null;
@@ -302,7 +303,7 @@ class UploadService {
         continue;
       }
       const blob = stored.uploadId ? await getBlob(stored) : undefined;
-      if (!live()) {
+      if (!live() || !isStorageEncryptionReady()) {
         release();
         return;
       }

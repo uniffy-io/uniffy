@@ -6,6 +6,8 @@ from uuid import UUID
 from sqlalchemy import and_, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.membership import get_active_membership, get_active_memberships
+from uniffy.core.errors import MembershipRequiredError
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.push_subscription import PushSubscription
 from uniffy.core.models.shared import NotificationType
@@ -17,6 +19,29 @@ class NotificationOperations:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    async def _require_membership(self, user_id: UUID, organization_id: UUID) -> None:
+        if await get_active_membership(self.session, user_id, organization_id) is None:
+            raise MembershipRequiredError("access organization notifications")
+
+    async def _require_notification_memberships(
+        self, user_id: UUID, notification_ids: list[UUID]
+    ) -> None:
+        organization_ids = set(
+            (
+                await self.session.execute(
+                    select(Notification.organization_id)
+                    .where(
+                        Notification.user_id == user_id,
+                        Notification.id.in_(notification_ids),
+                    )
+                    .distinct()
+                )
+            ).scalars()
+        )
+        memberships = await get_active_memberships(self.session, user_id, organization_ids)
+        if organization_ids != {membership.organization_id for membership in memberships}:
+            raise MembershipRequiredError("access organization notifications")
+
     async def list_notifications(
         self,
         user_id: UUID,
@@ -27,6 +52,7 @@ class NotificationOperations:
         notification_types: list[NotificationType] | None = None,
     ) -> tuple[list[Notification], int, int]:
         """Return ``(notifications, total_count, unread_count)`` for the user."""
+        await self._require_membership(user_id, organization_id)
         base_conditions = [
             Notification.user_id == user_id,
             Notification.organization_id == organization_id,
@@ -66,6 +92,7 @@ class NotificationOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
+        await self._require_membership(user_id, organization_id)
         query = select(func.count()).where(
             and_(
                 Notification.user_id == user_id,
@@ -94,6 +121,7 @@ class NotificationOperations:
         if not notification:
             return None
 
+        await self._require_membership(user_id, notification.organization_id)
         if not notification.is_read:
             notification.is_read = True
             notification.read_at = datetime.now(UTC)
@@ -108,6 +136,7 @@ class NotificationOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> int:
+        await self._require_membership(user_id, organization_id)
         now = datetime.now(UTC)
         stmt = (
             update(Notification)
@@ -142,6 +171,7 @@ class NotificationOperations:
         if not notification:
             return False
 
+        await self._require_membership(user_id, notification.organization_id)
         await self.session.delete(notification)
         await self.session.commit()
         return True
@@ -160,6 +190,7 @@ class NotificationOperations:
         actor_id: UUID | None = None,
     ) -> tuple[list[Notification], int, int]:
         """Search notifications by free text + filters; returns ``(rows, total, unread)``."""
+        await self._require_membership(user_id, organization_id)
         base_conditions = [
             Notification.user_id == user_id,
             Notification.organization_id == organization_id,
@@ -222,6 +253,7 @@ class NotificationOperations:
         int,
     ]:
         """Return ``(daily_stats, type_stats, total, unread, read)`` over the last ``days``."""
+        await self._require_membership(user_id, organization_id)
         cutoff = datetime.now(UTC) - timedelta(days=days)
         base_conditions = [
             Notification.user_id == user_id,
@@ -229,7 +261,6 @@ class NotificationOperations:
             Notification.created_at >= cutoff,
         ]
 
-        # Daily stats
         date_col = func.date(func.timezone("UTC", Notification.created_at)).label("day")
         daily_query = (
             select(
@@ -282,6 +313,7 @@ class NotificationOperations:
         if not source_urn:
             return 0
 
+        await self._require_membership(user_id, organization_id)
         now = datetime.now(UTC)
         stmt = (
             update(Notification)
@@ -307,6 +339,7 @@ class NotificationOperations:
         if not notification_ids:
             return 0
 
+        await self._require_notification_memberships(user_id, notification_ids)
         now = datetime.now(UTC)
         stmt = (
             update(Notification)
@@ -331,6 +364,7 @@ class NotificationOperations:
         if not notification_ids:
             return 0
 
+        await self._require_notification_memberships(user_id, notification_ids)
         result = await self.session.execute(
             select(Notification).where(
                 and_(

@@ -34,18 +34,25 @@ export function useContentOrganizationResolver(
   const dispatch = useAppDispatch();
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const [settled, setSettled] = useState<Settled | null>(null);
-  const requestedKey = useRef<string | null>(null);
+  const requested = useRef<{ key: string } | null>(null);
   const key = failed && urn && isValidUrn(urn) ? `${currentOrganizationId ?? ""}|${urn}` : null;
 
   useEffect(() => {
-    if (!key || !urn || requestedKey.current === key) return;
-    requestedKey.current = key;
+    if (!key || !urn || requested.current?.key === key) return;
+    const request = { key };
+    requested.current = request;
     dispatch(resolveContentOrganization(urn))
       .unwrap()
       .then(
-        (found) => setSettled({ key, organization: found?.organization ?? null }),
+        (found) => {
+          if (requested.current === request) {
+            setSettled({ key, organization: found?.organization ?? null });
+          }
+        },
         // The error went through the global toast; the page falls back as if nothing matched.
-        () => setSettled({ key, organization: null }),
+        () => {
+          if (requested.current === request) setSettled({ key, organization: null });
+        },
       );
   }, [dispatch, key, urn]);
 

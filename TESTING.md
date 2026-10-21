@@ -2917,15 +2917,15 @@ dates and one custom single-select field makes every check reachable.
 ## Sign-out and organization switch reset
 
 Needs a user who belongs to two organizations; the org picker lives at `/select-org`, and the
-header and user menu switch as well. Stored state is readable from the browser console with
+user menu switches as well. Stored state is readable from the browser console with
 `JSON.parse(JSON.parse(localStorage.getItem("persist:root")).projectsUi)`.
 
 - [ ] `(both products)` In organization A, open a project, change its view (hide a column) so the
       tab shows the unsaved dot, and pick "Modal view" for task details. Go to `/select-org` and
       pick organization B. Projects shows only B's projects, Chat shows only B's channels, the
-      notification badge shows B's count, and the stored `viewDrafts` and `activeViewIds` are
-      empty. The user is still signed in.
-- [ ] Switch back to A: the project opens on its default view with no unsaved dot, and task
+      notification badge shows B's count, and stored `viewDrafts` and `activeViewIds` retain A's
+      project entries without showing A's content in B. The user is still signed in.
+- [ ] Switch back to A: the project restores its selected view and unsaved draft, and task
       details still open as a modal.
 - [ ] Sign out from the user menu: the stored `auth` has no user, `viewDrafts` is empty, and the
       detail-mode preference is kept.
@@ -2951,30 +2951,34 @@ Needs a user in organizations A and B plus a third organization C, an org admin 
 browser, a platform operator for C, a second user who is not in B, and a mobile dev build signed
 in as the first user. (both products)
 
-- [ ] Header: the header shows A's initial box (and its name on a wide window). Click it: the
-      popover lists A, B and C with A checked. Pick B: within a second the tab lands on `/` in B,
-      the header reads B, and no sign-in prompt appears. "All organizations" in the popover opens
-      `/select-org`.
-- [ ] User menu: the Organizations section lists the same organizations with the current one
-      checked. Pick A: the tab lands on `/` in A. A user in a single organization signs in
+- [ ] Header: organization switcher is absent at desktop, tablet, and mobile widths.
+- [ ] User menu: Organizations lists A, B and C with A checked. Pick B: the tab lands on `/` in B
+      without a sign-in prompt. "All organizations" opens `/select-org`. A user in a single organization signs in
       straight to `/` with no picker, and the section shows that one checked row.
+- [ ] Fail the first organization-list request after reload. User menu still offers "All
+      organizations". Open it and retry: the picker loads current memberships without signing out.
 - [ ] Two tabs in two organizations: tab 1 stays in A with a note open, tab 2 switches to B and
       opens a note there. Type in both for a minute: both badges stay Live, each note saves its
       own edits, and neither tab signs out, reloads or changes organization on its own.
-- [ ] Reload: with tab 2 last switched to B, reload tab 1 and open a new tab. Both land in B, the
-      organization picked last on this device, and tab 1 offers to switch back to A for its note.
+- [ ] Reload: with tab 2 last switched to B, reload tab 1 and open a fresh tab. Tab 1 stays in A
+      with its note open. The fresh tab lands in B, the organization picked last on this device.
       Sign out and back in: B opens with no picker. Remove `uniffy:last-org:<user id>` from
       localStorage and sign in again: the picker shows.
-- [ ] Recording: start a screen recording and switch from the header. "Discard active recording?"
+- [ ] Recording: start a screen recording and switch from the user menu. "Discard active recording?"
       appears. Stay keeps the recording and the organization. "Discard and switch" cancels the
-      recording and lands in the other organization. Repeat from the user menu.
+      recording and lands in the other organization.
 - [ ] Wrong organization link: in a tab in A, paste the URL of a note in B. The page shows "This
       note is in B." with "Switch to B and open" and "Stay here". Switch opens the note in this tab
-      while other tabs stay in A. Repeat with a project URL and a chat channel URL. As the second
+      while other tabs stay in A. Repeat with a project URL. As the second
       user, the same note URL shows the ordinary not found path and never names B.
+- [ ] Fail one note-load request, then restore connectivity and reopen that note from the sidebar.
+      The note opens without a reload or repeated redirects. Rapidly open two wrong-org links
+      with responses completing out of order: the current link settles and shows its own result.
+- [ ] Reload during a resumable upload while delaying the storage-key request. Stored upload
+      bytes remain intact and upload resumes once the key arrives.
 - [ ] Suspended organization: switch a tab to C and open a note, then the platform operator
       suspends C. The note shows "Access lost", and a reload of that tab lands on `/select-org`.
-      C shows greyed with a Suspended badge in the header popover, the user menu and
+      C shows greyed with a Suspended badge in the user menu and
       `/select-org`, and clicking it does nothing. Unsuspend C: it can be entered again.
 - [ ] Member removal: in browser 1 switch one tab to B, then another tab to A last and open a
       note there. The admin of A removes the user. Within a second the note shows "Access lost"

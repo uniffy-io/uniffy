@@ -175,3 +175,49 @@ it("asks nothing for a malformed reference", async () => {
   expect(await renderSettled("not-a-urn", true)).toEqual({ match: null, status: "idle" });
   expect(resolveRpc).not.toHaveBeenCalled();
 });
+
+it.each(["success", "failure"])(
+  "keeps current lookup settled when stale lookup finishes with %s",
+  async (outcome) => {
+    type Response = ReturnType<typeof create<typeof ResolveContentOrganizationResponseSchema>>;
+    let resolveFirst!: (value: Response) => void;
+    let rejectFirst!: (error: Error) => void;
+    let resolveSecond!: (value: Response) => void;
+    resolveRpc.mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          resolveFirst = resolve;
+          rejectFirst = reject;
+        }),
+    );
+    resolveRpc.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+    );
+    const first = buildUrn(UrnType.NOTE, "first-note");
+    const second = buildUrn(UrnType.NOTE, "second-note");
+    render(first, true);
+    render(second, true);
+    resolveSecond(
+      create(ResolveContentOrganizationResponseSchema, {
+        organization: { id: "org-second", name: "Second", slug: "second" },
+        role: OrganizationRole.MEMBER,
+      }),
+    );
+    const settled = await renderSettled(second, true);
+    expect(settled.match?.id).toBe("org-second");
+    if (outcome === "success") {
+      resolveFirst(
+        create(ResolveContentOrganizationResponseSchema, {
+          organization: { id: "org-first", name: "First", slug: "first" },
+        }),
+      );
+    } else {
+      rejectFirst(new ConnectError("unavailable", Code.Unavailable));
+    }
+    expect(await renderSettled(second, true)).toEqual(settled);
+    expect(resolveRpc).toHaveBeenCalledTimes(2);
+  },
+);

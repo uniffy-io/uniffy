@@ -70,9 +70,11 @@ Persistence + resume (`uploadStore.ts`, one IndexedDB DB `uniffy-uploads` with `
   (ephemeral). Oversize is logged, never silently dropped.
 - Blobs rest only as AES-GCM ciphertext under the per-user device key (`shared/crypto/storageEncryption.ts`)
   with additional data `uniffy-upload-v1|<userId>|<organizationId>|<record id>`. A blob that fails
-  authentication (another scope, a rotated key) reads as missing. No key means no bytes at rest, so a reload
-  asks to re-select.
-- `recover({ userId, organizationId })` runs whenever the tab's account or organization changes (`UploadBoot`).
+  authentication (another scope, a rotated key) reads as missing. Uploads started without a key store
+  no bytes, so recovery asks to re-select once the key is available.
+- `recover({ userId, organizationId })` runs whenever the tab's account or organization changes (`UploadBoot`)
+  and when storage encryption becomes ready. It stamps the scope immediately but waits for the key before
+  reading stored bytes. Losing the key during recovery releases the lock and preserves the stored row.
   It lists only that scope's incomplete records, skips any whose lock another tab holds, re-reads the row
   under the lock, then calls `filesApi.getUploadStatus` (the server is the authority on completed parts) and
   resumes the worker from the first missing part (the worker skips `completedChunks`). Other scopes' records

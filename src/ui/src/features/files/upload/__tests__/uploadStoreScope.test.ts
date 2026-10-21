@@ -109,6 +109,13 @@ function holdInAnotherTab(id: string): () => void {
 }
 
 beforeEach(async () => {
+  vi.stubGlobal(
+    "BroadcastChannel",
+    class {
+      postMessage() {}
+      close() {}
+    },
+  );
   vi.stubGlobal("indexedDB", new IDBFactory());
   const local = new Map<string, string>();
   vi.stubGlobal("localStorage", {
@@ -225,6 +232,24 @@ describe("upload purge", () => {
 });
 
 describe("upload blob encryption", () => {
+  it("keeps resumable encrypted upload while reload waits for cache key", async () => {
+    await storeUpload(stored(ALICE_ORG_1, "pending-reload"));
+    expect(await rawKeys("blobs")).toEqual(["pending-reload"]);
+    vi.resetModules();
+    const encryption = await import("@/shared/crypto/storageEncryption");
+    const store = await import("@/features/files/upload/uploadStore");
+    const service = await import("@/features/files/upload/uploadService");
+    engine = { ...encryption, ...store, ...service };
+    expect(engine.isStorageEncryptionReady()).toBe(false);
+    await engine.uploadService.recover(ALICE_ORG_1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(await rawKeys("records")).toEqual(["pending-reload"]);
+    expect(await rawKeys("blobs")).toEqual(["pending-reload"]);
+    await engine.initStorageEncryption(DEVICE_SEED, "alice");
+    await engine.uploadService.recover(ALICE_ORG_1);
+    await vi.waitFor(() => expect(mocks.uploadChunks).toHaveBeenCalledOnce());
+  });
+
   it("stores ciphertext that reads back only under the scope that wrote it", async () => {
     const owner = stored(ALICE_ORG_1, "secret");
     const bytes = new TextEncoder().encode("plain file bytes");

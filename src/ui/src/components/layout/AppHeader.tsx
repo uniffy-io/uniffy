@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Kanban, Cpu, List, MagnifyingGlass } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
-import { OrgIdentity } from "@/components/layout/OrgIdentity";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { GlobalSearch } from "@/features/search/components/GlobalSearch";
 import { openSpotlightSearch } from "@/features/search/hooks/useSpotlightTrigger";
@@ -297,8 +296,7 @@ export function AppHeader() {
         <div className="absolute inset-0 bg-nav/95 backdrop-blur-sm border-b border-border-strong shadow-[0_8px_24px_-16px_hsl(0_0%_0%_/_var(--edge-drop-strong))]" />
 
         <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
-          {/* Stops short of the centered search, so a long organization name truncates instead. */}
-          <div className="flex min-w-0 items-center gap-0.5 z-20 lg:max-w-[calc(50%-11rem)] xl:max-w-[calc(50%-13.5rem)]">
+          <div className="flex min-w-0 items-center gap-0.5 z-20">
             <div className="flex md:hidden min-w-0 items-center gap-0.5">
               <button
                 onClick={() => setMobileMenuOpen(true)}
@@ -308,12 +306,10 @@ export function AppHeader() {
                 <List size={20} weight="bold" />
               </button>
               <LogoNavItem isActive={location.pathname === "/"} />
-              <OrgIdentity />
             </div>
 
             <nav className="hidden md:flex min-w-0 items-center gap-0.5">
               <LogoNavItem isActive={location.pathname === "/"} />
-              <OrgIdentity />
               {visibleNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
                 const targetPath = item.path === "/chat" ? chatPath : item.path;

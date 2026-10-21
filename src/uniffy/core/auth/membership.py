@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -9,7 +10,28 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
+    from sqlalchemy import Select
+
     from uniffy.core.models.login.organization_member import OrganizationMember
+
+
+def _active_memberships_query(user_id: UUID) -> Select[tuple[OrganizationMember]]:
+    from uniffy.core.models.login.organization import Organization
+    from uniffy.core.models.login.organization_member import OrganizationMember
+    from uniffy.core.models.login.user import User
+
+    return (
+        select(OrganizationMember)
+        .join(User, User.id == OrganizationMember.user_id)
+        .join(Organization, Organization.id == OrganizationMember.organization_id)
+        .where(
+            OrganizationMember.user_id == user_id,
+            OrganizationMember.is_active.is_(True),
+            User.is_active.is_(True),
+            Organization.deleted_at.is_(None),
+            Organization.is_suspended.is_(False),
+        )
+    )
 
 
 async def get_active_membership(
@@ -17,25 +39,32 @@ async def get_active_membership(
     user_id: UUID,
     organization_id: UUID,
 ) -> OrganizationMember | None:
-    from uniffy.core.models.login.organization import Organization
     from uniffy.core.models.login.organization_member import OrganizationMember
-    from uniffy.core.models.login.user import User
 
     return (
         await session.execute(
-            select(OrganizationMember)
-            .join(User, User.id == OrganizationMember.user_id)
-            .join(Organization, Organization.id == OrganizationMember.organization_id)
-            .where(
-                OrganizationMember.user_id == user_id,
-                OrganizationMember.organization_id == organization_id,
-                OrganizationMember.is_active.is_(True),
-                User.is_active.is_(True),
-                Organization.deleted_at.is_(None),
-                Organization.is_suspended.is_(False),
+            _active_memberships_query(user_id).where(
+                OrganizationMember.organization_id == organization_id
             )
         )
     ).scalar_one_or_none()
+
+
+async def get_active_memberships(
+    session: AsyncSession,
+    user_id: UUID,
+    organization_ids: Collection[UUID],
+) -> list[OrganizationMember]:
+    from uniffy.core.models.login.organization_member import OrganizationMember
+
+    if not organization_ids:
+        return []
+    result = await session.execute(
+        _active_memberships_query(user_id).where(
+            OrganizationMember.organization_id.in_(organization_ids)
+        )
+    )
+    return list(result.scalars().all())
 
 
 async def is_active_member(

@@ -92,11 +92,14 @@ export function NotesPage() {
   const [loadFailure, setLoadFailure] = useState<{
     noteId: string;
     organizationId: string | null;
+    routeKey: string;
   } | null>(null);
-  const failedNoteId =
-    noteId && loadFailure?.noteId === noteId && loadFailure.organizationId === organizationId
-      ? noteId
-      : null;
+  const failureMatchesRoute =
+    loadFailure?.noteId === noteId &&
+    loadFailure?.organizationId === organizationId &&
+    loadFailure?.routeKey === location.key;
+  if (loadFailure && !failureMatchesRoute) setLoadFailure(null);
+  const failedNoteId = noteId && failureMatchesRoute ? noteId : null;
   const noteUrn = noteId ? buildUrn(UrnType.NOTE, noteId) : null;
   const { match: noteOrganization, status: noteResolution } = useContentOrganizationResolver(
     noteUrn,
@@ -167,19 +170,25 @@ export function NotesPage() {
   useEffect(() => {
     if (!noteId) return;
 
+    let current = true;
     dispatch(setCurrentNote(noteId));
     dispatch(fetchNote(noteId))
       .unwrap()
       .then((loaded) => {
+        if (!current) return;
+        setLoadFailure(null);
         setLoadedRoute({ noteId, fromTrash: Boolean(loaded.isDeleted) });
         if (organizationId && userId) {
           saveLastOpenedNote(organizationId, userId, noteId);
         }
       })
       .catch(() => {
-        setLoadFailure({ noteId, organizationId });
+        if (current) setLoadFailure({ noteId, organizationId, routeKey: location.key });
       });
-  }, [noteId, organizationId, userId, dispatch]);
+    return () => {
+      current = false;
+    };
+  }, [noteId, organizationId, userId, location.key, dispatch]);
 
   const leaveUnopenableNote = useCallback(
     (id: string) => {

@@ -235,11 +235,11 @@ export function UserMenu() {
             </div>
           </div>
 
-          {organizations.length > 0 && (
-            <div className="border-b border-border py-1.5 px-1.5">
-              <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                Organizations
-              </div>
+          <div className="border-b border-border py-1.5 px-1.5">
+            <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Organizations
+            </div>
+            {organizations.length > 0 && (
               <div className="max-h-[min(15rem,40dvh)] overflow-y-auto">
                 <OrganizationList
                   compact
@@ -249,8 +249,19 @@ export function UserMenu() {
                   onSelect={selectOrganization}
                 />
               </div>
-            </div>
-          )}
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full min-h-11 justify-start"
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/select-org");
+              }}
+            >
+              All organizations
+            </Button>
+          </div>
 
           <div className="border-b border-border py-1.5 px-1.5">
             {showStatusPicker ? (
