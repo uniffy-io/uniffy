@@ -275,6 +275,7 @@ function RootLayoutNav() {
             <Stack.Screen name="you/appearance" />
             <Stack.Screen name="you/notifications" />
             <Stack.Screen name="you/security" />
+            <Stack.Screen name="you/organization" />
           </Stack>
         </View>
         {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely

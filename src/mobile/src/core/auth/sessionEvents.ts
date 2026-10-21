@@ -1,6 +1,7 @@
 type Listener = () => void;
 
-const listeners = new Set<Listener>();
+const sessionExpiredListeners = new Set<Listener>();
+const organizationLostListeners = new Set<Listener>();
 const signOutHandlers = new Set<(userId: string) => Promise<void>>();
 const unsyncedEditChecks = new Set<(userId: string) => Promise<boolean>>();
 
@@ -35,12 +36,26 @@ export async function hasUnsyncedEdits(userId: string): Promise<boolean> {
 // auth provider subscribes and drops the app back to the login screen; without
 // this signal an expired session would keep browsing dead screens.
 export function onSessionExpired(listener: Listener): () => void {
-  listeners.add(listener);
+  sessionExpiredListeners.add(listener);
   return () => {
-    listeners.delete(listener);
+    sessionExpiredListeners.delete(listener);
   };
 }
 
 export function emitSessionExpired(): void {
-  for (const listener of listeners) listener();
+  for (const listener of sessionExpiredListeners) listener();
+}
+
+// Fired when a refresh comes back without the organization this device was in. The session
+// lives on, so the auth provider drops that org's data and returns to the organization picker
+// instead of signing out.
+export function onOrganizationLost(listener: Listener): () => void {
+  organizationLostListeners.add(listener);
+  return () => {
+    organizationLostListeners.delete(listener);
+  };
+}
+
+export function emitOrganizationLost(): void {
+  for (const listener of organizationLostListeners) listener();
 }

@@ -18,13 +18,18 @@ import {
   setRefreshToken,
   getRefreshToken,
   setStoredOrgId,
-  getStoredOrgId,
+  clearStoredOrgId,
   clearAuthStorage,
 } from "@core/auth/auth";
 import { authApi } from "@core/auth/authApi";
 import { isTokenExpiring } from "@core/auth/jwt";
-import { isAuthRejection, refreshSession } from "@core/auth/refresh";
-import { onSessionExpired, clearUserSessionData, hasUnsyncedEdits } from "@core/auth/sessionEvents";
+import { isAuthRejection, refreshSession, withRefreshLock } from "@core/auth/refresh";
+import {
+  onSessionExpired,
+  onOrganizationLost,
+  clearUserSessionData,
+  hasUnsyncedEdits,
+} from "@core/auth/sessionEvents";
 import { resetSessionScope } from "@core/auth/sessionScope";
 import { hydrateServerUrl } from "@core/config/serverUrl";
 
@@ -32,6 +37,7 @@ type AuthTokens = {
   accessToken: string;
   refreshToken: string;
   organizationId?: string;
+  organizationSlug?: string;
   organizationRole?: string;
   domainAdminDomains?: readonly number[];
   assetCookie?: string;
@@ -57,7 +63,7 @@ type AuthAction =
     }
   | {
       type: "SET_ORGANIZATION";
-      organizationId: string;
+      organizationId: string | null;
       organizationRole: string | null;
       domainAdminDomains: number[];
     }
@@ -77,11 +83,12 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
         isRehydrating: false,
       };
     case "SET_ORGANIZATION":
+      // No org means no role in one: a lost grant takes its admin powers with it.
       return {
         ...state,
         organizationId: action.organizationId,
-        organizationRole: action.organizationRole,
-        domainAdminDomains: action.domainAdminDomains,
+        organizationRole: action.organizationId ? action.organizationRole : null,
+        domainAdminDomains: action.organizationId ? action.domainAdminDomains : [],
       };
     case "SET_REHYDRATING":
       return { ...state, isRehydrating: action.value };
@@ -165,7 +172,9 @@ async function handleAuthResponse(
   await setRefreshToken(response.refreshToken);
 
   if (response.organizationId) {
-    await setStoredOrgId(response.organizationId);
+    await setStoredOrgId(response.organizationId, response.organizationSlug);
+  } else {
+    await clearStoredOrgId();
   }
 
   const user = await authApi.getCurrentUser();
@@ -209,7 +218,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          const storedOrgId = await getStoredOrgId();
           const response = await refreshSession();
 
           if (cancelled) return;
@@ -219,10 +227,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
           }
 
-          const orgId = response.organizationId ?? storedOrgId ?? null;
-          if (orgId) {
-            await setStoredOrgId(orgId);
-          }
+          // The server's answer is the org this device is in. refreshSession already stored it,
+          // or dropped a stored org the server no longer grants.
+          const orgId = response.organizationId || null;
 
           const user = await authApi.getCurrentUser();
 
@@ -232,7 +239,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             type: "SET_AUTHENTICATED",
             user: toCurrentUser(user),
             organizationId: orgId,
-            organizationRole: response.organizationRole ?? null,
+            organizationRole: response.organizationRole || null,
             domainAdminDomains: [...response.domainAdminDomains],
           });
           return;
@@ -263,6 +270,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return onSessionExpired(() => {
       clearSessionCaches();
       dispatch({ type: "LOGOUT" });
+    });
+  }, []);
+
+  // A refresh that no longer grants this device's org keeps the session: drop that org's data
+  // and let AuthGate route to the organization picker.
+  useEffect(() => {
+    return onOrganizationLost(() => {
+      clearSessionCaches();
+      dispatch({
+        type: "SET_ORGANIZATION",
+        organizationId: null,
+        organizationRole: null,
+        domainAdminDomains: [],
+      });
     });
   }, []);
 
@@ -347,17 +368,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const selectOrganization = useCallback(async (slug: string) => {
-    const refreshToken = await getRefreshToken();
-    if (!refreshToken) throw new Error("No refresh token");
+    const result = await withRefreshLock(async () => {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) throw new Error("No refresh token");
 
-    const result = await authApi.refreshToken(refreshToken, slug);
+      const response = await authApi.refreshToken(refreshToken, slug);
+      // A refused grant still rotates the refresh token. Everything else stays on the current
+      // org, whose access token is still valid.
+      await setRefreshToken(response.refreshToken);
+      if (response.organizationId) {
+        setAccessToken(response.accessToken);
+        setAssetCookie(response.assetCookie);
+        await setStoredOrgId(response.organizationId, response.organizationSlug || slug);
+      }
+      return response;
+    });
 
-    setAccessToken(result.accessToken);
-    setAssetCookie(result.assetCookie);
-    await setRefreshToken(result.refreshToken);
-
-    const orgId = result.organizationId ?? "";
-    await setStoredOrgId(orgId);
+    if (!result.organizationId) {
+      void queryClient.invalidateQueries({ queryKey: ["organizations", "mine"] });
+      throw new Error("You no longer have access to that organization");
+    }
 
     // Different tenant: cached queries and decoded images from the previous
     // org must not carry into the new context.
@@ -365,8 +395,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     dispatch({
       type: "SET_ORGANIZATION",
-      organizationId: orgId,
-      organizationRole: result.organizationRole ?? null,
+      organizationId: result.organizationId,
+      organizationRole: result.organizationRole || null,
       domainAdminDomains: [...result.domainAdminDomains],
     });
   }, []);

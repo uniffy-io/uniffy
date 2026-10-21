@@ -26,15 +26,19 @@ Promoting someone to admin gives them everything you have. There is no limited a
 
 ## Removing someone
 
-Removal takes away their access to this organization and nothing else. They keep their Uniffy account.
+Removal takes away their access to this organization and nothing else. They keep their Uniffy account, and every other organization they belong to stays exactly as it was.
+
+It applies on the spot, with no grace period. A note they have open stops taking their edits, a call they are in drops them, and anything else they try in this organization is refused.
 
 Content they created stays with the organization. Ownership does not fall back to anyone, so nothing is orphaned and nothing is deleted.
+
+Removal is reversible. Uniffy keeps the membership as history, so inviting or adding the same person again brings back their own work and the shares they held. They return with the role you pick. Their domain admin scopes and chat channel memberships do not come back on their own, so grant them again where they still apply.
 
 ## Inactive accounts
 
 An account reads Inactive when a platform operator deactivates it. That is a different thing from removing a member, and you do not trigger it from this page.
 
-The row stays in the roster either way, so the audit trail stays intact.
+Their row stays in the roster, so the audit trail stays intact. A removed member leaves the roster instead.
 
 ## Agent spend quotas
 

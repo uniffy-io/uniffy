@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const REFRESH_TOKEN_KEY = "uniffy_refresh_token";
 const ORG_ID_KEY = "uniffy_organization_id";
+const ORG_SLUG_KEY = "uniffy_organization_slug";
 
 // expo-secure-store has no web backend; fall back to AsyncStorage there.
 const useSecureStore = Platform.OS !== "web";
@@ -74,12 +75,25 @@ export function getStoredOrgId(): Promise<string | null> {
   return getItem(ORG_ID_KEY);
 }
 
-export function setStoredOrgId(orgId: string): Promise<void> {
-  return setItem(ORG_ID_KEY, orgId);
+export function getStoredOrgSlug(): Promise<string | null> {
+  return getItem(ORG_SLUG_KEY);
+}
+
+// A refresh asks the server for the stored slug, so the slug is only ever kept beside the id
+// it belongs to: omitting it drops the stored one instead of leaving another org's slug behind.
+export async function setStoredOrgId(orgId: string, slug?: string): Promise<void> {
+  await Promise.all([
+    setItem(ORG_ID_KEY, orgId),
+    slug ? setItem(ORG_SLUG_KEY, slug) : deleteItem(ORG_SLUG_KEY),
+  ]);
+}
+
+export async function clearStoredOrgId(): Promise<void> {
+  await Promise.all([deleteItem(ORG_ID_KEY), deleteItem(ORG_SLUG_KEY)]);
 }
 
 export async function clearAuthStorage(): Promise<void> {
   accessToken = null;
   assetCookie = null;
-  await Promise.all([deleteItem(REFRESH_TOKEN_KEY), deleteItem(ORG_ID_KEY)]);
+  await Promise.all([deleteItem(REFRESH_TOKEN_KEY), clearStoredOrgId()]);
 }

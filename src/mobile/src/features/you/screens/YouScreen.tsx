@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import {
+  Buildings,
   Devices,
   Bell,
   ShieldCheck,
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
+import { useMyOrganizations } from "@features/auth/useMyOrganizations";
 import { useSignOut } from "@features/auth/useSignOut";
 import { useSessions } from "@features/you/useSessions";
 import { Avatar } from "@shared/components/Avatar";
@@ -27,13 +29,15 @@ export function YouScreen() {
   const insets = useSafeAreaInsets();
   const bottomPad =
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
-  const { user } = useAuth();
+  const { user, organizationId } = useAuth();
   const { signOut, signingOut } = useSignOut();
   const { sessions } = useSessions();
+  const { data: organizations } = useMyOrganizations();
 
   const userName = user?.fullName || user?.username || "User";
   const userEmail = user?.email || "";
   const sessionCount = sessions.length;
+  const organizationName = organizations?.find((org) => org.id === organizationId)?.name;
 
   return (
     <View style={[styles.container, { backgroundColor: T.pageBg }]}>
@@ -43,7 +47,6 @@ export function YouScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header */}
         <View style={[styles.profileHeader, { paddingTop: 24 }]}>
           <Avatar name={userName} avatarUrl={user?.avatarUrl} size={72} accentColor={T.accent} />
           <View style={{ alignItems: "center", gap: 4 }}>
@@ -52,10 +55,29 @@ export function YouScreen() {
           </View>
         </View>
 
-        {/* Account */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACCOUNT</Text>
           <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <TouchableOpacity
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
+              onPress={() => router.push("/you/organization" as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Buildings size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Organization</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]} numberOfLines={1}>
+                  {organizationName || "Switch organization"}
+                </Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.settingRow,
@@ -113,7 +135,6 @@ export function YouScreen() {
           </View>
         </View>
 
-        {/* App */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>APP</Text>
           <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -136,7 +157,6 @@ export function YouScreen() {
           </View>
         </View>
 
-        {/* About */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>ABOUT</Text>
           <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -185,7 +205,6 @@ export function YouScreen() {
           </View>
         </View>
 
-        {/* Sign Out */}
         <TouchableOpacity
           style={[styles.signOutBtn, { borderColor: "#FA525240" }]}
           onPress={() => void signOut()}

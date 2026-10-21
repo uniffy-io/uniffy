@@ -2004,8 +2004,9 @@ org admin in a second profile (`(both products)`).
       15 min) -> the socket closes with 4409, the client refreshes, and editing
       continues with no visible interruption and no lost keystrokes.
 - [ ] Membership removal mid-edit: user A edits a note, an org admin removes A
-      from the org -> within ~30s A's socket closes and further edits are
-      refused; A's earlier merged edits stay in the doc (CRDT trade-off).
+      from the org -> within a second the note shows "Access lost" and further
+      edits are refused, and within ~30s A's socket closes; A's earlier merged
+      edits stay in the doc (CRDT trade-off).
 - [ ] Healthy session is untouched: two peers editing the same note for
       several minutes see no spontaneous disconnects.
 
@@ -2915,8 +2916,8 @@ dates and one custom single-select field makes every check reachable.
       opened views of the first account appear.
 ## Sign-out and organization switch reset
 
-Needs a user who belongs to two organizations; the org picker lives at `/select-org` and also
-appears after sign-in. Stored state is readable from the browser console with
+Needs a user who belongs to two organizations; the org picker lives at `/select-org`, and the
+header and user menu switch as well. Stored state is readable from the browser console with
 `JSON.parse(JSON.parse(localStorage.getItem("persist:root")).projectsUi)`.
 
 - [ ] `(both products)` In organization A, open a project, change its view (hide a column) so the
@@ -2942,6 +2943,56 @@ appears after sign-in. Stored state is readable from the browser console with
 - [ ] Complete one upload, fail another, and leave a large upload running. Sign out or switch
       orgs, then start an upload in the new session. The tray contains only the new upload.
       Late completion responses and reload recovery never restore the previous uploads.
+
+## Organizations
+
+One sign-in covers every organization a user belongs to, and each tab holds its own organization.
+Needs a user in organizations A and B plus a third organization C, an org admin of A in a second
+browser, a platform operator for C, a second user who is not in B, and a mobile dev build signed
+in as the first user. (both products)
+
+- [ ] Header: the header shows A's initial box (and its name on a wide window). Click it: the
+      popover lists A, B and C with A checked. Pick B: within a second the tab lands on `/` in B,
+      the header reads B, and no sign-in prompt appears. "All organizations" in the popover opens
+      `/select-org`.
+- [ ] User menu: the Organizations section lists the same organizations with the current one
+      checked. Pick A: the tab lands on `/` in A. A user in a single organization signs in
+      straight to `/` with no picker, and the section shows that one checked row.
+- [ ] Two tabs in two organizations: tab 1 stays in A with a note open, tab 2 switches to B and
+      opens a note there. Type in both for a minute: both badges stay Live, each note saves its
+      own edits, and neither tab signs out, reloads or changes organization on its own.
+- [ ] Reload: with tab 2 last switched to B, reload tab 1 and open a new tab. Both land in B, the
+      organization picked last on this device, and tab 1 offers to switch back to A for its note.
+      Sign out and back in: B opens with no picker. Remove `uniffy:last-org:<user id>` from
+      localStorage and sign in again: the picker shows.
+- [ ] Recording: start a screen recording and switch from the header. "Discard active recording?"
+      appears. Stay keeps the recording and the organization. "Discard and switch" cancels the
+      recording and lands in the other organization. Repeat from the user menu.
+- [ ] Wrong organization link: in a tab in A, paste the URL of a note in B. The page shows "This
+      note is in B." with "Switch to B and open" and "Stay here". Switch opens the note in this tab
+      while other tabs stay in A. Repeat with a project URL and a chat channel URL. As the second
+      user, the same note URL shows the ordinary not found path and never names B.
+- [ ] Suspended organization: switch a tab to C and open a note, then the platform operator
+      suspends C. The note shows "Access lost", and a reload of that tab lands on `/select-org`.
+      C shows greyed with a Suspended badge in the header popover, the user menu and
+      `/select-org`, and clicking it does nothing. Unsuspend C: it can be entered again.
+- [ ] Member removal: in browser 1 switch one tab to B, then another tab to A last and open a
+      note there. The admin of A removes the user. Within a second the note shows "Access lost"
+      and refuses edits, and the B tab keeps working. A reload of the A tab lands on
+      `/select-org` with the toast "Your access to that organization ended.", A is gone from the
+      list and B is still there. The admin re-adds the user: A is back in the list and the
+      user's own notes open again.
+- [ ] Mobile: You > Organization shows the current organization name. The screen lists every
+      organization with the current one marked and C disabled. Pick B: the app lands on the home
+      tab in B and the chat list shows B's channels. The web tabs stay where they were.
+- [ ] Mobile access ends: with the app in B, the admin of B removes the user. Background the app
+      for longer than the access token lifetime and bring it back: the app lands on the
+      organization list, still signed in, B is gone and A is still there. Kill and relaunch the
+      app: it opens on the same list. Re-add the user to B and suspend C, then try C from
+      You > Organization while in A: the row is disabled. Lift the suspension, open the list,
+      have the operator suspend C again, then pick C: "You no longer have access to that
+      organization." shows, the app stays in A, and it is still in A after the next background
+      and foreground.
 
 ## Projects: tags in settings, status link and task key search
 
