@@ -17,11 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.config.settings.organization import OrgSettingsOperations
-from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.errors import MembershipRequiredError, PermissionDeniedError, ValidationError
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.domains.agents.access import is_org_admin
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.domains.agents.providers.catalog.images import (
     QUALITY_ORDER,
     RESOLUTION_ORDER,
@@ -172,7 +173,12 @@ class RuntimeSettingsOperations:
         self._settings = OrgSettingsOperations(session)
 
     async def _require_admin(self, user_id: UUID, organization_id: UUID) -> None:
-        if not await is_org_admin(self._session, user_id, organization_id):
+        # OrganizationOperations imports this module through the chat send path, so the
+        # gate reads the membership itself.
+        membership = await get_active_membership(self._session, user_id, organization_id)
+        if membership is None:
+            raise MembershipRequiredError("Requires organization admin privileges")
+        if membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
             raise PermissionDeniedError("Requires organization admin privileges")
 
     async def get(

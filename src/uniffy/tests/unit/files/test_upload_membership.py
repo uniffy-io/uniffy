@@ -16,6 +16,7 @@ from uniffy_proto.files.v1.files_pb import (
     UploadChunkRequest,
     UploadChunksRequest,
 )
+from uniffy_proto.files.v1.files_pb import UploadStatus as ProtoUploadStatus
 
 from uniffy.core.errors import NotFoundError, ValidationError
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
@@ -183,6 +184,18 @@ async def test_upload_status_answers_not_found_after_removal() -> None:
 
     assert (error.code, error.message) == (Code.NOT_FOUND, _NOT_FOUND)
     session.execute.assert_awaited_once()
+
+
+async def test_upload_status_of_a_readded_member_reports_the_expiry_of_the_removal() -> None:
+    actor = generate_id()
+    upload = _upload(actor, expires_in=-timedelta(seconds=1))
+    request = GetUploadStatusRequest(upload_id=str(upload.id))
+
+    async with _rpc(_session(upload), actor, active=True):
+        response = await _handlers(_storage()).get_upload_status(request, MagicMock())
+
+    assert response.status == ProtoUploadStatus.EXPIRED
+    assert upload.status is UploadStatus.ACTIVE
 
 
 async def test_complete_upload_rpc_answers_not_found_after_removal() -> None:

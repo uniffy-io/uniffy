@@ -40,19 +40,19 @@ function getOrgInitials(name: string): string {
 type OrganizationListProps = {
   organizations: OrganizationSummary[];
   currentOrganizationId: string | null;
-  selectingSlug: string | null;
-  onSelect: (slug: string) => void;
+  selectingOrganizationId: string | null;
+  onSelect: (organization: OrganizationSummary) => void;
   contentContainerStyle?: StyleProp<ViewStyle>;
 };
 
 export function OrganizationList({
   organizations,
   currentOrganizationId,
-  selectingSlug,
+  selectingOrganizationId,
   onSelect,
   contentContainerStyle,
 }: OrganizationListProps) {
-  const isBusy = selectingSlug !== null;
+  const isBusy = selectingOrganizationId !== null;
 
   return (
     <FlatList
@@ -63,7 +63,7 @@ export function OrganizationList({
         <OrganizationRow
           organization={item}
           isCurrent={item.id === currentOrganizationId}
-          isSelecting={item.slug === selectingSlug}
+          isSelecting={item.id === selectingOrganizationId}
           isBusy={isBusy}
           onSelect={onSelect}
         />
@@ -77,7 +77,7 @@ type OrganizationRowProps = {
   isCurrent: boolean;
   isSelecting: boolean;
   isBusy: boolean;
-  onSelect: (slug: string) => void;
+  onSelect: (organization: OrganizationSummary) => void;
 };
 
 function OrganizationRow({
@@ -98,7 +98,7 @@ function OrganizationRow({
         { backgroundColor: T.surface, borderColor: T.border },
         isBusy && !isSelecting && styles.idle,
       ]}
-      onPress={suspended ? undefined : () => onSelect(organization.slug)}
+      onPress={suspended ? undefined : () => onSelect(organization)}
       disabled={suspended || isBusy}
       activeOpacity={0.7}
       accessibilityRole="button"

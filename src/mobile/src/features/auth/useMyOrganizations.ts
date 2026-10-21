@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { authApi } from "@core/auth/authApi";
 import { useAuth } from "@core/providers/AuthContext";
 import { userFacingError } from "@shared/lib/userFacingError";
-import { toOrganizationSummaries } from "@features/auth/organizationSerializer";
+import {
+  toOrganizationSummaries,
+  type OrganizationSummary,
+} from "@features/auth/organizationSerializer";
 
 const LOST_ACCESS_MESSAGE = "You no longer have access to that organization.";
 const SELECT_FAILED_MESSAGE = "Could not switch to that organization. Try again.";
@@ -22,25 +25,26 @@ export function useMyOrganizations() {
 export function useSelectOrganization(onSelected?: () => void) {
   const { selectOrganization } = useAuth();
   const { refetch } = useMyOrganizations();
-  const [selectingSlug, setSelectingSlug] = useState<string | null>(null);
+  const [selectingOrganizationId, setSelectingOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  const select = async (slug: string) => {
+  const select = async ({ id, slug }: Pick<OrganizationSummary, "id" | "slug">) => {
     if (inFlight.current) return;
     inFlight.current = true;
-    setSelectingSlug(slug);
+    setSelectingOrganizationId(id);
     setError(null);
     try {
-      await selectOrganization(slug);
+      // The id survives a slug rename made since the list loaded; the slug is the fallback.
+      await selectOrganization(slug, id);
     } catch (err) {
       // A removed membership or a suspension surfaces as a failed switch, so the
       // refreshed list decides whether access is gone or the attempt just failed.
       const { data } = await refetch({ cancelRefetch: false });
-      const target = data?.find((org) => org.slug === slug);
+      const target = data?.find((org) => org.id === id);
       const accessLost = data !== undefined && (!target || target.suspended);
       setError(accessLost ? LOST_ACCESS_MESSAGE : userFacingError(err, SELECT_FAILED_MESSAGE));
-      setSelectingSlug(null);
+      setSelectingOrganizationId(null);
       return;
     } finally {
       inFlight.current = false;
@@ -48,5 +52,5 @@ export function useSelectOrganization(onSelected?: () => void) {
     onSelected?.();
   };
 
-  return { select, selectingSlug, error };
+  return { select, selectingOrganizationId, error };
 }

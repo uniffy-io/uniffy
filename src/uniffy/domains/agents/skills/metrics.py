@@ -9,9 +9,10 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.errors import ValidationError
 from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
-from uniffy.domains.agents.access import is_org_admin, require_agents_builder
+from uniffy.domains.agents.access import require_agents_builder
+from uniffy.domains.organizations.operations import OrganizationOperations
 
 
 @dataclass(frozen=True)
@@ -96,10 +97,12 @@ class SkillMetricsReader:
         page_size: int = 200,
         cursor: str = "",
     ) -> SkillMetricsPage:
+        organizations = OrganizationOperations(self._session)
         if skill_id is None:
-            if not await is_org_admin(self._session, user_id, organization_id):
-                raise PermissionDeniedError("Requires organization admin privileges")
+            await organizations.require_org_admin(user_id, organization_id)
         else:
+            # The builder gate answers a lost membership like a missing role.
+            await organizations.require_org_member(user_id, organization_id)
             await require_agents_builder(self._session, user_id, organization_id)
         if not 1 <= window_days <= 90:
             raise ValidationError("window_days", "Choose a window between 1 and 90 days")

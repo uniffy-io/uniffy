@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@core/providers/AuthContext";
 import { OrganizationList } from "@features/auth/components/OrganizationList";
+import type { OrganizationSummary } from "@features/auth/organizationSerializer";
 import { useMyOrganizations, useSelectOrganization } from "@features/auth/useMyOrganizations";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { ScreenError } from "@shared/components/ScreenError";
@@ -26,17 +27,16 @@ export function OrganizationScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { organizationId } = useAuth();
   const organizationsQuery = useMyOrganizations();
-  const { select, selectingSlug, error } = useSelectOrganization();
+  const { select, selectingOrganizationId, error } = useSelectOrganization();
   const organizations = organizationsQuery.data ?? [];
-  const currentSlug = organizations.find((org) => org.id === organizationId)?.slug;
 
-  const handleSelect = (slug: string) => {
+  const handleSelect = (organization: OrganizationSummary) => {
     // The session already holds a token for the current organization.
-    if (slug === currentSlug) {
+    if (organization.id === organizationId) {
       goHome();
       return;
     }
-    void select(slug);
+    void select(organization);
   };
 
   if (organizationsQuery.isError && !organizationsQuery.data) {
@@ -76,7 +76,7 @@ export function OrganizationScreen() {
         <OrganizationList
           organizations={organizations}
           currentOrganizationId={organizationId}
-          selectingSlug={selectingSlug}
+          selectingOrganizationId={selectingOrganizationId}
           onSelect={handleSelect}
           contentContainerStyle={{ paddingTop: 8, paddingBottom: bottomPad }}
         />

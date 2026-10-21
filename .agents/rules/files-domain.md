@@ -84,7 +84,7 @@ Persistence + resume (`uploadStore.ts`, one IndexedDB DB `uniffy-uploads` with `
 - Server gate: `UploadChunk`, `UploadChunks`, `GetUploadStatus` and `CompleteUpload` require the uploader to be
   an active member of the upload's organization, not just `upload.user_id`. A removed or deactivated member
   gets the same NOT_FOUND as a missing upload, so no File lands in an organization they left. `remove_member`
-  also expires that member's ACTIVE uploads in the organization in its transaction
+  and directory-sync deprovision also expire that member's ACTIVE uploads in the organization in their transaction
   (`files.cleanup.stage_member_upload_expiry`), so a re-add does not revive them; every write path treats an
   ACTIVE row past `expires_at` as EXPIRED, and the multipart reaper aborts the parts.
 

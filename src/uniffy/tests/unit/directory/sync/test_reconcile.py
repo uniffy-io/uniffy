@@ -288,7 +288,7 @@ class TestDeprovision:
         membership.role = OrganizationRole.MEMBER
         org_ops = MagicMock()
         org_ops.get_membership = AsyncMock(return_value=membership)
-        session = _session([])
+        session = _session([_result()])
         indexer = MagicMock()
         indexer.remove_from_organization = AsyncMock()
         search_indexer = MagicMock()
@@ -353,7 +353,7 @@ class TestDeprovisionUser:
         source = _source()
         user_id = generate_id()
         membership = MagicMock(is_active=True, role=OrganizationRole.MEMBER)
-        session = _session([])
+        session = _session([_result()])
         lifecycle = AsyncMock()
         commits_before_evict: list[int] = []
         lifecycle.evict_user.side_effect = lambda *_a, **_k: commits_before_evict.append(
@@ -383,6 +383,65 @@ class TestDeprovisionUser:
             reason=CallEvictionReason.MEMBERSHIP_REVOKED,
             organization_id=source.organization_id,
         )
+
+    async def test_expires_the_members_open_uploads_inside_the_deprovision_commit(self) -> None:
+        source = _source()
+        user_id = generate_id()
+        membership = MagicMock(is_active=True, role=OrganizationRole.MEMBER)
+        session = _session([])
+        commits_at_expiry: list[int] = []
+        expire = AsyncMock(
+            side_effect=lambda *_a, **_k: commits_at_expiry.append(session.commit.await_count)
+        )
+        projection = MagicMock()
+        projection.return_value.remove_from_organization = AsyncMock()
+        with (
+            patch.object(
+                reconcile.OrganizationOperations,
+                "get_membership",
+                AsyncMock(return_value=membership),
+            ),
+            patch.object(reconcile, "stage_member_upload_expiry", expire),
+            patch.object(reconcile, "invalidate_person", AsyncMock()),
+            patch.object(reconcile, "UserDirectoryProjection", projection),
+            patch.object(reconcile, "publish_mention_state", AsyncMock()),
+        ):
+            assert await reconcile.deprovision_user(
+                session, source, user_id, MagicMock(), AsyncMock(), active_owner_ids=set()
+            )
+
+        expire.assert_awaited_once_with(
+            session,
+            organization_id=source.organization_id,
+            user_id=user_id,
+            expired_at=membership.removed_at,
+        )
+        assert commits_at_expiry == [0]
+        session.commit.assert_awaited_once()
+
+    async def test_refused_deprovision_leaves_uploads_alone(self) -> None:
+        source = _source()
+        user_id = generate_id()
+        membership = MagicMock(is_active=True, role=OrganizationRole.OWNER)
+        expire = AsyncMock()
+        with (
+            patch.object(
+                reconcile.OrganizationOperations,
+                "get_membership",
+                AsyncMock(return_value=membership),
+            ),
+            patch.object(reconcile, "stage_member_upload_expiry", expire),
+        ):
+            assert not await reconcile.deprovision_user(
+                _session([]),
+                source,
+                user_id,
+                MagicMock(),
+                AsyncMock(),
+                active_owner_ids={user_id},
+            )
+
+        expire.assert_not_awaited()
 
 
 class TestRunFullSync:

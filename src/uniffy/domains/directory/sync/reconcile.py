@@ -36,6 +36,7 @@ from uniffy.domains.directory.sync.records import (
     upsert_user,
 )
 from uniffy.domains.directory.sync.types import DirectoryGroup, DirectoryUser, ReconcileReport
+from uniffy.domains.files.cleanup import stage_member_upload_expiry
 from uniffy.domains.organizations.operations import (
     OrganizationOperations,
     StagedOrganizationMembership,
@@ -64,6 +65,13 @@ async def deprovision_user(
         return False
 
     removed_at = datetime.now(UTC)
+    # Open uploads take no more parts; a reactivated member starts them again.
+    await stage_member_upload_expiry(
+        session,
+        organization_id=org_id,
+        user_id=user_id,
+        expired_at=removed_at,
+    )
     membership.is_active = False
     membership.removed_at = removed_at
     membership.updated_at = removed_at

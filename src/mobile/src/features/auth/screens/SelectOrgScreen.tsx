@@ -23,7 +23,7 @@ export function SelectOrgScreen() {
   const { user, organizationId } = useAuth();
   const { signOut, signingOut } = useSignOut();
   const organizationsQuery = useMyOrganizations();
-  const { select, selectingSlug, error } = useSelectOrganization();
+  const { select, selectingOrganizationId, error } = useSelectOrganization();
   const organizations = organizationsQuery.data ?? [];
   const loadFailed = organizationsQuery.isError && !organizationsQuery.data;
 
@@ -95,8 +95,8 @@ export function SelectOrgScreen() {
         <OrganizationList
           organizations={organizations}
           currentOrganizationId={organizationId}
-          selectingSlug={selectingSlug}
-          onSelect={(slug) => void select(slug)}
+          selectingOrganizationId={selectingOrganizationId}
+          onSelect={(organization) => void select(organization)}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
         />
       )}
