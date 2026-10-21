@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Kanban, Cpu, List, MagnifyingGlass } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
+import { OrgIdentity } from "@/components/layout/OrgIdentity";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { GlobalSearch } from "@/features/search/components/GlobalSearch";
 import { openSpotlightSearch } from "@/features/search/hooks/useSpotlightTrigger";
@@ -14,6 +15,8 @@ import { UrnType } from "@/shared/utils/urn";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
+import { selectOrganizationsStatus } from "@/features/auth/store/organizationsSlice";
+import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { Drawer } from "@/components/ui/drawer";
 import { preloadChatPage } from "@/features/chat/pages/chatPageLoader";
@@ -81,7 +84,7 @@ function LogoNavItem({ isActive }: { isActive: boolean }) {
       onFocus={preloadDashboard}
       onPointerDown={preloadDashboard}
       className={cn(
-        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+        "group relative flex shrink-0 items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
         isActive && "text-foreground",
       )}
@@ -130,7 +133,7 @@ function CompactNavItem({
       onFocus={item.preload}
       onPointerDown={item.preload}
       className={cn(
-        "group relative flex items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
+        "group relative flex shrink-0 items-center py-1.5 px-1.5 text-sm font-medium rounded-lg transition-all duration-700 ease-out overflow-hidden",
         "hover:px-2.5",
         isActive && "text-foreground",
       )}
@@ -236,6 +239,7 @@ export function AppHeader() {
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const organizationsStatus = useAppSelector(selectOrganizationsStatus);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavItems = useVisibleNavItems();
   const lastOpenedChannelId =
@@ -243,6 +247,12 @@ export function AppHeader() {
   const chatPath = lastOpenedChannelId ? `/chat/${lastOpenedChannelId}` : "/chat";
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+
+  // The list resets to idle on sign-out, so this loads it once per signed-in user.
+  useEffect(() => {
+    if (!userId || organizationsStatus !== "idle") return;
+    void dispatch(fetchMyOrganizations());
+  }, [dispatch, organizationsStatus, userId]);
 
   useEffect(() => {
     if (!organizationId || !userId || location.pathname.startsWith("/chat")) return;
@@ -287,8 +297,9 @@ export function AppHeader() {
         <div className="absolute inset-0 bg-nav/95 backdrop-blur-sm border-b border-border-strong shadow-[0_8px_24px_-16px_hsl(0_0%_0%_/_var(--edge-drop-strong))]" />
 
         <div className="relative flex h-12 items-center px-3 lg:px-4 justify-between">
-          <div className="flex items-center gap-0.5 z-20">
-            <div className="flex md:hidden items-center gap-0.5">
+          {/* Stops short of the centered search, so a long organization name truncates instead. */}
+          <div className="flex min-w-0 items-center gap-0.5 z-20 lg:max-w-[calc(50%-11rem)] xl:max-w-[calc(50%-13.5rem)]">
+            <div className="flex md:hidden min-w-0 items-center gap-0.5">
               <button
                 onClick={() => setMobileMenuOpen(true)}
                 className="relative p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
@@ -297,10 +308,12 @@ export function AppHeader() {
                 <List size={20} weight="bold" />
               </button>
               <LogoNavItem isActive={location.pathname === "/"} />
+              <OrgIdentity />
             </div>
 
-            <nav className="hidden md:flex items-center gap-0.5">
+            <nav className="hidden md:flex min-w-0 items-center gap-0.5">
               <LogoNavItem isActive={location.pathname === "/"} />
+              <OrgIdentity />
               {visibleNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.path);
                 const targetPath = item.path === "/chat" ? chatPath : item.path;
@@ -316,7 +329,7 @@ export function AppHeader() {
             </nav>
           </div>
 
-          {/* Centered, the full box collides with the nav icons and the right cluster below lg. */}
+          {/* Centered, the full box collides with the nav cluster and the right cluster below lg. */}
           <div
             className={cn(
               "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10",

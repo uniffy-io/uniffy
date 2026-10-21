@@ -15,6 +15,7 @@ import type { PersistedState, MigrationManifest } from "redux-persist";
 import { credentialSafeStorage } from "@/features/auth/store/credentialStorage";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { authReducer } from "@/features/auth/store/authSlice";
+import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
 import { instantDayKey } from "@/features/calendar/utils";
 import { QUICK_ACCESS_FILTERS } from "@/features/calendar/types/calendar";
 import { setPreferredTimeZone } from "@/shared/utils/timezone";
@@ -176,6 +177,7 @@ const agentsUiTransform = createTransform(
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  organizations: organizationsReducer,
   bookmarks: bookmarksReducer,
   libraryGraph: libraryGraphReducer,
   theme: themeReducer,

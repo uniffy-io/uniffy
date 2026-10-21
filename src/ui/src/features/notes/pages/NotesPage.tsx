@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { PageLoader } from "@/components/feedback/PageLoader";
 import { NotesLayout } from "@/features/notes/components/NotesLayout";
 import { NotesSidebar } from "@/features/notes/components/sidebar/NotesSidebar";
 import { NotesEditor } from "@/features/notes/components/editor/NotesEditor";
@@ -35,10 +36,14 @@ import { useShortcutHandler, useAppearanceSettings } from "@/features/settings";
 import { useNotesCacheSync } from "@/features/notes/hooks/useNotesCacheSync";
 import { recordRecentItem } from "@/features/search/utils/recentItems";
 import { SearchResultType } from "@uniffy/proto/search/v1/search_pb";
+import { WrongOrganizationNotice } from "@/features/auth/components/WrongOrganizationNotice";
+import { useContentOrganizationResolver } from "@/features/auth/hooks/useContentOrganizationResolver";
+import { buildUrn, UrnType } from "@/shared/utils/urn";
 
 export function NotesPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { noteId } = useParams<{ noteId: string }>();
 
   const notesState = useAppSelector((state) => state.notes);
@@ -82,6 +87,21 @@ export function NotesPage() {
     setEditorEpoch((epoch) => epoch + 1);
   }
   useDocumentTitle((currentNote ?? lostNote)?.title || "Notes");
+
+  // A note that failed to load in this organization may sit in another one of the user's.
+  const [loadFailure, setLoadFailure] = useState<{
+    noteId: string;
+    organizationId: string | null;
+  } | null>(null);
+  const failedNoteId =
+    noteId && loadFailure?.noteId === noteId && loadFailure.organizationId === organizationId
+      ? noteId
+      : null;
+  const noteUrn = noteId ? buildUrn(UrnType.NOTE, noteId) : null;
+  const { match: noteOrganization, status: noteResolution } = useContentOrganizationResolver(
+    noteUrn,
+    failedNoteId !== null,
+  );
 
   const handleToggleSidebar = useCallback(() => {
     dispatch(toggleSidebar());
@@ -157,14 +177,28 @@ export function NotesPage() {
         }
       })
       .catch(() => {
-        if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === noteId) {
-          clearLastOpenedNote(organizationId, userId);
-        }
-        dispatch(removeNote(noteId));
-        dispatch(initializeNotesData({ forceRefresh: true }));
-        navigate("/notes", { replace: true });
+        setLoadFailure({ noteId, organizationId });
       });
-  }, [noteId, organizationId, userId, dispatch, navigate]);
+  }, [noteId, organizationId, userId, dispatch]);
+
+  const leaveUnopenableNote = useCallback(
+    (id: string) => {
+      if (organizationId && userId && loadLastOpenedNote(organizationId, userId) === id) {
+        clearLastOpenedNote(organizationId, userId);
+      }
+      dispatch(removeNote(id));
+      dispatch(initializeNotesData({ forceRefresh: true }));
+      navigate("/notes", { replace: true });
+    },
+    [organizationId, userId, dispatch, navigate],
+  );
+
+  // No other organization holds the note, so the route goes as it always did.
+  useEffect(() => {
+    if (failedNoteId && noteResolution === "done" && !noteOrganization) {
+      leaveUnopenableNote(failedNoteId);
+    }
+  }, [failedNoteId, noteResolution, noteOrganization, leaveUnopenableNote]);
 
   // A lost note stays on screen read-only until the user navigates. A lost folder has no editor
   // to keep, so its route goes, or the page would show nothing under a URL that names it.
@@ -187,15 +221,25 @@ export function NotesPage() {
       <NotesLayout
         sidebar={<NotesSidebar />}
         editor={
-          currentNote?.nodeType === NodeType.FOLDER ? (
+          failedNoteId && noteUrn && noteOrganization ? (
+            <WrongOrganizationNotice
+              urn={noteUrn}
+              organization={noteOrganization}
+              path={`${location.pathname}${location.search}${location.hash}`}
+              onDismiss={() => leaveUnopenableNote(failedNoteId)}
+              tone="card"
+            />
+          ) : noteResolution === "resolving" ? (
+            <PageLoader className="h-full min-h-0 bg-surface" />
+          ) : currentNote?.nodeType === NodeType.FOLDER ? (
             <NoteFolderView key="folder-view" />
           ) : (
             <NotesEditor key={`note-editor:${editorEpoch}`} lostNote={lostNote} />
           )
         }
-        metadataPanel={currentNoteId ? <NotesMetadataPanel /> : null}
+        metadataPanel={currentNoteId && !failedNoteId ? <NotesMetadataPanel /> : null}
         showSidebar={!isZenMode && isSidebarOpen}
-        showMetadataPanel={!isZenMode && isMetadataPanelOpen && !!currentNoteId}
+        showMetadataPanel={!isZenMode && isMetadataPanelOpen && !!currentNoteId && !failedNoteId}
         onCloseSidebar={handleCloseSidebar}
         onCloseMetadataPanel={handleCloseMetadataPanel}
       />

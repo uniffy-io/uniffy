@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { combineReducers } from "@reduxjs/toolkit";
+import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { withSessionScope } from "@/app/sessionScope";
 import { themeReducer } from "@/config/theme/themeSlice";
 import { authReducer, logout, setCredentials } from "@/features/auth/store/authSlice";
 import { resetOrganizationScope } from "@/features/auth/store/authActions";
+import {
+  organizationsLoaded,
+  organizationsReducer,
+} from "@/features/auth/store/organizationsSlice";
 import { projectsReducer, setCurrentProject } from "@/features/projects/store/projectsSlice";
 import {
   openView,
@@ -14,6 +19,7 @@ import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  organizations: organizationsReducer,
   theme: themeReducer,
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
@@ -32,6 +38,19 @@ function signedIn(organizationId: string): State {
       refreshToken: "refresh",
       organizationId,
     }),
+  );
+  state = reducer(
+    state,
+    organizationsLoaded([
+      {
+        id: organizationId,
+        name: "Acme",
+        slug: "acme",
+        role: OrganizationRole.MEMBER,
+        suspended: false,
+        joinedAt: "2026-10-01T00:00:00.000Z",
+      },
+    ]),
   );
   state = reducer(state, setCurrentProject("project-a"));
   state = reducer(state, openView({ projectId: "project-a", viewId: "view-a" }));
@@ -62,12 +81,22 @@ describe("withSessionScope", () => {
     expect(after.projectsUi.viewDrafts).toEqual({});
   });
 
+  it("keeps the organization list across an organization switch", () => {
+    const before = signedIn("org-a");
+    const after = reducer(before, resetOrganizationScope());
+
+    expect(after.organizations).toBe(before.organizations);
+    expect(after.organizations.status).toBe("ready");
+  });
+
   it("signs out and clears organization data on logout", () => {
     const after = reducer(signedIn("org-a"), logout());
 
     expect(after.auth.isAuthenticated).toBe(false);
     expect(after.projects.currentProjectId).toBeNull();
     expect(after.sprints.sprintsByProject).toEqual({});
+    expect(after.organizations.items).toEqual([]);
+    expect(after.organizations.status).toBe("idle");
   });
 
   it("leaves other actions to the slices", () => {

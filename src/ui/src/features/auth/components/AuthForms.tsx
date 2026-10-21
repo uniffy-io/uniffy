@@ -1,25 +1,15 @@
 import { useState, useEffect } from "react";
-import { Code, ConnectError, createClient } from "@connectrpc/connect";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "@/features/auth/store/authSlice";
-import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import {
-  friendlyErrorMessage,
-  initStorageEncryptionFromApi,
-  publicUnaryTransport,
-  setEnrollmentToken,
-  setMemoryAccessToken,
-  unaryTransport,
-} from "@/config";
+import { authApi } from "@/features/auth/api/authApi";
+import { completeSignIn } from "@/features/auth/store/signInThunks";
+import { friendlyErrorMessage, setEnrollmentToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Envelope, IdentificationCard, Lock, User } from "@phosphor-icons/react";
 import { AuthInput } from "@/features/auth/components/AuthInput";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { LoginMfaStep } from "@/features/mfa";
-
-const authClient = createClient(AuthService, publicUnaryTransport);
 
 export function AuthForms() {
   useDocumentTitle("Login");
@@ -31,8 +21,8 @@ export function AuthForms() {
 
   useEffect(() => {
     let cancelled = false;
-    authClient
-      .getAuthConfig({})
+    authApi
+      .getAuthConfig()
       .then((response) => {
         if (cancelled) return;
         setPublicRegistrationEnabled(response.publicRegistrationEnabled);
@@ -76,50 +66,17 @@ export function AuthForms() {
     sessionId?: string,
     domainAdminDomains?: number[],
   ) => {
-    try {
-      setMemoryAccessToken(accessToken);
-      const authenticatedClient = createClient(AuthService, unaryTransport);
-      const userResponse = await authenticatedClient.getCurrentUser(
-        {},
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-
-      const plainUser = {
-        id: userResponse.id,
-        email: userResponse.email,
-        username: userResponse.username,
-        fullName: userResponse.fullName,
-        isActive: userResponse.isActive,
-        isSystemAdmin: userResponse.isSystemAdmin,
-        emailVerified: userResponse.emailVerified,
-        accentColor: userResponse.accentColor,
-        fontFamily: userResponse.fontFamily,
-        avatarUrl: userResponse.avatarUrl,
-        hasAvatar: userResponse.hasAvatar,
-      };
-
-      if (userResponse.accentColor) dispatch(setAccentColor(userResponse.accentColor));
-      if (userResponse.fontFamily) dispatch(setFontFamily(userResponse.fontFamily));
-
-      dispatch(
-        setCredentials({
-          user: plainUser,
-          accessToken,
-          refreshToken,
-          organizationId,
-          organizationSlug,
-          organizationRole,
-          sessionId,
-          domainAdminDomains,
-        }),
-      );
-
-      initStorageEncryptionFromApi(plainUser.id).catch((err) => {
-        console.warn("Storage encryption init failed:", err);
-      });
-    } catch {
-      throw new Error("Failed to fetch user details");
-    }
+    await dispatch(
+      completeSignIn({
+        accessToken,
+        refreshToken,
+        organizationId,
+        organizationSlug,
+        organizationRole,
+        sessionId,
+        domainAdminDomains,
+      }),
+    ).unwrap();
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -127,7 +84,7 @@ export function AuthForms() {
     setLoading(true);
     setError(null);
     try {
-      const response = await authClient.register({
+      const response = await authApi.register({
         email,
         username,
         password,
@@ -155,7 +112,7 @@ export function AuthForms() {
     setLoading(true);
     setError(null);
     try {
-      const response = await authClient.login({ email, password });
+      const response = await authApi.login({ email, password });
       const variant = response.result;
       if (variant.case === "authResult") {
         const r = variant.value;

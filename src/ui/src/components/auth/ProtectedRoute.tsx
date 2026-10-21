@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { ORGANIZATION_LOST_EVENT } from "@/config/api";
+import { clearSessionCaches } from "@/features/auth/hooks/useSignOut";
 import { useRealtimeDrain } from "@/features/realtime/hooks/useRealtimeDrain";
 import { fetchEffectiveSettings } from "@/features/settings";
 
@@ -24,6 +27,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       dispatch(fetchEffectiveSettings(undefined));
     }
   }, [dispatch, isAuthenticated, currentOrganizationId, initialized]);
+
+  // A refresh that comes back without the tab's organization means the grant is gone; the caches
+  // outside Redux still hold that organization's content.
+  useEffect(() => {
+    const handleLost = () => {
+      clearSessionCaches(dispatch);
+      toast.warning("Your access to that organization ended.");
+    };
+    window.addEventListener(ORGANIZATION_LOST_EVENT, handleLost);
+    return () => window.removeEventListener(ORGANIZATION_LOST_EVENT, handleLost);
+  }, [dispatch]);
 
   // Wait for rehydration before redirecting; otherwise an in-flight token refresh would race to /auth.
   if (isRehydrating || (!isAuthenticated && refreshToken)) {

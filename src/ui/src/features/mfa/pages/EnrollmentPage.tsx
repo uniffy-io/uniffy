@@ -1,13 +1,10 @@
-import { createClient } from "@connectrpc/connect";
 import { useNavigate } from "react-router-dom";
 
 import { useAppDispatch } from "@/app/hooks";
 import { Card } from "@/components/ui/card";
-import { clearEnrollmentToken, setMemoryAccessToken, unaryTransport } from "@/config/api";
-import { setCredentials } from "@/features/auth/store/authSlice";
+import { clearEnrollmentToken } from "@/config/api";
+import { completeSignIn } from "@/features/auth/store/signInThunks";
 import { EnrollmentWizard } from "@/features/mfa/components/EnrollmentWizard";
-
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
@@ -27,37 +24,22 @@ export function EnrollmentPage() {
     domainAdminDomains?: number[];
   }) => {
     clearEnrollmentToken();
-    setMemoryAccessToken(result.accessToken);
-    const client = createClient(AuthService, unaryTransport);
-    const me = await client.getCurrentUser(
-      {},
-      { headers: { Authorization: `Bearer ${result.accessToken}` } },
-    );
-    const plainUser = {
-      id: me.id,
-      email: me.email,
-      username: me.username,
-      fullName: me.fullName,
-      isActive: me.isActive,
-      isSystemAdmin: me.isSystemAdmin,
-      emailVerified: me.emailVerified,
-      accentColor: me.accentColor,
-      fontFamily: me.fontFamily,
-      avatarUrl: me.avatarUrl,
-      hasAvatar: me.hasAvatar,
-    };
-    dispatch(
-      setCredentials({
-        user: plainUser,
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        sessionId: result.sessionId,
-        organizationId: result.organizationId,
-        organizationSlug: result.organizationSlug,
-        organizationRole: result.organizationRole,
-        domainAdminDomains: result.domainAdminDomains,
-      }),
-    );
+    try {
+      await dispatch(
+        completeSignIn({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          sessionId: result.sessionId,
+          organizationId: result.organizationId,
+          organizationSlug: result.organizationSlug,
+          organizationRole: result.organizationRole,
+          domainAdminDomains: result.domainAdminDomains,
+        }),
+      ).unwrap();
+    } catch {
+      // The rejected sign-in already reached the error toast.
+      return;
+    }
     navigate("/", { replace: true });
   };
 

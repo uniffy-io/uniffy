@@ -134,7 +134,9 @@ export function GlobalSearch() {
         className={cn(
           "group relative flex items-center",
           "transition-all duration-500 ease-out",
-          isFocused ? "w-[min(420px,calc(100vw-10rem))]" : "w-[min(384px,calc(100vw-12rem))]",
+          isFocused
+            ? "w-[min(420px,calc(100vw-10rem))]"
+            : "w-[min(320px,calc(100vw-12rem))] xl:w-[min(384px,calc(100vw-12rem))]",
         )}
       >
         <div

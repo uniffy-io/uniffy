@@ -9,6 +9,7 @@ import {
 } from "@/features/auth/store/credentialStorage";
 import { env } from "@/config/env";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import type { RefreshTokenResponse } from "@uniffy/proto/auth/v1/auth_pb";
 import { getStoreRef } from "@/app/storeRef";
 import {
   createSetCredentialsAction,
@@ -16,7 +17,12 @@ import {
   createRehydrateCompleteAction,
   createRehydrateFailedAction,
   createLogoutAction,
+  resetOrganizationScope,
 } from "@/features/auth/store/authActions";
+import {
+  clearLastOrganizationSlug,
+  readLastOrganizationSlug,
+} from "@/features/auth/store/lastOrganizationStorage";
 import { initStorageEncryption } from "@/shared/crypto/storageEncryption";
 
 // Access token lives in memory only - never persisted, to reduce XSS surface.
@@ -30,15 +36,16 @@ let memoryAccessToken: string | null = null;
 // real access token arrives from ConfirmEnrollment.
 let memoryEnrollmentToken: string | null = null;
 
+/** Fired when a refresh comes back without the organization this tab held; the session stays signed in. */
+export const ORGANIZATION_LOST_EVENT = "uniffy:auth:org-lost";
+
 function getAuthState() {
   const stored = readStoredAuth();
   return {
     accessToken: memoryAccessToken,
     refreshToken: stored?.refreshToken ?? null,
     user: stored?.user ?? null,
-    currentOrganizationId: stored?.currentOrganizationId ?? null,
     currentOrganizationSlug: stored?.currentOrganizationSlug ?? null,
-    currentOrganizationRole: stored?.currentOrganizationRole ?? null,
   };
 }
 
@@ -62,16 +69,9 @@ function getEnrollmentToken(): string | null {
   return memoryEnrollmentToken;
 }
 
-function updateAuthState(
-  accessToken: string,
-  refreshToken: string,
-  organizationId?: string,
-  organizationSlug?: string,
-  organizationRole?: string,
-  sessionId?: string,
-  domainAdminDomains?: number[],
-): void {
-  setMemoryAccessToken(accessToken);
+/** The response is the whole truth about this tab's org: no org back means the grant is gone. */
+function updateAuthState(response: RefreshTokenResponse, requestedSlug: string | undefined): void {
+  setMemoryAccessToken(response.accessToken);
 
   const store = getStoreRef();
   if (!store) {
@@ -79,26 +79,37 @@ function updateAuthState(
     return;
   }
 
-  const state = store.getState();
-  const user = state.auth?.user;
-  const currentOrgId = state.auth?.currentOrganizationId;
-  const currentOrgSlug = state.auth?.currentOrganizationSlug;
-  const currentOrgRole = state.auth?.currentOrganizationRole;
+  const auth = store.getState().auth;
+  if (!auth?.user) return;
+  const { user } = auth;
 
-  if (user) {
-    store.dispatch(
-      createSetCredentialsAction({
-        user,
-        accessToken,
-        refreshToken,
-        // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
-        organizationId: organizationId || currentOrgId || undefined,
-        organizationSlug: organizationSlug || currentOrgSlug || undefined,
-        organizationRole: organizationRole || currentOrgRole || undefined,
-        sessionId,
-        domainAdminDomains,
-      }),
-    );
+  // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
+  const organizationId = response.organizationId || undefined;
+  const organizationLost = Boolean(auth.currentOrganizationId) && !organizationId;
+  // The lost org's data goes first so nothing renders it under org-less credentials.
+  if (organizationLost) store.dispatch(resetOrganizationScope());
+
+  store.dispatch(
+    createSetCredentialsAction({
+      user,
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      organizationId,
+      organizationSlug: response.organizationSlug || undefined,
+      organizationRole: response.organizationRole || undefined,
+      sessionId: response.sessionId,
+      // Always pass the array (even empty) so a revoked domain-admin grant
+      // clears on the next refresh instead of sticking until logout.
+      domainAdminDomains: Array.from(response.domainAdminDomains),
+    }),
+  );
+
+  // Another tab may have picked a different org since; only the refused slug is forgotten.
+  if (!organizationId && requestedSlug && readLastOrganizationSlug(user.id) === requestedSlug) {
+    clearLastOrganizationSlug(user.id);
+  }
+  if (organizationLost && typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ORGANIZATION_LOST_EVENT));
   }
 }
 
@@ -165,36 +176,43 @@ function isTokenExpiring(token: string, bufferSeconds = 60): boolean {
   return payload.exp <= now + bufferSeconds;
 }
 
-// Singleton in-flight refresh so concurrent callers share one network round-trip.
-let refreshPromise: Promise<string | null> | null = null;
+interface RefreshOptions {
+  organizationSlug?: string | null;
+}
 
-async function refreshAccessToken(): Promise<string | null> {
+// Singleton in-flight refresh so concurrent callers share one network round-trip.
+let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
+
+async function refreshSession({
+  organizationSlug,
+}: RefreshOptions): Promise<RefreshTokenResponse | null> {
   if (refreshPromise) {
     return refreshPromise;
   }
 
   const initial = readStoredAuth();
   const local = getStoreRef()?.getState().auth;
-  if (
-    local?.user &&
-    (initial?.user?.id !== local.user.id ||
-      initial.currentOrganizationId !== local.currentOrganizationId)
-  )
-    return null;
+  if (local?.user && initial?.user?.id !== local.user.id) return null;
 
   if (!initial?.refreshToken || !initial.user) {
     return null;
   }
+  const userId = initial.user.id;
 
   refreshPromise = withAuthLock(async () => {
     const current = readStoredAuth();
     if (
       !current?.refreshToken ||
       current.user?.id !== initial.user?.id ||
-      current.currentOrganizationId !== initial.currentOrganizationId ||
       current.currentSessionId !== initial.currentSessionId
     )
       return null;
+    // Read under the lock: an org switch that held it has already moved this tab.
+    const requestedSlug =
+      organizationSlug ||
+      getStoreRef()?.getState().auth?.currentOrganizationSlug ||
+      readLastOrganizationSlug(userId) ||
+      undefined;
     try {
       // Transport without auth interceptor - would otherwise recurse on 401.
       const refreshTransport = createConnectTransport({
@@ -204,26 +222,17 @@ async function refreshAccessToken(): Promise<string | null> {
       });
 
       const client = createClient(AuthService, refreshTransport);
-      // A refresh may name the org it wants minted. None here, so the token
-      // lands in the org this session last minted for.
-      const response = await client.refreshToken({ refreshToken: current.refreshToken });
+      // The slug picks the org to mint. A grant that is gone comes back with no
+      // org and a live session; UNAUTHENTICATED only means the session is dead.
+      const response = await client.refreshToken({
+        refreshToken: current.refreshToken,
+        organizationSlug: requestedSlug,
+      });
       if (readStoredAuth()?.refreshToken !== current.refreshToken) return null;
 
-      setMemoryAccessToken(response.accessToken);
+      updateAuthState(response, requestedSlug);
 
-      updateAuthState(
-        response.accessToken,
-        response.refreshToken,
-        response.organizationId,
-        response.organizationSlug,
-        response.organizationRole,
-        response.sessionId,
-        // Always pass the array (even empty) so a revoked domain-admin grant
-        // clears on the next refresh instead of sticking until logout.
-        Array.from(response.domainAdminDomains),
-      );
-
-      return response.accessToken;
+      return response;
     } catch (error) {
       if (error instanceof ConnectError && error.code === Code.Unauthenticated) {
         console.warn("Token refresh failed: authentication required");
@@ -237,6 +246,12 @@ async function refreshAccessToken(): Promise<string | null> {
   });
 
   return refreshPromise;
+}
+
+/** Each tab refreshes into its own org: the explicit slug, else the tab's, else the device's last one. */
+async function refreshAccessToken(options: RefreshOptions = {}): Promise<string | null> {
+  const response = await refreshSession(options);
+  return response?.accessToken ?? null;
 }
 
 /** Fetch cache key seed and seed client-side storage encryption. Called once per session. */
@@ -254,13 +269,7 @@ async function initStorageEncryptionFromApi(userId: string): Promise<void> {
 
 /** Recover an access token after redux-persist boots; also revalidates the user is still active. */
 export async function rehydrateAuth(): Promise<boolean> {
-  const {
-    refreshToken,
-    user,
-    currentOrganizationId: persistedOrgId,
-    currentOrganizationSlug: persistedOrgSlug,
-    currentOrganizationRole: persistedOrgRole,
-  } = getAuthState();
+  const { refreshToken, user, currentOrganizationSlug: persistedOrgSlug } = getAuthState();
 
   if (!refreshToken || !user) {
     return false;
@@ -279,9 +288,12 @@ export async function rehydrateAuth(): Promise<boolean> {
   try {
     store.dispatch(createStartRehydratingAction());
 
-    const newToken = await refreshAccessToken();
+    // A fresh tab lands in the org this device used last.
+    const response = await refreshSession({
+      organizationSlug: readLastOrganizationSlug(user.id) ?? persistedOrgSlug,
+    });
 
-    if (newToken) {
+    if (response) {
       const state = store.getState();
       const persistedUser = user as {
         id: string;
@@ -303,11 +315,12 @@ export async function rehydrateAuth(): Promise<boolean> {
             ...persistedUser,
             hasAvatar: persistedUser.hasAvatar ?? Boolean(persistedUser.avatarUrl),
           },
-          accessToken: newToken,
+          accessToken: response.accessToken,
           refreshToken: state.auth?.refreshToken || refreshToken,
-          organizationId: state.auth?.currentOrganizationId || persistedOrgId || undefined,
-          organizationSlug: state.auth?.currentOrganizationSlug || persistedOrgSlug || undefined,
-          organizationRole: state.auth?.currentOrganizationRole || persistedOrgRole || undefined,
+          // The minted org wins over the persisted one; an org-less response stays org-less.
+          organizationId: response.organizationId || undefined,
+          organizationSlug: response.organizationSlug || undefined,
+          organizationRole: response.organizationRole || undefined,
           sessionId: state.auth?.currentSessionId || undefined,
         }),
       );
@@ -419,9 +432,9 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
     const store = getStoreRef();
     const current = store?.getState().auth;
     if (!store || !current?.user) return;
+    // Another tab's org is its own choice; only a different user or session ends this one.
     if (
       stored?.user?.id === current.user.id &&
-      stored.currentOrganizationId === current.currentOrganizationId &&
       stored.currentSessionId === current.currentSessionId
     ) {
       store.dispatch({ type: "auth/syncRefreshToken", payload: stored.refreshToken });

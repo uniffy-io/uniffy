@@ -12,7 +12,10 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { OrganizationList } from "@/features/auth/components/OrganizationList";
 import { useSignOut } from "@/features/auth/hooks/useSignOut";
+import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
+import { selectOrganizations } from "@/features/auth/store/organizationsSlice";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
@@ -41,6 +44,10 @@ export function UserMenu() {
   const currentCustomStatus = useCustomStatus(user?.id ?? "");
   const orgChartEnabled = useAppSelector((state) => state.people.policy.orgChartEnabled);
   const peoplePolicyStatus = useAppSelector((state) => state.people.policy.status);
+  const organizations = useAppSelector(selectOrganizations);
+  const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
+  const { requestSwitch, confirmDialog: switchConfirmDialog } = useSwitchOrganization();
 
   useEffect(() => {
     if (isOpen && peoplePolicyStatus === "idle") {
@@ -99,6 +106,11 @@ export function UserMenu() {
       setConfirmingUnsynced(true);
       setIsOpen(false);
     }
+  };
+
+  const selectOrganization = (slug: string) => {
+    setIsOpen(false);
+    void requestSwitch(slug);
   };
 
   const displayName = user.fullName || user.username || "User";
@@ -171,6 +183,23 @@ export function UserMenu() {
               </div>
             </div>
           </div>
+
+          {organizations.length > 0 && (
+            <div className="border-b border-border py-1.5 px-1.5">
+              <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Organizations
+              </div>
+              <div className="max-h-[min(15rem,40dvh)] overflow-y-auto">
+                <OrganizationList
+                  compact
+                  organizations={organizations}
+                  currentOrganizationId={currentOrganizationId}
+                  switchingSlug={switchingSlug}
+                  onSelect={selectOrganization}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="border-b border-border py-1.5 px-1.5">
             {showStatusPicker ? (
@@ -367,6 +396,7 @@ export function UserMenu() {
         cancelLabel="Stay"
         variant="warning"
       />
+      {switchConfirmDialog}
     </div>
   );
 }

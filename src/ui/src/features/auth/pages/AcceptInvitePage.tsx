@@ -5,16 +5,9 @@ import { Envelope, IdentificationCard, Lock, User, WarningCircle } from "@phosph
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import type { GetInvitationResponse } from "@uniffy/proto/auth/v1/auth_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
-import {
-  friendlyErrorMessage,
-  initStorageEncryptionFromApi,
-  setEnrollmentToken,
-  setMemoryAccessToken,
-  unaryTransport,
-} from "@/config";
+import { friendlyErrorMessage, setEnrollmentToken, unaryTransport } from "@/config";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "@/features/auth/store/authSlice";
-import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
+import { completeSignIn } from "@/features/auth/store/signInThunks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { AuthInput } from "@/features/auth/components/AuthInput";
 import { AuthShell } from "@/features/auth/components/AuthShell";
@@ -107,30 +100,8 @@ export function AcceptInvitePage() {
         return;
       }
       const r = variant.value;
-      setMemoryAccessToken(r.accessToken);
-      const authenticated = createClient(AuthService, unaryTransport);
-      const profile = await authenticated.getCurrentUser(
-        {},
-        { headers: { Authorization: `Bearer ${r.accessToken}` } },
-      );
-      const plainUser = {
-        id: profile.id,
-        email: profile.email,
-        username: profile.username,
-        fullName: profile.fullName,
-        isActive: profile.isActive,
-        isSystemAdmin: profile.isSystemAdmin,
-        emailVerified: profile.emailVerified,
-        accentColor: profile.accentColor,
-        fontFamily: profile.fontFamily,
-        avatarUrl: profile.avatarUrl,
-        hasAvatar: profile.hasAvatar,
-      };
-      if (profile.accentColor) dispatch(setAccentColor(profile.accentColor));
-      if (profile.fontFamily) dispatch(setFontFamily(profile.fontFamily));
-      dispatch(
-        setCredentials({
-          user: plainUser,
+      await dispatch(
+        completeSignIn({
           accessToken: r.accessToken,
           refreshToken: r.refreshToken,
           organizationId: r.organizationId,
@@ -139,8 +110,7 @@ export function AcceptInvitePage() {
           sessionId: r.sessionId,
           domainAdminDomains: Array.from(r.domainAdminDomains),
         }),
-      );
-      initStorageEncryptionFromApi(plainUser.id).catch(() => undefined);
+      ).unwrap();
       navigate("/", { replace: true });
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Could not accept invitation";

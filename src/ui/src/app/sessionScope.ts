@@ -4,9 +4,10 @@ import { resetFilesScope, type FilesState } from "@/features/files/store/filesSl
 import { projectsUiLayout } from "@/features/projects/store/projectsUiPersist";
 import type { ProjectsUiState } from "@/features/projects/types/ui";
 
-/** Device preferences survive; auth and recording handle logout in their own reducers. */
+/** Device preferences survive; auth, organizations and recording handle logout in their own reducers. */
 const SESSION_INDEPENDENT_SLICES = [
   "auth",
+  "organizations",
   "theme",
   "zenMode",
   "editor",

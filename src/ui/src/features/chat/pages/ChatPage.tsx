@@ -1,5 +1,5 @@
 import { clearUnreadSeparator } from "@/features/chat/store/chatMessagesSlice";
-import { Suspense, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { Suspense, useEffect, useCallback, useRef, useState, type ReactNode } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -48,6 +48,9 @@ import {
   clearLastOpenedChannel,
 } from "@/features/chat/utils/lastOpenedChannel";
 import { chooseChatLanding } from "@/features/chat/utils/landing";
+import { WrongOrganizationNotice } from "@/features/auth/components/WrongOrganizationNotice";
+import { useContentOrganizationResolver } from "@/features/auth/hooks/useContentOrganizationResolver";
+import { buildUrn, UrnType } from "@/shared/utils/urn";
 import "@/features/chat/styles/chat.css";
 
 const ThreadPanel = lazyImport(
@@ -85,8 +88,9 @@ export function ChatPage() {
   const { channelId } = useParams<{ channelId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const initializedRef = useRef(false);
-  const hydrationStartedRef = useRef(false);
+  // Keyed by organization, so a switch made on this route from a link into another one starts over.
+  const initializedForRef = useRef<string | null | undefined>(undefined);
+  const hydratedForRef = useRef<string | null | undefined>(undefined);
   const landingNavigationStartedRef = useRef(false);
   const channelRequestRef = useRef<string | null>(null);
   const { isMobile, isMobileOrTablet } = useBreakpoint();
@@ -118,6 +122,24 @@ export function ChatPage() {
   const isUnreadsRoute = !channelId && currentPath === "/chat/unreads";
   const isDraftsRoute = !channelId && currentPath === "/chat/drafts";
 
+  // A channel that failed to load in this organization may sit in another one of the user's.
+  const [channelFailure, setChannelFailure] = useState<{
+    channelId: string;
+    organizationId: string;
+  } | null>(null);
+  const failedChannelId =
+    channelId &&
+    !channelInStore &&
+    channelFailure?.channelId === channelId &&
+    channelFailure.organizationId === organizationId
+      ? channelId
+      : null;
+  const channelUrn = channelId ? buildUrn(UrnType.CHAT, channelId) : null;
+  const { match: channelOrganization, status: channelResolution } = useContentOrganizationResolver(
+    channelUrn,
+    failedChannelId !== null,
+  );
+
   useEffect(() => {
     if (channelInStore) {
       channelRequestRef.current = null;
@@ -133,8 +155,7 @@ export function ChatPage() {
       .catch(() => {
         if (channelRequestRef.current !== key || !routeSnapshotIsCurrent(currentPath) || !userId)
           return;
-        clearLastOpenedChannel(organizationId, userId);
-        navigate("/chat", { replace: true });
+        setChannelFailure({ channelId, organizationId });
       });
   }, [
     channelId,
@@ -145,7 +166,29 @@ export function ChatPage() {
     channelsLoaded,
     currentPath,
     dispatch,
-    navigate,
+  ]);
+
+  const leaveUnopenableChannel = useCallback(() => {
+    if (organizationId && userId) clearLastOpenedChannel(organizationId, userId);
+    navigate("/chat", { replace: true });
+  }, [organizationId, userId, navigate]);
+
+  // No other organization holds the channel, so the route goes as it always did.
+  useEffect(() => {
+    if (
+      failedChannelId &&
+      channelResolution === "done" &&
+      !channelOrganization &&
+      routeSnapshotIsCurrent(currentPath)
+    ) {
+      leaveUnopenableChannel();
+    }
+  }, [
+    failedChannelId,
+    channelResolution,
+    channelOrganization,
+    currentPath,
+    leaveUnopenableChannel,
   ]);
 
   useEffect(() => {
@@ -227,21 +270,26 @@ export function ChatPage() {
   const hashMessageId = location.hash.replace("#", "") || undefined;
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
+    if (initializedForRef.current === organizationId) return;
+    initializedForRef.current = organizationId;
     dispatch(initializeChat());
-  }, [dispatch]);
+  }, [dispatch, organizationId]);
 
   useEffect(() => {
-    if (hydrationStartedRef.current || !routeSnapshotIsCurrent(currentPath) || !channelsLoaded) {
+    if (
+      hydratedForRef.current === organizationId ||
+      !routeSnapshotIsCurrent(currentPath) ||
+      !channelsLoaded
+    ) {
       return;
     }
     if (channelId && channelInStore && !channelMessagesSettled) return;
     if (isChatIndexRoute && channels.length > 0) return;
-    hydrationStartedRef.current = true;
+    hydratedForRef.current = organizationId;
     dispatch(hydrateChat());
   }, [
     dispatch,
+    organizationId,
     currentPath,
     channelsLoaded,
     channelId,
@@ -374,6 +422,16 @@ export function ChatPage() {
     <DeferredChatSurface>
       <DraftsView />
     </DeferredChatSurface>
+  ) : channelUrn && failedChannelId && channelOrganization ? (
+    <WrongOrganizationNotice
+      urn={channelUrn}
+      organization={channelOrganization}
+      path={`${currentPath}${location.search}${location.hash}`}
+      onDismiss={leaveUnopenableChannel}
+      tone="card"
+    />
+  ) : channelResolution === "resolving" ? (
+    <PageLoader className="h-full min-h-0 bg-surface" />
   ) : (
     <div
       className={cn(

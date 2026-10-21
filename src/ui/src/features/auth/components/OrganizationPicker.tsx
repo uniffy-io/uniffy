@@ -1,185 +1,55 @@
-import { useState, useEffect } from "react";
-import { createClient } from "@connectrpc/connect";
-import { useNavigate } from "react-router-dom";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
-import { OrganizationsService } from "@uniffy/proto/organizations/v1/organizations_pb";
-import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "@/features/auth/store/authSlice";
-import { resetOrganizationScope } from "@/features/auth/store/authActions";
-import { clearSessionCaches, useSignOut } from "@/features/auth/hooks/useSignOut";
-import { cancelRecording } from "@/features/recording/store/recordingThunks";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
-import { UniffyLogo } from "@/components/ui/uniffy-logo";
-import { Card } from "@/components/ui/card";
-import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
-import { cn } from "@/shared/utils/cn";
-import { unaryTransport, setMemoryAccessToken } from "@/config";
-import { publicUnaryTransport } from "@/config/api";
-import { withAuthLock } from "@/features/auth/authLock";
-import { readStoredAuth } from "@/features/auth/store/credentialStorage";
-import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
-  Buildings,
-  SignOut,
   ArrowRight,
+  Buildings,
+  Check,
   CircleNotch,
   ShieldWarning,
+  SignOut,
   WarningCircle,
 } from "@phosphor-icons/react";
-
-function getRoleLabel(role: OrganizationRole): string {
-  switch (role) {
-    case OrganizationRole.OWNER:
-      return "Owner";
-    case OrganizationRole.ADMIN:
-      return "Admin";
-    case OrganizationRole.MEMBER:
-      return "Member";
-    default:
-      return "Member";
-  }
-}
-
-function getRoleBadgeClasses(role: OrganizationRole): string {
-  switch (role) {
-    case OrganizationRole.OWNER:
-      return "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-700 dark:from-amber-950 dark:to-amber-900 dark:text-amber-300";
-    case OrganizationRole.ADMIN:
-      return "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 dark:from-blue-950 dark:to-blue-900 dark:text-blue-300";
-    default:
-      return "bg-muted text-muted-foreground";
-  }
-}
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { UniffyLogo } from "@/components/ui/uniffy-logo";
+import { OrganizationAvatar } from "@/features/auth/components/OrganizationList";
+import { useSignOut } from "@/features/auth/hooks/useSignOut";
+import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
+import {
+  selectOrganizations,
+  selectOrganizationsStatus,
+} from "@/features/auth/store/organizationsSlice";
+import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
+import { getRoleBadgeClasses, getRoleLabel } from "@/features/auth/utils/organizationRoles";
+import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { cn } from "@/shared/utils/cn";
 
 export function OrganizationPicker() {
   useDocumentTitle("Select Organization");
-  const [organizations, setOrganizations] = useState<MyOrganization[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectingSlug, setSelectingSlug] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const accessToken = useAppSelector((state) => state.auth?.accessToken);
-  const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
-  const handleLogout = useSignOut();
+  const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
   const user = useAppSelector((state) => state.auth?.user);
-  const recordingState = useAppSelector((state) => state.recording.state);
-  const [pendingOrgSlug, setPendingOrgSlug] = useState<string | null>(null);
+  const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
+  const organizations = useAppSelector(selectOrganizations);
+  const status = useAppSelector(selectOrganizationsStatus);
+  const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
+  const handleLogout = useSignOut();
+  const { requestSwitch, confirmDialog } = useSwitchOrganization();
   const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) {
-      navigate("/auth");
-      return;
-    }
+    if (isAuthenticated) void dispatch(fetchMyOrganizations());
+  }, [dispatch, isAuthenticated]);
 
-    const fetchOrgs = async () => {
-      try {
-        const client = createClient(OrganizationsService, unaryTransport);
-        const response = await client.listMyOrganizations(
-          {},
-          { headers: { Authorization: `Bearer ${accessToken}` } },
-        );
-        setOrganizations(response.organizations);
-      } catch {
-        setError("Failed to load organizations.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
 
-    fetchOrgs();
-  }, [accessToken, navigate]);
-
-  const RECORDING_ACTIVE_STATES = new Set([
-    "requesting",
-    "initiating-upload",
-    "recording",
-    "paused",
-    "stopping",
-    "flushing",
-    "completing",
-  ]);
-
-  const handleSelectOrg = async (orgSlug: string) => {
-    if (!refreshToken) {
-      setError("Session expired. Please login again.");
-      return;
-    }
-    // Switching orgs orphans the MultipartUpload row that backs an active recording, losing the clip.
-    if (RECORDING_ACTIVE_STATES.has(recordingState)) {
-      setPendingOrgSlug(orgSlug);
-      return;
-    }
-    await switchToOrg(orgSlug);
-  };
-
-  const switchToOrg = async (orgSlug: string) => {
-    if (!refreshToken) {
-      setError("Session expired. Please login again.");
-      return;
-    }
-    setSelectingSlug(orgSlug);
-    try {
-      await withAuthLock(async () => {
-        const current = readStoredAuth();
-        if (!current?.refreshToken || current.user?.id !== user?.id)
-          throw new Error("Session changed");
-        const client = createClient(AuthService, publicUnaryTransport);
-        const r = await client.refreshToken({
-          refreshToken: current.refreshToken,
-          organizationSlug: orgSlug,
-        });
-        if (readStoredAuth()?.refreshToken !== current.refreshToken)
-          throw new Error("Session changed");
-
-        clearSessionCaches(dispatch);
-        dispatch(resetOrganizationScope());
-        setMemoryAccessToken(r.accessToken);
-
-        if (user) {
-          if (user.accentColor) {
-            dispatch(setAccentColor(user.accentColor));
-          }
-          if (user.fontFamily) {
-            dispatch(setFontFamily(user.fontFamily));
-          }
-
-          dispatch(
-            setCredentials({
-              user: user,
-              accessToken: r.accessToken,
-              refreshToken: r.refreshToken,
-              organizationId: r.organizationId,
-              organizationSlug: r.organizationSlug || orgSlug,
-              organizationRole: r.organizationRole,
-              sessionId: r.sessionId,
-              domainAdminDomains: Array.from(r.domainAdminDomains),
-            }),
-          );
-        }
-
-        navigate("/");
-      });
-    } catch {
-      setError("Failed to switch to organization.");
-      setSelectingSlug(null);
-    }
-  };
-
-  const confirmDiscardAndSwitch = async () => {
-    if (!pendingOrgSlug) return;
-    const slug = pendingOrgSlug;
-    setPendingOrgSlug(null);
-    await dispatch(cancelRecording());
-    await switchToOrg(slug);
-  };
+  const hasOrganizations = organizations.length > 0;
+  const isLoading = !hasOrganizations && (status === "idle" || status === "loading");
+  const loadFailed = !hasOrganizations && status === "error";
 
   return (
     <>
@@ -193,16 +63,7 @@ export function OrganizationPicker() {
         }
       `}</style>
 
-      <ConfirmDialog
-        isOpen={pendingOrgSlug !== null}
-        onClose={() => setPendingOrgSlug(null)}
-        onConfirm={() => void confirmDiscardAndSwitch()}
-        title="Discard active recording?"
-        message="A screen recording is in progress. Switching organizations will discard it."
-        confirmLabel="Discard and switch"
-        cancelLabel="Stay"
-        variant="warning"
-      />
+      {confirmDialog}
 
       <ConfirmDialog
         isOpen={confirmingUnsynced}
@@ -228,7 +89,7 @@ export function OrganizationPicker() {
               <UniffyLogo className="w-14 h-14" />
               <div>
                 <h1 className="text-lg font-bold tracking-tight text-foreground">
-                  Select a workspace
+                  Select an organization
                 </h1>
                 <p className="text-xs text-muted-foreground">
                   {user?.email || "Choose where to continue"}
@@ -250,17 +111,7 @@ export function OrganizationPicker() {
             </Button>
           </div>
 
-          {error && (
-            <div
-              className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
-              style={{ animation: "org-slide-up 0.3s ease-out forwards" }}
-            >
-              <WarningCircle className="h-4 w-4 mt-0.5 flex-shrink-0" weight="fill" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {loading ? (
+          {isLoading ? (
             <div
               className="flex flex-col items-center justify-center py-16 opacity-0"
               style={{ animation: "org-slide-up 0.5s ease-out 0.2s forwards" }}
@@ -270,9 +121,25 @@ export function OrganizationPicker() {
                 style={{ animation: "org-spinner 0.8s linear infinite" }}
                 weight="bold"
               />
-              <p className="text-sm text-muted-foreground">Loading workspaces...</p>
+              <p className="text-sm text-muted-foreground">Loading organizations...</p>
             </div>
-          ) : organizations.length === 0 ? (
+          ) : loadFailed ? (
+            <div
+              className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
+              style={{ animation: "org-slide-up 0.3s ease-out forwards" }}
+            >
+              <WarningCircle className="h-4 w-4 mt-0.5 flex-shrink-0" weight="fill" />
+              <span className="flex-1">Your organizations could not be loaded.</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void dispatch(fetchMyOrganizations())}
+                className="-my-1"
+              >
+                Retry
+              </Button>
+            </div>
+          ) : !hasOrganizations ? (
             <Card
               tone="surface"
               className="p-10 text-center opacity-0"
@@ -281,7 +148,7 @@ export function OrganizationPicker() {
               <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
                 <Buildings className="h-6 w-6 text-muted-foreground" />
               </div>
-              <p className="text-foreground font-medium mb-1">No workspaces yet</p>
+              <p className="text-foreground font-medium mb-1">No organizations yet</p>
               <p className={cn("text-sm text-muted-foreground", user?.isSystemAdmin && "mb-6")}>
                 {user?.isSystemAdmin
                   ? "You are a platform operator with no tenant membership. Open the platform console to manage the deployment."
@@ -322,41 +189,38 @@ export function OrganizationPicker() {
                   </div>
                 </button>
               )}
-              {organizations.map((myOrg, index) => {
-                const slug = myOrg.organization?.slug || "";
-                const isSelecting = selectingSlug === slug;
-                const isSuspended = myOrg.suspended;
+              {organizations.map((organization, index) => {
+                const isSelecting = switchingSlug === organization.slug;
+                const isCurrent = organization.id === currentOrganizationId;
+                const isSuspended = organization.suspended;
 
                 return (
                   <button
-                    key={myOrg.organization?.id}
+                    key={organization.id}
                     type="button"
-                    onClick={isSuspended ? undefined : () => handleSelectOrg(slug)}
-                    disabled={!isSuspended && selectingSlug !== null}
+                    onClick={isSuspended ? undefined : () => void requestSwitch(organization.slug)}
+                    disabled={!isSuspended && switchingSlug !== null}
                     aria-disabled={isSuspended ? "true" : undefined}
+                    aria-current={isCurrent ? "true" : undefined}
                     className={cn(
                       "w-full text-left rounded-xl transition-shadow duration-150 group opacity-0",
                       isSuspended
                         ? "bg-muted shadow-edge cursor-not-allowed"
-                        : isSelecting
+                        : isSelecting || isCurrent
                           ? "bg-primary/5 shadow-edge-primary cursor-pointer"
                           : "bg-surface shadow-edge hover:shadow-edge-strong cursor-pointer",
-                      selectingSlug !== null && !isSelecting && "opacity-60",
+                      switchingSlug !== null && !isSelecting && "opacity-60",
                     )}
                     style={{
                       animation: `org-slide-up 0.4s ease-out ${0.15 + index * 0.06}s forwards`,
                     }}
                   >
                     <div className="flex items-center gap-4 p-4">
-                      <div
-                        className={cn(
-                          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm",
-                          isSuspended && "grayscale opacity-60",
-                        )}
-                        style={getAvatarGradientStyle(myOrg.organization?.name || "?")}
-                      >
-                        {getInitials(myOrg.organization?.name || "?")}
-                      </div>
+                      <OrganizationAvatar
+                        name={organization.name}
+                        suspended={isSuspended}
+                        className="w-10 h-10 rounded-lg text-sm"
+                      />
 
                       <div className="flex-1 min-w-0">
                         <div
@@ -365,16 +229,16 @@ export function OrganizationPicker() {
                             isSuspended ? "text-muted-foreground" : "text-foreground",
                           )}
                         >
-                          {myOrg.organization?.name}
+                          {organization.name}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span
                             className={cn(
                               "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-                              getRoleBadgeClasses(myOrg.role),
+                              getRoleBadgeClasses(organization.role),
                             )}
                           >
-                            {getRoleLabel(myOrg.role)}
+                            {getRoleLabel(organization.role)}
                           </span>
                           {isSuspended && (
                             <Badge variant="outline" className="px-2 text-muted-foreground">
@@ -393,6 +257,8 @@ export function OrganizationPicker() {
                             }}
                             weight="bold"
                           />
+                        ) : isCurrent ? (
+                          <Check className="h-5 w-5 text-primary" weight="bold" />
                         ) : (
                           <ArrowRight className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
                         )}
