@@ -28,7 +28,8 @@ import {
   onSessionExpired,
   onOrganizationLost,
   clearUserSessionData,
-  hasUnsyncedEdits,
+  emitAuthBoundary,
+  listUnsyncedOrganizations,
 } from "@core/auth/sessionEvents";
 import { resetSessionScope } from "@core/auth/sessionScope";
 import { hydrateServerUrl } from "@core/config/serverUrl";
@@ -126,6 +127,12 @@ export type LoginResult =
   | { status: "mfa"; challengeToken: string; methods: string[] }
   | { status: "enroll"; enrollmentToken: string };
 
+/** `unsynced` names the organizations whose edits only this device holds. An empty list means
+ * the check failed and could not tell which. */
+export type LogoutResult =
+  | { status: "signed_out" }
+  | { status: "unsynced"; organizationIds: readonly string[] };
+
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<LoginResult>;
   verifyMfa: (challengeToken: string, code: string, method: string) => Promise<void>;
@@ -138,10 +145,11 @@ interface AuthContextValue extends AuthState {
   ) => Promise<LoginResult>;
   beginForcedEnrollment: (enrollmentToken: string) => void;
   completeEnrollment: (tokens: AuthTokens) => Promise<void>;
-  selectOrganization: (slug: string) => Promise<void>;
-  /** Resolves false without signing out while edits only this device holds would be deleted;
-   * callers confirm and retry with `discardUnsynced`. */
-  logout: (options?: { discardUnsynced?: boolean }) => Promise<boolean>;
+  /** Asks for the organization by id when the caller knows it, since a slug can be renamed. */
+  selectOrganization: (slug: string, organizationId?: string) => Promise<void>;
+  /** Resolves `unsynced` without signing out while edits only this device holds would be
+   * deleted; callers confirm and retry with `discardUnsynced`. */
+  logout: (options?: { discardUnsynced?: boolean }) => Promise<LogoutResult>;
   holdNavigation: boolean;
   setHoldNavigation: (v: boolean) => void;
   loginSplashVisible: boolean;
@@ -153,13 +161,32 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const REHYDRATE_RETRY_BASE_MS = 3000;
 const REHYDRATE_RETRY_MAX_MS = 15000;
 
+/** Cache subdirectory that holds downloaded files, as `<userId>/<organizationId>/<name>`. */
+export const DOWNLOADS_CACHE_DIRECTORY = "downloads";
+
+// A download lives only until its share or copy settles; this removes any a crash or a share
+// still open left behind. A build without the native module never stored one.
+function deleteDownloads(): void {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const FileSystem = require("expo-file-system/legacy");
+    if (!FileSystem.cacheDirectory) return;
+    void FileSystem.deleteAsync(`${FileSystem.cacheDirectory}${DOWNLOADS_CACHE_DIRECTORY}`, {
+      idempotent: true,
+    }).catch(() => {});
+  } catch {
+    // No module, no downloads.
+  }
+}
+
 // Wiping caches on every auth boundary keeps one user's content (query data,
-// decoded images on disk) from surviving into another session on the device.
+// decoded images and downloaded files on disk) from surviving into another session on the device.
 function clearSessionCaches(): void {
   resetSessionScope();
   queryClient.clear();
   void Image.clearMemoryCache();
   void Image.clearDiskCache();
+  deleteDownloads();
 }
 
 async function handleAuthResponse(
@@ -176,6 +203,7 @@ async function handleAuthResponse(
   } else {
     await clearStoredOrgId();
   }
+  emitAuthBoundary(response.organizationId || null);
 
   const user = await authApi.getCurrentUser();
 
@@ -284,6 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         organizationRole: null,
         domainAdminDomains: [],
       });
+      emitAuthBoundary(null);
     });
   }, []);
 
@@ -367,12 +396,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await handleAuthResponse(tokens, dispatch);
   }, []);
 
-  const selectOrganization = useCallback(async (slug: string) => {
+  const selectOrganization = useCallback(async (slug: string, organizationId?: string) => {
     const result = await withRefreshLock(async () => {
       const refreshToken = await getRefreshToken();
       if (!refreshToken) throw new Error("No refresh token");
 
-      const response = await authApi.refreshToken(refreshToken, slug);
+      const response = await authApi.refreshToken(refreshToken, {
+        organizationId,
+        organizationSlug: slug,
+      });
       // A refused grant still rotates the refresh token. Everything else stays on the current
       // org, whose access token is still valid.
       await setRefreshToken(response.refreshToken);
@@ -399,12 +431,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       organizationRole: result.organizationRole || null,
       domainAdminDomains: [...result.domainAdminDomains],
     });
+    emitAuthBoundary(result.organizationId);
   }, []);
 
   const logout = useCallback(
-    async (options?: { discardUnsynced?: boolean }) => {
+    async (options?: { discardUnsynced?: boolean }): Promise<LogoutResult> => {
       const userId = state.user?.id;
-      if (userId && !options?.discardUnsynced && (await hasUnsyncedEdits(userId))) return false;
+      if (userId && !options?.discardUnsynced) {
+        const organizationIds = await listUnsyncedOrganizations(userId).then(
+          (ids) => (ids.length ? ids : null),
+          // A check that failed names no organization but still asks.
+          () => [],
+        );
+        if (organizationIds) return { status: "unsynced", organizationIds };
+      }
       if (userId) await clearUserSessionData(userId);
       const refreshToken = await getRefreshToken();
       if (refreshToken) {
@@ -417,7 +457,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await clearAuthStorage();
       clearSessionCaches();
       dispatch({ type: "LOGOUT" });
-      return true;
+      emitAuthBoundary(null);
+      return { status: "signed_out" };
     },
     [state.user],
   );

@@ -47,7 +47,7 @@ class Socket {
   static OPEN = 1;
   readyState = 0;
   onopen?: () => void;
-  onclose?: (event: { code: number }) => void;
+  onclose?: (event: { code: number; reason: string }) => void;
   onmessage?: (event: { data: ArrayBuffer }) => void;
   sent: Uint8Array[] = [];
   constructor(
@@ -64,14 +64,21 @@ class Socket {
     this.readyState = 1;
     this.onopen?.();
   }
-  close(code = 1000) {
+  close(code = 1000, reason = "") {
     this.readyState = 3;
-    this.onclose?.({ code });
+    this.onclose?.({ code, reason });
   }
   /** The server completes the handshake and closes before any frame, as an upgrade refusal does. */
-  refuse(code: number) {
+  refuse(code: number, reason = "") {
     this.open();
-    this.close(code);
+    this.close(code, reason);
+  }
+  get organizationId(): string | null {
+    return new URL(this.url).searchParams.get("org_id");
+  }
+  /** Names of the documents this socket carried any frame for. */
+  docNames(): string[] {
+    return [...new Set(this.sent.map((frame) => peekVarString(frame).docName))];
   }
   deliver(name: string, payload: Uint8Array) {
     const frame = encodeDocFrame(name, payload);
@@ -1009,5 +1016,156 @@ it("backs off between refreshes the server cannot answer and stops after five", 
   fresh.open();
   fresh.receive(h.sub.docName, 5, "g");
   expect(writes(fresh).map(readWrite)).toMatchObject([{ id: sent.id, generation: "g" }]);
+  h.destroy();
+});
+
+function attachDoc(
+  realtimeMultiplexer: Awaited<ReturnType<typeof loadTransport>>["realtimeMultiplexer"],
+  contentId: string,
+  organizationId: string,
+) {
+  const doc = new Y.Doc();
+  const awareness = new Awareness(doc);
+  const statuses: RealtimeStatus[] = [];
+  let mismatches = 0;
+  const sub = realtimeMultiplexer.attach({
+    contentType: "NOTE",
+    contentId,
+    organizationId,
+    ydoc: doc,
+    awareness,
+    onStatus: (status) => statuses.push(status),
+    onOrganizationMismatch: () => (mismatches += 1),
+  });
+  return {
+    doc,
+    sub,
+    statuses,
+    mismatches: () => mismatches,
+    destroy() {
+      sub.destroy();
+      awareness.destroy();
+      doc.destroy();
+    },
+  };
+}
+
+it("moves an idle socket to the organization of the next attached document", async () => {
+  const { realtimeMultiplexer } = await loadTransport();
+  const first = attachDoc(realtimeMultiplexer, "in-a", "org-a");
+  const socketA = Socket.instances[0];
+  expect(socketA.organizationId).toBe("org-a");
+  socketA.open();
+  first.destroy();
+
+  const second = attachDoc(realtimeMultiplexer, "in-b", "org-b");
+  expect(socketA.readyState).toBe(3);
+  expect(Socket.instances).toHaveLength(2);
+  const socketB = Socket.instances[1];
+  expect(socketB.organizationId).toBe("org-b");
+  socketB.open();
+  expect(socketA.docNames()).toEqual(["NOTE:in-a"]);
+  expect(socketB.docNames()).toEqual(["NOTE:in-b"]);
+  second.destroy();
+});
+
+it("keeps a document of the previous organization silent on the next organization's socket", async () => {
+  const { realtimeMultiplexer } = await loadTransport();
+  const stale = attachDoc(realtimeMultiplexer, "in-a", "org-a");
+  const socketA = Socket.instances[0];
+  socketA.open();
+  socketA.receive(stale.sub.docName, 5, "g");
+
+  const current = attachDoc(realtimeMultiplexer, "in-b", "org-b");
+  await Promise.resolve();
+  expect(stale.mismatches()).toBe(1);
+  expect(stale.statuses.at(-1)).toBe("access_lost");
+  const socketB = Socket.instances[1];
+  socketB.open();
+  socketB.receive(current.sub.docName, 5, "g");
+  const empty = new Y.Doc();
+  socketB.deliver(
+    current.sub.docName,
+    syncFrame((encoder) => syncProtocol.writeSyncStep2(encoder, empty)),
+  );
+  empty.destroy();
+  stale.doc.getText("markdown").insert(0, "typed after the switch");
+  vi.advanceTimersByTime(30_000);
+  // Frames the new organization's server could send for the stale doc change nothing.
+  socketB.receive(stale.sub.docName, 2, "no view access", 1);
+  expect(socketB.docNames()).toEqual(["NOTE:in-b"]);
+  expect(stale.statuses.at(-1)).toBe("access_lost");
+  expect(stale.mismatches()).toBe(1);
+  expect(realtimeMultiplexer.getDocState(stale.sub.docName).transportPending).toBe(true);
+  expect(Socket.instances).toHaveLength(2);
+  stale.destroy();
+  current.destroy();
+});
+
+it("closes an idle socket on an auth boundary and opens the next one for its organization", async () => {
+  const { emitAuthBoundary } = await import("@core/auth/sessionEvents");
+  const { realtimeMultiplexer } = await loadTransport();
+  const first = attachDoc(realtimeMultiplexer, "in-a", "org-a");
+  const socketA = Socket.instances[0];
+  socketA.open();
+  first.destroy();
+
+  emitAuthBoundary("org-b");
+  expect(socketA.readyState).toBe(3);
+  expect(Socket.instances).toHaveLength(1);
+  const second = attachDoc(realtimeMultiplexer, "in-b", "org-b");
+  expect(Socket.instances.at(-1)!.organizationId).toBe("org-b");
+  second.destroy();
+});
+
+it("reconnects on an auth boundary after close 4403 and opens nothing for a lost grant", async () => {
+  const { emitAuthBoundary } = await import("@core/auth/sessionEvents");
+  const h = await openDocument("boundary");
+  h.socket.close(4403);
+  expect(h.statuses.at(-1)).toBe("access_lost");
+
+  emitAuthBoundary(null);
+  expect(Socket.instances).toHaveLength(1);
+  expect(h.statuses.at(-1)).toBe("access_lost");
+
+  emitAuthBoundary("org");
+  expect(Socket.instances).toHaveLength(2);
+  const next = Socket.instances[1];
+  expect(next.organizationId).toBe("org");
+  next.open();
+  expect(h.statuses.at(-1)).toBe("connected");
+  h.destroy();
+});
+
+it("refreshes once when the server closes 4403 for a lost membership and reconnects with the new token", async () => {
+  const refresh = refreshEndpoint("issued");
+  const h = await openDocument("removed");
+  h.doc.getText("markdown").insert(0, "kept on this device");
+  vi.advanceTimersByTime(50);
+  const [sent] = writes(h.socket).map(readWrite);
+
+  h.socket.close(4403, "not a member");
+  expect(h.statuses.at(-1)).toBe("access_lost");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(refresh.requests).toBe(1);
+  const second = Socket.instances.at(-1)!;
+  expect(second.options.headers).toEqual({ Authorization: "Bearer fresh-1" });
+
+  // The refreshed token still names the organization, yet the server refuses it the same way:
+  // nothing a second refresh would change.
+  second.refuse(4403, "not a member");
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(refresh.requests).toBe(1);
+  expect(Socket.instances).toHaveLength(2);
+  expect(h.statuses.at(-1)).toBe("access_lost");
+
+  (await import("@core/auth/auth")).setAccessToken("reissued");
+  await vi.advanceTimersByTimeAsync(15_000);
+  const third = Socket.instances.at(-1)!;
+  expect(Socket.instances).toHaveLength(3);
+  expect(third.options.headers).toEqual({ Authorization: "Bearer reissued" });
+  third.open();
+  third.receive(h.sub.docName, 5, "g");
+  expect(writes(third).map(readWrite)).toMatchObject([{ id: sent.id, generation: "g" }]);
   h.destroy();
 });

@@ -12,7 +12,9 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 
-// Pops back to the home already under the You screens rather than mounting a second one.
+// Picking the current organization pops back to the home already under the You screens. A
+// switch needs nothing here: AuthGate resets the whole stack once the organization changes, so
+// no screen of the previous organization stays behind.
 function goHome() {
   router.dismissTo("/");
 }
@@ -24,7 +26,7 @@ export function OrganizationScreen() {
     Platform.OS === "web" ? BOTTOM_NAV_HEIGHT + 34 : BOTTOM_NAV_HEIGHT + insets.bottom;
   const { organizationId } = useAuth();
   const organizationsQuery = useMyOrganizations();
-  const { select, selectingSlug, error } = useSelectOrganization(goHome);
+  const { select, selectingSlug, error } = useSelectOrganization();
   const organizations = organizationsQuery.data ?? [];
   const currentSlug = organizations.find((org) => org.id === organizationId)?.slug;
 

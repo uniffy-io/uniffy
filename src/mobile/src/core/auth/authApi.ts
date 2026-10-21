@@ -16,8 +16,11 @@ export const authApi = {
   register: (email: string, username: string, password: string, fullName?: string) =>
     publicAuthClient.register({ email, username, password, fullName }),
 
-  refreshToken: (refreshToken: string, organizationSlug?: string) =>
-    publicAuthClient.refreshToken({ refreshToken, organizationSlug }),
+  /** `organizationId` wins over `organizationSlug`; omitting both keeps the session's last org. */
+  refreshToken: (
+    refreshToken: string,
+    organization?: { organizationId?: string; organizationSlug?: string },
+  ) => publicAuthClient.refreshToken({ refreshToken, ...organization }),
 
   verifyMfa: (challengeToken: string, code: string, method: string) =>
     publicMfaClient.verifyMfa({ challengeToken, code, method }),

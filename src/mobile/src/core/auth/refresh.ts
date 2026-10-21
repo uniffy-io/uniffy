@@ -19,6 +19,7 @@ const client = createClient(AuthService, publicTransport);
 
 let lockTail: Promise<unknown> = Promise.resolve();
 let inFlight: Promise<RefreshTokenResponse | null> | null = null;
+let membershipCheckedFor: string | null = null;
 
 // The server rotates the refresh token on every call, so each call that spends it waits for the
 // previous one. Two calls racing one token leave storage holding whichever rotation landed last,
@@ -40,6 +41,19 @@ export function refreshSession(): Promise<RefreshTokenResponse | null> {
   return inFlight;
 }
 
+/**
+ * One removal reaches the app as many refusals: every RPC in flight and the realtime close.
+ * They share one refresh per refused access token, and that refresh tells whether the grant is
+ * gone. A refusal of the refreshed token refreshes once more.
+ */
+export function refreshAfterMembershipDenial(
+  deniedToken: string,
+): Promise<RefreshTokenResponse | null> {
+  if (deniedToken === membershipCheckedFor) return inFlight ?? Promise.resolve(null);
+  membershipCheckedFor = deniedToken;
+  return refreshSession();
+}
+
 export function isAuthRejection(err: unknown): boolean {
   return (
     err instanceof ConnectError &&
@@ -53,10 +67,12 @@ async function doRefresh(): Promise<RefreshTokenResponse | null> {
   const [storedOrgId, storedOrgSlug] = await Promise.all([getStoredOrgId(), getStoredOrgSlug()]);
 
   try {
-    // Asking by slug keeps this device in its org: without one the server falls back to the
-    // session's last org, which a refused switch clears.
+    // Naming the org keeps this device in it: without one the server falls back to the
+    // session's last org, which a refused switch clears. The id survives a slug rename and wins
+    // over the slug, which only a server that predates ids reads.
     const response = await client.refreshToken({
       refreshToken,
+      organizationId: storedOrgId || undefined,
       organizationSlug: storedOrgSlug || undefined,
     });
     setAccessToken(response.accessToken);
