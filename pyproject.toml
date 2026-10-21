@@ -45,7 +45,7 @@ dependencies = [
   "valkey[libvalkey]>=6.1.1",
   "click>=8.5.0",
   # Image processing
-  "pillow>=12.3.0",
+  "pillow>=13.0.0",
   # PDF thumbnail generation
   "pypdfium2>=5.13.0",
   # Audio metadata extraction
