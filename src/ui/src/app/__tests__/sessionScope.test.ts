@@ -16,6 +16,19 @@ import {
   setSidebarWidth,
 } from "@/features/projects/store/projectsUiSlice";
 import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
+import {
+  calendarUiReducer,
+  openEventModal,
+  selectEvent,
+  setViewMode,
+} from "@/features/calendar/store/calendarUiSlice";
+import {
+  chatUiReducer,
+  openCreateChannelModal,
+  setDensity,
+  setReplyToMessage,
+  toggleAgentFolderCollapsed,
+} from "@/features/chat/store/chatUiSlice";
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -24,6 +37,8 @@ const rootReducer = combineReducers({
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
   sprints: sprintsReducer,
+  chatUi: chatUiReducer,
+  calendarUi: calendarUiReducer,
 });
 const reducer = withSessionScope(rootReducer);
 type State = ReturnType<typeof rootReducer>;
@@ -68,17 +83,61 @@ describe("withSessionScope", () => {
 
     expect(after.projects.currentProjectId).toBeNull();
     expect(after.sprints.sprintsByProject).toEqual({});
-    expect(after.projectsUi.activeViewIds).toEqual({});
     expect(after.auth.isAuthenticated).toBe(true);
     expect(after.auth.currentOrganizationId).toBe("org-a");
     expect(after.theme).toBe(before.theme);
   });
 
-  it("keeps projects layout preferences and nothing else from the projects UI", () => {
+  it("keeps projects layout and open views across a switch, since project ids are global", () => {
     const after = reducer(signedIn("org-a"), resetOrganizationScope());
 
     expect(after.projectsUi.sidebarWidth).toBe(333);
-    expect(after.projectsUi.viewDrafts).toEqual({});
+    expect(after.projectsUi.activeViewIds).toEqual({ "project-a": "view-a" });
+  });
+
+  it("drops open views on logout and keeps projects layout", () => {
+    const after = reducer(signedIn("org-a"), logout());
+
+    expect(after.projectsUi.sidebarWidth).toBe(333);
+    expect(after.projectsUi.activeViewIds).toEqual({});
+  });
+
+  it("keeps chat and calendar layout and drops what names the previous organization", () => {
+    let before = signedIn("org-a");
+    before = reducer(before, setDensity("compact"));
+    before = reducer(before, toggleAgentFolderCollapsed("folder-a"));
+    before = reducer(before, openCreateChannelModal("category-a"));
+    before = reducer(
+      before,
+      setReplyToMessage({
+        id: "message-a",
+        channelId: "channel-a",
+        senderName: "Ada",
+        contentPreview: "Org A secret",
+      }),
+    );
+    before = reducer(before, setViewMode("month"));
+    before = reducer(before, selectEvent("event-a"));
+    before = reducer(
+      before,
+      openEventModal({ mode: "create", prefill: { title: "Org A meeting" } }),
+    );
+
+    const after = reducer(before, resetOrganizationScope());
+
+    expect(after.chatUi).toMatchObject({
+      density: "compact",
+      replyToMessage: null,
+      collapsedAgentFolders: {},
+      createChannelModalOpen: false,
+      createChannelCategoryId: null,
+    });
+    expect(after.calendarUi).toMatchObject({
+      viewMode: "month",
+      selectedEventId: null,
+      isEventModalOpen: false,
+      eventModalPrefill: null,
+    });
   });
 
   it("keeps the organization list across an organization switch", () => {

@@ -4,14 +4,19 @@ import { authReducer, setCredentials } from "@/features/auth/store/authSlice";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import {
   AUTH_STORAGE_KEY,
+  credentialSafeStorage,
   readStoredAuth,
   writeStoredAuth,
 } from "@/features/auth/store/credentialStorage";
+import { writeLastOrganizationSlug } from "@/features/auth/store/lastOrganizationStorage";
 
 const shared = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("@connectrpc/connect", async (original) => ({
   ...(await original<typeof import("@connectrpc/connect")>()),
-  createClient: () => ({ refreshToken: shared.refresh }),
+  createClient: () => ({
+    refreshToken: shared.refresh,
+    getCacheKeySeed: async () => ({ cacheKeySeed: new Uint8Array() }),
+  }),
 }));
 vi.mock("@connectrpc/connect-web", () => ({ createConnectTransport: () => ({}) }));
 vi.mock("@/config/env", () => ({ env: { apiBaseUrl: "http://test" } }));
@@ -19,8 +24,28 @@ vi.mock("@/shared/crypto/storageEncryption", () => ({ initStorageEncryption: vi.
 
 const ORGANIZATION_IDS: Record<string, string> = { acme: "org-acme", globex: "org-globex" };
 
+function memoryStorage() {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+}
+
+/** Puts the test in one tab: sessionStorage is per tab, localStorage is shared by all of them. */
+function enterTab(session: ReturnType<typeof memoryStorage>) {
+  vi.stubGlobal("sessionStorage", session);
+}
+
 /** One browser tab: its own store and its own instance of the api module, sharing localStorage. */
 async function openTab(slug: string) {
+  const session = memoryStorage();
+  enterTab(session);
   const actions: UnknownAction[] = [];
   const recorder: Middleware = () => (next) => (action) => {
     actions.push(action as UnknownAction);
@@ -45,7 +70,22 @@ async function openTab(slug: string) {
   vi.resetModules();
   vi.doMock("@/app/storeRef", () => ({ getStoreRef: () => store }));
   const api = await import("@/config/api");
-  return { store, actions, api };
+  return { store, actions, api, session };
+}
+
+/** Reloads a tab: a fresh store seeded the way redux-persist reads it back, and a fresh api module. */
+async function reloadTab(session: ReturnType<typeof memoryStorage>) {
+  enterTab(session);
+  const root = JSON.parse((await credentialSafeStorage.getItem("persist:root")) ?? "{}");
+  const store = configureStore({
+    reducer: { auth: authReducer },
+    middleware: (getDefault) => getDefault().concat(credentialMiddleware),
+    preloadedState: { auth: JSON.parse(root.auth) },
+  });
+  vi.resetModules();
+  vi.doMock("@/app/storeRef", () => ({ getStoreRef: () => store }));
+  const api = await import("@/config/api");
+  return { store, api };
 }
 
 function storageEvent() {
@@ -54,16 +94,7 @@ function storageEvent() {
 
 beforeEach(() => {
   shared.refresh.mockReset();
-  const values = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      values.set(key, value);
-    },
-    removeItem: (key: string) => {
-      values.delete(key);
-    },
-  });
+  vi.stubGlobal("localStorage", memoryStorage());
   vi.stubGlobal("window", new EventTarget());
   let pending = Promise.resolve<unknown>(undefined);
   vi.stubGlobal("navigator", {
@@ -84,6 +115,7 @@ it("tabs in different organizations each refresh into their own organization", a
       organizationSlug,
     }: {
       refreshToken: string;
+      organizationId: string;
       organizationSlug: string;
     }) => ({
       accessToken: `access-${organizationSlug}`,
@@ -104,8 +136,8 @@ it("tabs in different organizations each refresh into their own organization", a
   ]);
 
   expect(shared.refresh.mock.calls.map(([request]) => request)).toEqual([
-    { refreshToken: "first", organizationSlug: "acme" },
-    { refreshToken: "first-next", organizationSlug: "globex" },
+    { refreshToken: "first", organizationId: "org-acme", organizationSlug: "acme" },
+    { refreshToken: "first-next", organizationId: "org-globex", organizationSlug: "globex" },
   ]);
   expect(tokens).toEqual(["access-acme", "access-globex"]);
   expect(acme.api.getAccessToken()).toBe("access-acme");
@@ -161,4 +193,41 @@ it("another session in storage signs this tab out without rewriting storage", as
   expect(acme.api.getAccessToken()).toBeNull();
   expect(revoked).toHaveBeenCalledOnce();
   expect(readStoredAuth()?.refreshToken).toBe("other-login");
+});
+
+it("a reload keeps a tab in its organization after another tab switched", async () => {
+  shared.refresh.mockImplementation(
+    async ({ refreshToken, organizationId }: { refreshToken: string; organizationId?: string }) => {
+      const slug = Object.keys(ORGANIZATION_IDS).find(
+        (key) => ORGANIZATION_IDS[key] === organizationId,
+      );
+      return {
+        accessToken: `access-${slug}`,
+        refreshToken: `${refreshToken}-next`,
+        organizationId,
+        organizationSlug: slug,
+        organizationRole: "member",
+        sessionId: "session",
+        domainAdminDomains: [],
+      };
+    },
+  );
+  const acme = await openTab("acme");
+  // Tab B switches: its credentials land in its own store and the device remembers its pick.
+  await openTab("globex");
+  writeLastOrganizationSlug("user", "globex");
+
+  const reloaded = await reloadTab(acme.session);
+  expect(await reloaded.api.rehydrateAuth()).toBe(true);
+
+  expect(shared.refresh).toHaveBeenLastCalledWith({
+    refreshToken: "first",
+    organizationId: "org-acme",
+    organizationSlug: "acme",
+  });
+  expect(reloaded.store.getState().auth).toMatchObject({
+    currentOrganizationId: "org-acme",
+    currentOrganizationSlug: "acme",
+  });
+  expect(readStoredAuth()?.currentOrganizationId).toBeNull();
 });

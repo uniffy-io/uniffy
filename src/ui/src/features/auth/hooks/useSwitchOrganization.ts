@@ -2,7 +2,10 @@ import { createElement, useCallback, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { selectCurrentOrganization } from "@/features/auth/store/organizationsSlice";
 import { switchOrganization } from "@/features/auth/store/organizationsThunks";
+import { uploadService } from "@/features/files/upload";
+import { hasUnsyncedEdits } from "@/features/realtime";
 import type { RecordingState } from "@/features/recording/store/recordingSlice";
 import { cancelRecording } from "@/features/recording/store/recordingThunks";
 
@@ -17,17 +20,41 @@ const RECORDING_ACTIVE_STATES = new Set<RecordingState>([
   "completing",
 ]);
 
+/** What a switch would interrupt in this tab, asked once before it runs. */
+interface SwitchInterruptions {
+  recording: boolean;
+  unsyncedEdits: boolean;
+  uploads: boolean;
+}
+
 interface PendingSwitch {
   slug: string;
   target?: string;
+  interruptions: SwitchInterruptions;
 }
 
 export interface OrganizationSwitchControls {
   /** Lands on `target` (default `/`) in the organization; the current one only navigates. */
   requestSwitch: (slug: string, target?: string) => Promise<void>;
   isSwitching: boolean;
-  /** Recording discard confirmation; mount it where it outlives the menu that asked. */
+  /** Confirmation for work the switch would interrupt; mount it where it outlives the menu that asked. */
   confirmDialog: ReactNode;
+}
+
+function interruptionMessage(interruptions: SwitchInterruptions, organizationName: string): string {
+  const parts: string[] = [];
+  if (interruptions.recording) {
+    parts.push("A screen recording is in progress. Switching organizations will discard it.");
+  }
+  if (interruptions.unsyncedEdits) {
+    parts.push(
+      `Some edits in ${organizationName} have not reached the server yet. They stay on this device and finish saving when a tab opens ${organizationName} again.`,
+    );
+  }
+  if (interruptions.uploads) {
+    parts.push("Switching cancels the uploads in progress in this tab.");
+  }
+  return parts.join(" ");
 }
 
 export function useSwitchOrganization(): OrganizationSwitchControls {
@@ -36,7 +63,10 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
   const location = useLocation();
   const here = location.pathname + location.search + location.hash;
   const recordingState = useAppSelector((state) => state.recording.state);
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
+  const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const currentSlug = useAppSelector((state) => state.auth.currentOrganizationSlug);
+  const currentOrganization = useAppSelector(selectCurrentOrganization);
   const isSwitching = useAppSelector((state) => state.organizations.switchingSlug !== null);
   const [pending, setPending] = useState<PendingSwitch | null>(null);
 
@@ -62,31 +92,50 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
         navigate(target ?? "/");
         return;
       }
-      if (RECORDING_ACTIVE_STATES.has(recordingState)) {
-        setPending({ slug, target });
+      // Pending edits keep their rows and drain once a tab returns to this organization; only
+      // this tab's uploads end with the switch.
+      const interruptions: SwitchInterruptions = {
+        recording: RECORDING_ACTIVE_STATES.has(recordingState),
+        unsyncedEdits:
+          currentOrganizationId !== null && hasUnsyncedEdits(userId, currentOrganizationId),
+        uploads: uploadService.hasActiveUploads(),
+      };
+      if (interruptions.recording || interruptions.unsyncedEdits || interruptions.uploads) {
+        setPending({ slug, target, interruptions });
         return;
       }
       await performSwitch(slug, target);
     },
-    [currentSlug, isSwitching, navigate, performSwitch, recordingState],
+    [
+      currentOrganizationId,
+      currentSlug,
+      isSwitching,
+      navigate,
+      performSwitch,
+      recordingState,
+      userId,
+    ],
   );
 
-  const confirmDiscardAndSwitch = async () => {
+  const confirmSwitch = async () => {
     if (!pending) return;
-    const { slug, target } = pending;
+    const { slug, target, interruptions } = pending;
     setPending(null);
-    await dispatch(cancelRecording());
+    if (interruptions.recording) await dispatch(cancelRecording());
     await performSwitch(slug, target);
   };
 
+  const recording = pending?.interruptions.recording ?? false;
   const confirmDialog = createElement(ConfirmDialog, {
     isOpen: pending !== null,
     onClose: () => setPending(null),
-    onConfirm: () => void confirmDiscardAndSwitch(),
-    title: "Discard active recording?",
-    message: "A screen recording is in progress. Switching organizations will discard it.",
-    confirmLabel: "Discard and switch",
-    cancelLabel: "Stay",
+    onConfirm: () => void confirmSwitch(),
+    title: recording ? "Discard active recording?" : "Wait or switch anyway?",
+    message: pending
+      ? interruptionMessage(pending.interruptions, currentOrganization?.name ?? "this organization")
+      : "",
+    confirmLabel: recording ? "Discard and switch" : "Switch anyway",
+    cancelLabel: recording ? "Stay" : "Wait",
     variant: "warning",
   });
 

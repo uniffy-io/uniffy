@@ -12,8 +12,14 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
 import { OrganizationList } from "@/features/auth/components/OrganizationList";
-import { useSignOut } from "@/features/auth/hooks/useSignOut";
+import {
+  pendingOrganizationNames,
+  usePendingOrganizations,
+  useSignOut,
+  type PendingOrganization,
+} from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { selectOrganizations } from "@/features/auth/store/organizationsSlice";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
@@ -28,18 +34,63 @@ import { getInitials } from "@/components/subject/utils";
 import { useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
+interface UnsyncedEditsMessageProps {
+  pending: PendingOrganization[];
+  currentOrganizationId: string | null;
+  onSwitch: (slug: string) => void;
+}
+
+/** Names where the unsynced edits sit and offers to go to each organization that can still save them. */
+function UnsyncedEditsMessage({
+  pending,
+  currentOrganizationId,
+  onSwitch,
+}: UnsyncedEditsMessageProps) {
+  if (pending.length === 0) {
+    return <>Some edits have not reached the server yet. Signing out now discards them.</>;
+  }
+  const reachable = pending.flatMap(({ id, organization }) =>
+    organization && id !== currentOrganizationId && !organization.suspended ? [organization] : [],
+  );
+  return (
+    <div className="space-y-3">
+      <p>
+        Edits in {pendingOrganizationNames(pending)} have not reached the server yet. Signing out
+        now discards them.
+      </p>
+      {reachable.length > 0 && (
+        <div className="flex flex-col items-start gap-2">
+          {reachable.map((organization) => (
+            <Button
+              key={organization.id}
+              type="button"
+              variant="secondary"
+              className="max-w-full"
+              onClick={() => onSwitch(organization.slug)}
+            >
+              <span className="truncate">Switch to {organization.name} to finish saving</span>
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserMenu() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
   const signOut = useSignOut();
+  const listPendingOrganizations = usePendingOrganizations();
   const recordingState = useAppSelector((state) => state.recording.state);
   const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
   const { themeMode, setTheme, availableModes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
+  // The organizations holding unsynced edits while the sign-out waits for a decision.
+  const [unsynced, setUnsynced] = useState<PendingOrganization[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentCustomStatus = useCustomStatus(user?.id ?? "");
   const orgChartEnabled = useAppSelector((state) => state.people.policy.orgChartEnabled);
@@ -103,8 +154,8 @@ export function UserMenu() {
   const performLogout = async () => {
     setConfirmingLogout(false);
     if (!(await signOut())) {
-      setConfirmingUnsynced(true);
       setIsOpen(false);
+      setUnsynced(await listPendingOrganizations());
     }
   };
 
@@ -384,14 +435,23 @@ export function UserMenu() {
         variant="warning"
       />
       <ConfirmDialog
-        isOpen={confirmingUnsynced}
-        onClose={() => setConfirmingUnsynced(false)}
+        isOpen={unsynced !== null}
+        onClose={() => setUnsynced(null)}
         onConfirm={() => {
-          setConfirmingUnsynced(false);
-          signOut({ discardUnsynced: true });
+          setUnsynced(null);
+          void signOut({ discardUnsynced: true });
         }}
         title="Discard unsynced edits?"
-        message="Some edits have not reached the server yet. Signing out now discards them."
+        message={
+          <UnsyncedEditsMessage
+            pending={unsynced ?? []}
+            currentOrganizationId={currentOrganizationId}
+            onSwitch={(slug) => {
+              setUnsynced(null);
+              void requestSwitch(slug);
+            }}
+          />
+        }
         confirmLabel="Discard and sign out"
         cancelLabel="Stay"
         variant="warning"

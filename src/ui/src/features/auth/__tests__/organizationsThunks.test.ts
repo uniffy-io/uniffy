@@ -21,12 +21,17 @@ import {
   readLastOrganizationSlug,
   writeLastOrganizationSlug,
 } from "@/features/auth/store/lastOrganizationStorage";
-import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
+import {
+  organizationsLoaded,
+  organizationsReducer,
+  summarizeOrganization,
+} from "@/features/auth/store/organizationsSlice";
 import {
   fetchMyOrganizations,
   LOST_ORGANIZATION_ACCESS_MESSAGE,
   switchOrganization,
 } from "@/features/auth/store/organizationsThunks";
+import { readTabOrganization } from "@/features/auth/store/tabOrganizationStorage";
 
 const shared = vi.hoisted(() => ({ refresh: vi.fn(), list: vi.fn() }));
 vi.mock("@connectrpc/connect", async (original) => ({
@@ -79,16 +84,18 @@ beforeEach(() => {
   shared.refresh.mockReset();
   shared.list.mockReset();
   vi.mocked(clearSessionCaches).mockReset();
-  const values = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      values.set(key, value);
-    },
-    removeItem: (key: string) => {
-      values.delete(key);
-    },
-  });
+  for (const name of ["localStorage", "sessionStorage"]) {
+    const values = new Map<string, string>();
+    vi.stubGlobal(name, {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+    });
+  }
   vi.stubGlobal("window", new EventTarget());
   let pending = Promise.resolve<unknown>(undefined);
   vi.stubGlobal("navigator", {
@@ -117,6 +124,7 @@ beforeEach(() => {
 });
 
 it("switches on the same session through the scope guard and lands the new credentials", async () => {
+  store.dispatch(organizationsLoaded([acme, globex].map(summarizeOrganization)));
   shared.refresh.mockResolvedValue(globexMint);
 
   await expect(dispatch()(switchOrganization("globex"))).resolves.toEqual({
@@ -126,13 +134,16 @@ it("switches on the same session through the scope guard and lands the new crede
   expect(shared.refresh).toHaveBeenCalledOnce();
   expect(shared.refresh).toHaveBeenCalledWith({
     refreshToken: "first",
+    organizationId: "org-globex",
     organizationSlug: "globex",
   });
   const reset = actions.indexOf("auth/resetOrganizationScope");
   expect(reset).toBeGreaterThanOrEqual(0);
   expect(reset).toBeLessThan(actions.indexOf("auth/setCredentials"));
   expect(actions).not.toContain("auth/logout");
+  // A switch moves only this tab, so the per-organization device stores stay for other tabs.
   expect(clearSessionCaches).toHaveBeenCalledOnce();
+  expect(clearSessionCaches).toHaveBeenCalledWith(expect.any(Function), { reason: "switch" });
   expect(store.getState().auth).toMatchObject({
     currentOrganizationId: "org-globex",
     currentOrganizationSlug: "globex",
@@ -144,6 +155,18 @@ it("switches on the same session through the scope guard and lands the new crede
   expect(readStoredAuth()?.refreshToken).toBe("second");
   expect(getAccessToken()).toBe("access-globex");
   expect(readLastOrganizationSlug("user")).toBe("globex");
+  expect(readTabOrganization("user")).toEqual({ id: "org-globex", slug: "globex" });
+});
+
+it("switches by slug alone into an organization the list does not hold yet", async () => {
+  shared.refresh.mockResolvedValue(globexMint);
+
+  await dispatch()(switchOrganization("globex"));
+
+  const [request] = shared.refresh.mock.calls[0] as [Record<string, unknown>];
+  expect(request).toMatchObject({ refreshToken: "first", organizationSlug: "globex" });
+  expect(request.organizationId).toBeUndefined();
+  expect(store.getState().auth.currentOrganizationId).toBe("org-globex");
 });
 
 it("refuses a switch when another tab replaced the credential while the mint was in flight", async () => {
@@ -198,10 +221,8 @@ it("keeps the tab in its organization when the requested grant is gone", async (
     currentOrganizationId: "org-acme",
     refreshToken: "second",
   });
-  expect(readStoredAuth()).toMatchObject({
-    currentOrganizationId: "org-acme",
-    refreshToken: "second",
-  });
+  expect(readStoredAuth()).toMatchObject({ refreshToken: "second" });
+  expect(readTabOrganization("user")).toEqual({ id: "org-acme", slug: "acme" });
   expect(getAccessToken()).toBe("access-acme");
   expect(readLastOrganizationSlug("user")).toBeNull();
 });

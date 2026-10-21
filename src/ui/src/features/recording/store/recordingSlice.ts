@@ -1,7 +1,7 @@
 /** Screen recording state machine. Live state wipes on rehydrate (MediaStream cannot survive a reload); persisted picker prefs only. */
 
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { logout, rehydrateComplete, setCredentials } from "@/features/auth/store/authSlice";
+import { rehydrateComplete, setCredentials } from "@/features/auth/store/authSlice";
 
 export type RecordingState =
   | "idle"
@@ -26,18 +26,12 @@ export interface RecordingErrorInfo {
   message: string;
 }
 
-export interface RecordingsRecent {
-  fileId: string;
-  filename: string;
-  finishedAt: number;
-}
-
 export interface RecordingSliceState {
   state: RecordingState;
   network: NetworkStatus;
   auth: "ok" | "lost";
   uploadId: string | null;
-  /** Who the persisted per-user fields (recents, first-use consent) belong to. */
+  /** Who the persisted first-use consent belongs to. */
   ownerUserId: string | null;
   startedAt: number | null;
   pausedDurationMs: number;
@@ -46,7 +40,6 @@ export interface RecordingSliceState {
   bytesUploaded: number;
   lastFileId: string | null;
   error: RecordingErrorInfo | null;
-  recents: RecordingsRecent[];
   source: RecordingSource;
   micDeviceId: string | null;
   captureTabAudio: boolean;
@@ -70,7 +63,6 @@ const initialState: RecordingSliceState = {
   bytesUploaded: 0,
   lastFileId: null,
   error: null,
-  recents: [],
   source: "screen",
   micDeviceId: null,
   captureTabAudio: false,
@@ -81,13 +73,10 @@ const initialState: RecordingSliceState = {
   firstUseModalOpen: false,
 };
 
-const RECENTS_CAP = 10;
-
 /** The slice persists across logins on a shared browser; a different account starts clean. */
 function claimForUser(state: RecordingSliceState, userId: string) {
   if (state.ownerUserId === userId) return;
   state.ownerUserId = userId;
-  state.recents = [];
   state.firstUseAcknowledged = false;
 }
 
@@ -144,12 +133,6 @@ const recordingSlice = createSlice({
     recordingDone(state, action: PayloadAction<{ fileId: string; filename: string }>) {
       state.state = "done";
       state.lastFileId = action.payload.fileId;
-      const recent: RecordingsRecent = {
-        fileId: action.payload.fileId,
-        filename: action.payload.filename,
-        finishedAt: Date.now(),
-      };
-      state.recents = [recent, ...state.recents].slice(0, RECENTS_CAP);
     },
     backToIdle(state) {
       state.state = "idle";
@@ -216,9 +199,6 @@ const recordingSlice = createSlice({
       })
       .addCase(rehydrateComplete, (state, { payload }) => {
         claimForUser(state, payload.user.id);
-      })
-      .addCase(logout, (state) => {
-        state.recents = [];
       });
   },
 });

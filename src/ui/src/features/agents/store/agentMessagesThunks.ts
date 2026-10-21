@@ -9,6 +9,7 @@ import {
   addOptimisticUserMessage,
   clearConfirmation,
   streamError,
+  selectActiveRunId,
 } from "@/features/agents/store/agentMessagesSlice";
 import { createAgentStreamConsumer } from "@/features/agents/store/agentStreamFold";
 import { messageToPlain } from "@/features/agents/store/agentMessagesSerde";
@@ -152,7 +153,7 @@ export const cancelActiveRun = createAsyncThunk<
   try {
     const state = getState();
     const organizationId = getOrganizationId(state);
-    const runId = state.agentMessages.activeRunId;
+    const runId = selectActiveRunId(state);
     if (!runId) return;
     await runtimeApi.cancelStream({ organizationId, runId });
   } catch (error) {

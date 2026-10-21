@@ -2,8 +2,16 @@ import { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { ORGANIZATION_LOST_EVENT } from "@/config/api";
+import {
+  ORGANIZATION_LOST_EVENT,
+  takePendingOrganizationLost,
+  type OrganizationLostDetail,
+} from "@/config/api";
 import { clearSessionCaches } from "@/features/auth/hooks/useSignOut";
+import {
+  clearTabOrganization,
+  readTabOrganization,
+} from "@/features/auth/store/tabOrganizationStorage";
 import { useRealtimeDrain } from "@/features/realtime/hooks/useRealtimeDrain";
 import { fetchEffectiveSettings } from "@/features/settings";
 
@@ -15,11 +23,13 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
   const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
+  const userId = useAppSelector((state) => state.auth?.user?.id ?? null);
   const isRehydrating = useAppSelector((state) => state.auth?.isRehydrating ?? false);
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const initialized = useAppSelector((state) => state.settings?.initialized ?? false);
   const location = useLocation();
-  // Stranded offline edits replay from here, whichever page the user lands on.
+  // Stranded offline edits replay from here, whichever page the user lands on. Its lost-grant
+  // listener registers before the one below, so a replayed loss reaches both.
   useRealtimeDrain();
 
   useEffect(() => {
@@ -29,15 +39,27 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, [dispatch, isAuthenticated, currentOrganizationId, initialized]);
 
   // A refresh that comes back without the tab's organization means the grant is gone; the caches
-  // outside Redux still hold that organization's content.
+  // outside Redux and the device stores of that organization still hold its content.
   useEffect(() => {
-    const handleLost = () => {
-      clearSessionCaches(dispatch);
+    if (!userId) return;
+    const handleLost = (event: Event) => {
+      takePendingOrganizationLost(userId);
+      const lost = (event as CustomEvent<OrganizationLostDetail>).detail?.organizationId;
+      if (lost && readTabOrganization(userId)?.id === lost) clearTabOrganization(userId);
+      void clearSessionCaches(dispatch, { reason: "lost-grant", organizationId: lost, userId });
       toast.warning("Your access to that organization ended.");
     };
     window.addEventListener(ORGANIZATION_LOST_EVENT, handleLost);
+    // A reload notices the loss before this shell mounts. Replay it, unless the tab has entered
+    // another organization since, whose memory is not the lost one's.
+    const pending = takePendingOrganizationLost(userId);
+    if (pending && (!currentOrganizationId || currentOrganizationId === pending.organizationId)) {
+      window.dispatchEvent(
+        new CustomEvent<OrganizationLostDetail>(ORGANIZATION_LOST_EVENT, { detail: pending }),
+      );
+    }
     return () => window.removeEventListener(ORGANIZATION_LOST_EVENT, handleLost);
-  }, [dispatch]);
+  }, [currentOrganizationId, dispatch, userId]);
 
   // Wait for rehydration before redirecting; otherwise an in-flight token refresh would race to /auth.
   if (isRehydrating || (!isAuthenticated && refreshToken)) {

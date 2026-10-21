@@ -123,6 +123,10 @@ export function installBrowser(): void {
   });
   const local = new Map<string, string>();
   vi.stubGlobal("localStorage", {
+    get length() {
+      return local.size;
+    },
+    key: (index: number) => [...local.keys()][index] ?? null,
     getItem: (key: string) => local.get(key) ?? null,
     setItem: (key: string, value: string) => void local.set(key, String(value)),
     removeItem: (key: string) => void local.delete(key),

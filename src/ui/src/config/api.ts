@@ -1,6 +1,7 @@
 import { createConnectTransport } from "@connectrpc/connect-web";
 import type { Interceptor } from "@connectrpc/connect";
 import { ConnectError, Code, createClient } from "@connectrpc/connect";
+import { BinaryReader, WireType } from "@bufbuild/protobuf/wire";
 import { withAuthLock } from "@/features/auth/authLock";
 import {
   AUTH_STORAGE_KEY,
@@ -21,8 +22,13 @@ import {
 } from "@/features/auth/store/authActions";
 import {
   clearLastOrganizationSlug,
+  readLastOrganization,
   readLastOrganizationSlug,
+  writeLastOrganization,
 } from "@/features/auth/store/lastOrganizationStorage";
+import { readTabOrganization } from "@/features/auth/store/tabOrganizationStorage";
+import { clearStoredFilesFilters } from "@/features/files/store/filesFilterStorage";
+import { clearRecentItemsForUser } from "@/features/search/utils/recentItems";
 import { initStorageEncryption } from "@/shared/crypto/storageEncryption";
 
 // Access token lives in memory only - never persisted, to reduce XSS surface.
@@ -39,13 +45,43 @@ let memoryEnrollmentToken: string | null = null;
 /** Fired when a refresh comes back without the organization this tab held; the session stays signed in. */
 export const ORGANIZATION_LOST_EVENT = "uniffy:auth:org-lost";
 
+/** Detail of `ORGANIZATION_LOST_EVENT`. The id is absent when the tab knew the organization by slug only. */
+export interface OrganizationLostDetail {
+  organizationId?: string;
+}
+
+// A lost grant the shell has not handled yet. A reload notices one before any listener mounts.
+let pendingOrganizationLost: { userId: string; detail: OrganizationLostDetail } | null = null;
+
+/** Hands over, once, the lost grant of this user that no listener has handled yet. */
+export function takePendingOrganizationLost(userId: string): OrganizationLostDetail | null {
+  const pending = pendingOrganizationLost;
+  pendingOrganizationLost = null;
+  return pending?.userId === userId ? pending.detail : null;
+}
+
+function announceOrganizationLost(userId: string, organizationId: string | undefined): void {
+  pendingOrganizationLost = { userId, detail: { organizationId } };
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<OrganizationLostDetail>(ORGANIZATION_LOST_EVENT, {
+      detail: { organizationId },
+    }),
+  );
+}
+
+/** The organization a refresh asks for. Ids survive a slug rename; the slug is a fallback hint. */
+interface OrganizationRef {
+  id?: string;
+  slug?: string;
+}
+
 function getAuthState() {
   const stored = readStoredAuth();
   return {
     accessToken: memoryAccessToken,
     refreshToken: stored?.refreshToken ?? null,
     user: stored?.user ?? null,
-    currentOrganizationSlug: stored?.currentOrganizationSlug ?? null,
   };
 }
 
@@ -69,8 +105,15 @@ function getEnrollmentToken(): string | null {
   return memoryEnrollmentToken;
 }
 
-/** The response is the whole truth about this tab's org: no org back means the grant is gone. */
-function updateAuthState(response: RefreshTokenResponse, requestedSlug: string | undefined): void {
+/**
+ * The response is the whole truth about this tab's org: no org back for the one the tab `held`
+ * means the grant is gone.
+ */
+function updateAuthState(
+  response: RefreshTokenResponse,
+  requested: OrganizationRef,
+  held: boolean,
+): void {
   setMemoryAccessToken(response.accessToken);
 
   const store = getStoreRef();
@@ -85,7 +128,8 @@ function updateAuthState(response: RefreshTokenResponse, requestedSlug: string |
 
   // `||` not `??`: protobuf returns "" for unset strings, which ?? does not fall through.
   const organizationId = response.organizationId || undefined;
-  const organizationLost = Boolean(auth.currentOrganizationId) && !organizationId;
+  const organizationSlug = response.organizationSlug || undefined;
+  const organizationLost = held && !organizationId;
   // The lost org's data goes first so nothing renders it under org-less credentials.
   if (organizationLost) store.dispatch(resetOrganizationScope());
 
@@ -95,7 +139,7 @@ function updateAuthState(response: RefreshTokenResponse, requestedSlug: string |
       accessToken: response.accessToken,
       refreshToken: response.refreshToken,
       organizationId,
-      organizationSlug: response.organizationSlug || undefined,
+      organizationSlug,
       organizationRole: response.organizationRole || undefined,
       sessionId: response.sessionId,
       // Always pass the array (even empty) so a revoked domain-admin grant
@@ -104,13 +148,39 @@ function updateAuthState(response: RefreshTokenResponse, requestedSlug: string |
     }),
   );
 
-  // Another tab may have picked a different org since; only the refused slug is forgotten.
-  if (!organizationId && requestedSlug && readLastOrganizationSlug(user.id) === requestedSlug) {
-    clearLastOrganizationSlug(user.id);
+  // Another tab may have picked a different org since; only the requested slug is forgotten or,
+  // after a rename, moved to the current one.
+  if (requested.slug && readLastOrganizationSlug(user.id) === requested.slug) {
+    if (!organizationId) clearLastOrganizationSlug(user.id);
+    else if (organizationSlug && organizationSlug !== requested.slug)
+      writeLastOrganization(user.id, { id: organizationId, slug: organizationSlug });
   }
-  if (organizationLost && typeof window !== "undefined") {
-    window.dispatchEvent(new Event(ORGANIZATION_LOST_EVENT));
-  }
+  if (organizationLost) announceOrganizationLost(user.id, requested.id);
+}
+
+// Bounds the device cleanup of an ended session, so a blocked database cannot hold the redirect.
+const SESSION_CLEANUP_TIMEOUT_MS = 2_000;
+
+/**
+ * An ended session's device stores go with it. The storage key and pending realtime rows stay:
+ * the same user's next sign-in drains those edits, and another account's sign-in wipes them.
+ */
+async function clearEndedSessionStores(userId: string): Promise<void> {
+  clearRecentItemsForUser(userId);
+  clearStoredFilesFilters(userId);
+  // Imported on demand: the upload engine imports this module for its transport, and both
+  // register their databases with storage encryption when they load.
+  const uploads = import("@/features/files/upload").then(({ uploadService }) =>
+    uploadService.purgeUser(userId),
+  );
+  const notes = import("@/features/notes/utils/notesCache").then(({ clearAllCache }) =>
+    clearAllCache(),
+  );
+  const cleanup = Promise.allSettled([notes, uploads]);
+  await Promise.race([
+    cleanup,
+    new Promise((resolve) => setTimeout(resolve, SESSION_CLEANUP_TIMEOUT_MS)),
+  ]);
 }
 
 async function clearAuthAndRedirect(): Promise<void> {
@@ -120,10 +190,9 @@ async function clearAuthAndRedirect(): Promise<void> {
   // with local cleanup and the redirect.
   const local = getStoreRef()?.getState().auth;
   const stored = readStoredAuth();
-  const refreshToken =
-    stored?.user?.id === local?.user?.id && stored?.currentSessionId === local?.currentSessionId
-      ? stored?.refreshToken
-      : null;
+  const sameSession =
+    stored?.user?.id === local?.user?.id && stored?.currentSessionId === local?.currentSessionId;
+  const refreshToken = sameSession ? stored?.refreshToken : null;
   if (refreshToken) {
     try {
       const transportNoAuth = createConnectTransport({
@@ -147,6 +216,10 @@ async function clearAuthAndRedirect(): Promise<void> {
   if (typeof window !== "undefined") {
     window.dispatchEvent(new Event("uniffy:auth:revoked"));
   }
+
+  // Skipped when a newer sign-in in another tab owns the device stores now.
+  const userId = local?.user?.id;
+  if (userId && (!stored?.user || sameSession)) await clearEndedSessionStores(userId);
 
   const store = getStoreRef();
   if (store) {
@@ -177,14 +250,15 @@ function isTokenExpiring(token: string, bufferSeconds = 60): boolean {
 }
 
 interface RefreshOptions {
-  organizationSlug?: string | null;
+  /** The organization this tab is in when Redux does not know it yet, such as on reload. */
+  organization?: OrganizationRef;
 }
 
 // Singleton in-flight refresh so concurrent callers share one network round-trip.
 let refreshPromise: Promise<RefreshTokenResponse | null> | null = null;
 
 async function refreshSession({
-  organizationSlug,
+  organization,
 }: RefreshOptions): Promise<RefreshTokenResponse | null> {
   if (refreshPromise) {
     return refreshPromise;
@@ -208,11 +282,18 @@ async function refreshSession({
     )
       return null;
     // Read under the lock: an org switch that held it has already moved this tab.
-    const requestedSlug =
-      organizationSlug ||
-      getStoreRef()?.getState().auth?.currentOrganizationSlug ||
-      readLastOrganizationSlug(userId) ||
-      undefined;
+    const tab = getStoreRef()?.getState().auth;
+    const held: OrganizationRef | undefined =
+      organization ??
+      (tab?.currentOrganizationId
+        ? {
+            id: tab.currentOrganizationId,
+            slug: tab.currentOrganizationSlug || undefined,
+          }
+        : undefined);
+    // A tab in no organization asks for the device's last one, which it never held.
+    const last = held ? null : readLastOrganization(userId);
+    const requested: OrganizationRef = held ?? { id: last?.id, slug: last?.slug };
     try {
       // Transport without auth interceptor - would otherwise recurse on 401.
       const refreshTransport = createConnectTransport({
@@ -222,15 +303,16 @@ async function refreshSession({
       });
 
       const client = createClient(AuthService, refreshTransport);
-      // The slug picks the org to mint. A grant that is gone comes back with no
-      // org and a live session; UNAUTHENTICATED only means the session is dead.
+      // The id picks the org to mint and wins over the slug. A grant that is gone comes back
+      // with no org and a live session; UNAUTHENTICATED only means the session is dead.
       const response = await client.refreshToken({
         refreshToken: current.refreshToken,
-        organizationSlug: requestedSlug,
+        organizationId: requested.id,
+        organizationSlug: requested.slug,
       });
       if (readStoredAuth()?.refreshToken !== current.refreshToken) return null;
 
-      updateAuthState(response, requestedSlug);
+      updateAuthState(response, requested, held !== undefined);
 
       return response;
     } catch (error) {
@@ -248,7 +330,7 @@ async function refreshSession({
   return refreshPromise;
 }
 
-/** Each tab refreshes into its own org: the explicit slug, else the tab's, else the device's last one. */
+/** Each tab refreshes into its own org: the explicit one, else the tab's, else the device's last one. */
 async function refreshAccessToken(options: RefreshOptions = {}): Promise<string | null> {
   const response = await refreshSession(options);
   return response?.accessToken ?? null;
@@ -267,9 +349,27 @@ async function initStorageEncryptionFromApi(userId: string): Promise<void> {
   }
 }
 
+/** Where a reload lands: this tab's org, else the device's last one for a fresh tab, else the persisted one. */
+function reloadOrganization(
+  userId: string,
+  persisted: { currentOrganizationId: string | null; currentOrganizationSlug: string | null },
+): OrganizationRef | undefined {
+  const tab = readTabOrganization(userId);
+  if (tab) return { id: tab.id, slug: tab.slug || undefined };
+  const last = readLastOrganization(userId);
+  if (last) return { id: last.id, slug: last.slug };
+  if (persisted.currentOrganizationId || persisted.currentOrganizationSlug) {
+    return {
+      id: persisted.currentOrganizationId || undefined,
+      slug: persisted.currentOrganizationSlug || undefined,
+    };
+  }
+  return undefined;
+}
+
 /** Recover an access token after redux-persist boots; also revalidates the user is still active. */
 export async function rehydrateAuth(): Promise<boolean> {
-  const { refreshToken, user, currentOrganizationSlug: persistedOrgSlug } = getAuthState();
+  const { refreshToken, user } = getAuthState();
 
   if (!refreshToken || !user) {
     return false;
@@ -286,11 +386,11 @@ export async function rehydrateAuth(): Promise<boolean> {
   }
 
   try {
+    const persisted = store.getState().auth;
     store.dispatch(createStartRehydratingAction());
 
-    // A fresh tab lands in the org this device used last.
     const response = await refreshSession({
-      organizationSlug: readLastOrganizationSlug(user.id) ?? persistedOrgSlug,
+      organization: reloadOrganization(user.id, persisted),
     });
 
     if (response) {
@@ -332,6 +432,9 @@ export async function rehydrateAuth(): Promise<boolean> {
       return true;
     } else {
       store.dispatch(createRehydrateFailedAction());
+      // The record is gone only when no newer sign-in or rotation owns it, so the dead session's
+      // device stores go with it, as on an expiry mid-session.
+      if (!readStoredAuth()?.user) await clearEndedSessionStores(user.id);
       return false;
     }
   } catch (error) {
@@ -340,9 +443,54 @@ export async function rehydrateAuth(): Promise<boolean> {
   }
 }
 
+// No generated descriptor exists for google.rpc.ErrorInfo, so its two string fields are read off
+// the wire: reason is field 1, domain is field 2.
+const ERROR_INFO_TYPE = "google.rpc.ErrorInfo";
+const ERROR_INFO_DOMAIN = "uniffy";
+const MEMBERSHIP_REQUIRED_REASON = "membership_required";
+
+function readErrorInfo(value: Uint8Array): { reason: string; domain: string } | null {
+  try {
+    const reader = new BinaryReader(value);
+    let reason = "";
+    let domain = "";
+    while (reader.pos < reader.len) {
+      const [field, wireType] = reader.tag();
+      if (field === 1 && wireType === WireType.LengthDelimited) reason = reader.string();
+      else if (field === 2 && wireType === WireType.LengthDelimited) domain = reader.string();
+      else reader.skip(wireType, field);
+    }
+    return { reason, domain };
+  } catch {
+    return null;
+  }
+}
+
+/** The server refused because the caller is no active member of the organization. Only a hint:
+ * the refresh it triggers decides whether the grant is gone. */
+export function decodeMembershipRequired(err: unknown): boolean {
+  if (!(err instanceof ConnectError) || err.code !== Code.PermissionDenied) return false;
+  return err.details.some((detail) => {
+    if (!("type" in detail) || detail.type !== ERROR_INFO_TYPE) return false;
+    const info = readErrorInfo(detail.value);
+    return info?.domain === ERROR_INFO_DOMAIN && info.reason === MEMBERSHIP_REQUIRED_REASON;
+  });
+}
+
+// One removal reaches the tab as many refusals, every RPC in flight at once. They share one
+// refresh per refused access token; a refusal of the refreshed token asks once more.
+let membershipCheckedFor: string | null = null;
+
+function refreshAfterMembershipDenial(deniedToken: string): void {
+  if (deniedToken === membershipCheckedFor) return;
+  membershipCheckedFor = deniedToken;
+  void refreshAccessToken().catch(() => null);
+}
+
 const authInterceptor: Interceptor = (next) => async (req) => {
   // Refresh calls would recurse through this interceptor.
   const isRefreshRequest = req.url.includes("RefreshToken");
+  let sentToken: string | null = null;
 
   if (!isRefreshRequest) {
     let { accessToken } = getAuthState();
@@ -358,6 +506,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     }
 
     if (accessToken) {
+      sentToken = accessToken;
       req.header.set("Authorization", `Bearer ${accessToken}`);
     } else if (memoryEnrollmentToken) {
       // Mid-login MFA enrollment: no access token exists yet, only the
@@ -372,6 +521,9 @@ const authInterceptor: Interceptor = (next) => async (req) => {
   try {
     return await next(req);
   } catch (error) {
+    // A removal from the organization would otherwise show only at the next expiry refresh. The
+    // refusal still reaches the caller; the refresh resets the tab when the grant is gone.
+    if (sentToken && decodeMembershipRequired(error)) refreshAfterMembershipDenial(sentToken);
     if (error instanceof ConnectError && error.code === Code.Unauthenticated && !isRefreshRequest) {
       // Skip the refresh+retry dance when we are riding on an enrollment
       // token - refresh would fail (no session yet) and bounce the user

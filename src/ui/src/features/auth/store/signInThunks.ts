@@ -15,7 +15,7 @@ import { setCredentials } from "@/features/auth/store/authSlice";
 import {
   clearLastOrganizationSlug,
   readLastOrganizationSlug,
-  writeLastOrganizationSlug,
+  writeLastOrganization,
 } from "@/features/auth/store/lastOrganizationStorage";
 import {
   organizationsLoaded,
@@ -95,6 +95,7 @@ async function chooseOrganization(
   const client = createClient(AuthService, publicUnaryTransport);
   const minted = await client.refreshToken({
     refreshToken: result.refreshToken,
+    organizationId: candidate.id,
     organizationSlug: candidate.slug,
   });
   // The membership ended between the list and the mint; the rotated token still signs in org-less.
@@ -140,7 +141,10 @@ export const completeSignIn = thunk<SignInCompletion, SignInResult>(
         }),
       );
       if (credentials.organizationId && credentials.organizationSlug) {
-        writeLastOrganizationSlug(user.id, credentials.organizationSlug);
+        writeLastOrganization(user.id, {
+          id: credentials.organizationId,
+          slug: credentials.organizationSlug,
+        });
       }
 
       initStorageEncryptionFromApi(user.id).catch((error) => {

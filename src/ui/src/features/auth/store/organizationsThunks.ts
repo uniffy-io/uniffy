@@ -13,7 +13,7 @@ import { readStoredAuth, writeStoredAuth } from "@/features/auth/store/credentia
 import {
   clearLastOrganizationSlug,
   readLastOrganizationSlug,
-  writeLastOrganizationSlug,
+  writeLastOrganization,
 } from "@/features/auth/store/lastOrganizationStorage";
 import {
   organizationsFailed,
@@ -113,9 +113,14 @@ const runOrganizationSwitch = thunk<OrganizationSwitch, string>(
         )
           return rejectWithValue(SESSION_CHANGED_MESSAGE);
 
+        // The id survives a slug rename since the list loaded; the slug serves when it is unlisted.
+        const picked = getState().organizations.items.find(
+          (organization) => organization.slug === slug,
+        );
         const client = createClient(AuthService, publicUnaryTransport);
         const response = await client.refreshToken({
           refreshToken: current.refreshToken,
+          organizationId: picked?.id,
           organizationSlug: slug,
         });
         const latest = readStoredAuth();
@@ -133,7 +138,7 @@ const runOrganizationSwitch = thunk<OrganizationSwitch, string>(
         }
 
         const organizationSlug = response.organizationSlug || slug;
-        clearSessionCaches(dispatch);
+        void clearSessionCaches(dispatch, { reason: "switch" });
         dispatch(resetOrganizationScope());
         setMemoryAccessToken(response.accessToken);
         dispatch(
@@ -148,7 +153,7 @@ const runOrganizationSwitch = thunk<OrganizationSwitch, string>(
             domainAdminDomains: Array.from(response.domainAdminDomains),
           }),
         );
-        writeLastOrganizationSlug(user.id, organizationSlug);
+        writeLastOrganization(user.id, { id: response.organizationId, slug: organizationSlug });
         // The scope reset aborts a list load still in flight, which would otherwise stay loading.
         if (getState().organizations.status === "loading") void dispatch(fetchMyOrganizations());
         return { organizationId: response.organizationId };

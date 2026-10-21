@@ -19,22 +19,21 @@ const seeded = (userId: string) => {
 };
 
 describe("recording slice account scoping", () => {
-  it("keeps recents and consent across a reload by the same user", () => {
+  it("keeps consent across a reload by the same user", () => {
     const state = recordingReducer(seeded("user-a"), rehydrateComplete(credentials("user-a")));
-    expect(state.recents).toHaveLength(1);
     expect(state.firstUseAcknowledged).toBe(true);
     expect(state.ownerUserId).toBe("user-a");
   });
 
-  it("drops recents and consent when a different user signs in", () => {
+  it("drops consent when a different user signs in", () => {
     const state = recordingReducer(seeded("user-a"), setCredentials(credentials("user-b")));
-    expect(state.recents).toEqual([]);
     expect(state.firstUseAcknowledged).toBe(false);
     expect(state.ownerUserId).toBe("user-b");
   });
 
-  it("clears recents on logout", () => {
+  it("keeps no list of recorded files to persist", () => {
     const state = recordingReducer(seeded("user-a"), logout());
-    expect(state.recents).toEqual([]);
+    expect(state.lastFileId).toBe("file-1");
+    expect(JSON.stringify(state)).not.toContain("clip.mp4");
   });
 });

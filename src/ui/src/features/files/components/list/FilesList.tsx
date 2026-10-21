@@ -157,6 +157,7 @@ export function FilesList({
 
   // Active filter state
   const activeFilterId = useAppSelector((state) => state.files.activeFilter.id);
+  const hasActiveFilter = useAppSelector((state) => state.files.activeFilter.criteria !== null);
 
   // Details panel state
   const isDetailsPanelOpen = useAppSelector((state) => state.files.isDetailsPanelOpen);
@@ -881,17 +882,20 @@ export function FilesList({
             </>
           ) : (
             <>
-              {/* Filter dropdown - hidden on mobile */}
-              {savedFilters.length > 0 && (
+              {/* Filter dropdown - hidden on mobile. A restored filter still hides files after its
+                  saved filter is gone, so the clear control shows on its own too. */}
+              {(savedFilters.length > 0 || hasActiveFilter) && (
                 <div className="hidden sm:flex items-center gap-1">
-                  <Select
-                    value={activeFilterId ?? ""}
-                    onChange={handleFilterChange}
-                    options={filterOptions}
-                    size="sm"
-                    placeholder="Filter"
-                  />
-                  {activeFilterId && (
+                  {savedFilters.length > 0 && (
+                    <Select
+                      value={activeFilterId ?? ""}
+                      onChange={handleFilterChange}
+                      options={filterOptions}
+                      size="sm"
+                      placeholder="Filter"
+                    />
+                  )}
+                  {hasActiveFilter && (
                     <button
                       onClick={() => {
                         dispatch(clearActiveFilter());

@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { configureStore, type Middleware, type UnknownAction } from "@reduxjs/toolkit";
 import { authReducer, setCredentials } from "@/features/auth/store/authSlice";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
@@ -7,6 +8,10 @@ import {
   readLastOrganizationSlug,
   writeLastOrganizationSlug,
 } from "@/features/auth/store/lastOrganizationStorage";
+import {
+  clearTabOrganization,
+  readTabOrganization,
+} from "@/features/auth/store/tabOrganizationStorage";
 
 const shared = vi.hoisted(() => ({
   refresh: vi.fn(),
@@ -52,11 +57,13 @@ function refreshResponse(overrides: Record<string, unknown> = {}) {
   };
 }
 
-beforeEach(() => {
-  vi.resetModules();
-  shared.refresh.mockReset();
+function memoryStorage() {
   const values = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
+  return {
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => [...values.keys()][index] ?? null,
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => {
       values.set(key, value);
@@ -64,7 +71,14 @@ beforeEach(() => {
     removeItem: (key: string) => {
       values.delete(key);
     },
-  });
+  };
+}
+
+beforeEach(() => {
+  vi.resetModules();
+  shared.refresh.mockReset();
+  vi.stubGlobal("localStorage", memoryStorage());
+  vi.stubGlobal("sessionStorage", memoryStorage());
   vi.stubGlobal("window", new EventTarget());
   let pending = Promise.resolve<unknown>(undefined);
   vi.stubGlobal("navigator", {
@@ -146,11 +160,31 @@ it("refresh asks for the organization this tab is in, not the device's last one"
   shared.refresh.mockResolvedValue(refreshResponse());
   const api = await import("@/config/api");
   await api.refreshAccessToken();
-  expect(shared.refresh).toHaveBeenCalledWith({ refreshToken: "first", organizationSlug: "acme" });
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "first",
+    organizationId: "org",
+    organizationSlug: "acme",
+  });
   expect(store.getState().auth).toMatchObject({
     currentOrganizationId: "org",
     currentOrganizationSlug: "acme",
   });
+});
+
+it("a renamed slug keeps the tab in its organization and moves the device's memory along", async () => {
+  writeLastOrganizationSlug("user", "acme");
+  shared.refresh.mockResolvedValue(refreshResponse({ organizationSlug: "acme-renamed" }));
+  const lost = vi.fn();
+  window.addEventListener("uniffy:auth:org-lost", lost);
+  const api = await import("@/config/api");
+  await api.refreshAccessToken();
+  expect(store.getState().auth).toMatchObject({
+    currentOrganizationId: "org",
+    currentOrganizationSlug: "acme-renamed",
+  });
+  expect(readLastOrganizationSlug("user")).toBe("acme-renamed");
+  expect(readTabOrganization("user")).toEqual({ id: "org", slug: "acme-renamed" });
+  expect(lost).not.toHaveBeenCalled();
 });
 
 it("lost organization grant resets the scope and clears the org without signing out", async () => {
@@ -181,8 +215,64 @@ it("lost organization grant resets the scope and clears the org without signing 
   });
   expect(readStoredAuth()).toMatchObject({ refreshToken: "second", currentOrganizationId: null });
   expect(readLastOrganizationSlug("user")).toBeNull();
+  expect(readTabOrganization("user")).toBeNull();
   expect(lost).toHaveBeenCalledOnce();
+  const [event] = lost.mock.calls[0] as [Event];
+  expect(event).toBeInstanceOf(CustomEvent);
+  expect((event as CustomEvent).detail).toEqual({ organizationId: "org" });
   expect(api.getAccessToken()).toBe("org-less");
+});
+
+it("a lost grant stays pending for the shell of the same user until it takes it once", async () => {
+  shared.refresh.mockResolvedValue(
+    refreshResponse({ organizationId: "", organizationSlug: "", organizationRole: "" }),
+  );
+  const api = await import("@/config/api");
+  await api.refreshAccessToken();
+  expect(api.takePendingOrganizationLost("someone-else")).toBeNull();
+
+  await api.refreshAccessToken();
+  expect(api.takePendingOrganizationLost("user")).toBeNull();
+
+  store.dispatch(
+    setCredentials({
+      user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
+      accessToken: "access",
+      refreshToken: readStoredAuth()!.refreshToken!,
+      organizationId: "org",
+      organizationSlug: "acme",
+      sessionId: "session",
+    }),
+  );
+  await api.refreshAccessToken();
+  expect(api.takePendingOrganizationLost("user")).toEqual({ organizationId: "org" });
+  expect(api.takePendingOrganizationLost("user")).toBeNull();
+});
+
+it("a tab in no organization asks for the device's last one without announcing a loss", async () => {
+  store.dispatch(
+    setCredentials({
+      user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
+      accessToken: "access",
+      refreshToken: "first",
+      sessionId: "session",
+    }),
+  );
+  writeLastOrganizationSlug("user", "globex");
+  shared.refresh.mockResolvedValue(
+    refreshResponse({ organizationId: "", organizationSlug: "", organizationRole: "" }),
+  );
+  const lost = vi.fn();
+  window.addEventListener("uniffy:auth:org-lost", lost);
+  const api = await import("@/config/api");
+  await api.refreshAccessToken();
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "first",
+    organizationSlug: "globex",
+  });
+  expect(shared.actions.map((action) => action.type)).not.toContain("auth/resetOrganizationScope");
+  expect(lost).not.toHaveBeenCalled();
+  expect(api.takePendingOrganizationLost("user")).toBeNull();
 });
 
 it("lost grant keeps the device's memory of an org another tab picked since", async () => {
@@ -196,7 +286,25 @@ it("lost grant keeps the device's memory of an org another tab picked since", as
   expect(readLastOrganizationSlug("user")).toBe("globex");
 });
 
+it("rehydrate brings a reloaded tab back to its own organization, not the device's last one", async () => {
+  writeLastOrganizationSlug("user", "globex");
+  shared.refresh.mockResolvedValue(refreshResponse());
+  const api = await import("@/config/api");
+  expect(await api.rehydrateAuth()).toBe(true);
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "first",
+    organizationId: "org",
+    organizationSlug: "acme",
+  });
+  expect(store.getState().auth).toMatchObject({
+    currentOrganizationId: "org",
+    currentOrganizationSlug: "acme",
+  });
+  expect(readLastOrganizationSlug("user")).toBe("globex");
+});
+
 it("rehydrate lands a fresh tab in the device's last organization", async () => {
+  clearTabOrganization("user");
   writeLastOrganizationSlug("user", "globex");
   shared.refresh.mockResolvedValue(
     refreshResponse({ organizationId: "org-globex", organizationSlug: "globex" }),
@@ -207,6 +315,7 @@ it("rehydrate lands a fresh tab in the device's last organization", async () => 
     refreshToken: "first",
     organizationSlug: "globex",
   });
+  expect(readTabOrganization("user")).toEqual({ id: "org-globex", slug: "globex" });
   expect(store.getState().auth).toMatchObject({
     isRehydrating: false,
     currentOrganizationId: "org-globex",
@@ -219,13 +328,62 @@ it("rehydrate does not restore a persisted org the server no longer grants", asy
   shared.refresh.mockResolvedValue(
     refreshResponse({ organizationId: "", organizationSlug: "", organizationRole: "" }),
   );
+  const lost = vi.fn();
+  window.addEventListener("uniffy:auth:org-lost", lost);
   const api = await import("@/config/api");
   expect(await api.rehydrateAuth()).toBe(true);
-  expect(shared.refresh).toHaveBeenCalledWith({ refreshToken: "first", organizationSlug: "acme" });
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "first",
+    organizationId: "org",
+    organizationSlug: "acme",
+  });
   expect(store.getState().auth).toMatchObject({
     isAuthenticated: true,
     currentOrganizationId: null,
     currentOrganizationSlug: null,
   });
   expect(shared.actions.map((action) => action.type)).not.toContain("auth/logout");
+  expect(readTabOrganization("user")).toBeNull();
+  expect(lost).toHaveBeenCalledOnce();
+  // The shell mounts after the reload's refresh, so it takes the loss from here.
+  expect(api.takePendingOrganizationLost("user")).toEqual({ organizationId: "org" });
+});
+
+it("rehydrate of a fresh tab refused its remembered organization announces the loss by slug", async () => {
+  clearTabOrganization("user");
+  writeLastOrganizationSlug("user", "globex");
+  shared.refresh.mockResolvedValue(
+    refreshResponse({ organizationId: "", organizationSlug: "", organizationRole: "" }),
+  );
+  const api = await import("@/config/api");
+  expect(await api.rehydrateAuth()).toBe(true);
+  expect(readLastOrganizationSlug("user")).toBeNull();
+  expect(api.takePendingOrganizationLost("user")).toEqual({ organizationId: undefined });
+});
+
+it("a reload that finds the session dead drops the user's titles and filters on the device", async () => {
+  shared.refresh.mockRejectedValue(new ConnectError("expired", Code.Unauthenticated));
+  const userKeys = ["uniffy:recent-items:org:user", "uniffy-files-view:filter:org:user"];
+  for (const key of [...userKeys, "uniffy:recent-items:org:other"]) localStorage.setItem(key, "[]");
+  const api = await import("@/config/api");
+
+  expect(await api.rehydrateAuth()).toBe(false);
+
+  expect(readStoredAuth()).toBeNull();
+  for (const key of userKeys) expect(localStorage.getItem(key)).toBeNull();
+  expect(localStorage.getItem("uniffy:recent-items:org:other")).toBe("[]");
+});
+
+it("a reload that loses a rotation race keeps the device stores of the live session", async () => {
+  shared.refresh.mockImplementation(async () => {
+    writeStoredAuth({ ...readStoredAuth()!, refreshToken: "rotated-elsewhere" });
+    return refreshResponse();
+  });
+  localStorage.setItem("uniffy:recent-items:org:user", "[]");
+  const api = await import("@/config/api");
+
+  expect(await api.rehydrateAuth()).toBe(false);
+
+  expect(readStoredAuth()?.refreshToken).toBe("rotated-elsewhere");
+  expect(localStorage.getItem("uniffy:recent-items:org:user")).toBe("[]");
 });

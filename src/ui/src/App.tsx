@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -33,6 +34,9 @@ import { ErrorBoundary } from "@/components/feedback/ErrorBoundary";
 import { LazyRoute } from "@/components/feedback/LazyRoute";
 import { AppErrorFallback } from "@/components/feedback/AppErrorFallback";
 import { NotFoundPage } from "@/components/feedback/NotFoundPage";
+import { PageLoader } from "@/components/feedback/PageLoader";
+import { WrongOrganizationNotice } from "@/features/auth/components/WrongOrganizationNotice";
+import { useContentOrganizationResolver } from "@/features/auth/hooks/useContentOrganizationResolver";
 import {
   AccessPolicyDialogProvider,
   AccessPolicyDialog,
@@ -352,10 +356,14 @@ function TagsRouteRedirect() {
 /**
  * PushNotificationRedirect - Landing route for web-push clicks.
  * The service worker cannot map a URN to a route, so it sends the notification
- * fields here and the shared resolver picks the destination.
+ * fields here and the shared resolver picks the destination. The click can land
+ * in a tab of another organization, so the source is resolved to its own first.
  */
 function PushNotificationRedirect() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const sourceUrn = searchParams.get("urn") ?? "";
+  const { match, status } = useContentOrganizationResolver(sourceUrn || null, true);
 
   const rawMeta = searchParams.get("meta");
   let metadata: Record<string, string> = {};
@@ -367,13 +375,33 @@ function PushNotificationRedirect() {
     }
   }
 
-  const path = notificationHref({
-    notificationType: Number(searchParams.get("type") ?? 0),
-    sourceUrn: searchParams.get("urn") ?? "",
-    metadata,
-  });
+  const path =
+    notificationHref({
+      notificationType: Number(searchParams.get("type") ?? 0),
+      sourceUrn,
+      metadata,
+    }) ?? "/notifications";
 
-  return <Navigate to={path ?? "/notifications"} replace />;
+  if (status === "resolving") {
+    return (
+      <MainLayout>
+        <PageLoader />
+      </MainLayout>
+    );
+  }
+  if (match) {
+    return (
+      <MainLayout>
+        <WrongOrganizationNotice
+          urn={sourceUrn}
+          organization={match}
+          path={path}
+          onDismiss={() => navigate("/notifications", { replace: true })}
+        />
+      </MainLayout>
+    );
+  }
+  return <Navigate to={path} replace />;
 }
 
 export function App() {

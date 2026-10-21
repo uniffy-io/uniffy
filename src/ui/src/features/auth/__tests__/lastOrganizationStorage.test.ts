@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearLastOrganizationSlug,
+  readLastOrganization,
   readLastOrganizationSlug,
+  writeLastOrganization,
   writeLastOrganizationSlug,
 } from "@/features/auth/store/lastOrganizationStorage";
 
@@ -29,7 +31,7 @@ describe("lastOrganizationStorage", () => {
     writeLastOrganizationSlug("user-a", "acme");
 
     expect(readLastOrganizationSlug("user-a")).toBe("acme");
-    expect(values.get("uniffy:last-org:user-a")).toBe("acme");
+    expect(JSON.parse(values.get("uniffy:last-org:user-a") ?? "null")).toEqual({ slug: "acme" });
   });
 
   it("returns null when nothing was remembered", () => {
@@ -70,5 +72,17 @@ describe("lastOrganizationStorage", () => {
     expect(() => writeLastOrganizationSlug("user-a", "acme")).not.toThrow();
     expect(() => clearLastOrganizationSlug("user-a")).not.toThrow();
     expect(readLastOrganizationSlug("user-a")).toBeNull();
+  });
+
+  it("keeps the id beside the slug and reads older bare-slug records", () => {
+    writeLastOrganization("user-a", { id: "org-1", slug: "acme" });
+    expect(readLastOrganization("user-a")).toEqual({ id: "org-1", slug: "acme" });
+    expect(readLastOrganizationSlug("user-a")).toBe("acme");
+    writeLastOrganizationSlug("user-a", "acme");
+    expect(readLastOrganization("user-a")).toEqual({ id: "org-1", slug: "acme" });
+    writeLastOrganizationSlug("user-a", "globex");
+    expect(readLastOrganization("user-a")).toEqual({ slug: "globex" });
+    values.set("uniffy:last-org:user-b", "initech");
+    expect(readLastOrganization("user-b")).toEqual({ slug: "initech" });
   });
 });

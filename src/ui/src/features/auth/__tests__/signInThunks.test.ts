@@ -15,6 +15,7 @@ import {
 } from "@/features/auth/store/lastOrganizationStorage";
 import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
 import { completeSignIn, type SignInResult } from "@/features/auth/store/signInThunks";
+import { readTabOrganization } from "@/features/auth/store/tabOrganizationStorage";
 
 const shared = vi.hoisted(() => ({ refresh: vi.fn(), list: vi.fn(), me: vi.fn() }));
 vi.mock("@connectrpc/connect", async (original) => ({
@@ -94,16 +95,18 @@ beforeEach(() => {
     emailVerified: true,
     hasAvatar: false,
   });
-  const values = new Map<string, string>();
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => {
-      values.set(key, value);
-    },
-    removeItem: (key: string) => {
-      values.delete(key);
-    },
-  });
+  for (const name of ["localStorage", "sessionStorage"]) {
+    const values = new Map<string, string>();
+    vi.stubGlobal(name, {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      },
+    });
+  }
   vi.stubGlobal("window", new EventTarget());
   setMemoryAccessToken(null);
   actions = [];
@@ -118,9 +121,12 @@ it("signs a single-organization user straight into that organization", async () 
 
   expect(shared.refresh).toHaveBeenCalledWith({
     refreshToken: "login-refresh",
+    organizationId: "org-acme",
     organizationSlug: "acme",
   });
   expect(credentialDispatches()).toBe(1);
+  // The credentials carry the tab's organization; nothing else writes it.
+  expect(readTabOrganization("user")).toEqual({ id: "org-acme", slug: "acme" });
   expect(store.getState().auth).toMatchObject({
     currentOrganizationId: "org-acme",
     currentOrganizationSlug: "acme",
@@ -141,6 +147,7 @@ it("signs a multi-organization user into the organization remembered on this dev
 
   expect(shared.refresh).toHaveBeenCalledWith({
     refreshToken: "login-refresh",
+    organizationId: "org-globex",
     organizationSlug: "globex",
   });
   expect(credentialDispatches()).toBe(1);

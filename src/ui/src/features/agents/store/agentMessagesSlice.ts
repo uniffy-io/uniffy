@@ -111,14 +111,14 @@ const initialState: AgentMessagesState = {
   streamingToolCalls: [],
   pendingConfirmation: null,
   isStreaming: false,
-  activeRunId: readPersistedRunId(),
+  activeRunId: null,
   loading: false,
   error: null,
 };
 
 function clearMessageState(): AgentMessagesState {
   writePersistedRunId(null);
-  return { ...initialState, activeRunId: null };
+  return initialState;
 }
 
 export const agentMessagesSlice = createSlice({
@@ -439,7 +439,12 @@ export const selectStreamingUsage = (state: RootState) => state.agentMessages.st
 export const selectStreamingToolCalls = (state: RootState) =>
   state.agentMessages.streamingToolCalls;
 export const selectIsStreaming = (state: RootState) => state.agentMessages.isStreaming;
-export const selectActiveRunId = (state: RootState) => state.agentMessages.activeRunId;
+/**
+ * The run id survives a reload in this tab's sessionStorage. It is read on demand, never into the
+ * initial state that a scope reset rebuilds from.
+ */
+export const selectActiveRunId = (state: RootState): string | null =>
+  state.agentMessages.activeRunId ?? readPersistedRunId();
 export const selectPendingConfirmation = (state: RootState) =>
   state.agentMessages.pendingConfirmation;
 export const selectMessagesLoading = (state: RootState) => state.agentMessages.loading;
