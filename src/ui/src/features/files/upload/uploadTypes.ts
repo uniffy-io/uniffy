@@ -24,6 +24,12 @@ export interface UploadInput {
   persist?: boolean;
 }
 
+/** The account and organization a tab uploads for. Stored rows are matched against it. */
+export interface UploadScope {
+  userId: string;
+  organizationId: string;
+}
+
 /** Serializable projection of one upload. Safe to mirror into Redux and render. */
 export interface UploadRecord {
   id: string;
@@ -31,6 +37,10 @@ export interface UploadRecord {
   mimeType: string;
   context: UploadContext;
   organizationId: string;
+  /** Empty when the tab had no signed-in account; such a record is never persisted. */
+  userId: string;
+  /** The tab that runs the upload. Tabs without Web Locks resume only their own records. */
+  ownerTabId: string;
   folderId?: string;
   accessMode?: AccessMode;
   totalSize: number;

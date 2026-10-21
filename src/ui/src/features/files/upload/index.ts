@@ -7,4 +7,5 @@ export type {
   UploadContext,
   UploadStatus,
   UploadListener,
+  UploadScope,
 } from "@/features/files/upload/uploadTypes";

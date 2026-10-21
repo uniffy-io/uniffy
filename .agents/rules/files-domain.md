@@ -34,29 +34,59 @@ part failures settle sibling requests before reporting failure. Simultaneous aut
 per upload. Resumed and out-of-order parts advance progress by completed count, not part number.
 Progress is throttled (<=200ms) before reaching subscribers; status changes emit immediately. Cancel passes
 an `operationId` so the worker loop actually aborts.
-Session cleanup calls `reset()`: cancel active work, remove all in-memory records and blobs, clear persisted
-whole-file records and blobs, and publish an empty snapshot. Late responses and recovery reads cannot
-restore retired uploads. Recording chunk persistence keeps its own lifecycle.
+
+Scope (tabs of one browser can sit in different organizations):
+- Memory holds this tab's uploads only. The `uniffy-uploads` database is shared by every tab of the origin, so
+  every stored row (record, blob, recording chunk) carries `userId` + `organizationId`, and a record also
+  carries `ownerTabId` (a per-tab id kept in `sessionStorage`, so it survives a reload of that tab).
+  `uploadScope.ts` holds the tab's current scope and its id; `recover` sets the scope, scope boundaries clear it.
+- The tab running an upload holds the Web Lock `uniffy:upload:<id>` from enqueue (or adoption on recovery)
+  until the stored row is deleted, so no other tab resumes it twice.
+- `resetForScope()` (organization switch in this tab): cancel this tab's active uploads, delete only this tab's
+  rows, publish an empty snapshot. It never clears the shared stores. `reset()` is a deprecated alias.
+- `purgeUser(userId)` (sign-out, session death): `resetForScope()` plus every stored row of that account and
+  every row without an owner stamp.
+- `purgeOrganization(organizationId, userId?)` (a confirmed lost grant): cancel and drop this tab's uploads in
+  that organization and delete its stored rows for every tab, narrowed to one account when `userId` is given.
+  The server refuses those uploads once membership ends, and the stored bytes copy files the user still
+  holds. Unlike pending realtime edits, upload rows are never kept for a reactivation.
+- `hasActiveUploads()` tells a switch to confirm before `resetForScope()` cancels this tab's uploads.
+- Late responses and recovery reads cannot restore retired uploads.
 
 Consumption (the engine owns its own state - a `Map` of `UploadRecord` + a blob map; read via
 `subscribe(listener)` / `getRecords()`):
 - Files/editor: `subscribeUploadMirror(dispatch)` (`reduxMirror.ts`) projects non-chat records into
   `uploadSlice`, a READ-projection (`records` + `trayView` + downloads; it does NOT drive uploads). The global
   `UploadTray` floating bubble (mounted in `App.tsx`) renders from it. `UploadBoot` (also `App.tsx`) starts the
-  mirror, the failure-toast subscriber, the `app.showUploads` (Ctrl+U) recall, and `recover()` at boot.
+  mirror, the failure-toast subscriber, the `app.showUploads` (Ctrl+U) recall, and `recover()` for each scope.
 - Chat: consumes `uploadService` DIRECTLY via the returned handle + a scoped `subscribe` - NEVER Redux (see
   `feedback_chat_upload_pattern`). The mirror filters `context === 'chat'` out of the tray.
 - Completion -> File row: `enqueueFileUploads(inputs, dispatch)` awaits each handle and dispatches
   `setFile(fileToPlain(file))` + `bulkUpsertTags`. The engine never touches the files store itself.
 
 Persistence + resume (`uploadStore.ts`, one IndexedDB DB `uniffy-uploads` with `records` / `blobs` / `chunks`):
-- Metadata always persisted; the blob only when `size <= UPLOAD_PERSIST_MAX_BYTES` (~50 MB) or `persist:true`.
-  Chat/editor pass `persist:false` (ephemeral). Oversize is logged, never silently dropped.
-- `recover()` at boot re-queues uploads whose bytes survived a reload; for each it calls
-  `filesApi.getUploadStatus` (the server is the authority on completed parts) and resumes the worker from the
-  first missing part (the worker skips `completedChunks`). No stored blob -> failed "re-select".
-- Recording's streaming uploader writes per-part into the same DB's `chunks` store; its recovery
-  (`recoverOrphanedRecordings`) stays separate - streaming has a different shape than whole-blob uploads.
+- Metadata persisted once the tab knows its account; the blob only when `size <= UPLOAD_PERSIST_MAX_BYTES`
+  (~50 MB) or `persist:true`, and only while storage encryption is ready. Chat/editor pass `persist:false`
+  (ephemeral). Oversize is logged, never silently dropped.
+- Blobs rest only as AES-GCM ciphertext under the per-user device key (`shared/crypto/storageEncryption.ts`)
+  with additional data `uniffy-upload-v1|<userId>|<organizationId>|<record id>`. A blob that fails
+  authentication (another scope, a rotated key) reads as missing. No key means no bytes at rest, so a reload
+  asks to re-select.
+- `recover({ userId, organizationId })` runs whenever the tab's account or organization changes (`UploadBoot`).
+  It lists only that scope's incomplete records, skips any whose lock another tab holds, re-reads the row
+  under the lock, then calls `filesApi.getUploadStatus` (the server is the authority on completed parts) and
+  resumes the worker from the first missing part (the worker skips `completedChunks`). Other scopes' records
+  wait for a tab in that scope. No stored blob -> failed "re-select". Without Web Locks (plain HTTP origins) a
+  tab resumes only records whose `ownerTabId` is its own.
+- Recording's streaming uploader writes per-part into the same DB's `chunks` store, stamped with the tab's
+  scope; its recovery (`recoverOrphanedRecordings`) stays separate - streaming has a different shape than
+  whole-blob uploads - and resumes only chunks of the tab's scope, once per scope. Chunks rest unencrypted.
+- Server gate: `UploadChunk`, `UploadChunks`, `GetUploadStatus` and `CompleteUpload` require the uploader to be
+  an active member of the upload's organization, not just `upload.user_id`. A removed or deactivated member
+  gets the same NOT_FOUND as a missing upload, so no File lands in an organization they left. `remove_member`
+  also expires that member's ACTIVE uploads in the organization in its transaction
+  (`files.cleanup.stage_member_upload_expiry`), so a re-add does not revive them; every write path treats an
+  ACTIVE row past `expires_at` as EXPIRED, and the multipart reaper aborts the parts.
 
 ## 2. Asset read path (cookie-authenticated)
 
@@ -98,8 +128,11 @@ NO service-worker auth proxy.
 - Asset-route permission checks are unchanged by the cookie - it proves the session, never access.
 - Media is a plain HTTP Range route. Do NOT reintroduce a ConnectRPC media stream or a service-worker auth proxy.
 - `getUploadStatus` is the authority on completed parts during resume - never re-POST a completed part.
+- Upload rows are scoped by account, organization and owning tab. Never clear the shared stores at a scope
+  boundary, and never resume a record of another scope or one whose lock another tab holds.
 - Both products: same-origin cookie, no `Domain`; `Secure` env-gated so self-host http LAN works.
 
 Guard tests: `src/uniffy/tests/unit/core/auth/test_cookie.py`,
 `src/uniffy/tests/unit/files/test_media_range.py`;
-`features/files/upload/__tests__/uploadService.test.ts`, `shared/utils/__tests__/fileUrls.test.ts`.
+`features/files/upload/__tests__/uploadService.test.ts`, `features/files/upload/__tests__/uploadStoreScope.test.ts`,
+`features/recording/__tests__/recoverOrphanedRecordings.test.ts`, `shared/utils/__tests__/fileUrls.test.ts`.

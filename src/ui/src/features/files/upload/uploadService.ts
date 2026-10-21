@@ -7,10 +7,19 @@ import {
   putRecord,
   putBlob,
   getBlob,
-  deleteRecord,
-  listIncomplete,
-  clearUploadRecords,
+  getRecord,
+  deleteRecords,
+  deleteRowsMatching,
+  listIncompleteFor,
+  type StoredRowOwner,
 } from "@/features/files/upload/uploadStore";
+import {
+  generateUploadId,
+  getUploadScope,
+  sameUploadScope,
+  setUploadScope,
+  uploadTabId,
+} from "@/features/files/upload/uploadScope";
 import type {
   UploadInput,
   UploadHandle,
@@ -18,7 +27,9 @@ import type {
   UploadResult,
   UploadContext,
   UploadListener,
+  UploadScope,
 } from "@/features/files/upload/uploadTypes";
+import { isStorageEncryptionReady } from "@/shared/crypto/storageEncryption";
 
 export const UPLOAD_MAX_CONCURRENT = 4;
 const PROGRESS_FLUSH_MS = 200;
@@ -27,17 +38,6 @@ const PROGRESS_FLUSH_MS = 200;
 // Persisting large blobs would blow the IDB quota, so above this size we degrade to "re-select".
 const UPLOAD_PERSIST_MAX_BYTES = 50 * 1024 * 1024;
 
-function generateId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-}
-
 const TERMINAL: ReadonlySet<UploadRecord["status"]> = new Set(["completed", "failed", "cancelled"]);
 
 interface Deferred {
@@ -45,17 +45,63 @@ interface Deferred {
   reject: (error: Error) => void;
 }
 
+// Web Locks span every tab of this origin. The tab that runs an upload holds its lock until the
+// stored row is gone, so recovery in another tab never resumes it a second time. Plain HTTP origins
+// have no Web Locks; there a tab resumes only the records it owns.
+function lockManager(): LockManager | null {
+  return typeof navigator !== "undefined" && navigator.locks ? navigator.locks : null;
+}
+
+const uploadLockName = (id: string) => `uniffy:upload:${id}`;
+
+/** Holds the upload for this tab until the returned release runs. */
+function holdUploadLock(id: string): () => void {
+  const locks = lockManager();
+  if (!locks) return () => {};
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  locks.request(uploadLockName(id), { mode: "exclusive" }, () => held).catch(() => undefined);
+  return release;
+}
+
+/** Takes the upload's lock when no tab holds it; null while one does. */
+function claimUploadLock(id: string): Promise<(() => void) | null> {
+  const locks = lockManager();
+  if (!locks) return Promise.resolve(() => {});
+  return new Promise((resolve) => {
+    let release!: () => void;
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    locks
+      .request(uploadLockName(id), { ifAvailable: true }, (lock) => {
+        if (!lock) {
+          resolve(null);
+          return null;
+        }
+        resolve(release);
+        return held;
+      })
+      // A lock manager that refuses the request leaves the record to this tab.
+      .catch(() => resolve(() => {}));
+  });
+}
+
 /**
  * Module-level upload engine, owned by no component. Drives initiate -> worker chunk POSTs ->
  * complete entirely outside the React tree, so uploads survive SPA navigation. Framework-agnostic:
  * state lives here and is read via subscribe(); the Redux mirror and chat consume it without
- * the engine knowing about either.
+ * the engine knowing about either. Memory holds this tab's uploads only; other tabs share the store.
  */
 class UploadService {
   private records = new Map<string, UploadRecord>();
   private blobs = new Map<string, Blob>();
   private deferreds = new Map<string, Deferred>();
   private listeners = new Set<UploadListener>();
+  private lockReleases = new Map<string, () => void>();
+  private blobWrites = new Map<string, Promise<boolean>>();
 
   private activeCount = 0;
   private flushScheduled = false;
@@ -63,9 +109,10 @@ class UploadService {
 
   enqueue(inputs: UploadInput[]): UploadHandle[] {
     this.ensureWorker();
+    const userId = getUploadScope()?.userId ?? "";
 
     const handles = inputs.map((input) => {
-      const id = generateId();
+      const id = generateUploadId();
       this.blobs.set(id, input.file);
       const record: UploadRecord = {
         id,
@@ -73,6 +120,8 @@ class UploadService {
         mimeType: input.mimeType,
         context: input.context,
         organizationId: input.organizationId,
+        userId,
+        ownerTabId: uploadTabId(),
         folderId: input.folderId,
         accessMode: input.accessMode,
         totalSize: input.file.size,
@@ -82,6 +131,7 @@ class UploadService {
         createdAt: Date.now(),
       };
       this.records.set(id, record);
+      this.lockReleases.set(id, holdUploadLock(id));
       this.persist(id, input.file, input.persist);
 
       const done = new Promise<UploadResult>((resolve, reject) => {
@@ -114,7 +164,7 @@ class UploadService {
     }
 
     this.blobs.delete(id);
-    void deleteRecord(id);
+    this.retire(id);
     this.settle(id, new Error("Upload cancelled"));
   }
 
@@ -126,17 +176,62 @@ class UploadService {
     }
   }
 
-  reset(): void {
+  /** Ends this tab's scope: cancels and forgets its uploads. Other tabs' stored records stay. */
+  resetForScope(): void {
     this.generation += 1;
+    setUploadScope(null);
+    const ids = Array.from(this.records.keys());
     this.cancelAll();
     for (const id of this.deferreds.keys()) {
       this.settle(id, new Error("Upload cancelled"));
     }
+    this.retire(...ids);
     this.records.clear();
     this.blobs.clear();
     this.activeCount = 0;
-    void clearUploadRecords();
     this.emitNow();
+  }
+
+  /** @deprecated Use resetForScope, purgeUser or purgeOrganization. */
+  reset(): void {
+    this.resetForScope();
+  }
+
+  /** Sign-out and session death: drops this tab's uploads and every stored row of the account. */
+  async purgeUser(userId: string): Promise<void> {
+    this.resetForScope();
+    await Promise.allSettled(this.blobWrites.values());
+    // A row without an owner stamp cannot be told apart from this account's, so it goes too.
+    await deleteRowsMatching((owner) => !owner.userId || owner.userId === userId);
+  }
+
+  /**
+   * A confirmed lost grant: drops the organization's uploads in this tab and its stored rows for
+   * every tab, since the server refuses them now. `userId` narrows the purge to one account.
+   */
+  async purgeOrganization(organizationId: string, userId?: string): Promise<void> {
+    const owned = (owner: StoredRowOwner) =>
+      owner.organizationId === organizationId && (!userId || owner.userId === userId);
+    const scope = getUploadScope();
+    if (scope && owned(scope)) setUploadScope(null);
+    const dropped = Array.from(this.records.values()).filter(owned);
+    for (const record of dropped) {
+      this.cancel(record.id);
+      this.records.delete(record.id);
+      this.blobs.delete(record.id);
+      this.settle(record.id, new Error("Upload cancelled"));
+    }
+    if (dropped.length > 0) this.emitNow();
+    await Promise.allSettled(this.blobWrites.values());
+    await deleteRowsMatching(owned);
+  }
+
+  /** True while this tab runs an upload that ending its scope would cancel. */
+  hasActiveUploads(): boolean {
+    for (const record of this.records.values()) {
+      if (!TERMINAL.has(record.status)) return true;
+    }
+    return false;
   }
 
   retry(id: string): void {
@@ -158,6 +253,7 @@ class UploadService {
     record.uploadId = undefined;
     record.chunkSize = undefined;
     record.totalChunks = undefined;
+    if (!this.lockReleases.has(id)) this.lockReleases.set(id, holdUploadLock(id));
     this.emitNow();
     this.drain();
   }
@@ -175,30 +271,58 @@ class UploadService {
     return context ? snapshot.filter((r) => r.context === context) : snapshot;
   }
 
-  /** Called once at app boot: re-queue uploads whose bytes survived a reload, fail the rest. */
-  async recover(): Promise<void> {
+  /**
+   * Makes `scope` this tab's scope and re-queues its stored uploads that no live tab holds, so a
+   * reload or a closed tab resumes. Records of other accounts and organizations stay untouched.
+   */
+  async recover(scope: UploadScope): Promise<void> {
+    const current: UploadScope = { userId: scope.userId, organizationId: scope.organizationId };
+    setUploadScope(current);
     const generation = this.generation;
+    const live = () => generation === this.generation && getUploadScope() === current;
+    const hasWebLocks = lockManager() !== null;
     this.ensureWorker();
-    const incomplete = await listIncomplete();
-    if (generation !== this.generation) return;
-    for (const stored of incomplete) {
-      if (this.records.has(stored.id)) continue;
+    const incomplete = await listIncompleteFor(current);
+    if (!live()) return;
+    for (const candidate of incomplete) {
+      if (this.records.has(candidate.id)) continue;
+      // Without Web Locks a live tab's upload looks the same as an abandoned one.
+      if (!hasWebLocks && candidate.ownerTabId !== uploadTabId()) continue;
+      const release = await claimUploadLock(candidate.id);
+      if (!release) continue;
 
-      const blob = stored.uploadId ? await getBlob(stored.id) : undefined;
-      if (generation !== this.generation) return;
+      // Read again under the lock: the tab that held it may have finished and deleted the row.
+      const stored = live() ? await getRecord(candidate.id) : undefined;
+      if (!live()) {
+        release();
+        return;
+      }
+      if (!stored || TERMINAL.has(stored.status) || !sameUploadScope(stored, current)) {
+        release();
+        continue;
+      }
+      const blob = stored.uploadId ? await getBlob(stored) : undefined;
+      if (!live()) {
+        release();
+        return;
+      }
+
+      const adopted: UploadRecord = { ...stored, ownerTabId: uploadTabId() };
+      this.lockReleases.set(stored.id, release);
       if (!blob || !stored.uploadId) {
-        // Metadata survived but the bytes did not (oversize/quota) - cannot auto-resume.
+        // Metadata survived but the bytes did not (oversize, quota, no storage key).
         this.records.set(stored.id, {
-          ...stored,
+          ...adopted,
           status: "failed",
           error: "Upload interrupted - re-select to upload",
         });
-        void deleteRecord(stored.id);
+        this.retire(stored.id);
         continue;
       }
 
       this.blobs.set(stored.id, blob);
-      this.records.set(stored.id, { ...stored, status: "queued" });
+      this.records.set(stored.id, { ...adopted, status: "queued" });
+      this.save(adopted);
     }
     this.emitNow();
     this.drain();
@@ -210,9 +334,33 @@ class UploadService {
     }
   }
 
+  // Retires the stored row and releases the lock only after the row is gone, so no tab can claim
+  // a record whose upload just finished here.
+  private retire(...ids: string[]): void {
+    if (ids.length === 0) return;
+    const releases = ids.flatMap((id) => {
+      const release = this.lockReleases.get(id);
+      this.lockReleases.delete(id);
+      return release ? [release] : [];
+    });
+    const writes = ids.flatMap((id) => this.blobWrites.get(id) ?? []);
+    const deleted =
+      writes.length === 0
+        ? deleteRecords(ids)
+        : Promise.allSettled(writes).then(() => deleteRecords(ids));
+    void deleted.finally(() => {
+      for (const release of releases) release();
+    });
+  }
+
+  // A row without an account could never be matched to a scope again.
+  private save(record: UploadRecord): void {
+    if (record.userId) void putRecord(record);
+  }
+
   private persist(id: string, blob: Blob, persistOverride?: boolean): void {
     const record = this.records.get(id);
-    if (!record) return;
+    if (!record?.userId) return;
     void putRecord(record);
 
     const shouldStoreBlob = persistOverride ?? blob.size <= UPLOAD_PERSIST_MAX_BYTES;
@@ -226,10 +374,17 @@ class UploadService {
       }
       return;
     }
-    void putBlob(id, blob).then((ok) => {
+    // File bytes rest only encrypted, so without the storage key a reload asks to re-select.
+    if (!isStorageEncryptionReady()) return;
+    const write = putBlob(record, blob).then((ok) => {
       if (!ok) {
         console.warn(`[upload] could not persist ${record.filename}; it will not survive a reload`);
       }
+      return ok;
+    });
+    this.blobWrites.set(id, write);
+    void write.finally(() => {
+      if (this.blobWrites.get(id) === write) this.blobWrites.delete(id);
     });
   }
 
@@ -279,8 +434,6 @@ class UploadService {
         const status = await filesApi.getUploadStatus({ uploadId: record.uploadId });
         if (this.wasCancelled(id)) return;
         if (status.status !== UploadStatus.ACTIVE) {
-          this.blobs.delete(id);
-          void deleteRecord(id);
           this.fail(id, "Upload session expired - re-select to upload");
           return;
         }
@@ -304,7 +457,7 @@ class UploadService {
         record.chunkSize = init.chunkSize;
         record.totalChunks = init.totalChunks;
         // Persist the uploadId now so a reload mid-upload can resume via getUploadStatus.
-        void putRecord({ ...record, status: "uploading" });
+        this.save({ ...record, status: "uploading" });
       }
 
       if (this.wasCancelled(id)) return;
@@ -347,7 +500,7 @@ class UploadService {
       record.uploadedBytes = record.totalSize;
       record.progress = 100;
       this.blobs.delete(id);
-      void deleteRecord(id);
+      this.retire(id);
       this.emitNow();
       this.settle(id, undefined, { fileId: response.file.id, file: response.file });
     } catch (error) {
@@ -357,7 +510,7 @@ class UploadService {
       if (message === "Operation aborted") {
         record.status = "cancelled";
         this.blobs.delete(id);
-        void deleteRecord(id);
+        this.retire(id);
         this.emitNow();
         this.settle(id, new Error("Upload cancelled"));
         return;
@@ -372,7 +525,7 @@ class UploadService {
     record.status = "failed";
     record.error = message;
     this.blobs.delete(id);
-    void deleteRecord(id);
+    this.retire(id);
     this.emitNow();
     this.settle(id, new Error(message));
   }

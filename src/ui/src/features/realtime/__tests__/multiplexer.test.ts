@@ -135,16 +135,16 @@ class FakeWebSocket {
     this.onmessage?.({ data: copy.buffer } as MessageEvent<ArrayBuffer>);
   }
 
-  serverClose(code: number): void {
+  serverClose(code: number, reason = ""): void {
     this.readyState = FakeWebSocket.CLOSED;
-    this.onclose?.({ code } as CloseEvent);
+    this.onclose?.({ code, reason } as CloseEvent);
   }
 
   /** The server completes the handshake and closes before any frame, as an upgrade refusal does. */
-  refuse(code: number): void {
+  refuse(code: number, reason = ""): void {
     this.readyState = FakeWebSocket.OPEN;
     this.onopen?.();
-    this.serverClose(code);
+    this.serverClose(code, reason);
   }
 }
 
@@ -247,7 +247,11 @@ function attachDoc(
   options: Partial<
     Pick<
       MultiplexerAttachOptions,
-      "onWriteDenied" | "onStatus" | "onGenerationMismatch" | "onCloseCode"
+      | "onWriteDenied"
+      | "onStatus"
+      | "onGenerationMismatch"
+      | "onCloseCode"
+      | "onOrganizationMismatch"
     >
   > = {},
 ): AttachedDoc {
@@ -257,6 +261,7 @@ function attachDoc(
   const subscription = realtimeMultiplexer.attach({
     contentType: "NOTE",
     contentId,
+    organizationId: authStore.getState().auth.currentOrganizationId ?? "",
     ydoc,
     awareness,
     onSync,
@@ -750,6 +755,87 @@ it("closes an idle socket of the previous workspace before attaching in another"
   expect(first.readyState).toBe(FakeWebSocket.CLOSED);
   expect(currentWs().url).toContain("org_id=org-2");
   signIn("org-1");
+});
+
+describe("socket organization", () => {
+  afterEach(() => signIn("org-1"));
+
+  it("bootstraps only documents of the socket's organization and reports the others once", async () => {
+    const mismatches = vi.fn();
+    const statuses: RealtimeStatus[] = [];
+    const first = attachDoc("first-org-doc", {
+      onOrganizationMismatch: mismatches,
+      onStatus: (status) => statuses.push(status),
+    });
+    const ws = currentWs();
+    ws.open();
+    expect(sentSyncSubtypes(ws, first.docName)).toEqual([SYNC_STEP1]);
+    first.ydoc.getText("markdown").insert(0, "typed in org-1");
+
+    signIn("org-2");
+    const other = currentWs();
+    expect(other).not.toBe(ws);
+    expect(other.url).toContain("org_id=org-2");
+    const heard = statuses.length;
+    other.open();
+    await Promise.resolve();
+    expect(mismatches).toHaveBeenCalledOnce();
+    expect(statuses.slice(heard)).toEqual([]);
+    // Batches, resyncs and keepalives never carry the document on this socket.
+    vi.advanceTimersByTime(30_000);
+    expect(other.sent.filter((frame) => peekVarString(frame).docName === first.docName)).toEqual(
+      [],
+    );
+    expect(hasUnsyncedEdits(null, "org-1")).toBe(true);
+    expect(hasUnsyncedEdits(null, "org-2")).toBe(false);
+
+    const second = attachDoc("second-org-doc");
+    expect(sentSyncSubtypes(other, second.docName)).toEqual([SYNC_STEP1]);
+    await Promise.resolve();
+    expect(mismatches).toHaveBeenCalledOnce();
+
+    // Back in its organization the document attaches again and sends what it kept.
+    signIn("org-1");
+    const back = currentWs();
+    back.open();
+    expect(sentSyncSubtypes(back, first.docName)).toEqual([SYNC_STEP1]);
+    expect(sentSyncSubtypes(back, second.docName)).toEqual([]);
+    const server = new Y.Doc();
+    applyClientFramesToServer(back, first.docName, server);
+    expect(server.getText("markdown").toString()).toBe("typed in org-1");
+    server.destroy();
+  });
+
+  it("refreshes once when the server closes the socket because the account left the organization", async () => {
+    refreshAnswers([], "issued");
+    const statuses: RealtimeStatus[] = [];
+    attachDoc("removed", { onStatus: (status) => statuses.push(status) });
+    const first = currentWs();
+    first.open();
+    first.serverClose(4403, "not a member");
+    expect(statuses.at(-1)).toBe("access_lost");
+    await vi.waitFor(() => expect(FakeWebSocket.instances).toHaveLength(2));
+    expect(refreshServer.requests).toBe(1);
+
+    // The refresh kept the organization, so its credentials reconnect; a second refusal before
+    // any frame shows the refresh changed nothing, so no further refresh follows.
+    currentWs().refuse(4403, "not a member");
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(refreshServer.requests).toBe(1);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(statuses.at(-1)).toBe("access_lost");
+  });
+
+  it("does not refresh on a forbidden close that names no membership", async () => {
+    refreshAnswers([], "issued");
+    attachDoc("refused-origin");
+    const ws = currentWs();
+    ws.open();
+    ws.serverClose(4403, "origin not allowed");
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(refreshServer.requests).toBe(0);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
 });
 
 it("keeps seed proposals separate from pending user updates and settles rejection", async () => {

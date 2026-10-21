@@ -12,6 +12,7 @@ import {
   updateWrites,
   installBrowser,
   reopenSocket,
+  signedInOrganization,
 } from "@/features/realtime/persistence/__tests__/browser";
 
 const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
@@ -41,6 +42,7 @@ function openNote(contentId: string, text: string) {
   const subscription = realtimeMultiplexer.attach({
     contentType: "NOTE",
     contentId,
+    organizationId: signedInOrganization(),
     ydoc,
     awareness,
   });

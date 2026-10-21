@@ -6,11 +6,10 @@ import { subscribeUploadMirror } from "@/features/files/upload/reduxMirror";
 import { subscribeUploadErrorToasts } from "@/features/files/upload/uploadErrorToasts";
 import { setTrayView } from "@/features/files/store/uploadSlice";
 
-let recovered = false;
-
 /** Wires the Redux mirror, failure toasts, the recall shortcut, and reload recovery. Renders nothing. */
 export function UploadBoot() {
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   useEffect(() => subscribeUploadMirror(dispatch), [dispatch]);
@@ -18,12 +17,12 @@ export function UploadBoot() {
 
   useShortcutHandler("app.showUploads", () => dispatch(setTrayView("expanded")));
 
+  // Each scope this tab enters resumes its own stored uploads; other scopes' records wait for theirs.
   useEffect(() => {
-    if (organizationId && !recovered) {
-      recovered = true;
-      void uploadService.recover();
+    if (userId && organizationId) {
+      void uploadService.recover({ userId, organizationId });
     }
-  }, [organizationId]);
+  }, [userId, organizationId]);
 
   return null;
 }

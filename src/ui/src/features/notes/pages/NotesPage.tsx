@@ -234,7 +234,11 @@ export function NotesPage() {
           ) : currentNote?.nodeType === NodeType.FOLDER ? (
             <NoteFolderView key="folder-view" />
           ) : (
-            <NotesEditor key={`note-editor:${editorEpoch}`} lostNote={lostNote} />
+            <NotesEditor
+              key={`note-editor:${editorEpoch}`}
+              lostNote={lostNote}
+              loadFailed={failedNoteId !== null}
+            />
           )
         }
         metadataPanel={currentNoteId && !failedNoteId ? <NotesMetadataPanel /> : null}

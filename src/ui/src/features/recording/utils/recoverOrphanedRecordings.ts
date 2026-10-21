@@ -1,11 +1,14 @@
 /**
  * Recovers orphaned screen recordings on boot: IDB-buffered chunks whose `MultipartUpload` is still
  * ACTIVE server-side (24h TTL) get re-uploaded and completed. 60s idle grace skips the live session's
- * own chunks. Cross-tab races guarded by a BroadcastChannel claim.
+ * own chunks. Cross-tab races guarded by a BroadcastChannel claim. Only chunks stamped with the tab's
+ * account and organization are touched; other scopes' recordings wait for a tab in that scope.
  */
 
 import { UploadStatus } from "@uniffy/proto/files/v1/files_pb";
 import { filesApi } from "@/features/files/api/filesApi";
+import type { UploadScope } from "@/features/files/upload/uploadTypes";
+import { getUploadScope } from "@/features/files/upload/uploadScope";
 import {
   clearUploadChunks,
   deleteChunk,
@@ -22,7 +25,7 @@ interface RecoveryClaim {
   tabId: string;
 }
 
-let recoveryRan = false;
+const recoveredScopes = new Set<string>();
 const claimedByOtherTab = new Set<string>();
 let recoveryChannel: BroadcastChannel | null = null;
 
@@ -84,15 +87,19 @@ export async function resumeUpload(uploadId: string): Promise<RecoveryResult | n
   };
 }
 
+/** Runs once per account and organization; without a tab scope nothing is matched and a later call retries. */
 export async function recoverOrphanedRecordings(
   onRecovered: (info: RecoveryResult) => void,
+  scope: UploadScope | null = getUploadScope(),
 ): Promise<void> {
-  if (recoveryRan) return;
-  recoveryRan = true;
+  if (!scope) return;
+  const scopeKey = `${scope.userId}|${scope.organizationId}`;
+  if (recoveredScopes.has(scopeKey)) return;
+  recoveredScopes.add(scopeKey);
 
   let uploadIds: string[];
   try {
-    uploadIds = await listOrphanedChunkUploads(ORPHAN_AGE_MS);
+    uploadIds = await listOrphanedChunkUploads(ORPHAN_AGE_MS, scope);
   } catch {
     return;
   }
