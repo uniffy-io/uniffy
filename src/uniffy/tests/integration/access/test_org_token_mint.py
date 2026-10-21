@@ -149,6 +149,32 @@ class TestMint:
         assert (await _session_row(session, session_id)).organization_id == access.other_org_id
         assert len(await _org_switch_audits(session, access.member_id)) == 1
 
+    async def test_a_slug_rename_keeps_the_mint_for_a_refresh_by_id(self, session, access) -> None:
+        session_id, refresh = await _signed_in(session, access, access.org_id)
+        stale_slug = await _slug(session, access.org_id)
+        renamed_slug = f"{stale_slug}-renamed"
+        await OrganizationOperations(session).update(
+            access.org_id, slug=renamed_slug, actor_user_id=access.owner_id
+        )
+        operations = _operations(session)
+
+        kept = await operations.refresh_token(
+            refresh, organization_slug=stale_slug, organization_id=access.org_id
+        )
+
+        assert _claims(kept)["org_id"] == str(access.org_id)
+        assert kept.organization_id == access.org_id
+        assert kept.organization_slug == renamed_slug
+        assert (await _session_row(session, session_id)).organization_id == access.org_id
+        assert await _audits_with_event(session, access.member_id, "org_dropped") == []
+
+        dropped = await operations.refresh_token(kept.refresh_token, organization_slug=stale_slug)
+
+        assert dropped.organization_id is None
+        [audit] = await _audits_with_event(session, access.member_id, "org_dropped")
+        assert audit.details["requested_slug"] == stale_slug
+        assert audit.details["requested_org_id"] is None
+
 
 class TestRefusal:
     async def test_reusing_a_rotated_token_after_the_grace_window_revokes_the_session(

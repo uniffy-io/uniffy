@@ -82,13 +82,17 @@ message LoginRequest {
   optional string organization_slug = 3; // Authenticate into specific org
 }
 
-// Request to refresh access token. organization_slug selects the organization
-// the new access token is bound to; omitted means the session's last
-// organization. The caller must be an active member of it. Moving to another
-// organization keeps the session and rotates the refresh token like any refresh.
+// Request to refresh access token. organization_id, else organization_slug,
+// selects the organization the new access token is bound to; omitting both
+// means the session's last organization. The caller must be an active member
+// of it. Moving to another organization keeps the session and rotates the
+// refresh token like any refresh.
 message RefreshTokenRequest {
   string refresh_token = 1;
   optional string organization_slug = 2;
+  // Takes precedence over organization_slug. A slug can be renamed and an id
+  // cannot, so a client holding the id keeps its organization across a rename.
+  optional string organization_id = 3;
 }
 
 // Request to get current user info

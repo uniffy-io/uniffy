@@ -161,16 +161,20 @@ func (x *LoginRequest) GetOrganizationSlug() string {
 	return ""
 }
 
-// Request to refresh access token. organization_slug selects the organization
-// the new access token is bound to; omitted means the session's last
-// organization. The caller must be an active member of it. Moving to another
-// organization keeps the session and rotates the refresh token like any refresh.
+// Request to refresh access token. organization_id, else organization_slug,
+// selects the organization the new access token is bound to; omitting both
+// means the session's last organization. The caller must be an active member
+// of it. Moving to another organization keeps the session and rotates the
+// refresh token like any refresh.
 type RefreshTokenRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	RefreshToken     string                 `protobuf:"bytes,1,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
 	OrganizationSlug *string                `protobuf:"bytes,2,opt,name=organization_slug,json=organizationSlug,proto3,oneof" json:"organization_slug,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Takes precedence over organization_slug. A slug can be renamed and an id
+	// cannot, so a client holding the id keeps its organization across a rename.
+	OrganizationId *string `protobuf:"bytes,3,opt,name=organization_id,json=organizationId,proto3,oneof" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RefreshTokenRequest) Reset() {
@@ -213,6 +217,13 @@ func (x *RefreshTokenRequest) GetRefreshToken() string {
 func (x *RefreshTokenRequest) GetOrganizationSlug() string {
 	if x != nil && x.OrganizationSlug != nil {
 		return *x.OrganizationSlug
+	}
+	return ""
+}
+
+func (x *RefreshTokenRequest) GetOrganizationId() string {
+	if x != nil && x.OrganizationId != nil {
+		return *x.OrganizationId
 	}
 	return ""
 }
@@ -2234,11 +2245,13 @@ const file_auth_v1_auth_proto_rawDesc = "" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x120\n" +
 	"\x11organization_slug\x18\x03 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01B\x14\n" +
-	"\x12_organization_slug\"\x82\x01\n" +
+	"\x12_organization_slug\"\xc4\x01\n" +
 	"\x13RefreshTokenRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\x120\n" +
-	"\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01B\x14\n" +
-	"\x12_organization_slug\"\x17\n" +
+	"\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x12,\n" +
+	"\x0forganization_id\x18\x03 \x01(\tH\x01R\x0eorganizationId\x88\x01\x01B\x14\n" +
+	"\x12_organization_slugB\x12\n" +
+	"\x10_organization_id\"\x17\n" +
 	"\x15GetCurrentUserRequest\"K\n" +
 	"\rLogoutRequest\x12(\n" +
 	"\rrefresh_token\x18\x01 \x01(\tH\x00R\frefreshToken\x88\x01\x01B\x10\n" +

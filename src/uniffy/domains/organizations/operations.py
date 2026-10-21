@@ -15,7 +15,12 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions.defaults import ORG_PERMISSION_DEFAULTS
 from uniffy.core.crypto import OrgCipher
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    MembershipRequiredError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.audit.event import AuditResourceType
@@ -50,6 +55,7 @@ from uniffy.domains.chat.search import (
 )
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
+from uniffy.domains.files.cleanup import stage_member_upload_expiry
 from uniffy.domains.files.filters.presets import create_default_presets
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
@@ -356,8 +362,9 @@ class OrganizationOperations:
         org_id: UUID,
     ) -> OrganizationMember:
         membership = await get_active_membership(self._session, user_id, org_id)
-        admin_roles = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
-        if not membership or membership.role not in admin_roles:
+        if not membership:
+            raise MembershipRequiredError("Requires organization admin privileges")
+        if membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
             raise PermissionDeniedError("Requires organization admin privileges")
         return membership
 
@@ -370,7 +377,9 @@ class OrganizationOperations:
         single accountable person.
         """
         membership = await get_active_membership(self._session, user_id, org_id)
-        if not membership or membership.role != OrganizationRole.OWNER:
+        if not membership:
+            raise MembershipRequiredError("Requires organization owner privileges")
+        if membership.role != OrganizationRole.OWNER:
             raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
@@ -381,7 +390,7 @@ class OrganizationOperations:
     ) -> OrganizationMember:
         membership = await get_active_membership(self._session, user_id, org_id)
         if not membership:
-            raise PermissionDeniedError("Requires organization membership")
+            raise MembershipRequiredError("Requires organization membership")
         return membership
 
     async def list_members(
@@ -658,6 +667,13 @@ class OrganizationOperations:
         )
         # The row stays as history; re-adding through stage_member reactivates it.
         removed_at = datetime.now(UTC)
+        # Re-adding does not revive these; a reactivated member starts the upload again.
+        await stage_member_upload_expiry(
+            self._session,
+            organization_id=org_id,
+            user_id=target_user_id,
+            expired_at=removed_at,
+        )
         membership.is_active = False
         membership.removed_at = removed_at
         membership.removed_by_user_id = admin_user_id

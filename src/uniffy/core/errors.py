@@ -30,6 +30,13 @@ class PermissionDeniedError(UNIFFYError):
         super().__init__(msg)
 
 
+class MembershipRequiredError(PermissionDeniedError):
+    """The caller holds no active membership in the organization the request targets.
+
+    Clients read this as a lost organization grant and refresh their token.
+    """
+
+
 class ValidationError(UNIFFYError):
     """Input validation failed."""
 

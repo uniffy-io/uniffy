@@ -379,8 +379,11 @@ class AuthOperations:
         self,
         refresh_token: str,
         organization_slug: str | None = None,
+        organization_id: UUID | None = None,
     ) -> AuthResult:
-        """The slug picks the organization; a switch or a lost grant never revokes the session."""
+        """The id, else the slug, picks the organization; a switch or a lost grant never revokes
+        the session. The id wins because a slug can be renamed under a client that still holds it.
+        """
         try:
             try:
                 payload = decode_refresh_token(refresh_token)
@@ -416,7 +419,7 @@ class AuthOperations:
                     incoming_refresh=refresh_token,
                 )
 
-            organization_id: UUID | None = None
+            minted_org_id: UUID | None = None
             organization_slug_resolved: str | None = None
             organization_role: str | None = None
             domain_admin_domains: list[str] | None = None
@@ -425,7 +428,9 @@ class AuthOperations:
             target: tuple[UUID, str, str, list[str]] | None = None
             dropped_reason: str | None = None
             try:
-                if organization_slug:
+                if organization_id is not None:
+                    target = await self._verify_org_membership_by_id(user_id, organization_id)
+                elif organization_slug:
                     target = await self._verify_org_membership(user_id, organization_slug)
                 elif session_org_id is not None:
                     target = await self._verify_org_membership_by_id(user_id, session_org_id)
@@ -435,22 +440,22 @@ class AuthOperations:
                 dropped_reason = str(exc)
             if target is not None:
                 (
-                    organization_id,
+                    minted_org_id,
                     organization_slug_resolved,
                     organization_role,
                     domain_admin_domains,
                 ) = target
             if session_record is not None:
-                session_record.organization_id = organization_id
+                session_record.organization_id = minted_org_id
             switched = (
                 session_org_id is not None
-                and organization_id is not None
-                and organization_id != session_org_id
+                and minted_org_id is not None
+                and minted_org_id != session_org_id
             )
 
             access_token = create_access_token(
                 user_id,
-                organization_id,
+                minted_org_id,
                 token_version=user.token_version,
                 session_id=session_id,
                 full_name=user.full_name,
@@ -473,6 +478,7 @@ class AuthOperations:
                 details: dict[str, str | None] = {
                     "event": "org_dropped",
                     "previous_org_id": str(session_org_id) if session_org_id else None,
+                    "requested_org_id": str(organization_id) if organization_id else None,
                     "requested_slug": organization_slug,
                     "reason": dropped_reason,
                     "session_id": str(session_id) if session_id else None,
@@ -482,7 +488,7 @@ class AuthOperations:
                 details = {
                     "event": "org_switch",
                     "previous_org_id": str(session_org_id),
-                    "target_org_id": str(organization_id),
+                    "target_org_id": str(minted_org_id),
                     "session_id": str(session_id) if session_id else None,
                 }
                 dedupe_key = None
@@ -492,7 +498,7 @@ class AuthOperations:
 
             await write_audit_event(
                 self._session,
-                organization_id=organization_id,
+                organization_id=minted_org_id,
                 actor_user_id=user_id,
                 action=Action.AUTH_TOKEN_REFRESHED,
                 resource_type=AuditResourceType.USER,
@@ -514,7 +520,7 @@ class AuthOperations:
                 access_token=access_token,
                 refresh_token=new_refresh_token,
                 user_id=user_id,
-                organization_id=organization_id,
+                organization_id=minted_org_id,
                 organization_slug=organization_slug_resolved,
                 organization_role=organization_role,
                 session_id=session_id,
@@ -941,7 +947,7 @@ class AuthOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> tuple[UUID, str, str, list[str]]:
-        """Same as ``_verify_org_membership`` but keyed off the session's bound id."""
+        """Same as ``_verify_org_membership`` but keyed off the immutable id."""
         result = await self._session.execute(
             select(Organization).where(Organization.id == organization_id)
         )

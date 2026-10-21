@@ -25,6 +25,7 @@ from uniffy.domains.auth.types import AuthResult
 _OPS = "uniffy.domains.auth.operations"
 _ACME = "acme"
 _GLOBEX = "globex"
+_ACME_RENAMED = "acme-industries"
 _ORG_SWITCH = "org_switch"
 _ORG_DROPPED = "org_dropped"
 _NOT_A_MEMBER = "User is not a member of this organization"
@@ -83,6 +84,10 @@ class _Refresher:
         self._memberships[slug] = (org_id, slug, OrganizationRole.MEMBER.value, [])
         return org_id
 
+    def rename(self, slug: str, new_slug: str) -> None:
+        org_id, _, role, domain_admins = self._memberships.pop(slug)
+        self._memberships[new_slug] = (org_id, new_slug, role, domain_admins)
+
     async def _by_slug(self, _user_id: UUID, slug: str) -> Membership:
         if slug not in self._memberships:
             raise AuthenticationError(_NOT_A_MEMBER)
@@ -94,7 +99,7 @@ class _Refresher:
                 return membership
         raise AuthenticationError(_NOT_A_MEMBER)
 
-    async def refresh(self, slug: str | None = None) -> AuthResult:
+    async def refresh(self, slug: str | None = None, org_id: UUID | None = None) -> AuthResult:
         with (
             patch.object(AuthOperations, "_get_user_by_id", AsyncMock(return_value=self.user)),
             patch.object(
@@ -107,7 +112,7 @@ class _Refresher:
             patch(f"{_OPS}._publish_session_revoke_safe", self.publish_revoke),
         ):
             result = await AuthOperations(self.db, self.call_lifecycle).refresh_token(
-                self.refresh_token, organization_slug=slug
+                self.refresh_token, organization_slug=slug, organization_id=org_id
             )
         self.refresh_token = result.refresh_token
         return result
@@ -260,3 +265,62 @@ async def test_a_lost_last_org_without_a_slug_demotes_the_session() -> None:
     assert audit["details"]["event"] == _ORG_DROPPED
     assert audit["details"]["requested_slug"] is None
     assert decode_refresh_token(result.refresh_token)["sid"] == str(refresher.row.id)
+
+
+async def test_a_renamed_slug_keeps_the_grant_when_the_client_refreshes_by_id() -> None:
+    refresher = _Refresher()
+    acme_id = refresher.join(_ACME)
+    refresher.row.organization_id = acme_id
+    refresher.rename(_ACME, _ACME_RENAMED)
+
+    result = await refresher.refresh(slug=_ACME, org_id=acme_id)
+
+    assert decode_access_token(result.access_token)[_ORG_CLAIM] == str(acme_id)
+    assert result.organization_id == acme_id
+    assert result.organization_slug == _ACME_RENAMED
+    assert refresher.row.organization_id == acme_id
+    refresher.by_id.assert_awaited_once_with(refresher.user.id, acme_id)
+    refresher.by_slug.assert_not_awaited()
+    assert refresher.last_audit()["details"] == {"session_id": str(refresher.row.id)}
+
+
+async def test_the_stale_slug_alone_loses_the_grant_after_a_rename() -> None:
+    refresher = _Refresher()
+    acme_id = refresher.join(_ACME)
+    refresher.row.organization_id = acme_id
+    refresher.rename(_ACME, _ACME_RENAMED)
+
+    result = await refresher.refresh(slug=_ACME)
+
+    assert result.organization_id is None
+    assert refresher.last_audit()["details"]["event"] == _ORG_DROPPED
+
+
+async def test_the_id_wins_over_a_slug_for_another_org() -> None:
+    refresher = _Refresher()
+    acme_id = refresher.join(_ACME)
+    refresher.join(_GLOBEX)
+    refresher.row.organization_id = acme_id
+
+    result = await refresher.refresh(slug=_GLOBEX, org_id=acme_id)
+
+    assert result.organization_id == acme_id
+    assert result.organization_slug == _ACME
+    refresher.by_slug.assert_not_awaited()
+
+
+async def test_an_id_without_a_membership_demotes_the_session_and_records_the_id() -> None:
+    refresher = _Refresher()
+    acme_id = refresher.join(_ACME)
+    refresher.row.organization_id = acme_id
+    foreign_id = generate_id()
+
+    result = await refresher.refresh(org_id=foreign_id)
+
+    assert result.organization_id is None
+    assert refresher.row.organization_id is None
+    assert refresher.row.is_revoked is False
+    details = refresher.last_audit()["details"]
+    assert details["event"] == _ORG_DROPPED
+    assert details["requested_org_id"] == str(foreign_id)
+    assert details["requested_slug"] is None

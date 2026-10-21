@@ -184,6 +184,21 @@ def _login_outcome_to_proto(
     return LoginResponse(result=Oneof(field="enrollment_required", value=enrollment))
 
 
+def _refresh_target_organization_id(request: RefreshTokenRequest) -> UUID | None:
+    """The organization a refresh asks to mint, proven later by ``refresh_token``'s membership check.
+
+    RefreshToken runs before authentication, so there is no principal scope for
+    ``resolve_organization_id`` to compare it with.
+    """
+    requested = request.organization_id if request.has_field("organization_id") else ""
+    if not requested:
+        return None
+    try:
+        return UUID(requested)
+    except ValueError:
+        raise ConnectError(Code.INVALID_ARGUMENT, "Invalid organization_id") from None
+
+
 class AuthHandlers:
     """Auth RPC handlers - authentication only."""
 
@@ -272,6 +287,7 @@ class AuthHandlers:
         request: RefreshTokenRequest,
         ctx: RequestContext,
     ) -> RefreshTokenResponse:
+        organization_id = _refresh_target_organization_id(request)
         try:
             async with open_session() as session:
                 auth_ops = AuthOperations(session, self.call_lifecycle)
@@ -280,6 +296,7 @@ class AuthHandlers:
                     organization_slug=(
                         request.organization_slug if request.has_field("organization_slug") else None
                     ),
+                    organization_id=organization_id,
                 )
 
                 asset_cookie = _set_asset_cookie(ctx, result)
