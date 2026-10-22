@@ -96,3 +96,70 @@ export interface AggregateRow {
   minutes: number;
   entries: number;
 }
+
+export type TimesheetStatus = "open" | "submitted" | "approved" | "rejected";
+
+export type TimePeriodStatus = "open" | "closed";
+
+/** One person's sheet for one period; id is empty until the first state change creates the row. */
+export interface Timesheet {
+  id: string;
+  userId: string;
+  periodStart: string;
+  periodEnd: string;
+  status: TimesheetStatus;
+  submittedAt: string | null;
+  /** Null on a submitted sheet means the period job submitted it. */
+  submittedByUserId: string | null;
+  submitComment: string;
+  reviewerUserId: string | null;
+  reviewedAt: string | null;
+  reviewComment: string;
+  /** While in the future the sheet's days accept edits again. */
+  graceUntil: string | null;
+  locked: boolean;
+  periodClosed: boolean;
+  canReview: boolean;
+  totalMinutes: number;
+  requiredMinutes: number;
+}
+
+export interface DayTotal {
+  day: string;
+  minutes: number;
+  requiredMinutes: number;
+}
+
+export interface TimePeriod {
+  id: string;
+  startDate: string;
+  endDate: string;
+  status: TimePeriodStatus;
+  closedByUserId: string | null;
+  closedAt: string | null;
+}
+
+export interface ReviewRow {
+  userId: string;
+  status: TimesheetStatus;
+  periodMinutes: number;
+  requiredMinutes: number;
+  days: DayTotal[];
+  timesheet: Timesheet;
+}
+
+export interface ReviewQuery {
+  /** Any day inside the period. */
+  periodStart: string;
+  status?: TimesheetStatus;
+  query?: string;
+  teamId?: string;
+  pageToken?: string;
+}
+
+export interface ReviewPage {
+  rows: ReviewRow[];
+  nextPageToken: string;
+  period: TimePeriod;
+  viewerIsTimekeepingAdmin: boolean;
+}

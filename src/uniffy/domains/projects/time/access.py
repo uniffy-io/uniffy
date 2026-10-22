@@ -20,9 +20,10 @@ from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
-from uniffy.core.models.login.organization_member import OrganizationMember
+from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.profile import PeopleProfile
+from uniffy.core.models.permissions.domain_admin import DomainAdmin
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.types import DomainType
@@ -88,6 +89,36 @@ class TimeAccess:
             )
         )
         return {row[0] for row in result.all()}
+
+    async def timekeeping_admins(self, organization_id: UUID) -> set[UUID]:
+        """Active org owners and admins plus active PROJECTS domain admins."""
+        org_admins = select(OrganizationMember.user_id).where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.role.in_([OrganizationRole.OWNER, OrganizationRole.ADMIN]),
+        )
+        domain_admins = select(DomainAdmin.user_id).where(
+            DomainAdmin.organization_id == organization_id,
+            DomainAdmin.domain == DomainType.PROJECTS,
+        )
+        candidates = org_admins.union(domain_admins).subquery()
+        result = await self.session.execute(
+            select(OrganizationMember.user_id)
+            .join(User, User.id == OrganizationMember.user_id)
+            .where(
+                OrganizationMember.organization_id == organization_id,
+                OrganizationMember.is_active.is_(True),
+                User.is_active.is_(True),
+                OrganizationMember.user_id.in_(select(candidates.c.user_id)),
+            )
+        )
+        return {row[0] for row in result.all()}
+
+    async def review_recipients(self, organization_id: UUID, subject_id: UUID) -> set[UUID]:
+        """Who hears about the subject's sheet: named reviewers, else the timekeeping admins."""
+        reviewers = await self.reviewers_of(organization_id, subject_id)
+        if reviewers:
+            return reviewers
+        return (await self.timekeeping_admins(organization_id)) - {subject_id}
 
     async def is_reviewer_of(self, actor_id: UUID, organization_id: UUID, subject_id: UUID) -> bool:
         """True for a named reviewer; when nobody is named, timekeeping admins review."""

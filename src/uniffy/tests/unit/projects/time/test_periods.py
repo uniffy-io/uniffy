@@ -97,3 +97,12 @@ def test_period_lock_date_is_the_day_after_the_delay() -> None:
     assert period_lock_date(date(2026, 10, 4), _weekly()) == date(2026, 10, 7)
     zero_delay = ResolvedTimePolicy(organization_id=ORG, period_lock_delay_days=0)
     assert period_lock_date(date(2026, 10, 4), zero_delay) == date(2026, 10, 5)
+
+
+def test_lock_due_and_previous_period_follow_the_delay() -> None:
+    from uniffy.domains.projects.time.periods import period_is_lock_due, previous_period
+
+    policy = ResolvedTimePolicy(organization_id=uuid4(), period_lock_delay_days=2)
+    assert period_is_lock_due(date(2026, 10, 18), date(2026, 10, 20), policy) is False
+    assert period_is_lock_due(date(2026, 10, 18), date(2026, 10, 21), policy) is True
+    assert previous_period(date(2026, 10, 12), policy) == (date(2026, 10, 5), date(2026, 10, 11))

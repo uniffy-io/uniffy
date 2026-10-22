@@ -226,12 +226,14 @@ from uniffy.domains.projects.jobs.contracts import (
     PROJECT_JOB_REFS,
     PROJECT_SCHEDULED_JOB_REFS,
     REFRESH_PROJECT_SEARCH_ACL,
+    TIMESHEET_PERIODS_SCHEDULE,
 )
 from uniffy.domains.projects.jobs.jobs import (
     check_task_due_dates,
     flush_project_search_acl_refreshes,
     pause_overrun_timers,
     refresh_project_search_acl,
+    run_timesheet_periods,
 )
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_JOB_REFS,
@@ -444,6 +446,7 @@ CORE_SCHEDULED_REGISTRATIONS = (
         pause_overrun_timers,
         minute=(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55),
     ),
+    _bind_schedule(TIMESHEET_PERIODS_SCHEDULE, run_timesheet_periods, minute=(7,)),
     _bind_schedule(
         FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
         flush_calendar_search_acl_refreshes,

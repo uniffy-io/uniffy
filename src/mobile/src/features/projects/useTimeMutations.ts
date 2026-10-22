@@ -35,7 +35,7 @@ export function useCreateWorklog() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
     },
     onError: (error) => {
-      Alert.alert("Could not log time", serverMessage(error, "The time entry was not saved"));
+      Alert.alert("Could not log time", timeErrorMessage(error, "The time entry was not saved"));
     },
   });
 }
@@ -71,7 +71,7 @@ export function useStartTimer() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
     },
     onError: (error) => {
-      Alert.alert("Could not start the timer", serverMessage(error, "The timer did not start"));
+      Alert.alert("Could not start the timer", timeErrorMessage(error, "The timer did not start"));
     },
   });
 }
@@ -131,7 +131,25 @@ export function useStopTimer() {
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
     },
     onError: (error) => {
-      Alert.alert("Could not stop the timer", serverMessage(error, "The timer is still running"));
+      Alert.alert(
+        "Could not stop the timer",
+        timeErrorMessage(error, "The timer is still running"),
+      );
     },
   });
+}
+
+/**
+ * The server names the locked day or the disabled policy in its refusal; the
+ * person needs what to do next, not the field it came from.
+ */
+export function timeErrorMessage(error: unknown, fallback: string): string {
+  const message = serverMessage(error, fallback);
+  if (/is locked/.test(message)) {
+    return "This day is locked. Recall the timesheet or ask your reviewer to reopen it.";
+  }
+  if (/turned off/.test(message)) {
+    return "Time tracking is turned off for this organization.";
+  }
+  return message;
 }

@@ -5,10 +5,14 @@ import { timeApi } from "../api/timeApi";
 import { weekRangeKey } from "../utils/timeWeek";
 import type {
   CreateWorklogInput,
+  ReviewPage,
+  ReviewQuery,
   StartTimerInput,
   StopTimerInput,
+  TimePeriod,
   TimePolicy,
   Timer,
+  Timesheet,
   UpdateWorklogInput,
   Worklog,
 } from "../types/time";
@@ -56,6 +60,7 @@ export const createWorklog = createAsyncThunk<
   try {
     const result = await timeApi.createWorklog(input, orgId);
     applyRollup(dispatch, input.taskId, result.taskTimeSpentMinutes);
+    if (!input.userId) refreshOwnSheet(dispatch, getState(), input.workDate);
     return result;
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to log time"));
@@ -72,6 +77,9 @@ export const updateWorklog = createAsyncThunk<
   try {
     const result = await timeApi.updateWorklog(input, orgId);
     applyRollup(dispatch, input.taskId, result.taskTimeSpentMinutes);
+    if (result.worklog.userId === getState().auth.user?.id) {
+      refreshOwnSheet(dispatch, getState(), result.worklog.workDate);
+    }
     return result;
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to update the time entry"));
@@ -83,11 +91,16 @@ export const deleteWorklog = createAsyncThunk<
   { worklogId: string; taskId: string },
   ThunkConfig
 >("time/deleteWorklog", async ({ worklogId, taskId }, { getState, dispatch, rejectWithValue }) => {
-  const orgId = organizationIdOf(getState());
+  const state = getState();
+  const orgId = organizationIdOf(state);
   if (!orgId) return rejectWithValue("No organization selected");
+  const own = Object.values(state.time.weeks)
+    .flat()
+    .find((entry) => entry.id === worklogId);
   try {
     const result = await timeApi.deleteWorklog(worklogId, orgId);
     applyRollup(dispatch, taskId, result.taskTimeSpentMinutes);
+    if (own) refreshOwnSheet(dispatch, getState(), own.workDate);
     return { taskId, worklogId, taskTimeSpentMinutes: result.taskTimeSpentMinutes };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to delete the time entry"));
@@ -199,3 +212,167 @@ export const fetchUserWorklogs = createAsyncThunk<
     return rejectWithValue(messageOf(error, "Failed to load your time"));
   }
 });
+
+/** Refresh the signed-in person's sheet after their own entry changed under a pending period. */
+function refreshOwnSheet(dispatch: AppDispatch, state: RootState, day: string): void {
+  if (state.time.policy?.approvalsEnabled) void dispatch(fetchTimesheet({ day }));
+}
+
+export const fetchTimesheet = createAsyncThunk<Timesheet, { day: string }, ThunkConfig>(
+  "time/fetchTimesheet",
+  async ({ day }, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.getTimesheet(day, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to load the timesheet"));
+    }
+  },
+);
+
+export const submitTimesheet = createAsyncThunk<
+  Timesheet,
+  { day: string; comment: string },
+  ThunkConfig
+>("time/submitTimesheet", async ({ day, comment }, { getState, dispatch, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const sheet = await timeApi.submitTimesheet(day, comment, orgId);
+    // Submitting stops a timer still running inside the period.
+    void dispatch(fetchActiveTimer());
+    void dispatch(fetchUserWorklogs({ from: sheet.periodStart, to: sheet.periodEnd }));
+    return sheet;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to submit the timesheet"));
+  }
+});
+
+export const recallTimesheet = createAsyncThunk<Timesheet, { day: string }, ThunkConfig>(
+  "time/recallTimesheet",
+  async ({ day }, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.recallTimesheet(day, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to recall the timesheet"));
+    }
+  },
+);
+
+export const fetchReviewTimesheets = createAsyncThunk<ReviewPage, ReviewQuery, ThunkConfig>(
+  "time/fetchReviewTimesheets",
+  async (query, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.listReviewTimesheets(query, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to load the timesheets to review"));
+    }
+  },
+);
+
+export const approveTimesheet = createAsyncThunk<
+  Timesheet,
+  { timesheetId: string; comment?: string },
+  ThunkConfig
+>("time/approveTimesheet", async ({ timesheetId, comment }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    return await timeApi.approveTimesheet(timesheetId, comment ?? "", orgId);
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to approve the timesheet"));
+  }
+});
+
+export const rejectTimesheet = createAsyncThunk<
+  Timesheet,
+  { timesheetId: string; comment: string },
+  ThunkConfig
+>("time/rejectTimesheet", async ({ timesheetId, comment }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    return await timeApi.rejectTimesheet(timesheetId, comment, orgId);
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to reject the timesheet"));
+  }
+});
+
+export const grantGrace = createAsyncThunk<
+  Timesheet,
+  { userId: string; day: string; hours: number },
+  ThunkConfig
+>("time/grantGrace", async ({ userId, day, hours }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    return await timeApi.grantGrace(userId, day, hours, orgId);
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to grant grace"));
+  }
+});
+
+export const closePeriod = createAsyncThunk<TimePeriod, { day: string }, ThunkConfig>(
+  "time/closePeriod",
+  async ({ day }, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.closePeriod(day, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to close the period"));
+    }
+  },
+);
+
+export const reopenPeriod = createAsyncThunk<TimePeriod, { day: string }, ThunkConfig>(
+  "time/reopenPeriod",
+  async ({ day }, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.reopenPeriod(day, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to reopen the period"));
+    }
+  },
+);
+
+/** Another person's entries over a range, for a reviewer's read-only week. */
+export const fetchPersonWorklogs = createAsyncThunk<
+  { key: string; worklogs: Worklog[] },
+  { userId: string; from: string; to: string },
+  ThunkConfig
+>("time/fetchPersonWorklogs", async ({ userId, from, to }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const worklogs = await timeApi.listUserWorklogs(orgId, from, to, userId);
+    return { key: personRangeKey(userId, from, to), worklogs };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to load their time"));
+  }
+});
+
+export const fetchPersonTimesheet = createAsyncThunk<
+  Timesheet,
+  { userId: string; day: string },
+  ThunkConfig
+>("time/fetchPersonTimesheet", async ({ userId, day }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    return await timeApi.getTimesheet(day, orgId, userId);
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to load their timesheet"));
+  }
+});
+
+export function personRangeKey(userId: string, from: string, to: string): string {
+  return `${userId}:${weekRangeKey(from, to)}`;
+}

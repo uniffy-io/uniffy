@@ -7,6 +7,12 @@ from uniffy.core.models.projects.search_acl_refresh import ProjectSearchAclRefre
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.task_watcher import TaskWatcher
 from uniffy.core.models.projects.timer import Timer, TimerPauseReason
+from uniffy.core.models.projects.timesheet import (
+    TimePeriod,
+    TimePeriodStatus,
+    Timesheet,
+    TimesheetStatus,
+)
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 
@@ -20,6 +26,10 @@ __all__ = [
     "TaskActivity",
     "Timer",
     "TimerPauseReason",
+    "TimePeriod",
+    "TimePeriodStatus",
+    "Timesheet",
+    "TimesheetStatus",
     "Worklog",
     "WorklogSource",
 ]

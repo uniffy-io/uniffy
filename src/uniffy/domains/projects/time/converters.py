@@ -11,6 +11,18 @@ from uniffy_proto.projects.v1.time_pb import (
     AggregateRow as ProtoAggregateRow,
 )
 from uniffy_proto.projects.v1.time_pb import (
+    DayTotal as ProtoDayTotal,
+)
+from uniffy_proto.projects.v1.time_pb import (
+    ReviewTimesheetRow as ProtoReviewTimesheetRow,
+)
+from uniffy_proto.projects.v1.time_pb import (
+    TimePeriod as ProtoTimePeriod,
+)
+from uniffy_proto.projects.v1.time_pb import (
+    TimePeriodStatus as ProtoTimePeriodStatus,
+)
+from uniffy_proto.projects.v1.time_pb import (
     TimePeriodType as ProtoTimePeriodType,
 )
 from uniffy_proto.projects.v1.time_pb import (
@@ -23,6 +35,12 @@ from uniffy_proto.projects.v1.time_pb import (
     TimerPauseReason as ProtoTimerPauseReason,
 )
 from uniffy_proto.projects.v1.time_pb import (
+    Timesheet as ProtoTimesheet,
+)
+from uniffy_proto.projects.v1.time_pb import (
+    TimesheetStatus as ProtoTimesheetStatus,
+)
+from uniffy_proto.projects.v1.time_pb import (
     Worklog as ProtoWorklog,
 )
 from uniffy_proto.projects.v1.time_pb import (
@@ -32,9 +50,13 @@ from uniffy_proto.projects.v1.time_pb import (
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.timer import TimerPauseReason
+from uniffy.core.models.projects.timesheet import TimePeriodStatus, TimesheetStatus
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
+from uniffy.domains.projects.time.closures import PeriodView
 from uniffy.domains.projects.time.policy import PeriodType, ResolvedTimePolicy
+from uniffy.domains.projects.time.review import ReviewRow
 from uniffy.domains.projects.time.timers import TimerRow
+from uniffy.domains.projects.time.timesheets import SheetView
 from uniffy.domains.projects.time.worklogs import AggregateGroupBy, AggregateRow
 
 _SOURCE_TO_PROTO = {
@@ -170,3 +192,87 @@ def group_by_from_proto(value: ProtoAggregateGroupBy) -> AggregateGroupBy:
 
 def aggregate_row_to_proto(row: AggregateRow) -> ProtoAggregateRow:
     return ProtoAggregateRow(key=row.key, label=row.label, minutes=row.minutes, entries=row.entries)
+
+
+_SHEET_STATUS_TO_PROTO = {
+    TimesheetStatus.OPEN: ProtoTimesheetStatus.OPEN,
+    TimesheetStatus.SUBMITTED: ProtoTimesheetStatus.SUBMITTED,
+    TimesheetStatus.APPROVED: ProtoTimesheetStatus.APPROVED,
+    TimesheetStatus.REJECTED: ProtoTimesheetStatus.REJECTED,
+}
+_SHEET_STATUS_FROM_PROTO = {value: key for key, value in _SHEET_STATUS_TO_PROTO.items()}
+
+_PERIOD_STATUS_TO_PROTO = {
+    TimePeriodStatus.OPEN: ProtoTimePeriodStatus.OPEN,
+    TimePeriodStatus.CLOSED: ProtoTimePeriodStatus.CLOSED,
+}
+
+
+def timesheet_status_from_proto(value: ProtoTimesheetStatus) -> TimesheetStatus:
+    status = _SHEET_STATUS_FROM_PROTO.get(value)
+    if status is None:
+        raise ValidationError("status", "must be open, submitted, approved or rejected")
+    return status
+
+
+def timesheet_to_proto(view: SheetView) -> ProtoTimesheet:
+    sheet = view.timesheet
+    proto = ProtoTimesheet(
+        id=str(sheet.id) if sheet is not None else "",
+        user_id=str(view.user_id),
+        period_start=view.period_start.isoformat(),
+        period_end=view.period_end.isoformat(),
+        status=_SHEET_STATUS_TO_PROTO[TimesheetStatus(view.status)],
+        submit_comment=sheet.submit_comment if sheet is not None else "",
+        review_comment=sheet.review_comment if sheet is not None else "",
+        locked=view.locked,
+        period_closed=view.period_closed,
+        can_review=view.can_review,
+        total_minutes=view.total_minutes,
+        required_minutes=view.required_minutes,
+    )
+    if sheet is None:
+        return proto
+    if sheet.submitted_at is not None:
+        proto.submitted_at = datetime_to_timestamp(sheet.submitted_at)
+    if sheet.submitted_by_user_id is not None:
+        proto.submitted_by_user_id = str(sheet.submitted_by_user_id)
+    if sheet.reviewer_user_id is not None:
+        proto.reviewer_user_id = str(sheet.reviewer_user_id)
+    if sheet.reviewed_at is not None:
+        proto.reviewed_at = datetime_to_timestamp(sheet.reviewed_at)
+    if sheet.grace_until is not None:
+        proto.grace_until = datetime_to_timestamp(sheet.grace_until)
+    return proto
+
+
+def period_to_proto(view: PeriodView) -> ProtoTimePeriod:
+    proto = ProtoTimePeriod(
+        id=str(view.period.id) if view.period is not None else "",
+        start_date=view.start_date.isoformat(),
+        end_date=view.end_date.isoformat(),
+        status=_PERIOD_STATUS_TO_PROTO[TimePeriodStatus(view.status)],
+    )
+    if view.period is not None and view.period.closed_by_user_id is not None:
+        proto.closed_by_user_id = str(view.period.closed_by_user_id)
+    if view.period is not None and view.period.closed_at is not None:
+        proto.closed_at = datetime_to_timestamp(view.period.closed_at)
+    return proto
+
+
+def review_row_to_proto(row: ReviewRow) -> ProtoReviewTimesheetRow:
+    return ProtoReviewTimesheetRow(
+        user_id=str(row.sheet.user_id),
+        status=_SHEET_STATUS_TO_PROTO[TimesheetStatus(row.sheet.status)],
+        period_minutes=row.sheet.total_minutes,
+        required_minutes=row.sheet.required_minutes,
+        days=[
+            ProtoDayTotal(
+                day=total.day.isoformat(),
+                minutes=total.minutes,
+                required_minutes=total.required_minutes,
+            )
+            for total in row.days
+        ],
+        timesheet=timesheet_to_proto(row.sheet),
+    )

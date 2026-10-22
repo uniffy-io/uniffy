@@ -167,6 +167,36 @@ const (
 	// ProjectsServiceAggregateWorklogsProcedure is the fully-qualified name of the ProjectsService's
 	// AggregateWorklogs RPC.
 	ProjectsServiceAggregateWorklogsProcedure = "/projects.v1.ProjectsService/AggregateWorklogs"
+	// ProjectsServiceGetTimesheetProcedure is the fully-qualified name of the ProjectsService's
+	// GetTimesheet RPC.
+	ProjectsServiceGetTimesheetProcedure = "/projects.v1.ProjectsService/GetTimesheet"
+	// ProjectsServiceSubmitTimesheetProcedure is the fully-qualified name of the ProjectsService's
+	// SubmitTimesheet RPC.
+	ProjectsServiceSubmitTimesheetProcedure = "/projects.v1.ProjectsService/SubmitTimesheet"
+	// ProjectsServiceRecallTimesheetProcedure is the fully-qualified name of the ProjectsService's
+	// RecallTimesheet RPC.
+	ProjectsServiceRecallTimesheetProcedure = "/projects.v1.ProjectsService/RecallTimesheet"
+	// ProjectsServiceListReviewTimesheetsProcedure is the fully-qualified name of the ProjectsService's
+	// ListReviewTimesheets RPC.
+	ProjectsServiceListReviewTimesheetsProcedure = "/projects.v1.ProjectsService/ListReviewTimesheets"
+	// ProjectsServiceApproveTimesheetProcedure is the fully-qualified name of the ProjectsService's
+	// ApproveTimesheet RPC.
+	ProjectsServiceApproveTimesheetProcedure = "/projects.v1.ProjectsService/ApproveTimesheet"
+	// ProjectsServiceRejectTimesheetProcedure is the fully-qualified name of the ProjectsService's
+	// RejectTimesheet RPC.
+	ProjectsServiceRejectTimesheetProcedure = "/projects.v1.ProjectsService/RejectTimesheet"
+	// ProjectsServiceGrantGraceProcedure is the fully-qualified name of the ProjectsService's
+	// GrantGrace RPC.
+	ProjectsServiceGrantGraceProcedure = "/projects.v1.ProjectsService/GrantGrace"
+	// ProjectsServiceClosePeriodProcedure is the fully-qualified name of the ProjectsService's
+	// ClosePeriod RPC.
+	ProjectsServiceClosePeriodProcedure = "/projects.v1.ProjectsService/ClosePeriod"
+	// ProjectsServiceReopenPeriodProcedure is the fully-qualified name of the ProjectsService's
+	// ReopenPeriod RPC.
+	ProjectsServiceReopenPeriodProcedure = "/projects.v1.ProjectsService/ReopenPeriod"
+	// ProjectsServiceListPeriodsProcedure is the fully-qualified name of the ProjectsService's
+	// ListPeriods RPC.
+	ProjectsServiceListPeriodsProcedure = "/projects.v1.ProjectsService/ListPeriods"
 )
 
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
@@ -225,6 +255,16 @@ type ProjectsServiceClient interface {
 	GetTimePolicy(context.Context, *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error)
 	UpdateTimePolicy(context.Context, *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error)
 	AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error)
+	GetTimesheet(context.Context, *connect.Request[v1.GetTimesheetRequest]) (*connect.Response[v1.GetTimesheetResponse], error)
+	SubmitTimesheet(context.Context, *connect.Request[v1.SubmitTimesheetRequest]) (*connect.Response[v1.SubmitTimesheetResponse], error)
+	RecallTimesheet(context.Context, *connect.Request[v1.RecallTimesheetRequest]) (*connect.Response[v1.RecallTimesheetResponse], error)
+	ListReviewTimesheets(context.Context, *connect.Request[v1.ListReviewTimesheetsRequest]) (*connect.Response[v1.ListReviewTimesheetsResponse], error)
+	ApproveTimesheet(context.Context, *connect.Request[v1.ApproveTimesheetRequest]) (*connect.Response[v1.ApproveTimesheetResponse], error)
+	RejectTimesheet(context.Context, *connect.Request[v1.RejectTimesheetRequest]) (*connect.Response[v1.RejectTimesheetResponse], error)
+	GrantGrace(context.Context, *connect.Request[v1.GrantGraceRequest]) (*connect.Response[v1.GrantGraceResponse], error)
+	ClosePeriod(context.Context, *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error)
+	ReopenPeriod(context.Context, *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error)
+	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
 }
 
 // NewProjectsServiceClient constructs a client for the projects.v1.ProjectsService service. By
@@ -508,6 +548,66 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("AggregateWorklogs")),
 			connect.WithClientOptions(opts...),
 		),
+		getTimesheet: connect.NewClient[v1.GetTimesheetRequest, v1.GetTimesheetResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetTimesheetProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetTimesheet")),
+			connect.WithClientOptions(opts...),
+		),
+		submitTimesheet: connect.NewClient[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse](
+			httpClient,
+			baseURL+ProjectsServiceSubmitTimesheetProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("SubmitTimesheet")),
+			connect.WithClientOptions(opts...),
+		),
+		recallTimesheet: connect.NewClient[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse](
+			httpClient,
+			baseURL+ProjectsServiceRecallTimesheetProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("RecallTimesheet")),
+			connect.WithClientOptions(opts...),
+		),
+		listReviewTimesheets: connect.NewClient[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse](
+			httpClient,
+			baseURL+ProjectsServiceListReviewTimesheetsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ListReviewTimesheets")),
+			connect.WithClientOptions(opts...),
+		),
+		approveTimesheet: connect.NewClient[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse](
+			httpClient,
+			baseURL+ProjectsServiceApproveTimesheetProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ApproveTimesheet")),
+			connect.WithClientOptions(opts...),
+		),
+		rejectTimesheet: connect.NewClient[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse](
+			httpClient,
+			baseURL+ProjectsServiceRejectTimesheetProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("RejectTimesheet")),
+			connect.WithClientOptions(opts...),
+		),
+		grantGrace: connect.NewClient[v1.GrantGraceRequest, v1.GrantGraceResponse](
+			httpClient,
+			baseURL+ProjectsServiceGrantGraceProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GrantGrace")),
+			connect.WithClientOptions(opts...),
+		),
+		closePeriod: connect.NewClient[v1.ClosePeriodRequest, v1.ClosePeriodResponse](
+			httpClient,
+			baseURL+ProjectsServiceClosePeriodProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ClosePeriod")),
+			connect.WithClientOptions(opts...),
+		),
+		reopenPeriod: connect.NewClient[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse](
+			httpClient,
+			baseURL+ProjectsServiceReopenPeriodProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ReopenPeriod")),
+			connect.WithClientOptions(opts...),
+		),
+		listPeriods: connect.NewClient[v1.ListPeriodsRequest, v1.ListPeriodsResponse](
+			httpClient,
+			baseURL+ProjectsServiceListPeriodsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ListPeriods")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -558,6 +658,16 @@ type projectsServiceClient struct {
 	getTimePolicy         *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
 	updateTimePolicy      *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
 	aggregateWorklogs     *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
+	getTimesheet          *connect.Client[v1.GetTimesheetRequest, v1.GetTimesheetResponse]
+	submitTimesheet       *connect.Client[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse]
+	recallTimesheet       *connect.Client[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse]
+	listReviewTimesheets  *connect.Client[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse]
+	approveTimesheet      *connect.Client[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse]
+	rejectTimesheet       *connect.Client[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse]
+	grantGrace            *connect.Client[v1.GrantGraceRequest, v1.GrantGraceResponse]
+	closePeriod           *connect.Client[v1.ClosePeriodRequest, v1.ClosePeriodResponse]
+	reopenPeriod          *connect.Client[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse]
+	listPeriods           *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
@@ -785,6 +895,56 @@ func (c *projectsServiceClient) AggregateWorklogs(ctx context.Context, req *conn
 	return c.aggregateWorklogs.CallUnary(ctx, req)
 }
 
+// GetTimesheet calls projects.v1.ProjectsService.GetTimesheet.
+func (c *projectsServiceClient) GetTimesheet(ctx context.Context, req *connect.Request[v1.GetTimesheetRequest]) (*connect.Response[v1.GetTimesheetResponse], error) {
+	return c.getTimesheet.CallUnary(ctx, req)
+}
+
+// SubmitTimesheet calls projects.v1.ProjectsService.SubmitTimesheet.
+func (c *projectsServiceClient) SubmitTimesheet(ctx context.Context, req *connect.Request[v1.SubmitTimesheetRequest]) (*connect.Response[v1.SubmitTimesheetResponse], error) {
+	return c.submitTimesheet.CallUnary(ctx, req)
+}
+
+// RecallTimesheet calls projects.v1.ProjectsService.RecallTimesheet.
+func (c *projectsServiceClient) RecallTimesheet(ctx context.Context, req *connect.Request[v1.RecallTimesheetRequest]) (*connect.Response[v1.RecallTimesheetResponse], error) {
+	return c.recallTimesheet.CallUnary(ctx, req)
+}
+
+// ListReviewTimesheets calls projects.v1.ProjectsService.ListReviewTimesheets.
+func (c *projectsServiceClient) ListReviewTimesheets(ctx context.Context, req *connect.Request[v1.ListReviewTimesheetsRequest]) (*connect.Response[v1.ListReviewTimesheetsResponse], error) {
+	return c.listReviewTimesheets.CallUnary(ctx, req)
+}
+
+// ApproveTimesheet calls projects.v1.ProjectsService.ApproveTimesheet.
+func (c *projectsServiceClient) ApproveTimesheet(ctx context.Context, req *connect.Request[v1.ApproveTimesheetRequest]) (*connect.Response[v1.ApproveTimesheetResponse], error) {
+	return c.approveTimesheet.CallUnary(ctx, req)
+}
+
+// RejectTimesheet calls projects.v1.ProjectsService.RejectTimesheet.
+func (c *projectsServiceClient) RejectTimesheet(ctx context.Context, req *connect.Request[v1.RejectTimesheetRequest]) (*connect.Response[v1.RejectTimesheetResponse], error) {
+	return c.rejectTimesheet.CallUnary(ctx, req)
+}
+
+// GrantGrace calls projects.v1.ProjectsService.GrantGrace.
+func (c *projectsServiceClient) GrantGrace(ctx context.Context, req *connect.Request[v1.GrantGraceRequest]) (*connect.Response[v1.GrantGraceResponse], error) {
+	return c.grantGrace.CallUnary(ctx, req)
+}
+
+// ClosePeriod calls projects.v1.ProjectsService.ClosePeriod.
+func (c *projectsServiceClient) ClosePeriod(ctx context.Context, req *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error) {
+	return c.closePeriod.CallUnary(ctx, req)
+}
+
+// ReopenPeriod calls projects.v1.ProjectsService.ReopenPeriod.
+func (c *projectsServiceClient) ReopenPeriod(ctx context.Context, req *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error) {
+	return c.reopenPeriod.CallUnary(ctx, req)
+}
+
+// ListPeriods calls projects.v1.ProjectsService.ListPeriods.
+func (c *projectsServiceClient) ListPeriods(ctx context.Context, req *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error) {
+	return c.listPeriods.CallUnary(ctx, req)
+}
+
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
@@ -841,6 +1001,16 @@ type ProjectsServiceHandler interface {
 	GetTimePolicy(context.Context, *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error)
 	UpdateTimePolicy(context.Context, *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error)
 	AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error)
+	GetTimesheet(context.Context, *connect.Request[v1.GetTimesheetRequest]) (*connect.Response[v1.GetTimesheetResponse], error)
+	SubmitTimesheet(context.Context, *connect.Request[v1.SubmitTimesheetRequest]) (*connect.Response[v1.SubmitTimesheetResponse], error)
+	RecallTimesheet(context.Context, *connect.Request[v1.RecallTimesheetRequest]) (*connect.Response[v1.RecallTimesheetResponse], error)
+	ListReviewTimesheets(context.Context, *connect.Request[v1.ListReviewTimesheetsRequest]) (*connect.Response[v1.ListReviewTimesheetsResponse], error)
+	ApproveTimesheet(context.Context, *connect.Request[v1.ApproveTimesheetRequest]) (*connect.Response[v1.ApproveTimesheetResponse], error)
+	RejectTimesheet(context.Context, *connect.Request[v1.RejectTimesheetRequest]) (*connect.Response[v1.RejectTimesheetResponse], error)
+	GrantGrace(context.Context, *connect.Request[v1.GrantGraceRequest]) (*connect.Response[v1.GrantGraceResponse], error)
+	ClosePeriod(context.Context, *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error)
+	ReopenPeriod(context.Context, *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error)
+	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
 }
 
 // NewProjectsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1120,6 +1290,66 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("AggregateWorklogs")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceGetTimesheetHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetTimesheetProcedure,
+		svc.GetTimesheet,
+		connect.WithSchema(projectsServiceMethods.ByName("GetTimesheet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceSubmitTimesheetHandler := connect.NewUnaryHandler(
+		ProjectsServiceSubmitTimesheetProcedure,
+		svc.SubmitTimesheet,
+		connect.WithSchema(projectsServiceMethods.ByName("SubmitTimesheet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceRecallTimesheetHandler := connect.NewUnaryHandler(
+		ProjectsServiceRecallTimesheetProcedure,
+		svc.RecallTimesheet,
+		connect.WithSchema(projectsServiceMethods.ByName("RecallTimesheet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceListReviewTimesheetsHandler := connect.NewUnaryHandler(
+		ProjectsServiceListReviewTimesheetsProcedure,
+		svc.ListReviewTimesheets,
+		connect.WithSchema(projectsServiceMethods.ByName("ListReviewTimesheets")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceApproveTimesheetHandler := connect.NewUnaryHandler(
+		ProjectsServiceApproveTimesheetProcedure,
+		svc.ApproveTimesheet,
+		connect.WithSchema(projectsServiceMethods.ByName("ApproveTimesheet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceRejectTimesheetHandler := connect.NewUnaryHandler(
+		ProjectsServiceRejectTimesheetProcedure,
+		svc.RejectTimesheet,
+		connect.WithSchema(projectsServiceMethods.ByName("RejectTimesheet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceGrantGraceHandler := connect.NewUnaryHandler(
+		ProjectsServiceGrantGraceProcedure,
+		svc.GrantGrace,
+		connect.WithSchema(projectsServiceMethods.ByName("GrantGrace")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceClosePeriodHandler := connect.NewUnaryHandler(
+		ProjectsServiceClosePeriodProcedure,
+		svc.ClosePeriod,
+		connect.WithSchema(projectsServiceMethods.ByName("ClosePeriod")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceReopenPeriodHandler := connect.NewUnaryHandler(
+		ProjectsServiceReopenPeriodProcedure,
+		svc.ReopenPeriod,
+		connect.WithSchema(projectsServiceMethods.ByName("ReopenPeriod")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceListPeriodsHandler := connect.NewUnaryHandler(
+		ProjectsServiceListPeriodsProcedure,
+		svc.ListPeriods,
+		connect.WithSchema(projectsServiceMethods.ByName("ListPeriods")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/projects.v1.ProjectsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectsServiceCreateProjectProcedure:
@@ -1212,6 +1442,26 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceUpdateTimePolicyHandler.ServeHTTP(w, r)
 		case ProjectsServiceAggregateWorklogsProcedure:
 			projectsServiceAggregateWorklogsHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetTimesheetProcedure:
+			projectsServiceGetTimesheetHandler.ServeHTTP(w, r)
+		case ProjectsServiceSubmitTimesheetProcedure:
+			projectsServiceSubmitTimesheetHandler.ServeHTTP(w, r)
+		case ProjectsServiceRecallTimesheetProcedure:
+			projectsServiceRecallTimesheetHandler.ServeHTTP(w, r)
+		case ProjectsServiceListReviewTimesheetsProcedure:
+			projectsServiceListReviewTimesheetsHandler.ServeHTTP(w, r)
+		case ProjectsServiceApproveTimesheetProcedure:
+			projectsServiceApproveTimesheetHandler.ServeHTTP(w, r)
+		case ProjectsServiceRejectTimesheetProcedure:
+			projectsServiceRejectTimesheetHandler.ServeHTTP(w, r)
+		case ProjectsServiceGrantGraceProcedure:
+			projectsServiceGrantGraceHandler.ServeHTTP(w, r)
+		case ProjectsServiceClosePeriodProcedure:
+			projectsServiceClosePeriodHandler.ServeHTTP(w, r)
+		case ProjectsServiceReopenPeriodProcedure:
+			projectsServiceReopenPeriodHandler.ServeHTTP(w, r)
+		case ProjectsServiceListPeriodsProcedure:
+			projectsServiceListPeriodsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1399,4 +1649,44 @@ func (UnimplementedProjectsServiceHandler) UpdateTimePolicy(context.Context, *co
 
 func (UnimplementedProjectsServiceHandler) AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.AggregateWorklogs is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetTimesheet(context.Context, *connect.Request[v1.GetTimesheetRequest]) (*connect.Response[v1.GetTimesheetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetTimesheet is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) SubmitTimesheet(context.Context, *connect.Request[v1.SubmitTimesheetRequest]) (*connect.Response[v1.SubmitTimesheetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.SubmitTimesheet is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) RecallTimesheet(context.Context, *connect.Request[v1.RecallTimesheetRequest]) (*connect.Response[v1.RecallTimesheetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.RecallTimesheet is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ListReviewTimesheets(context.Context, *connect.Request[v1.ListReviewTimesheetsRequest]) (*connect.Response[v1.ListReviewTimesheetsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListReviewTimesheets is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ApproveTimesheet(context.Context, *connect.Request[v1.ApproveTimesheetRequest]) (*connect.Response[v1.ApproveTimesheetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ApproveTimesheet is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) RejectTimesheet(context.Context, *connect.Request[v1.RejectTimesheetRequest]) (*connect.Response[v1.RejectTimesheetResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.RejectTimesheet is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GrantGrace(context.Context, *connect.Request[v1.GrantGraceRequest]) (*connect.Response[v1.GrantGraceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GrantGrace is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ClosePeriod(context.Context, *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ClosePeriod is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ReopenPeriod(context.Context, *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ReopenPeriod is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListPeriods is not implemented"))
 }

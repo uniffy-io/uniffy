@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   CaretLeft,
   CaretRight,
   Clock,
   Copy,
+  Lock,
   PencilSimple,
   Plus,
   Trash,
@@ -35,8 +36,10 @@ import {
   useAppearanceSettings,
   useSchedulingSettings,
 } from "@/features/settings/hooks/useSettings";
-import type { Worklog } from "@/features/projects/types/time";
+import type { Timesheet, Worklog } from "@/features/projects/types/time";
 import {
+  selectSheetBusy,
+  selectSheetsTouching,
   selectTimePolicy,
   selectWeekLoading,
   selectWeekWorklogs,
@@ -45,7 +48,10 @@ import {
   createWorklog,
   deleteWorklog,
   fetchTimePolicy,
+  fetchTimesheet,
   fetchUserWorklogs,
+  recallTimesheet,
+  submitTimesheet,
   updateWorklog,
 } from "@/features/projects/store/timeThunks";
 import {
@@ -67,6 +73,7 @@ import {
   type WeekRowRef,
 } from "@/features/projects/utils/timeWeek";
 import { LogTimeModal } from "./LogTimeModal";
+import { PeriodBanner } from "./PeriodBanner";
 import { RecentTasksRail } from "./RecentTasksRail";
 import { useTaskLabels } from "./useTaskLabels";
 
@@ -94,12 +101,14 @@ interface CellEditor {
 
 function EntriesPopover({
   entries,
+  readOnly,
   onAdd,
   onEdit,
   onDelete,
   onClose,
 }: {
   entries: Worklog[];
+  readOnly: boolean;
   onAdd: () => void;
   onEdit: (entry: Worklog) => void;
   onDelete: (entry: Worklog) => void;
@@ -120,36 +129,61 @@ function EntriesPopover({
               <span className="min-w-0 flex-1 truncate text-muted-foreground">
                 {entry.description || (entry.source === "timer" ? "timer" : "")}
               </span>
-              <button
-                type="button"
-                className="p-0.5 text-muted-foreground hover:text-foreground"
-                title="Edit entry"
-                onClick={() => onEdit(entry)}
-              >
-                <PencilSimple size={12} />
-              </button>
-              <button
-                type="button"
-                className="p-0.5 text-muted-foreground hover:text-red-500"
-                title="Delete entry"
-                onClick={() => onDelete(entry)}
-              >
-                <Trash size={12} />
-              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    type="button"
+                    className="p-0.5 text-muted-foreground hover:text-foreground"
+                    title="Edit entry"
+                    onClick={() => onEdit(entry)}
+                  >
+                    <PencilSimple size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-0.5 text-muted-foreground hover:text-red-500"
+                    title="Delete entry"
+                    onClick={() => onDelete(entry)}
+                  >
+                    <Trash size={12} />
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>
-        <Button type="button" variant="ghost" size="xs" className="mt-2 w-full" onClick={onAdd}>
-          <Plus size={12} />
-          Add entry
-        </Button>
+        {readOnly ? (
+          <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Lock size={10} />
+            This day is locked
+          </p>
+        ) : (
+          <Button type="button" variant="ghost" size="xs" className="mt-2 w-full" onClick={onAdd}>
+            <Plus size={12} />
+            Add entry
+          </Button>
+        )}
       </div>
     </>
   );
 }
 
+function lockHint(sheet: Timesheet | undefined): string | undefined {
+  if (!sheet?.locked) return undefined;
+  if (sheet.periodClosed) return "This period is closed";
+  if (sheet.status === "submitted") return "Submitted for review; recall it to edit";
+  if (sheet.status === "approved") return "Approved; ask your reviewer to reopen it";
+  return "This period has locked; ask your reviewer to reopen it";
+}
+
+interface MyTimeWeekProps {
+  /** Day whose week opens first; today otherwise. */
+  initialDay?: string;
+  headerExtra?: ReactNode;
+}
+
 /** The person's week, one row per task and one editable cell per day. */
-export function MyTimeWeek() {
+export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isMobileOrTablet } = useBreakpoint();
@@ -158,12 +192,16 @@ export function MyTimeWeek() {
   const { weekStart: preferredWeekStart } = useAppearanceSettings();
   const weekStart = normalizeWeekStart(policy?.weekStart ?? preferredWeekStart);
   const today = effectiveDayKey(new Date());
-  const [anchor, setAnchor] = useState(today);
+  const [anchor, setAnchor] = useState(initialDay ?? today);
   const days = useMemo(() => weekDays(weekStartOf(anchor, weekStart)), [anchor, weekStart]);
   const rangeKey = weekRangeKey(days[0], days[6]);
   const selectWorklogs = useMemo(() => selectWeekWorklogs(rangeKey), [rangeKey]);
   const worklogs = useAppSelector(selectWorklogs);
   const loading = useAppSelector(selectWeekLoading(rangeKey));
+  const selectSheets = useMemo(() => selectSheetsTouching(days[0], days[6]), [days]);
+  const sheets = useAppSelector(selectSheets);
+  const sheetBusy = useAppSelector(selectSheetBusy);
+  const approvals = policy?.approvalsEnabled ?? false;
   // Empty rows added from the rail or copied from last week live only in this view of this week.
   const [extraRows, setExtraRows] = useState<Record<string, WeekRowRef[]>>({});
   const [editor, setEditor] = useState<CellEditor | null>(null);
@@ -178,6 +216,18 @@ export function MyTimeWeek() {
   useEffect(() => {
     void dispatch(fetchUserWorklogs({ from: days[0], to: days[6] }));
   }, [dispatch, days]);
+
+  useEffect(() => {
+    if (!approvals) return;
+    void dispatch(fetchTimesheet({ day: days[0] }));
+    // A monthly period can change inside the week; weekly periods share the week's bounds.
+    if (policy?.periodType === "monthly") void dispatch(fetchTimesheet({ day: days[6] }));
+  }, [dispatch, days, approvals, policy?.periodType]);
+
+  const sheetFor = useCallback(
+    (day: string) => sheets.find((sheet) => sheet.periodStart <= day && sheet.periodEnd >= day),
+    [sheets],
+  );
 
   const rows = useMemo(
     () => buildWeekRows(worklogs, days, extraRows[rangeKey] ?? []),
@@ -230,6 +280,7 @@ export function MyTimeWeek() {
   };
 
   const commitCell = (row: WeekRow, day: string, minutes: number | null) => {
+    if (sheetFor(day)?.locked) return;
     const entries = row.cells[day] ?? [];
     if (entries.length === 0) {
       if (minutes && minutes > 0) {
@@ -275,6 +326,7 @@ export function MyTimeWeek() {
     <div className="flex h-full min-h-0 flex-col" data-testid="my-time-week">
       <PaneHeader>
         <PaneHeaderBar icon={Clock} title="My time" subtitle={rangeLabel}>
+          {headerExtra}
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -324,6 +376,18 @@ export function MyTimeWeek() {
           </div>
         </PaneHeaderBar>
       </PaneHeader>
+      {approvals &&
+        sheets.map((sheet) => (
+          <PeriodBanner
+            key={sheet.periodStart}
+            sheet={sheet}
+            busy={sheetBusy}
+            onSubmit={(comment) =>
+              void dispatch(submitTimesheet({ day: sheet.periodStart, comment }))
+            }
+            onRecall={() => void dispatch(recallTimesheet({ day: sheet.periodStart }))}
+          />
+        ))}
 
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 min-w-0 flex-1 overflow-auto">
@@ -375,14 +439,20 @@ export function MyTimeWeek() {
                     {days.map((day) => {
                       const entries = row.cells[day] ?? [];
                       const cellOpen = openCell?.taskId === row.taskId && openCell.day === day;
+                      const hint = lockHint(sheetFor(day));
+                      const locked = hint !== undefined;
                       return (
-                        <TableCell key={day} className="relative py-1 text-right">
+                        <TableCell
+                          key={day}
+                          className={cn("relative py-1 text-right", locked && "bg-muted/20")}
+                          data-locked={locked ? "true" : undefined}
+                        >
                           {entries.length > 1 ? (
                             <button
                               type="button"
                               className="h-7 w-full rounded-md px-2 text-right text-xs tabular-nums hover:bg-muted"
                               onClick={() => setOpenCell({ taskId: row.taskId, day })}
-                              title={`${entries.length} entries`}
+                              title={hint ?? `${entries.length} entries`}
                               data-testid="week-cell-multi"
                             >
                               {formatMinutes(sumMinutes(entries))}
@@ -397,12 +467,15 @@ export function MyTimeWeek() {
                               placeholder=""
                               className="h-7 w-full min-w-[68px] text-right text-xs"
                               aria-label={`${title} on ${day}`}
+                              disabled={locked}
+                              title={hint}
                               data-testid="week-cell"
                             />
                           )}
                           {cellOpen && (
                             <EntriesPopover
                               entries={entries}
+                              readOnly={locked}
                               onClose={() => setOpenCell(null)}
                               onAdd={() => {
                                 setOpenCell(null);

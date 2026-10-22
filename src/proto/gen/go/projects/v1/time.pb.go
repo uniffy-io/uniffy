@@ -228,6 +228,110 @@ func (AggregateGroupBy) EnumDescriptor() ([]byte, []int) {
 	return file_projects_v1_time_proto_rawDescGZIP(), []int{3}
 }
 
+type TimesheetStatus int32
+
+const (
+	TimesheetStatus_TIMESHEET_STATUS_UNSPECIFIED TimesheetStatus = 0
+	TimesheetStatus_TIMESHEET_STATUS_OPEN        TimesheetStatus = 1
+	TimesheetStatus_TIMESHEET_STATUS_SUBMITTED   TimesheetStatus = 2
+	TimesheetStatus_TIMESHEET_STATUS_APPROVED    TimesheetStatus = 3
+	TimesheetStatus_TIMESHEET_STATUS_REJECTED    TimesheetStatus = 4
+)
+
+// Enum value maps for TimesheetStatus.
+var (
+	TimesheetStatus_name = map[int32]string{
+		0: "TIMESHEET_STATUS_UNSPECIFIED",
+		1: "TIMESHEET_STATUS_OPEN",
+		2: "TIMESHEET_STATUS_SUBMITTED",
+		3: "TIMESHEET_STATUS_APPROVED",
+		4: "TIMESHEET_STATUS_REJECTED",
+	}
+	TimesheetStatus_value = map[string]int32{
+		"TIMESHEET_STATUS_UNSPECIFIED": 0,
+		"TIMESHEET_STATUS_OPEN":        1,
+		"TIMESHEET_STATUS_SUBMITTED":   2,
+		"TIMESHEET_STATUS_APPROVED":    3,
+		"TIMESHEET_STATUS_REJECTED":    4,
+	}
+)
+
+func (x TimesheetStatus) Enum() *TimesheetStatus {
+	p := new(TimesheetStatus)
+	*p = x
+	return p
+}
+
+func (x TimesheetStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TimesheetStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_projects_v1_time_proto_enumTypes[4].Descriptor()
+}
+
+func (TimesheetStatus) Type() protoreflect.EnumType {
+	return &file_projects_v1_time_proto_enumTypes[4]
+}
+
+func (x TimesheetStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TimesheetStatus.Descriptor instead.
+func (TimesheetStatus) EnumDescriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{4}
+}
+
+type TimePeriodStatus int32
+
+const (
+	TimePeriodStatus_TIME_PERIOD_STATUS_UNSPECIFIED TimePeriodStatus = 0
+	TimePeriodStatus_TIME_PERIOD_STATUS_OPEN        TimePeriodStatus = 1
+	TimePeriodStatus_TIME_PERIOD_STATUS_CLOSED      TimePeriodStatus = 2
+)
+
+// Enum value maps for TimePeriodStatus.
+var (
+	TimePeriodStatus_name = map[int32]string{
+		0: "TIME_PERIOD_STATUS_UNSPECIFIED",
+		1: "TIME_PERIOD_STATUS_OPEN",
+		2: "TIME_PERIOD_STATUS_CLOSED",
+	}
+	TimePeriodStatus_value = map[string]int32{
+		"TIME_PERIOD_STATUS_UNSPECIFIED": 0,
+		"TIME_PERIOD_STATUS_OPEN":        1,
+		"TIME_PERIOD_STATUS_CLOSED":      2,
+	}
+)
+
+func (x TimePeriodStatus) Enum() *TimePeriodStatus {
+	p := new(TimePeriodStatus)
+	*p = x
+	return p
+}
+
+func (x TimePeriodStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (TimePeriodStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_projects_v1_time_proto_enumTypes[5].Descriptor()
+}
+
+func (TimePeriodStatus) Type() protoreflect.EnumType {
+	return &file_projects_v1_time_proto_enumTypes[5]
+}
+
+func (x TimePeriodStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use TimePeriodStatus.Descriptor instead.
+func (TimePeriodStatus) EnumDescriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{5}
+}
+
 type Worklog struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2225,6 +2329,1521 @@ func (x *AggregateWorklogsResponse) GetTotalMinutes() int32 {
 	return 0
 }
 
+// One person's sheet for one period. A sheet with no row yet is open; the id
+// is empty until the first state change creates it.
+type Timesheet struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId      string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PeriodStart string                 `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	PeriodEnd   string                 `protobuf:"bytes,4,opt,name=period_end,json=periodEnd,proto3" json:"period_end,omitempty"`
+	Status      TimesheetStatus        `protobuf:"varint,5,opt,name=status,proto3,enum=projects.v1.TimesheetStatus" json:"status,omitempty"`
+	SubmittedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=submitted_at,json=submittedAt,proto3,oneof" json:"submitted_at,omitempty"`
+	// Unset on a submitted sheet means the period job submitted it.
+	SubmittedByUserId *string                `protobuf:"bytes,7,opt,name=submitted_by_user_id,json=submittedByUserId,proto3,oneof" json:"submitted_by_user_id,omitempty"`
+	SubmitComment     string                 `protobuf:"bytes,8,opt,name=submit_comment,json=submitComment,proto3" json:"submit_comment,omitempty"`
+	ReviewerUserId    *string                `protobuf:"bytes,9,opt,name=reviewer_user_id,json=reviewerUserId,proto3,oneof" json:"reviewer_user_id,omitempty"`
+	ReviewedAt        *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=reviewed_at,json=reviewedAt,proto3,oneof" json:"reviewed_at,omitempty"`
+	ReviewComment     string                 `protobuf:"bytes,11,opt,name=review_comment,json=reviewComment,proto3" json:"review_comment,omitempty"`
+	// While this instant is in the future the sheet's days accept edits again.
+	GraceUntil *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=grace_until,json=graceUntil,proto3,oneof" json:"grace_until,omitempty"`
+	// Whether the person's days in this period refuse writes right now.
+	Locked bool `protobuf:"varint,13,opt,name=locked,proto3" json:"locked,omitempty"`
+	// The period itself is closed by a timekeeping admin.
+	PeriodClosed bool `protobuf:"varint,14,opt,name=period_closed,json=periodClosed,proto3" json:"period_closed,omitempty"`
+	// The caller reviews this person and is not the person.
+	CanReview       bool  `protobuf:"varint,15,opt,name=can_review,json=canReview,proto3" json:"can_review,omitempty"`
+	TotalMinutes    int32 `protobuf:"varint,16,opt,name=total_minutes,json=totalMinutes,proto3" json:"total_minutes,omitempty"`
+	RequiredMinutes int32 `protobuf:"varint,17,opt,name=required_minutes,json=requiredMinutes,proto3" json:"required_minutes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Timesheet) Reset() {
+	*x = Timesheet{}
+	mi := &file_projects_v1_time_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Timesheet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Timesheet) ProtoMessage() {}
+
+func (x *Timesheet) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Timesheet.ProtoReflect.Descriptor instead.
+func (*Timesheet) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *Timesheet) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Timesheet) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *Timesheet) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+func (x *Timesheet) GetPeriodEnd() string {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return ""
+}
+
+func (x *Timesheet) GetStatus() TimesheetStatus {
+	if x != nil {
+		return x.Status
+	}
+	return TimesheetStatus_TIMESHEET_STATUS_UNSPECIFIED
+}
+
+func (x *Timesheet) GetSubmittedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SubmittedAt
+	}
+	return nil
+}
+
+func (x *Timesheet) GetSubmittedByUserId() string {
+	if x != nil && x.SubmittedByUserId != nil {
+		return *x.SubmittedByUserId
+	}
+	return ""
+}
+
+func (x *Timesheet) GetSubmitComment() string {
+	if x != nil {
+		return x.SubmitComment
+	}
+	return ""
+}
+
+func (x *Timesheet) GetReviewerUserId() string {
+	if x != nil && x.ReviewerUserId != nil {
+		return *x.ReviewerUserId
+	}
+	return ""
+}
+
+func (x *Timesheet) GetReviewedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return nil
+}
+
+func (x *Timesheet) GetReviewComment() string {
+	if x != nil {
+		return x.ReviewComment
+	}
+	return ""
+}
+
+func (x *Timesheet) GetGraceUntil() *timestamppb.Timestamp {
+	if x != nil {
+		return x.GraceUntil
+	}
+	return nil
+}
+
+func (x *Timesheet) GetLocked() bool {
+	if x != nil {
+		return x.Locked
+	}
+	return false
+}
+
+func (x *Timesheet) GetPeriodClosed() bool {
+	if x != nil {
+		return x.PeriodClosed
+	}
+	return false
+}
+
+func (x *Timesheet) GetCanReview() bool {
+	if x != nil {
+		return x.CanReview
+	}
+	return false
+}
+
+func (x *Timesheet) GetTotalMinutes() int32 {
+	if x != nil {
+		return x.TotalMinutes
+	}
+	return 0
+}
+
+func (x *Timesheet) GetRequiredMinutes() int32 {
+	if x != nil {
+		return x.RequiredMinutes
+	}
+	return 0
+}
+
+type DayTotal struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Day             string                 `protobuf:"bytes,1,opt,name=day,proto3" json:"day,omitempty"`
+	Minutes         int32                  `protobuf:"varint,2,opt,name=minutes,proto3" json:"minutes,omitempty"`
+	RequiredMinutes int32                  `protobuf:"varint,3,opt,name=required_minutes,json=requiredMinutes,proto3" json:"required_minutes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *DayTotal) Reset() {
+	*x = DayTotal{}
+	mi := &file_projects_v1_time_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DayTotal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DayTotal) ProtoMessage() {}
+
+func (x *DayTotal) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DayTotal.ProtoReflect.Descriptor instead.
+func (*DayTotal) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *DayTotal) GetDay() string {
+	if x != nil {
+		return x.Day
+	}
+	return ""
+}
+
+func (x *DayTotal) GetMinutes() int32 {
+	if x != nil {
+		return x.Minutes
+	}
+	return 0
+}
+
+func (x *DayTotal) GetRequiredMinutes() int32 {
+	if x != nil {
+		return x.RequiredMinutes
+	}
+	return 0
+}
+
+type TimePeriod struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty until an admin closes the period; open periods come from the policy.
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	StartDate      string                 `protobuf:"bytes,2,opt,name=start_date,json=startDate,proto3" json:"start_date,omitempty"`
+	EndDate        string                 `protobuf:"bytes,3,opt,name=end_date,json=endDate,proto3" json:"end_date,omitempty"`
+	Status         TimePeriodStatus       `protobuf:"varint,4,opt,name=status,proto3,enum=projects.v1.TimePeriodStatus" json:"status,omitempty"`
+	ClosedByUserId *string                `protobuf:"bytes,5,opt,name=closed_by_user_id,json=closedByUserId,proto3,oneof" json:"closed_by_user_id,omitempty"`
+	ClosedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=closed_at,json=closedAt,proto3,oneof" json:"closed_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *TimePeriod) Reset() {
+	*x = TimePeriod{}
+	mi := &file_projects_v1_time_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TimePeriod) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TimePeriod) ProtoMessage() {}
+
+func (x *TimePeriod) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TimePeriod.ProtoReflect.Descriptor instead.
+func (*TimePeriod) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *TimePeriod) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TimePeriod) GetStartDate() string {
+	if x != nil {
+		return x.StartDate
+	}
+	return ""
+}
+
+func (x *TimePeriod) GetEndDate() string {
+	if x != nil {
+		return x.EndDate
+	}
+	return ""
+}
+
+func (x *TimePeriod) GetStatus() TimePeriodStatus {
+	if x != nil {
+		return x.Status
+	}
+	return TimePeriodStatus_TIME_PERIOD_STATUS_UNSPECIFIED
+}
+
+func (x *TimePeriod) GetClosedByUserId() string {
+	if x != nil && x.ClosedByUserId != nil {
+		return *x.ClosedByUserId
+	}
+	return ""
+}
+
+func (x *TimePeriod) GetClosedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return nil
+}
+
+// Any day inside the period works as period_start; the server resolves the
+// period containing it.
+type GetTimesheetRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+	UserId        *string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	PeriodStart   string  `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTimesheetRequest) Reset() {
+	*x = GetTimesheetRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTimesheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTimesheetRequest) ProtoMessage() {}
+
+func (x *GetTimesheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTimesheetRequest.ProtoReflect.Descriptor instead.
+func (*GetTimesheetRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *GetTimesheetRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetTimesheetRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return ""
+}
+
+func (x *GetTimesheetRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+type GetTimesheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTimesheetResponse) Reset() {
+	*x = GetTimesheetResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTimesheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTimesheetResponse) ProtoMessage() {}
+
+func (x *GetTimesheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTimesheetResponse.ProtoReflect.Descriptor instead.
+func (*GetTimesheetResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *GetTimesheetResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type SubmitTimesheetRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// Submit on behalf of someone else; reviewers and timekeeping admins only.
+	UserId        *string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	PeriodStart   string  `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	Comment       string  `protobuf:"bytes,4,opt,name=comment,proto3" json:"comment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitTimesheetRequest) Reset() {
+	*x = SubmitTimesheetRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitTimesheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitTimesheetRequest) ProtoMessage() {}
+
+func (x *SubmitTimesheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitTimesheetRequest.ProtoReflect.Descriptor instead.
+func (*SubmitTimesheetRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *SubmitTimesheetRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SubmitTimesheetRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return ""
+}
+
+func (x *SubmitTimesheetRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+func (x *SubmitTimesheetRequest) GetComment() string {
+	if x != nil {
+		return x.Comment
+	}
+	return ""
+}
+
+type SubmitTimesheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubmitTimesheetResponse) Reset() {
+	*x = SubmitTimesheetResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitTimesheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitTimesheetResponse) ProtoMessage() {}
+
+func (x *SubmitTimesheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitTimesheetResponse.ProtoReflect.Descriptor instead.
+func (*SubmitTimesheetResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *SubmitTimesheetResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type RecallTimesheetRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         *string                `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	PeriodStart    string                 `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RecallTimesheetRequest) Reset() {
+	*x = RecallTimesheetRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecallTimesheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecallTimesheetRequest) ProtoMessage() {}
+
+func (x *RecallTimesheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecallTimesheetRequest.ProtoReflect.Descriptor instead.
+func (*RecallTimesheetRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *RecallTimesheetRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RecallTimesheetRequest) GetUserId() string {
+	if x != nil && x.UserId != nil {
+		return *x.UserId
+	}
+	return ""
+}
+
+func (x *RecallTimesheetRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+type RecallTimesheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecallTimesheetResponse) Reset() {
+	*x = RecallTimesheetResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecallTimesheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecallTimesheetResponse) ProtoMessage() {}
+
+func (x *RecallTimesheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecallTimesheetResponse.ProtoReflect.Descriptor instead.
+func (*RecallTimesheetResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *RecallTimesheetResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type ListReviewTimesheetsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	PeriodStart    string                 `protobuf:"bytes,2,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	Status         *TimesheetStatus       `protobuf:"varint,3,opt,name=status,proto3,enum=projects.v1.TimesheetStatus,oneof" json:"status,omitempty"`
+	// Default 50, capped at 200.
+	PageSize  int32  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// Matches the person's name or email.
+	Query         string  `protobuf:"bytes,6,opt,name=query,proto3" json:"query,omitempty"`
+	TeamId        *string `protobuf:"bytes,7,opt,name=team_id,json=teamId,proto3,oneof" json:"team_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReviewTimesheetsRequest) Reset() {
+	*x = ListReviewTimesheetsRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewTimesheetsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewTimesheetsRequest) ProtoMessage() {}
+
+func (x *ListReviewTimesheetsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewTimesheetsRequest.ProtoReflect.Descriptor instead.
+func (*ListReviewTimesheetsRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *ListReviewTimesheetsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListReviewTimesheetsRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+func (x *ListReviewTimesheetsRequest) GetStatus() TimesheetStatus {
+	if x != nil && x.Status != nil {
+		return *x.Status
+	}
+	return TimesheetStatus_TIMESHEET_STATUS_UNSPECIFIED
+}
+
+func (x *ListReviewTimesheetsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListReviewTimesheetsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListReviewTimesheetsRequest) GetQuery() string {
+	if x != nil {
+		return x.Query
+	}
+	return ""
+}
+
+func (x *ListReviewTimesheetsRequest) GetTeamId() string {
+	if x != nil && x.TeamId != nil {
+		return *x.TeamId
+	}
+	return ""
+}
+
+type ReviewTimesheetRow struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	UserId          string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Status          TimesheetStatus        `protobuf:"varint,2,opt,name=status,proto3,enum=projects.v1.TimesheetStatus" json:"status,omitempty"`
+	PeriodMinutes   int32                  `protobuf:"varint,3,opt,name=period_minutes,json=periodMinutes,proto3" json:"period_minutes,omitempty"`
+	RequiredMinutes int32                  `protobuf:"varint,4,opt,name=required_minutes,json=requiredMinutes,proto3" json:"required_minutes,omitempty"`
+	Days            []*DayTotal            `protobuf:"bytes,5,rep,name=days,proto3" json:"days,omitempty"`
+	Timesheet       *Timesheet             `protobuf:"bytes,6,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ReviewTimesheetRow) Reset() {
+	*x = ReviewTimesheetRow{}
+	mi := &file_projects_v1_time_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewTimesheetRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewTimesheetRow) ProtoMessage() {}
+
+func (x *ReviewTimesheetRow) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewTimesheetRow.ProtoReflect.Descriptor instead.
+func (*ReviewTimesheetRow) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ReviewTimesheetRow) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ReviewTimesheetRow) GetStatus() TimesheetStatus {
+	if x != nil {
+		return x.Status
+	}
+	return TimesheetStatus_TIMESHEET_STATUS_UNSPECIFIED
+}
+
+func (x *ReviewTimesheetRow) GetPeriodMinutes() int32 {
+	if x != nil {
+		return x.PeriodMinutes
+	}
+	return 0
+}
+
+func (x *ReviewTimesheetRow) GetRequiredMinutes() int32 {
+	if x != nil {
+		return x.RequiredMinutes
+	}
+	return 0
+}
+
+func (x *ReviewTimesheetRow) GetDays() []*DayTotal {
+	if x != nil {
+		return x.Days
+	}
+	return nil
+}
+
+func (x *ReviewTimesheetRow) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type ListReviewTimesheetsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*ReviewTimesheetRow  `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Period        *TimePeriod            `protobuf:"bytes,3,opt,name=period,proto3" json:"period,omitempty"`
+	// The caller may close and reopen periods and reviews people nobody else reviews.
+	ViewerIsTimekeepingAdmin bool `protobuf:"varint,4,opt,name=viewer_is_timekeeping_admin,json=viewerIsTimekeepingAdmin,proto3" json:"viewer_is_timekeeping_admin,omitempty"`
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *ListReviewTimesheetsResponse) Reset() {
+	*x = ListReviewTimesheetsResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReviewTimesheetsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReviewTimesheetsResponse) ProtoMessage() {}
+
+func (x *ListReviewTimesheetsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReviewTimesheetsResponse.ProtoReflect.Descriptor instead.
+func (*ListReviewTimesheetsResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ListReviewTimesheetsResponse) GetRows() []*ReviewTimesheetRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+func (x *ListReviewTimesheetsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListReviewTimesheetsResponse) GetPeriod() *TimePeriod {
+	if x != nil {
+		return x.Period
+	}
+	return nil
+}
+
+func (x *ListReviewTimesheetsResponse) GetViewerIsTimekeepingAdmin() bool {
+	if x != nil {
+		return x.ViewerIsTimekeepingAdmin
+	}
+	return false
+}
+
+type ApproveTimesheetRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	TimesheetId    string                 `protobuf:"bytes,2,opt,name=timesheet_id,json=timesheetId,proto3" json:"timesheet_id,omitempty"`
+	Comment        string                 `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ApproveTimesheetRequest) Reset() {
+	*x = ApproveTimesheetRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveTimesheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveTimesheetRequest) ProtoMessage() {}
+
+func (x *ApproveTimesheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveTimesheetRequest.ProtoReflect.Descriptor instead.
+func (*ApproveTimesheetRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ApproveTimesheetRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ApproveTimesheetRequest) GetTimesheetId() string {
+	if x != nil {
+		return x.TimesheetId
+	}
+	return ""
+}
+
+func (x *ApproveTimesheetRequest) GetComment() string {
+	if x != nil {
+		return x.Comment
+	}
+	return ""
+}
+
+type ApproveTimesheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ApproveTimesheetResponse) Reset() {
+	*x = ApproveTimesheetResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ApproveTimesheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ApproveTimesheetResponse) ProtoMessage() {}
+
+func (x *ApproveTimesheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ApproveTimesheetResponse.ProtoReflect.Descriptor instead.
+func (*ApproveTimesheetResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ApproveTimesheetResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type RejectTimesheetRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	TimesheetId    string                 `protobuf:"bytes,2,opt,name=timesheet_id,json=timesheetId,proto3" json:"timesheet_id,omitempty"`
+	// Required; the worker sees it on the sheet.
+	Comment       string `protobuf:"bytes,3,opt,name=comment,proto3" json:"comment,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectTimesheetRequest) Reset() {
+	*x = RejectTimesheetRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectTimesheetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectTimesheetRequest) ProtoMessage() {}
+
+func (x *RejectTimesheetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectTimesheetRequest.ProtoReflect.Descriptor instead.
+func (*RejectTimesheetRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *RejectTimesheetRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RejectTimesheetRequest) GetTimesheetId() string {
+	if x != nil {
+		return x.TimesheetId
+	}
+	return ""
+}
+
+func (x *RejectTimesheetRequest) GetComment() string {
+	if x != nil {
+		return x.Comment
+	}
+	return ""
+}
+
+type RejectTimesheetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RejectTimesheetResponse) Reset() {
+	*x = RejectTimesheetResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RejectTimesheetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RejectTimesheetResponse) ProtoMessage() {}
+
+func (x *RejectTimesheetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RejectTimesheetResponse.ProtoReflect.Descriptor instead.
+func (*RejectTimesheetResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RejectTimesheetResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type GrantGraceRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	PeriodStart    string                 `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	// 1 to 336 hours from now.
+	Hours         int32 `protobuf:"varint,4,opt,name=hours,proto3" json:"hours,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantGraceRequest) Reset() {
+	*x = GrantGraceRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantGraceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantGraceRequest) ProtoMessage() {}
+
+func (x *GrantGraceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantGraceRequest.ProtoReflect.Descriptor instead.
+func (*GrantGraceRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GrantGraceRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GrantGraceRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GrantGraceRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+func (x *GrantGraceRequest) GetHours() int32 {
+	if x != nil {
+		return x.Hours
+	}
+	return 0
+}
+
+type GrantGraceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Timesheet     *Timesheet             `protobuf:"bytes,1,opt,name=timesheet,proto3" json:"timesheet,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GrantGraceResponse) Reset() {
+	*x = GrantGraceResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GrantGraceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GrantGraceResponse) ProtoMessage() {}
+
+func (x *GrantGraceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GrantGraceResponse.ProtoReflect.Descriptor instead.
+func (*GrantGraceResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GrantGraceResponse) GetTimesheet() *Timesheet {
+	if x != nil {
+		return x.Timesheet
+	}
+	return nil
+}
+
+type ClosePeriodRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	PeriodStart    string                 `protobuf:"bytes,2,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ClosePeriodRequest) Reset() {
+	*x = ClosePeriodRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClosePeriodRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClosePeriodRequest) ProtoMessage() {}
+
+func (x *ClosePeriodRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClosePeriodRequest.ProtoReflect.Descriptor instead.
+func (*ClosePeriodRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *ClosePeriodRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ClosePeriodRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+type ClosePeriodResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Period        *TimePeriod            `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClosePeriodResponse) Reset() {
+	*x = ClosePeriodResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClosePeriodResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClosePeriodResponse) ProtoMessage() {}
+
+func (x *ClosePeriodResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClosePeriodResponse.ProtoReflect.Descriptor instead.
+func (*ClosePeriodResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ClosePeriodResponse) GetPeriod() *TimePeriod {
+	if x != nil {
+		return x.Period
+	}
+	return nil
+}
+
+type ReopenPeriodRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	PeriodStart    string                 `protobuf:"bytes,2,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReopenPeriodRequest) Reset() {
+	*x = ReopenPeriodRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReopenPeriodRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReopenPeriodRequest) ProtoMessage() {}
+
+func (x *ReopenPeriodRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReopenPeriodRequest.ProtoReflect.Descriptor instead.
+func (*ReopenPeriodRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ReopenPeriodRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ReopenPeriodRequest) GetPeriodStart() string {
+	if x != nil {
+		return x.PeriodStart
+	}
+	return ""
+}
+
+type ReopenPeriodResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Period        *TimePeriod            `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReopenPeriodResponse) Reset() {
+	*x = ReopenPeriodResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReopenPeriodResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReopenPeriodResponse) ProtoMessage() {}
+
+func (x *ReopenPeriodResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReopenPeriodResponse.ProtoReflect.Descriptor instead.
+func (*ReopenPeriodResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ReopenPeriodResponse) GetPeriod() *TimePeriod {
+	if x != nil {
+		return x.Period
+	}
+	return nil
+}
+
+// Every period touching the inclusive range, computed from the policy, with
+// the closed ones marked.
+type ListPeriodsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	FromDate       string                 `protobuf:"bytes,2,opt,name=from_date,json=fromDate,proto3" json:"from_date,omitempty"`
+	ToDate         string                 `protobuf:"bytes,3,opt,name=to_date,json=toDate,proto3" json:"to_date,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListPeriodsRequest) Reset() {
+	*x = ListPeriodsRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPeriodsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPeriodsRequest) ProtoMessage() {}
+
+func (x *ListPeriodsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPeriodsRequest.ProtoReflect.Descriptor instead.
+func (*ListPeriodsRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *ListPeriodsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListPeriodsRequest) GetFromDate() string {
+	if x != nil {
+		return x.FromDate
+	}
+	return ""
+}
+
+func (x *ListPeriodsRequest) GetToDate() string {
+	if x != nil {
+		return x.ToDate
+	}
+	return ""
+}
+
+type ListPeriodsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Periods       []*TimePeriod          `protobuf:"bytes,1,rep,name=periods,proto3" json:"periods,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListPeriodsResponse) Reset() {
+	*x = ListPeriodsResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListPeriodsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPeriodsResponse) ProtoMessage() {}
+
+func (x *ListPeriodsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPeriodsResponse.ProtoReflect.Descriptor instead.
+func (*ListPeriodsResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ListPeriodsResponse) GetPeriods() []*TimePeriod {
+	if x != nil {
+		return x.Periods
+	}
+	return nil
+}
+
 var File_projects_v1_time_proto protoreflect.FileDescriptor
 
 const file_projects_v1_time_proto_rawDesc = "" +
@@ -2407,7 +4026,135 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\aentries\x18\x04 \x01(\x05R\aentries\"o\n" +
 	"\x19AggregateWorklogsResponse\x12-\n" +
 	"\x04rows\x18\x01 \x03(\v2\x19.projects.v1.AggregateRowR\x04rows\x12#\n" +
-	"\rtotal_minutes\x18\x02 \x01(\x05R\ftotalMinutes*\x99\x01\n" +
+	"\rtotal_minutes\x18\x02 \x01(\x05R\ftotalMinutes\"\xb2\x06\n" +
+	"\tTimesheet\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fperiod_start\x18\x03 \x01(\tR\vperiodStart\x12\x1d\n" +
+	"\n" +
+	"period_end\x18\x04 \x01(\tR\tperiodEnd\x124\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12B\n" +
+	"\fsubmitted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vsubmittedAt\x88\x01\x01\x124\n" +
+	"\x14submitted_by_user_id\x18\a \x01(\tH\x01R\x11submittedByUserId\x88\x01\x01\x12%\n" +
+	"\x0esubmit_comment\x18\b \x01(\tR\rsubmitComment\x12-\n" +
+	"\x10reviewer_user_id\x18\t \x01(\tH\x02R\x0ereviewerUserId\x88\x01\x01\x12@\n" +
+	"\vreviewed_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampH\x03R\n" +
+	"reviewedAt\x88\x01\x01\x12%\n" +
+	"\x0ereview_comment\x18\v \x01(\tR\rreviewComment\x12@\n" +
+	"\vgrace_until\x18\f \x01(\v2\x1a.google.protobuf.TimestampH\x04R\n" +
+	"graceUntil\x88\x01\x01\x12\x16\n" +
+	"\x06locked\x18\r \x01(\bR\x06locked\x12#\n" +
+	"\rperiod_closed\x18\x0e \x01(\bR\fperiodClosed\x12\x1d\n" +
+	"\n" +
+	"can_review\x18\x0f \x01(\bR\tcanReview\x12#\n" +
+	"\rtotal_minutes\x18\x10 \x01(\x05R\ftotalMinutes\x12)\n" +
+	"\x10required_minutes\x18\x11 \x01(\x05R\x0frequiredMinutesB\x0f\n" +
+	"\r_submitted_atB\x17\n" +
+	"\x15_submitted_by_user_idB\x13\n" +
+	"\x11_reviewer_user_idB\x0e\n" +
+	"\f_reviewed_atB\x0e\n" +
+	"\f_grace_until\"a\n" +
+	"\bDayTotal\x12\x10\n" +
+	"\x03day\x18\x01 \x01(\tR\x03day\x12\x18\n" +
+	"\aminutes\x18\x02 \x01(\x05R\aminutes\x12)\n" +
+	"\x10required_minutes\x18\x03 \x01(\x05R\x0frequiredMinutes\"\x9f\x02\n" +
+	"\n" +
+	"TimePeriod\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"start_date\x18\x02 \x01(\tR\tstartDate\x12\x19\n" +
+	"\bend_date\x18\x03 \x01(\tR\aendDate\x125\n" +
+	"\x06status\x18\x04 \x01(\x0e2\x1d.projects.v1.TimePeriodStatusR\x06status\x12.\n" +
+	"\x11closed_by_user_id\x18\x05 \x01(\tH\x00R\x0eclosedByUserId\x88\x01\x01\x12<\n" +
+	"\tclosed_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\bclosedAt\x88\x01\x01B\x14\n" +
+	"\x12_closed_by_user_idB\f\n" +
+	"\n" +
+	"_closed_at\"\x8b\x01\n" +
+	"\x13GetTimesheetRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n" +
+	"\fperiod_start\x18\x03 \x01(\tR\vperiodStartB\n" +
+	"\n" +
+	"\b_user_id\"L\n" +
+	"\x14GetTimesheetResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\xa8\x01\n" +
+	"\x16SubmitTimesheetRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n" +
+	"\fperiod_start\x18\x03 \x01(\tR\vperiodStart\x12\x18\n" +
+	"\acomment\x18\x04 \x01(\tR\acommentB\n" +
+	"\n" +
+	"\b_user_id\"O\n" +
+	"\x17SubmitTimesheetResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\x8e\x01\n" +
+	"\x16RecallTimesheetRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n" +
+	"\fperiod_start\x18\x03 \x01(\tR\vperiodStartB\n" +
+	"\n" +
+	"\b_user_id\"O\n" +
+	"\x17RecallTimesheetResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\xab\x02\n" +
+	"\x1bListReviewTimesheetsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n" +
+	"\fperiod_start\x18\x02 \x01(\tR\vperiodStart\x129\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1c.projects.v1.TimesheetStatusH\x00R\x06status\x88\x01\x01\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\x12\x14\n" +
+	"\x05query\x18\x06 \x01(\tR\x05query\x12\x1c\n" +
+	"\ateam_id\x18\a \x01(\tH\x01R\x06teamId\x88\x01\x01B\t\n" +
+	"\a_statusB\n" +
+	"\n" +
+	"\b_team_id\"\x96\x02\n" +
+	"\x12ReviewTimesheetRow\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x124\n" +
+	"\x06status\x18\x02 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12%\n" +
+	"\x0eperiod_minutes\x18\x03 \x01(\x05R\rperiodMinutes\x12)\n" +
+	"\x10required_minutes\x18\x04 \x01(\x05R\x0frequiredMinutes\x12)\n" +
+	"\x04days\x18\x05 \x03(\v2\x15.projects.v1.DayTotalR\x04days\x124\n" +
+	"\ttimesheet\x18\x06 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\xeb\x01\n" +
+	"\x1cListReviewTimesheetsResponse\x123\n" +
+	"\x04rows\x18\x01 \x03(\v2\x1f.projects.v1.ReviewTimesheetRowR\x04rows\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12/\n" +
+	"\x06period\x18\x03 \x01(\v2\x17.projects.v1.TimePeriodR\x06period\x12=\n" +
+	"\x1bviewer_is_timekeeping_admin\x18\x04 \x01(\bR\x18viewerIsTimekeepingAdmin\"\x7f\n" +
+	"\x17ApproveTimesheetRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n" +
+	"\ftimesheet_id\x18\x02 \x01(\tR\vtimesheetId\x12\x18\n" +
+	"\acomment\x18\x03 \x01(\tR\acomment\"P\n" +
+	"\x18ApproveTimesheetResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"~\n" +
+	"\x16RejectTimesheetRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n" +
+	"\ftimesheet_id\x18\x02 \x01(\tR\vtimesheetId\x12\x18\n" +
+	"\acomment\x18\x03 \x01(\tR\acomment\"O\n" +
+	"\x17RejectTimesheetResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\x8e\x01\n" +
+	"\x11GrantGraceRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
+	"\fperiod_start\x18\x03 \x01(\tR\vperiodStart\x12\x14\n" +
+	"\x05hours\x18\x04 \x01(\x05R\x05hours\"J\n" +
+	"\x12GrantGraceResponse\x124\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"`\n" +
+	"\x12ClosePeriodRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n" +
+	"\fperiod_start\x18\x02 \x01(\tR\vperiodStart\"F\n" +
+	"\x13ClosePeriodResponse\x12/\n" +
+	"\x06period\x18\x01 \x01(\v2\x17.projects.v1.TimePeriodR\x06period\"a\n" +
+	"\x13ReopenPeriodRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n" +
+	"\fperiod_start\x18\x02 \x01(\tR\vperiodStart\"G\n" +
+	"\x14ReopenPeriodResponse\x12/\n" +
+	"\x06period\x18\x01 \x01(\v2\x17.projects.v1.TimePeriodR\x06period\"s\n" +
+	"\x12ListPeriodsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
+	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12\x17\n" +
+	"\ato_date\x18\x03 \x01(\tR\x06toDate\"H\n" +
+	"\x13ListPeriodsResponse\x121\n" +
+	"\aperiods\x18\x01 \x03(\v2\x17.projects.v1.TimePeriodR\aperiods*\x99\x01\n" +
 	"\rWorklogSource\x12\x1e\n" +
 	"\x1aWORKLOG_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKLOG_SOURCE_MANUAL\x10\x01\x12\x18\n" +
@@ -2426,7 +4173,17 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\x16AGGREGATE_GROUP_BY_DAY\x10\x01\x12\x1b\n" +
 	"\x17AGGREGATE_GROUP_BY_TASK\x10\x02\x12\x1b\n" +
 	"\x17AGGREGATE_GROUP_BY_USER\x10\x03\x12\x1e\n" +
-	"\x1aAGGREGATE_GROUP_BY_PROJECT\x10\x04B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
+	"\x1aAGGREGATE_GROUP_BY_PROJECT\x10\x04*\xac\x01\n" +
+	"\x0fTimesheetStatus\x12 \n" +
+	"\x1cTIMESHEET_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15TIMESHEET_STATUS_OPEN\x10\x01\x12\x1e\n" +
+	"\x1aTIMESHEET_STATUS_SUBMITTED\x10\x02\x12\x1d\n" +
+	"\x19TIMESHEET_STATUS_APPROVED\x10\x03\x12\x1d\n" +
+	"\x19TIMESHEET_STATUS_REJECTED\x10\x04*r\n" +
+	"\x10TimePeriodStatus\x12\"\n" +
+	"\x1eTIME_PERIOD_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17TIME_PERIOD_STATUS_OPEN\x10\x01\x12\x1d\n" +
+	"\x19TIME_PERIOD_STATUS_CLOSED\x10\x02B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
 
 var (
 	file_projects_v1_time_proto_rawDescOnce sync.Once
@@ -2440,74 +4197,121 @@ func file_projects_v1_time_proto_rawDescGZIP() []byte {
 	return file_projects_v1_time_proto_rawDescData
 }
 
-var file_projects_v1_time_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_projects_v1_time_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_projects_v1_time_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_projects_v1_time_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
 var file_projects_v1_time_proto_goTypes = []any{
-	(WorklogSource)(0),                // 0: projects.v1.WorklogSource
-	(TimerPauseReason)(0),             // 1: projects.v1.TimerPauseReason
-	(TimePeriodType)(0),               // 2: projects.v1.TimePeriodType
-	(AggregateGroupBy)(0),             // 3: projects.v1.AggregateGroupBy
-	(*Worklog)(nil),                   // 4: projects.v1.Worklog
-	(*CreateWorklogRequest)(nil),      // 5: projects.v1.CreateWorklogRequest
-	(*CreateWorklogResponse)(nil),     // 6: projects.v1.CreateWorklogResponse
-	(*UpdateWorklogRequest)(nil),      // 7: projects.v1.UpdateWorklogRequest
-	(*UpdateWorklogResponse)(nil),     // 8: projects.v1.UpdateWorklogResponse
-	(*DeleteWorklogRequest)(nil),      // 9: projects.v1.DeleteWorklogRequest
-	(*DeleteWorklogResponse)(nil),     // 10: projects.v1.DeleteWorklogResponse
-	(*ListTaskWorklogsRequest)(nil),   // 11: projects.v1.ListTaskWorklogsRequest
-	(*ListTaskWorklogsResponse)(nil),  // 12: projects.v1.ListTaskWorklogsResponse
-	(*ListUserWorklogsRequest)(nil),   // 13: projects.v1.ListUserWorklogsRequest
-	(*ListUserWorklogsResponse)(nil),  // 14: projects.v1.ListUserWorklogsResponse
-	(*Timer)(nil),                     // 15: projects.v1.Timer
-	(*StartTimerRequest)(nil),         // 16: projects.v1.StartTimerRequest
-	(*StartTimerResponse)(nil),        // 17: projects.v1.StartTimerResponse
-	(*PauseTimerRequest)(nil),         // 18: projects.v1.PauseTimerRequest
-	(*PauseTimerResponse)(nil),        // 19: projects.v1.PauseTimerResponse
-	(*ResumeTimerRequest)(nil),        // 20: projects.v1.ResumeTimerRequest
-	(*ResumeTimerResponse)(nil),       // 21: projects.v1.ResumeTimerResponse
-	(*StopTimerRequest)(nil),          // 22: projects.v1.StopTimerRequest
-	(*StopTimerResponse)(nil),         // 23: projects.v1.StopTimerResponse
-	(*GetActiveTimerRequest)(nil),     // 24: projects.v1.GetActiveTimerRequest
-	(*GetActiveTimerResponse)(nil),    // 25: projects.v1.GetActiveTimerResponse
-	(*TimePolicy)(nil),                // 26: projects.v1.TimePolicy
-	(*GetTimePolicyRequest)(nil),      // 27: projects.v1.GetTimePolicyRequest
-	(*GetTimePolicyResponse)(nil),     // 28: projects.v1.GetTimePolicyResponse
-	(*UpdateTimePolicyRequest)(nil),   // 29: projects.v1.UpdateTimePolicyRequest
-	(*UpdateTimePolicyResponse)(nil),  // 30: projects.v1.UpdateTimePolicyResponse
-	(*AggregateWorklogsRequest)(nil),  // 31: projects.v1.AggregateWorklogsRequest
-	(*AggregateRow)(nil),              // 32: projects.v1.AggregateRow
-	(*AggregateWorklogsResponse)(nil), // 33: projects.v1.AggregateWorklogsResponse
-	(*timestamppb.Timestamp)(nil),     // 34: google.protobuf.Timestamp
+	(WorklogSource)(0),                   // 0: projects.v1.WorklogSource
+	(TimerPauseReason)(0),                // 1: projects.v1.TimerPauseReason
+	(TimePeriodType)(0),                  // 2: projects.v1.TimePeriodType
+	(AggregateGroupBy)(0),                // 3: projects.v1.AggregateGroupBy
+	(TimesheetStatus)(0),                 // 4: projects.v1.TimesheetStatus
+	(TimePeriodStatus)(0),                // 5: projects.v1.TimePeriodStatus
+	(*Worklog)(nil),                      // 6: projects.v1.Worklog
+	(*CreateWorklogRequest)(nil),         // 7: projects.v1.CreateWorklogRequest
+	(*CreateWorklogResponse)(nil),        // 8: projects.v1.CreateWorklogResponse
+	(*UpdateWorklogRequest)(nil),         // 9: projects.v1.UpdateWorklogRequest
+	(*UpdateWorklogResponse)(nil),        // 10: projects.v1.UpdateWorklogResponse
+	(*DeleteWorklogRequest)(nil),         // 11: projects.v1.DeleteWorklogRequest
+	(*DeleteWorklogResponse)(nil),        // 12: projects.v1.DeleteWorklogResponse
+	(*ListTaskWorklogsRequest)(nil),      // 13: projects.v1.ListTaskWorklogsRequest
+	(*ListTaskWorklogsResponse)(nil),     // 14: projects.v1.ListTaskWorklogsResponse
+	(*ListUserWorklogsRequest)(nil),      // 15: projects.v1.ListUserWorklogsRequest
+	(*ListUserWorklogsResponse)(nil),     // 16: projects.v1.ListUserWorklogsResponse
+	(*Timer)(nil),                        // 17: projects.v1.Timer
+	(*StartTimerRequest)(nil),            // 18: projects.v1.StartTimerRequest
+	(*StartTimerResponse)(nil),           // 19: projects.v1.StartTimerResponse
+	(*PauseTimerRequest)(nil),            // 20: projects.v1.PauseTimerRequest
+	(*PauseTimerResponse)(nil),           // 21: projects.v1.PauseTimerResponse
+	(*ResumeTimerRequest)(nil),           // 22: projects.v1.ResumeTimerRequest
+	(*ResumeTimerResponse)(nil),          // 23: projects.v1.ResumeTimerResponse
+	(*StopTimerRequest)(nil),             // 24: projects.v1.StopTimerRequest
+	(*StopTimerResponse)(nil),            // 25: projects.v1.StopTimerResponse
+	(*GetActiveTimerRequest)(nil),        // 26: projects.v1.GetActiveTimerRequest
+	(*GetActiveTimerResponse)(nil),       // 27: projects.v1.GetActiveTimerResponse
+	(*TimePolicy)(nil),                   // 28: projects.v1.TimePolicy
+	(*GetTimePolicyRequest)(nil),         // 29: projects.v1.GetTimePolicyRequest
+	(*GetTimePolicyResponse)(nil),        // 30: projects.v1.GetTimePolicyResponse
+	(*UpdateTimePolicyRequest)(nil),      // 31: projects.v1.UpdateTimePolicyRequest
+	(*UpdateTimePolicyResponse)(nil),     // 32: projects.v1.UpdateTimePolicyResponse
+	(*AggregateWorklogsRequest)(nil),     // 33: projects.v1.AggregateWorklogsRequest
+	(*AggregateRow)(nil),                 // 34: projects.v1.AggregateRow
+	(*AggregateWorklogsResponse)(nil),    // 35: projects.v1.AggregateWorklogsResponse
+	(*Timesheet)(nil),                    // 36: projects.v1.Timesheet
+	(*DayTotal)(nil),                     // 37: projects.v1.DayTotal
+	(*TimePeriod)(nil),                   // 38: projects.v1.TimePeriod
+	(*GetTimesheetRequest)(nil),          // 39: projects.v1.GetTimesheetRequest
+	(*GetTimesheetResponse)(nil),         // 40: projects.v1.GetTimesheetResponse
+	(*SubmitTimesheetRequest)(nil),       // 41: projects.v1.SubmitTimesheetRequest
+	(*SubmitTimesheetResponse)(nil),      // 42: projects.v1.SubmitTimesheetResponse
+	(*RecallTimesheetRequest)(nil),       // 43: projects.v1.RecallTimesheetRequest
+	(*RecallTimesheetResponse)(nil),      // 44: projects.v1.RecallTimesheetResponse
+	(*ListReviewTimesheetsRequest)(nil),  // 45: projects.v1.ListReviewTimesheetsRequest
+	(*ReviewTimesheetRow)(nil),           // 46: projects.v1.ReviewTimesheetRow
+	(*ListReviewTimesheetsResponse)(nil), // 47: projects.v1.ListReviewTimesheetsResponse
+	(*ApproveTimesheetRequest)(nil),      // 48: projects.v1.ApproveTimesheetRequest
+	(*ApproveTimesheetResponse)(nil),     // 49: projects.v1.ApproveTimesheetResponse
+	(*RejectTimesheetRequest)(nil),       // 50: projects.v1.RejectTimesheetRequest
+	(*RejectTimesheetResponse)(nil),      // 51: projects.v1.RejectTimesheetResponse
+	(*GrantGraceRequest)(nil),            // 52: projects.v1.GrantGraceRequest
+	(*GrantGraceResponse)(nil),           // 53: projects.v1.GrantGraceResponse
+	(*ClosePeriodRequest)(nil),           // 54: projects.v1.ClosePeriodRequest
+	(*ClosePeriodResponse)(nil),          // 55: projects.v1.ClosePeriodResponse
+	(*ReopenPeriodRequest)(nil),          // 56: projects.v1.ReopenPeriodRequest
+	(*ReopenPeriodResponse)(nil),         // 57: projects.v1.ReopenPeriodResponse
+	(*ListPeriodsRequest)(nil),           // 58: projects.v1.ListPeriodsRequest
+	(*ListPeriodsResponse)(nil),          // 59: projects.v1.ListPeriodsResponse
+	(*timestamppb.Timestamp)(nil),        // 60: google.protobuf.Timestamp
 }
 var file_projects_v1_time_proto_depIdxs = []int32{
-	34, // 0: projects.v1.Worklog.started_at:type_name -> google.protobuf.Timestamp
+	60, // 0: projects.v1.Worklog.started_at:type_name -> google.protobuf.Timestamp
 	0,  // 1: projects.v1.Worklog.source:type_name -> projects.v1.WorklogSource
-	34, // 2: projects.v1.Worklog.created_at:type_name -> google.protobuf.Timestamp
-	34, // 3: projects.v1.Worklog.updated_at:type_name -> google.protobuf.Timestamp
-	4,  // 4: projects.v1.CreateWorklogResponse.worklog:type_name -> projects.v1.Worklog
-	4,  // 5: projects.v1.UpdateWorklogResponse.worklog:type_name -> projects.v1.Worklog
-	4,  // 6: projects.v1.ListTaskWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
-	4,  // 7: projects.v1.ListUserWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
-	34, // 8: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
-	34, // 9: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
+	60, // 2: projects.v1.Worklog.created_at:type_name -> google.protobuf.Timestamp
+	60, // 3: projects.v1.Worklog.updated_at:type_name -> google.protobuf.Timestamp
+	6,  // 4: projects.v1.CreateWorklogResponse.worklog:type_name -> projects.v1.Worklog
+	6,  // 5: projects.v1.UpdateWorklogResponse.worklog:type_name -> projects.v1.Worklog
+	6,  // 6: projects.v1.ListTaskWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
+	6,  // 7: projects.v1.ListUserWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
+	60, // 8: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
+	60, // 9: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
 	1,  // 10: projects.v1.Timer.pause_reason:type_name -> projects.v1.TimerPauseReason
-	15, // 11: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
-	4,  // 12: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
-	15, // 13: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
-	15, // 14: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
-	4,  // 15: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
-	15, // 16: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
+	17, // 11: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 12: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
+	17, // 13: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
+	17, // 14: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 15: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
+	17, // 16: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
 	2,  // 17: projects.v1.TimePolicy.period_type:type_name -> projects.v1.TimePeriodType
-	26, // 18: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
-	26, // 19: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
-	26, // 20: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	28, // 18: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	28, // 19: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
+	28, // 20: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
 	3,  // 21: projects.v1.AggregateWorklogsRequest.group_by:type_name -> projects.v1.AggregateGroupBy
-	32, // 22: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
-	23, // [23:23] is the sub-list for method output_type
-	23, // [23:23] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	34, // 22: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
+	4,  // 23: projects.v1.Timesheet.status:type_name -> projects.v1.TimesheetStatus
+	60, // 24: projects.v1.Timesheet.submitted_at:type_name -> google.protobuf.Timestamp
+	60, // 25: projects.v1.Timesheet.reviewed_at:type_name -> google.protobuf.Timestamp
+	60, // 26: projects.v1.Timesheet.grace_until:type_name -> google.protobuf.Timestamp
+	5,  // 27: projects.v1.TimePeriod.status:type_name -> projects.v1.TimePeriodStatus
+	60, // 28: projects.v1.TimePeriod.closed_at:type_name -> google.protobuf.Timestamp
+	36, // 29: projects.v1.GetTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 30: projects.v1.SubmitTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 31: projects.v1.RecallTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	4,  // 32: projects.v1.ListReviewTimesheetsRequest.status:type_name -> projects.v1.TimesheetStatus
+	4,  // 33: projects.v1.ReviewTimesheetRow.status:type_name -> projects.v1.TimesheetStatus
+	37, // 34: projects.v1.ReviewTimesheetRow.days:type_name -> projects.v1.DayTotal
+	36, // 35: projects.v1.ReviewTimesheetRow.timesheet:type_name -> projects.v1.Timesheet
+	46, // 36: projects.v1.ListReviewTimesheetsResponse.rows:type_name -> projects.v1.ReviewTimesheetRow
+	38, // 37: projects.v1.ListReviewTimesheetsResponse.period:type_name -> projects.v1.TimePeriod
+	36, // 38: projects.v1.ApproveTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 39: projects.v1.RejectTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 40: projects.v1.GrantGraceResponse.timesheet:type_name -> projects.v1.Timesheet
+	38, // 41: projects.v1.ClosePeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 42: projects.v1.ReopenPeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 43: projects.v1.ListPeriodsResponse.periods:type_name -> projects.v1.TimePeriod
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_time_proto_init() }
@@ -2529,13 +4333,19 @@ func file_projects_v1_time_proto_init() {
 		(*AggregateWorklogsRequest_ProjectId)(nil),
 		(*AggregateWorklogsRequest_UserId)(nil),
 	}
+	file_projects_v1_time_proto_msgTypes[30].OneofWrappers = []any{}
+	file_projects_v1_time_proto_msgTypes[32].OneofWrappers = []any{}
+	file_projects_v1_time_proto_msgTypes[33].OneofWrappers = []any{}
+	file_projects_v1_time_proto_msgTypes[35].OneofWrappers = []any{}
+	file_projects_v1_time_proto_msgTypes[37].OneofWrappers = []any{}
+	file_projects_v1_time_proto_msgTypes[39].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_projects_v1_time_proto_rawDesc), len(file_projects_v1_time_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   30,
+			NumEnums:      6,
+			NumMessages:   54,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

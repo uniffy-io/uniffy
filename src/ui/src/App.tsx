@@ -128,6 +128,10 @@ const AuditLogsPage = lazyImport(
 const AdminAgentsPage = lazyImport(() => import("@/features/admin/pages/AgentsPage"), "AgentsPage");
 const StoragePage = lazyImport(() => import("@/features/admin/pages/StoragePage"), "StoragePage");
 const CallsAdminPage = lazyImport(() => import("@/features/admin/pages/CallsPage"), "CallsPage");
+const ProjectsAdminPage = lazyImport(
+  () => import("@/features/admin/pages/ProjectsAdminPage"),
+  "ProjectsAdminPage",
+);
 const ChatAdminPage = lazyImport(() => import("@/features/admin/pages/ChatPage"), "ChatPage");
 const CalendarAdminPage = lazyImport(
   () => import("@/features/admin/pages/CalendarPage"),
@@ -201,6 +205,10 @@ const TaskRedirectPage = lazyImport(
   "TaskRedirectPage",
 );
 const MyTimePage = lazyImport(() => import("@/features/projects/pages/MyTimePage"), "MyTimePage");
+const ReviewTimePage = lazyImport(
+  () => import("@/features/projects/pages/ReviewTimePage"),
+  "ReviewTimePage",
+);
 const ProjectSettingsPage = lazyImport(
   () => import("@/features/projects/pages/ProjectSettingsPage"),
   "ProjectSettingsPage",
@@ -658,6 +666,14 @@ export function App() {
                       }
                     />
                     <Route
+                      path="projects"
+                      element={
+                        <LazyRoute>
+                          <ProjectsAdminPage />
+                        </LazyRoute>
+                      }
+                    />
+                    <Route
                       path="chat"
                       element={
                         <LazyRoute>
@@ -1012,6 +1028,17 @@ export function App() {
                       <ProtectedRoute>
                         <LazyRoute>
                           <MyTimePage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/projects/time/review/:userId"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ReviewTimePage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }

@@ -84,6 +84,12 @@ enum NotificationType {
   NOTIFICATION_TYPE_CALENDAR_CANCELLED = 29;
   // A running timer passed the organization's limit and was paused
   NOTIFICATION_TYPE_TIMER_LIMIT_REACHED = 30;
+  // A timesheet awaits the reviewer, or was submitted for the worker by the period job
+  NOTIFICATION_TYPE_TIMESHEET_SUBMITTED = 31;
+  NOTIFICATION_TYPE_TIMESHEET_APPROVED = 32;
+  NOTIFICATION_TYPE_TIMESHEET_REJECTED = 33;
+  // A period ended without a submitted sheet, or a reviewer has sheets waiting
+  NOTIFICATION_TYPE_TIMESHEET_REMINDER = 34;
 }
 
 // Notification model

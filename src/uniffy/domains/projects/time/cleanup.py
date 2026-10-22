@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.timer import Timer
 from uniffy.core.models.projects.worklog import Worklog
-from uniffy.domains.projects.time.timesheets import TimesheetOperations
+from uniffy.domains.projects.time.locks import SheetLocks
 
 
 async def stage_delete_for_tasks(
@@ -19,7 +19,7 @@ async def stage_delete_for_tasks(
     """Hard-delete worklogs and timers of tasks about to be removed; refuses locked periods."""
     if not task_ids:
         return
-    locked = await TimesheetOperations(session).locked_periods_for_tasks(organization_id, task_ids)
+    locked = await SheetLocks(session).locked_periods_for_tasks(organization_id, task_ids)
     if locked:
         start, end = locked[0]
         raise ValidationError(

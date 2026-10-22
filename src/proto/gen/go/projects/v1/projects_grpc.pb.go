@@ -64,6 +64,16 @@ const (
 	ProjectsService_GetTimePolicy_FullMethodName         = "/projects.v1.ProjectsService/GetTimePolicy"
 	ProjectsService_UpdateTimePolicy_FullMethodName      = "/projects.v1.ProjectsService/UpdateTimePolicy"
 	ProjectsService_AggregateWorklogs_FullMethodName     = "/projects.v1.ProjectsService/AggregateWorklogs"
+	ProjectsService_GetTimesheet_FullMethodName          = "/projects.v1.ProjectsService/GetTimesheet"
+	ProjectsService_SubmitTimesheet_FullMethodName       = "/projects.v1.ProjectsService/SubmitTimesheet"
+	ProjectsService_RecallTimesheet_FullMethodName       = "/projects.v1.ProjectsService/RecallTimesheet"
+	ProjectsService_ListReviewTimesheets_FullMethodName  = "/projects.v1.ProjectsService/ListReviewTimesheets"
+	ProjectsService_ApproveTimesheet_FullMethodName      = "/projects.v1.ProjectsService/ApproveTimesheet"
+	ProjectsService_RejectTimesheet_FullMethodName       = "/projects.v1.ProjectsService/RejectTimesheet"
+	ProjectsService_GrantGrace_FullMethodName            = "/projects.v1.ProjectsService/GrantGrace"
+	ProjectsService_ClosePeriod_FullMethodName           = "/projects.v1.ProjectsService/ClosePeriod"
+	ProjectsService_ReopenPeriod_FullMethodName          = "/projects.v1.ProjectsService/ReopenPeriod"
+	ProjectsService_ListPeriods_FullMethodName           = "/projects.v1.ProjectsService/ListPeriods"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -124,6 +134,16 @@ type ProjectsServiceClient interface {
 	GetTimePolicy(ctx context.Context, in *GetTimePolicyRequest, opts ...grpc.CallOption) (*GetTimePolicyResponse, error)
 	UpdateTimePolicy(ctx context.Context, in *UpdateTimePolicyRequest, opts ...grpc.CallOption) (*UpdateTimePolicyResponse, error)
 	AggregateWorklogs(ctx context.Context, in *AggregateWorklogsRequest, opts ...grpc.CallOption) (*AggregateWorklogsResponse, error)
+	GetTimesheet(ctx context.Context, in *GetTimesheetRequest, opts ...grpc.CallOption) (*GetTimesheetResponse, error)
+	SubmitTimesheet(ctx context.Context, in *SubmitTimesheetRequest, opts ...grpc.CallOption) (*SubmitTimesheetResponse, error)
+	RecallTimesheet(ctx context.Context, in *RecallTimesheetRequest, opts ...grpc.CallOption) (*RecallTimesheetResponse, error)
+	ListReviewTimesheets(ctx context.Context, in *ListReviewTimesheetsRequest, opts ...grpc.CallOption) (*ListReviewTimesheetsResponse, error)
+	ApproveTimesheet(ctx context.Context, in *ApproveTimesheetRequest, opts ...grpc.CallOption) (*ApproveTimesheetResponse, error)
+	RejectTimesheet(ctx context.Context, in *RejectTimesheetRequest, opts ...grpc.CallOption) (*RejectTimesheetResponse, error)
+	GrantGrace(ctx context.Context, in *GrantGraceRequest, opts ...grpc.CallOption) (*GrantGraceResponse, error)
+	ClosePeriod(ctx context.Context, in *ClosePeriodRequest, opts ...grpc.CallOption) (*ClosePeriodResponse, error)
+	ReopenPeriod(ctx context.Context, in *ReopenPeriodRequest, opts ...grpc.CallOption) (*ReopenPeriodResponse, error)
+	ListPeriods(ctx context.Context, in *ListPeriodsRequest, opts ...grpc.CallOption) (*ListPeriodsResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -593,6 +613,106 @@ func (c *projectsServiceClient) AggregateWorklogs(ctx context.Context, in *Aggre
 	return out, nil
 }
 
+func (c *projectsServiceClient) GetTimesheet(ctx context.Context, in *GetTimesheetRequest, opts ...grpc.CallOption) (*GetTimesheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTimesheetResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetTimesheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) SubmitTimesheet(ctx context.Context, in *SubmitTimesheetRequest, opts ...grpc.CallOption) (*SubmitTimesheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTimesheetResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_SubmitTimesheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RecallTimesheet(ctx context.Context, in *RecallTimesheetRequest, opts ...grpc.CallOption) (*RecallTimesheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecallTimesheetResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RecallTimesheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ListReviewTimesheets(ctx context.Context, in *ListReviewTimesheetsRequest, opts ...grpc.CallOption) (*ListReviewTimesheetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListReviewTimesheetsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ListReviewTimesheets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ApproveTimesheet(ctx context.Context, in *ApproveTimesheetRequest, opts ...grpc.CallOption) (*ApproveTimesheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApproveTimesheetResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ApproveTimesheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RejectTimesheet(ctx context.Context, in *RejectTimesheetRequest, opts ...grpc.CallOption) (*RejectTimesheetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RejectTimesheetResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RejectTimesheet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) GrantGrace(ctx context.Context, in *GrantGraceRequest, opts ...grpc.CallOption) (*GrantGraceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GrantGraceResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GrantGrace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ClosePeriod(ctx context.Context, in *ClosePeriodRequest, opts ...grpc.CallOption) (*ClosePeriodResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClosePeriodResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ClosePeriod_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ReopenPeriod(ctx context.Context, in *ReopenPeriodRequest, opts ...grpc.CallOption) (*ReopenPeriodResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReopenPeriodResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ReopenPeriod_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ListPeriods(ctx context.Context, in *ListPeriodsRequest, opts ...grpc.CallOption) (*ListPeriodsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPeriodsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ListPeriods_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -651,6 +771,16 @@ type ProjectsServiceServer interface {
 	GetTimePolicy(context.Context, *GetTimePolicyRequest) (*GetTimePolicyResponse, error)
 	UpdateTimePolicy(context.Context, *UpdateTimePolicyRequest) (*UpdateTimePolicyResponse, error)
 	AggregateWorklogs(context.Context, *AggregateWorklogsRequest) (*AggregateWorklogsResponse, error)
+	GetTimesheet(context.Context, *GetTimesheetRequest) (*GetTimesheetResponse, error)
+	SubmitTimesheet(context.Context, *SubmitTimesheetRequest) (*SubmitTimesheetResponse, error)
+	RecallTimesheet(context.Context, *RecallTimesheetRequest) (*RecallTimesheetResponse, error)
+	ListReviewTimesheets(context.Context, *ListReviewTimesheetsRequest) (*ListReviewTimesheetsResponse, error)
+	ApproveTimesheet(context.Context, *ApproveTimesheetRequest) (*ApproveTimesheetResponse, error)
+	RejectTimesheet(context.Context, *RejectTimesheetRequest) (*RejectTimesheetResponse, error)
+	GrantGrace(context.Context, *GrantGraceRequest) (*GrantGraceResponse, error)
+	ClosePeriod(context.Context, *ClosePeriodRequest) (*ClosePeriodResponse, error)
+	ReopenPeriod(context.Context, *ReopenPeriodRequest) (*ReopenPeriodResponse, error)
+	ListPeriods(context.Context, *ListPeriodsRequest) (*ListPeriodsResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -795,6 +925,36 @@ func (UnimplementedProjectsServiceServer) UpdateTimePolicy(context.Context, *Upd
 }
 func (UnimplementedProjectsServiceServer) AggregateWorklogs(context.Context, *AggregateWorklogsRequest) (*AggregateWorklogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AggregateWorklogs not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetTimesheet(context.Context, *GetTimesheetRequest) (*GetTimesheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTimesheet not implemented")
+}
+func (UnimplementedProjectsServiceServer) SubmitTimesheet(context.Context, *SubmitTimesheetRequest) (*SubmitTimesheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitTimesheet not implemented")
+}
+func (UnimplementedProjectsServiceServer) RecallTimesheet(context.Context, *RecallTimesheetRequest) (*RecallTimesheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecallTimesheet not implemented")
+}
+func (UnimplementedProjectsServiceServer) ListReviewTimesheets(context.Context, *ListReviewTimesheetsRequest) (*ListReviewTimesheetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListReviewTimesheets not implemented")
+}
+func (UnimplementedProjectsServiceServer) ApproveTimesheet(context.Context, *ApproveTimesheetRequest) (*ApproveTimesheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ApproveTimesheet not implemented")
+}
+func (UnimplementedProjectsServiceServer) RejectTimesheet(context.Context, *RejectTimesheetRequest) (*RejectTimesheetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RejectTimesheet not implemented")
+}
+func (UnimplementedProjectsServiceServer) GrantGrace(context.Context, *GrantGraceRequest) (*GrantGraceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GrantGrace not implemented")
+}
+func (UnimplementedProjectsServiceServer) ClosePeriod(context.Context, *ClosePeriodRequest) (*ClosePeriodResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ClosePeriod not implemented")
+}
+func (UnimplementedProjectsServiceServer) ReopenPeriod(context.Context, *ReopenPeriodRequest) (*ReopenPeriodResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReopenPeriod not implemented")
+}
+func (UnimplementedProjectsServiceServer) ListPeriods(context.Context, *ListPeriodsRequest) (*ListPeriodsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListPeriods not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -1620,6 +1780,186 @@ func _ProjectsService_AggregateWorklogs_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_GetTimesheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTimesheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetTimesheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetTimesheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetTimesheet(ctx, req.(*GetTimesheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_SubmitTimesheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitTimesheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).SubmitTimesheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_SubmitTimesheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).SubmitTimesheet(ctx, req.(*SubmitTimesheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RecallTimesheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecallTimesheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RecallTimesheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RecallTimesheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RecallTimesheet(ctx, req.(*RecallTimesheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ListReviewTimesheets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListReviewTimesheetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ListReviewTimesheets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ListReviewTimesheets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ListReviewTimesheets(ctx, req.(*ListReviewTimesheetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ApproveTimesheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApproveTimesheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ApproveTimesheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ApproveTimesheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ApproveTimesheet(ctx, req.(*ApproveTimesheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RejectTimesheet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RejectTimesheetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RejectTimesheet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RejectTimesheet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RejectTimesheet(ctx, req.(*RejectTimesheetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_GrantGrace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrantGraceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GrantGrace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GrantGrace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GrantGrace(ctx, req.(*GrantGraceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ClosePeriod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClosePeriodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ClosePeriod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ClosePeriod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ClosePeriod(ctx, req.(*ClosePeriodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ReopenPeriod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReopenPeriodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ReopenPeriod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ReopenPeriod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ReopenPeriod(ctx, req.(*ReopenPeriodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ListPeriods_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPeriodsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ListPeriods(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ListPeriods_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ListPeriods(ctx, req.(*ListPeriodsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1802,6 +2142,46 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AggregateWorklogs",
 			Handler:    _ProjectsService_AggregateWorklogs_Handler,
+		},
+		{
+			MethodName: "GetTimesheet",
+			Handler:    _ProjectsService_GetTimesheet_Handler,
+		},
+		{
+			MethodName: "SubmitTimesheet",
+			Handler:    _ProjectsService_SubmitTimesheet_Handler,
+		},
+		{
+			MethodName: "RecallTimesheet",
+			Handler:    _ProjectsService_RecallTimesheet_Handler,
+		},
+		{
+			MethodName: "ListReviewTimesheets",
+			Handler:    _ProjectsService_ListReviewTimesheets_Handler,
+		},
+		{
+			MethodName: "ApproveTimesheet",
+			Handler:    _ProjectsService_ApproveTimesheet_Handler,
+		},
+		{
+			MethodName: "RejectTimesheet",
+			Handler:    _ProjectsService_RejectTimesheet_Handler,
+		},
+		{
+			MethodName: "GrantGrace",
+			Handler:    _ProjectsService_GrantGrace_Handler,
+		},
+		{
+			MethodName: "ClosePeriod",
+			Handler:    _ProjectsService_ClosePeriod_Handler,
+		},
+		{
+			MethodName: "ReopenPeriod",
+			Handler:    _ProjectsService_ReopenPeriod_Handler,
+		},
+		{
+			MethodName: "ListPeriods",
+			Handler:    _ProjectsService_ListPeriods_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

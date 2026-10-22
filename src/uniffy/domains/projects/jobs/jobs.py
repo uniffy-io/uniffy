@@ -24,6 +24,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import ContentRole, ContentType, SubjectType
 from uniffy.domains.projects.jobs.contracts import REFRESH_PROJECT_SEARCH_ACL
+from uniffy.domains.projects.time.reminders import process_period_schedule
 from uniffy.domains.projects.time.timers import pause_timers_past_limit
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
@@ -330,4 +331,20 @@ async def pause_overrun_timers(ctx: dict[str, Any]) -> dict[str, Any]:
             return {"status": "success", "count": count}
     except Exception:
         logger.exception("Error pausing overrun timers")
+        return {"status": "error"}
+
+
+async def run_timesheet_periods(ctx: dict[str, Any]) -> dict[str, Any]:
+    try:
+        async with open_session() as session:
+            summary = await process_period_schedule(session)
+            return {
+                "status": "success",
+                "organizations": summary.organizations,
+                "submitted": summary.submitted,
+                "worker_reminders": summary.worker_reminders,
+                "reviewer_reminders": summary.reviewer_reminders,
+            }
+    except Exception:
+        logger.exception("Error running the timesheet period schedule")
         return {"status": "error"}

@@ -17,7 +17,7 @@ from protobuf import DescService
 
 from . import projects_pb
 from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
-from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetTimePolicyRequest, GetTimePolicyResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
+from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Iterator, Mapping
@@ -189,6 +189,36 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def aggregate_worklogs(self, request: AggregateWorklogsRequest, ctx: RequestContext[AggregateWorklogsRequest, AggregateWorklogsResponse], /) -> AggregateWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_timesheet(self, request: GetTimesheetRequest, ctx: RequestContext[GetTimesheetRequest, GetTimesheetResponse], /) -> GetTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def submit_timesheet(self, request: SubmitTimesheetRequest, ctx: RequestContext[SubmitTimesheetRequest, SubmitTimesheetResponse], /) -> SubmitTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def recall_timesheet(self, request: RecallTimesheetRequest, ctx: RequestContext[RecallTimesheetRequest, RecallTimesheetResponse], /) -> RecallTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_review_timesheets(self, request: ListReviewTimesheetsRequest, ctx: RequestContext[ListReviewTimesheetsRequest, ListReviewTimesheetsResponse], /) -> ListReviewTimesheetsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def approve_timesheet(self, request: ApproveTimesheetRequest, ctx: RequestContext[ApproveTimesheetRequest, ApproveTimesheetResponse], /) -> ApproveTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def reject_timesheet(self, request: RejectTimesheetRequest, ctx: RequestContext[RejectTimesheetRequest, RejectTimesheetResponse], /) -> RejectTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def grant_grace(self, request: GrantGraceRequest, ctx: RequestContext[GrantGraceRequest, GrantGraceResponse], /) -> GrantGraceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def close_period(self, request: ClosePeriodRequest, ctx: RequestContext[ClosePeriodRequest, ClosePeriodResponse], /) -> ClosePeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def reopen_period(self, request: ReopenPeriodRequest, ctx: RequestContext[ReopenPeriodRequest, ReopenPeriodResponse], /) -> ReopenPeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -658,6 +688,106 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.aggregate_worklogs,
+                ),
+                "/projects.v1.ProjectsService/GetTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimesheetRequest,
+                        output=GetTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_timesheet,
+                ),
+                "/projects.v1.ProjectsService/SubmitTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SubmitTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=SubmitTimesheetRequest,
+                        output=SubmitTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.submit_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RecallTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecallTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RecallTimesheetRequest,
+                        output=RecallTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.recall_timesheet,
+                ),
+                "/projects.v1.ProjectsService/ListReviewTimesheets": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListReviewTimesheets",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListReviewTimesheetsRequest,
+                        output=ListReviewTimesheetsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_review_timesheets,
+                ),
+                "/projects.v1.ProjectsService/ApproveTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ApproveTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=ApproveTimesheetRequest,
+                        output=ApproveTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.approve_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RejectTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RejectTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RejectTimesheetRequest,
+                        output=RejectTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reject_timesheet,
+                ),
+                "/projects.v1.ProjectsService/GrantGrace": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GrantGrace",
+                        service_name="projects.v1.ProjectsService",
+                        input=GrantGraceRequest,
+                        output=GrantGraceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.grant_grace,
+                ),
+                "/projects.v1.ProjectsService/ClosePeriod": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ClosePeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ClosePeriodRequest,
+                        output=ClosePeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.close_period,
+                ),
+                "/projects.v1.ProjectsService/ReopenPeriod": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ReopenPeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ReopenPeriodRequest,
+                        output=ReopenPeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reopen_period,
+                ),
+                "/projects.v1.ProjectsService/ListPeriods": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListPeriods",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListPeriodsRequest,
+                        output=ListPeriodsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_periods,
                 ),
             },
             interceptors=interceptors,
@@ -1600,6 +1730,206 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_timesheet(
+        self,
+        request: GetTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimesheetRequest,
+                output=GetTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def submit_timesheet(
+        self,
+        request: SubmitTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SubmitTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=SubmitTimesheetRequest,
+                output=SubmitTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def recall_timesheet(
+        self,
+        request: RecallTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecallTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecallTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RecallTimesheetRequest,
+                output=RecallTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_review_timesheets(
+        self,
+        request: ListReviewTimesheetsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListReviewTimesheetsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewTimesheets",
+                service_name="projects.v1.ProjectsService",
+                input=ListReviewTimesheetsRequest,
+                output=ListReviewTimesheetsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def approve_timesheet(
+        self,
+        request: ApproveTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ApproveTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApproveTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=ApproveTimesheetRequest,
+                output=ApproveTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def reject_timesheet(
+        self,
+        request: RejectTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RejectTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RejectTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RejectTimesheetRequest,
+                output=RejectTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def grant_grace(
+        self,
+        request: GrantGraceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantGraceResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantGrace",
+                service_name="projects.v1.ProjectsService",
+                input=GrantGraceRequest,
+                output=GrantGraceResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def close_period(
+        self,
+        request: ClosePeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ClosePeriodResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ClosePeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ClosePeriodRequest,
+                output=ClosePeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def reopen_period(
+        self,
+        request: ReopenPeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReopenPeriodResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReopenPeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ReopenPeriodRequest,
+                output=ReopenPeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_periods(
+        self,
+        request: ListPeriodsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListPeriodsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPeriods",
+                service_name="projects.v1.ProjectsService",
+                input=ListPeriodsRequest,
+                output=ListPeriodsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: CreateProjectRequest, ctx: RequestContext[CreateProjectRequest, CreateProjectResponse], /) -> CreateProjectResponse:
         """
@@ -1761,6 +2091,36 @@ class ProjectsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def aggregate_worklogs(self, request: AggregateWorklogsRequest, ctx: RequestContext[AggregateWorklogsRequest, AggregateWorklogsResponse], /) -> AggregateWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_timesheet(self, request: GetTimesheetRequest, ctx: RequestContext[GetTimesheetRequest, GetTimesheetResponse], /) -> GetTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def submit_timesheet(self, request: SubmitTimesheetRequest, ctx: RequestContext[SubmitTimesheetRequest, SubmitTimesheetResponse], /) -> SubmitTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def recall_timesheet(self, request: RecallTimesheetRequest, ctx: RequestContext[RecallTimesheetRequest, RecallTimesheetResponse], /) -> RecallTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_review_timesheets(self, request: ListReviewTimesheetsRequest, ctx: RequestContext[ListReviewTimesheetsRequest, ListReviewTimesheetsResponse], /) -> ListReviewTimesheetsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def approve_timesheet(self, request: ApproveTimesheetRequest, ctx: RequestContext[ApproveTimesheetRequest, ApproveTimesheetResponse], /) -> ApproveTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def reject_timesheet(self, request: RejectTimesheetRequest, ctx: RequestContext[RejectTimesheetRequest, RejectTimesheetResponse], /) -> RejectTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def grant_grace(self, request: GrantGraceRequest, ctx: RequestContext[GrantGraceRequest, GrantGraceResponse], /) -> GrantGraceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def close_period(self, request: ClosePeriodRequest, ctx: RequestContext[ClosePeriodRequest, ClosePeriodResponse], /) -> ClosePeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def reopen_period(self, request: ReopenPeriodRequest, ctx: RequestContext[ReopenPeriodRequest, ReopenPeriodResponse], /) -> ReopenPeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -2228,6 +2588,106 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.aggregate_worklogs,
+                ),
+                "/projects.v1.ProjectsService/GetTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimesheetRequest,
+                        output=GetTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_timesheet,
+                ),
+                "/projects.v1.ProjectsService/SubmitTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SubmitTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=SubmitTimesheetRequest,
+                        output=SubmitTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.submit_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RecallTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecallTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RecallTimesheetRequest,
+                        output=RecallTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.recall_timesheet,
+                ),
+                "/projects.v1.ProjectsService/ListReviewTimesheets": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListReviewTimesheets",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListReviewTimesheetsRequest,
+                        output=ListReviewTimesheetsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_review_timesheets,
+                ),
+                "/projects.v1.ProjectsService/ApproveTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ApproveTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=ApproveTimesheetRequest,
+                        output=ApproveTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.approve_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RejectTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RejectTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RejectTimesheetRequest,
+                        output=RejectTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reject_timesheet,
+                ),
+                "/projects.v1.ProjectsService/GrantGrace": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GrantGrace",
+                        service_name="projects.v1.ProjectsService",
+                        input=GrantGraceRequest,
+                        output=GrantGraceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.grant_grace,
+                ),
+                "/projects.v1.ProjectsService/ClosePeriod": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ClosePeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ClosePeriodRequest,
+                        output=ClosePeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.close_period,
+                ),
+                "/projects.v1.ProjectsService/ReopenPeriod": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ReopenPeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ReopenPeriodRequest,
+                        output=ReopenPeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reopen_period,
+                ),
+                "/projects.v1.ProjectsService/ListPeriods": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListPeriods",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListPeriodsRequest,
+                        output=ListPeriodsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_periods,
                 ),
             },
             interceptors=interceptors,
@@ -3120,6 +3580,196 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=AggregateWorklogsRequest,
                 output=AggregateWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_timesheet(
+        self,
+        request: GetTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimesheetRequest,
+                output=GetTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def submit_timesheet(
+        self,
+        request: SubmitTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SubmitTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=SubmitTimesheetRequest,
+                output=SubmitTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def recall_timesheet(
+        self,
+        request: RecallTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecallTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecallTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RecallTimesheetRequest,
+                output=RecallTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_review_timesheets(
+        self,
+        request: ListReviewTimesheetsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListReviewTimesheetsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewTimesheets",
+                service_name="projects.v1.ProjectsService",
+                input=ListReviewTimesheetsRequest,
+                output=ListReviewTimesheetsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def approve_timesheet(
+        self,
+        request: ApproveTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ApproveTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApproveTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=ApproveTimesheetRequest,
+                output=ApproveTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def reject_timesheet(
+        self,
+        request: RejectTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RejectTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RejectTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RejectTimesheetRequest,
+                output=RejectTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def grant_grace(
+        self,
+        request: GrantGraceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantGraceResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantGrace",
+                service_name="projects.v1.ProjectsService",
+                input=GrantGraceRequest,
+                output=GrantGraceResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def close_period(
+        self,
+        request: ClosePeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ClosePeriodResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ClosePeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ClosePeriodRequest,
+                output=ClosePeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def reopen_period(
+        self,
+        request: ReopenPeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReopenPeriodResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReopenPeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ReopenPeriodRequest,
+                output=ReopenPeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_periods(
+        self,
+        request: ListPeriodsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListPeriodsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPeriods",
+                service_name="projects.v1.ProjectsService",
+                input=ListPeriodsRequest,
+                output=ListPeriodsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

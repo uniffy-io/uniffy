@@ -233,6 +233,27 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     actions: [{ value: "time_policy.updated", label: "Updated" }],
   },
   {
+    domain: "timesheet",
+    label: "Timesheets",
+    badgeClass: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+    actions: [
+      { value: "timesheet.submitted", label: "Submitted" },
+      { value: "timesheet.recalled", label: "Recalled" },
+      { value: "timesheet.approved", label: "Approved" },
+      { value: "timesheet.rejected", label: "Rejected" },
+      { value: "timesheet.grace_granted", label: "Grace granted" },
+    ],
+  },
+  {
+    domain: "time_period",
+    label: "Time periods",
+    badgeClass: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+    actions: [
+      { value: "time_period.closed", label: "Closed" },
+      { value: "time_period.reopened", label: "Reopened" },
+    ],
+  },
+  {
     domain: "chat_channel",
     label: "Chat",
     badgeClass: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400",

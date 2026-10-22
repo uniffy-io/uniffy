@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { X } from "@phosphor-icons/react";
+import { BellRinging, CheckCircle, PaperPlaneTilt, X, XCircle } from "@phosphor-icons/react";
 import {
   Bell,
   ShareNetwork,
@@ -51,6 +51,10 @@ const TYPE_ICON_MAP: Record<number, Icon> = {
   [NotificationType.TASK_DUE_SOON]: ClockCountdown,
   [NotificationType.TASK_OVERDUE]: Warning,
   [NotificationType.TIMER_LIMIT_REACHED]: Timer,
+  [NotificationType.TIMESHEET_SUBMITTED]: PaperPlaneTilt,
+  [NotificationType.TIMESHEET_APPROVED]: CheckCircle,
+  [NotificationType.TIMESHEET_REJECTED]: XCircle,
+  [NotificationType.TIMESHEET_REMINDER]: BellRinging,
   [NotificationType.CHAT_MENTION]: ChatCircle,
   [NotificationType.CHAT_DM]: ChatCenteredText,
   [NotificationType.CHAT_CHANNEL_INVITE]: UserPlus,

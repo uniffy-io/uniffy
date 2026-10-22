@@ -1,19 +1,40 @@
 import { createSelector, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import type { TimePolicy, Timer, Worklog } from "../types/time";
+import type { ReviewRow, TimePeriod, TimePolicy, Timer, Timesheet, Worklog } from "../types/time";
 import {
+  approveTimesheet,
+  closePeriod,
   createWorklog,
   deleteWorklog,
   fetchActiveTimer,
+  fetchPersonTimesheet,
+  fetchPersonWorklogs,
+  fetchReviewTimesheets,
   fetchTaskWorklogs,
   fetchTimePolicy,
+  fetchTimesheet,
   fetchUserWorklogs,
+  grantGrace,
   pauseTimer,
+  recallTimesheet,
+  rejectTimesheet,
+  reopenPeriod,
   resumeTimer,
   startTimer,
   stopTimer,
+  submitTimesheet,
   updateWorklog,
 } from "./timeThunks";
+
+export interface ReviewState {
+  rows: ReviewRow[];
+  nextPageToken: string;
+  period: TimePeriod | null;
+  viewerIsTimekeepingAdmin: boolean;
+  loading: boolean;
+  /** Whether the inbox was ever loaded, so the Approvals tab knows to show. */
+  loaded: boolean;
+}
 
 export interface TimeState {
   worklogsByTask: Record<string, Worklog[]>;
@@ -27,6 +48,13 @@ export interface TimeState {
   /** The person's own entries per inclusive day range, keyed "from:to". */
   weeks: Record<string, Worklog[]>;
   weekLoading: Record<string, boolean>;
+  /** The person's own sheets keyed by period start. */
+  sheets: Record<string, Timesheet>;
+  sheetBusy: boolean;
+  review: ReviewState;
+  /** Other people's entries, keyed "userId:from:to", and their sheets keyed "userId:periodStart". */
+  personWeeks: Record<string, Worklog[]>;
+  personSheets: Record<string, Timesheet>;
 }
 
 export const initialTimeState: TimeState = {
@@ -39,7 +67,45 @@ export const initialTimeState: TimeState = {
   timerBusy: false,
   weeks: {},
   weekLoading: {},
+  sheets: {},
+  sheetBusy: false,
+  review: {
+    rows: [],
+    nextPageToken: "",
+    period: null,
+    viewerIsTimekeepingAdmin: false,
+    loading: false,
+    loaded: false,
+  },
+  personWeeks: {},
+  personSheets: {},
 };
+
+function storeSheet(state: TimeState, sheet: Timesheet, ownerId: string | null): void {
+  if (ownerId === sheet.userId) state.sheets[sheet.periodStart] = sheet;
+  state.personSheets[`${sheet.userId}:${sheet.periodStart}`] = sheet;
+  state.review.rows = state.review.rows.map((row) =>
+    row.userId === sheet.userId && row.timesheet.periodStart === sheet.periodStart
+      ? { ...row, status: sheet.status, timesheet: sheet }
+      : row,
+  );
+}
+
+function applyPeriod(state: TimeState, period: TimePeriod): void {
+  const closed = period.status === "closed";
+  if (state.review.period?.startDate === period.startDate) state.review.period = period;
+  for (const sheet of [
+    ...Object.values(state.sheets),
+    ...Object.values(state.personSheets),
+    ...state.review.rows.map((row) => row.timesheet),
+  ]) {
+    if (sheet.periodStart === period.startDate) {
+      sheet.periodClosed = closed;
+      // Reopening may or may not unlock a sheet; the view refetches to find out.
+      if (closed) sheet.locked = true;
+    }
+  }
+}
 
 /** Every loaded range that covers the entry's day gets it; a range it left drops it. */
 function placeInWeeks(state: TimeState, worklog: Worklog): void {
@@ -71,7 +137,11 @@ function sortEntries(entries: Worklog[]): Worklog[] {
 export const timeSlice = createSlice({
   name: "time",
   initialState: initialTimeState,
-  reducers: {},
+  reducers: {
+    timePolicyLoaded(state, action: { payload: TimePolicy }) {
+      state.policy = action.payload;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchTaskWorklogs.pending, (state, action) => {
@@ -192,11 +262,74 @@ export const timeSlice = createSlice({
       .addCase(fetchUserWorklogs.rejected, (state, action) => {
         const { from, to } = action.meta.arg;
         state.weekLoading[`${from}:${to}`] = false;
+      })
+      .addCase(fetchTimesheet.fulfilled, (state, action) => {
+        state.sheets[action.payload.periodStart] = action.payload;
+      })
+      .addCase(submitTimesheet.pending, (state) => {
+        state.sheetBusy = true;
+      })
+      .addCase(submitTimesheet.fulfilled, (state, action) => {
+        state.sheetBusy = false;
+        state.sheets[action.payload.periodStart] = action.payload;
+      })
+      .addCase(submitTimesheet.rejected, (state) => {
+        state.sheetBusy = false;
+      })
+      .addCase(recallTimesheet.pending, (state) => {
+        state.sheetBusy = true;
+      })
+      .addCase(recallTimesheet.fulfilled, (state, action) => {
+        state.sheetBusy = false;
+        state.sheets[action.payload.periodStart] = action.payload;
+      })
+      .addCase(recallTimesheet.rejected, (state) => {
+        state.sheetBusy = false;
+      })
+      .addCase(fetchReviewTimesheets.pending, (state) => {
+        state.review.loading = true;
+      })
+      .addCase(fetchReviewTimesheets.fulfilled, (state, action) => {
+        const { rows, nextPageToken, period, viewerIsTimekeepingAdmin } = action.payload;
+        state.review = {
+          rows: action.meta.arg.pageToken ? [...state.review.rows, ...rows] : rows,
+          nextPageToken,
+          period,
+          viewerIsTimekeepingAdmin,
+          loading: false,
+          loaded: true,
+        };
+      })
+      .addCase(fetchReviewTimesheets.rejected, (state) => {
+        state.review.loading = false;
+      })
+      .addCase(approveTimesheet.fulfilled, (state, action) => {
+        storeSheet(state, action.payload, null);
+      })
+      .addCase(rejectTimesheet.fulfilled, (state, action) => {
+        storeSheet(state, action.payload, null);
+      })
+      .addCase(grantGrace.fulfilled, (state, action) => {
+        storeSheet(state, action.payload, null);
+      })
+      .addCase(closePeriod.fulfilled, (state, action) => {
+        applyPeriod(state, action.payload);
+      })
+      .addCase(reopenPeriod.fulfilled, (state, action) => {
+        applyPeriod(state, action.payload);
+      })
+      .addCase(fetchPersonWorklogs.fulfilled, (state, action) => {
+        state.personWeeks[action.payload.key] = sortEntries(action.payload.worklogs);
+      })
+      .addCase(fetchPersonTimesheet.fulfilled, (state, action) => {
+        state.personSheets[`${action.payload.userId}:${action.payload.periodStart}`] =
+          action.payload;
       });
   },
 });
 
 export const timeReducer = timeSlice.reducer;
+export const { timePolicyLoaded } = timeSlice.actions;
 
 const EMPTY: Worklog[] = [];
 
@@ -221,3 +354,26 @@ export const selectWeekLoading = (key: string) => (state: RootState) =>
 export const selectActiveTimer = (state: RootState) => state.time.activeTimer;
 
 export const selectTimerBusy = (state: RootState) => state.time.timerBusy;
+
+const NO_SHEETS: Timesheet[] = [];
+
+/** The person's own sheets whose period touches the inclusive day range. */
+export const selectSheetsTouching = (from: string, to: string) =>
+  createSelector([selectTimeState], (state) => {
+    const sheets = Object.values(state.sheets).filter(
+      (sheet) => sheet.periodStart <= to && sheet.periodEnd >= from,
+    );
+    return sheets.length
+      ? sheets.sort((a, b) => a.periodStart.localeCompare(b.periodStart))
+      : NO_SHEETS;
+  });
+
+export const selectSheetBusy = (state: RootState) => state.time.sheetBusy;
+
+export const selectReview = (state: RootState) => state.time.review;
+
+export const selectPersonWeek = (key: string) =>
+  createSelector([selectTimeState], (state) => state.personWeeks[key] ?? EMPTY);
+
+export const selectPersonSheet = (userId: string, periodStart: string) => (state: RootState) =>
+  state.time.personSheets[`${userId}:${periodStart}`] ?? null;

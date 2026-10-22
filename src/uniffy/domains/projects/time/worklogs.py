@@ -23,6 +23,7 @@ from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 from uniffy.core.types import ContentType
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.time.access import TimeAccess
+from uniffy.domains.projects.time.locks import SheetLocks
 from uniffy.domains.projects.time.policy import (
     MINUTES_PER_DAY,
     ResolvedTimePolicy,
@@ -92,6 +93,8 @@ class WorklogOperations:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.access = TimeAccess(session)
+        self.locks = SheetLocks(session)
+        self.sheets = TimesheetOperations(session)
 
     async def _get(self, organization_id: UUID, worklog_id: UUID) -> WorklogRow:
         result = await self.session.execute(
@@ -134,12 +137,15 @@ class WorklogOperations:
             )
 
     async def _require_unlocked(
-        self, actor_id: UUID, organization_id: UUID, user_id: UUID, work_date: date
+        self,
+        actor_id: UUID,
+        organization_id: UUID,
+        user_id: UUID,
+        work_date: date,
+        policy: ResolvedTimePolicy,
     ) -> bool:
         """False when open; True when a timekeeping admin overrides a lock; raises otherwise."""
-        if not await TimesheetOperations(self.session).is_locked(
-            organization_id, user_id, work_date
-        ):
+        if not await self.locks.is_locked(organization_id, user_id, work_date, policy=policy):
             return False
         if await self.access.is_timekeeping_admin(actor_id, organization_id):
             return True
@@ -268,7 +274,9 @@ class WorklogOperations:
             await self._require_daily_capacity(
                 organization_id, subject_id, work_date, duration_minutes
             )
-        override = await self._require_unlocked(actor_id, organization_id, subject_id, work_date)
+        override = await self._require_unlocked(
+            actor_id, organization_id, subject_id, work_date, policy
+        )
 
         worklog = Worklog(
             organization_id=organization_id,
@@ -294,6 +302,9 @@ class WorklogOperations:
                 action=Action.WORKLOG_OVERRIDE if override else Action.WORKLOG_CREATED,
                 worklog=worklog,
             )
+        await self.sheets.stage_after_write(
+            actor_id, organization_id, subject_id, work_date, policy=policy
+        )
         return WorklogRow(worklog=worklog, project_id=task.project_id), rollup
 
     async def update(
@@ -321,15 +332,18 @@ class WorklogOperations:
                 organization_id, worklog.user_id, new_date, new_minutes, exclude_id=worklog.id
             )
         override = await self._require_unlocked(
-            actor_id, organization_id, worklog.user_id, worklog.work_date
+            actor_id, organization_id, worklog.user_id, worklog.work_date, policy
         )
         if new_date != worklog.work_date:
             override = (
-                await self._require_unlocked(actor_id, organization_id, worklog.user_id, new_date)
+                await self._require_unlocked(
+                    actor_id, organization_id, worklog.user_id, new_date, policy
+                )
                 or override
             )
 
         previous_minutes = worklog.duration_minutes
+        previous_date = worklog.work_date
         worklog.work_date = new_date
         worklog.duration_minutes = new_minutes
         if description is not None:
@@ -350,6 +364,10 @@ class WorklogOperations:
                 action=Action.WORKLOG_OVERRIDE if override else Action.WORKLOG_UPDATED,
                 worklog=worklog,
             )
+        for day in {previous_date, new_date}:
+            await self.sheets.stage_after_write(
+                actor_id, organization_id, worklog.user_id, day, policy=policy
+            )
         task_id = worklog.task_id
         await self.session.commit()
         await publish_content_changed(ContentType.TASK, task_id, organization_id)
@@ -359,10 +377,11 @@ class WorklogOperations:
         self, actor_id: UUID, organization_id: UUID, worklog_id: UUID
     ) -> tuple[UUID, int]:
         """Soft delete; returns the task id and its new rollup."""
+        policy = await load_time_policy(self.session, organization_id)
         worklog = (await self._get(organization_id, worklog_id)).worklog
         on_behalf = await self._require_own_or_reviewer(actor_id, organization_id, worklog)
         override = await self._require_unlocked(
-            actor_id, organization_id, worklog.user_id, worklog.work_date
+            actor_id, organization_id, worklog.user_id, worklog.work_date, policy
         )
         worklog.is_deleted = True
         worklog.deleted_at = datetime.now(UTC)
@@ -381,6 +400,9 @@ class WorklogOperations:
                 action=Action.WORKLOG_OVERRIDE if override else Action.WORKLOG_DELETED,
                 worklog=worklog,
             )
+        await self.sheets.stage_after_write(
+            actor_id, organization_id, worklog.user_id, worklog.work_date, policy=policy
+        )
         task_id = worklog.task_id
         await self.session.commit()
         await publish_content_changed(ContentType.TASK, task_id, organization_id)

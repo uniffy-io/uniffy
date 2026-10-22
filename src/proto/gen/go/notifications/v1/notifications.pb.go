@@ -60,6 +60,12 @@ const (
 	NotificationType_NOTIFICATION_TYPE_CALENDAR_CANCELLED        NotificationType = 29
 	// A running timer passed the organization's limit and was paused
 	NotificationType_NOTIFICATION_TYPE_TIMER_LIMIT_REACHED NotificationType = 30
+	// A timesheet awaits the reviewer, or was submitted for the worker by the period job
+	NotificationType_NOTIFICATION_TYPE_TIMESHEET_SUBMITTED NotificationType = 31
+	NotificationType_NOTIFICATION_TYPE_TIMESHEET_APPROVED  NotificationType = 32
+	NotificationType_NOTIFICATION_TYPE_TIMESHEET_REJECTED  NotificationType = 33
+	// A period ended without a submitted sheet, or a reviewer has sheets waiting
+	NotificationType_NOTIFICATION_TYPE_TIMESHEET_REMINDER NotificationType = 34
 )
 
 // Enum value maps for NotificationType.
@@ -96,6 +102,10 @@ var (
 		28: "NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED",
 		29: "NOTIFICATION_TYPE_CALENDAR_CANCELLED",
 		30: "NOTIFICATION_TYPE_TIMER_LIMIT_REACHED",
+		31: "NOTIFICATION_TYPE_TIMESHEET_SUBMITTED",
+		32: "NOTIFICATION_TYPE_TIMESHEET_APPROVED",
+		33: "NOTIFICATION_TYPE_TIMESHEET_REJECTED",
+		34: "NOTIFICATION_TYPE_TIMESHEET_REMINDER",
 	}
 	NotificationType_value = map[string]int32{
 		"NOTIFICATION_TYPE_UNSPECIFIED":               0,
@@ -129,6 +139,10 @@ var (
 		"NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED":   28,
 		"NOTIFICATION_TYPE_CALENDAR_CANCELLED":        29,
 		"NOTIFICATION_TYPE_TIMER_LIMIT_REACHED":       30,
+		"NOTIFICATION_TYPE_TIMESHEET_SUBMITTED":       31,
+		"NOTIFICATION_TYPE_TIMESHEET_APPROVED":        32,
+		"NOTIFICATION_TYPE_TIMESHEET_REJECTED":        33,
+		"NOTIFICATION_TYPE_TIMESHEET_REMINDER":        34,
 	}
 )
 
@@ -2642,8 +2656,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x15ContentChangedPayload\x129\n" +
 	"\fcontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"content_id\x18\x02 \x01(\tR\tcontentId*\x81\n" +
-	"\n" +
+	"content_id\x18\x02 \x01(\tR\tcontentId*\xaa\v\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" NOTIFICATION_TYPE_CONTENT_SHARED\x10\x01\x12'\n" +
@@ -2676,7 +2689,11 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	")NOTIFICATION_TYPE_SUPPORT_SESSION_REVOKED\x10\x1b\x12-\n" +
 	")NOTIFICATION_TYPE_SUPPORT_SESSION_EXPIRED\x10\x1c\x12(\n" +
 	"$NOTIFICATION_TYPE_CALENDAR_CANCELLED\x10\x1d\x12)\n" +
-	"%NOTIFICATION_TYPE_TIMER_LIMIT_REACHED\x10\x1e2\xf2\v\n" +
+	"%NOTIFICATION_TYPE_TIMER_LIMIT_REACHED\x10\x1e\x12)\n" +
+	"%NOTIFICATION_TYPE_TIMESHEET_SUBMITTED\x10\x1f\x12(\n" +
+	"$NOTIFICATION_TYPE_TIMESHEET_APPROVED\x10 \x12(\n" +
+	"$NOTIFICATION_TYPE_TIMESHEET_REJECTED\x10!\x12(\n" +
+	"$NOTIFICATION_TYPE_TIMESHEET_REMINDER\x10\"2\xf2\v\n" +
 	"\x14NotificationsService\x12n\n" +
 	"\x11ListNotifications\x12*.notifications.v1.ListNotificationsRequest\x1a+.notifications.v1.ListNotificationsResponse\"\x00\x12e\n" +
 	"\x0eGetUnreadCount\x12'.notifications.v1.GetUnreadCountRequest\x1a(.notifications.v1.GetUnreadCountResponse\"\x00\x12Y\n" +

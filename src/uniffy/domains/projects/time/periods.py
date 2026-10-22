@@ -49,3 +49,12 @@ def periods_between(start: date, end: date, policy: ResolvedTimePolicy) -> list[
 def period_lock_date(period_end: date, policy: ResolvedTimePolicy) -> date:
     """First day on which the open sheets of an ended period are locked."""
     return period_end + timedelta(days=policy.period_lock_delay_days + 1)
+
+
+def period_is_lock_due(period_end: date, today: date, policy: ResolvedTimePolicy) -> bool:
+    """Whether the open sheets of a period that ended on ``period_end`` are locked today."""
+    return today >= period_lock_date(period_end, policy)
+
+
+def previous_period(period_start: date, policy: ResolvedTimePolicy) -> tuple[date, date]:
+    return period_for(period_start - timedelta(days=1), policy)

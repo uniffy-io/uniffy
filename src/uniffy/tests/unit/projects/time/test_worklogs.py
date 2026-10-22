@@ -93,8 +93,10 @@ def _env(
     access.require_active_actor = AsyncMock()
     access.require_person_scope = AsyncMock()
     access.require_project_view = AsyncMock()
+    locks = MagicMock()
+    locks.is_locked = AsyncMock(return_value=locked)
     timesheets = MagicMock()
-    timesheets.is_locked = AsyncMock(return_value=locked)
+    timesheets.stage_after_write = AsyncMock()
     notifications = MagicMock()
     notifications.log_activity = AsyncMock()
     audit = AsyncMock()
@@ -107,6 +109,7 @@ def _env(
         )
     )
     stack.enter_context(patch(f"{MODULE}.TimeAccess", return_value=access))
+    stack.enter_context(patch(f"{MODULE}.SheetLocks", return_value=locks))
     stack.enter_context(patch(f"{MODULE}.TimesheetOperations", return_value=timesheets))
     stack.enter_context(patch(f"{MODULE}.TaskNotifications", return_value=notifications))
     stack.enter_context(patch(f"{MODULE}.write_audit_event", new=audit))
@@ -395,7 +398,7 @@ async def test_cleanup_refuses_a_locked_period_before_deleting_anything() -> Non
         return_value=[(date(2026, 10, 5), date(2026, 10, 11))]
     )
     with (
-        patch("uniffy.domains.projects.time.cleanup.TimesheetOperations", return_value=timesheets),
+        patch("uniffy.domains.projects.time.cleanup.SheetLocks", return_value=timesheets),
         pytest.raises(ValidationError) as exc_info,
     ):
         await cleanup.stage_delete_for_tasks(session, ORG, [TASK_ID])  # type: ignore[arg-type]
@@ -407,7 +410,7 @@ async def test_cleanup_hard_deletes_timers_and_worklogs_without_committing() -> 
     session = _Session()
     timesheets = MagicMock()
     timesheets.locked_periods_for_tasks = AsyncMock(return_value=[])
-    with patch("uniffy.domains.projects.time.cleanup.TimesheetOperations", return_value=timesheets):
+    with patch("uniffy.domains.projects.time.cleanup.SheetLocks", return_value=timesheets):
         await cleanup.stage_delete_for_tasks(session, ORG, [TASK_ID])  # type: ignore[arg-type]
     sqls = [_compiled(s) for s in session.statements]
     assert any(s.startswith("delete from projects_timers") for s in sqls)

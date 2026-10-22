@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file projects/v1/time.proto.
  */
 export const file_projects_v1_time: GenFile = /*@__PURE__*/
-  fileDesc("ChZwcm9qZWN0cy92MS90aW1lLnByb3RvEgtwcm9qZWN0cy52MSL5AgoHV29ya2xvZxIKCgJpZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSDwoHdXNlcl9pZBgEIAEoCRIaChJjcmVhdGVkX2J5X3VzZXJfaWQYBSABKAkSEQoJd29ya19kYXRlGAYgASgJEjMKCnN0YXJ0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESGAoQZHVyYXRpb25fbWludXRlcxgIIAEoBRITCgtkZXNjcmlwdGlvbhgJIAEoCRIqCgZzb3VyY2UYCiABKA4yGi5wcm9qZWN0cy52MS5Xb3JrbG9nU291cmNlEi4KCmNyZWF0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg0KC19zdGFydGVkX2F0IqQBChRDcmVhdGVXb3JrbG9nUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIUCgd1c2VyX2lkGAMgASgJSACIAQESEQoJd29ya19kYXRlGAQgASgJEhgKEGR1cmF0aW9uX21pbnV0ZXMYBSABKAUSEwoLZGVzY3JpcHRpb24YBiABKAlCCgoIX3VzZXJfaWQiXwoVQ3JlYXRlV29ya2xvZ1Jlc3BvbnNlEiUKB3dvcmtsb2cYASABKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nEh8KF3Rhc2tfdGltZV9zcGVudF9taW51dGVzGAIgASgFIscBChRVcGRhdGVXb3JrbG9nUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKd29ya2xvZ19pZBgCIAEoCRIWCgl3b3JrX2RhdGUYAyABKAlIAIgBARIdChBkdXJhdGlvbl9taW51dGVzGAQgASgFSAGIAQESGAoLZGVzY3JpcHRpb24YBSABKAlIAogBAUIMCgpfd29ya19kYXRlQhMKEV9kdXJhdGlvbl9taW51dGVzQg4KDF9kZXNjcmlwdGlvbiJfChVVcGRhdGVXb3JrbG9nUmVzcG9uc2USJQoHd29ya2xvZxgBIAEoCzIULnByb2plY3RzLnYxLldvcmtsb2cSHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAUiQwoURGVsZXRlV29ya2xvZ1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCndvcmtsb2dfaWQYAiABKAkiSQoVRGVsZXRlV29ya2xvZ1Jlc3BvbnNlEg8KB3Rhc2tfaWQYASABKAkSHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAUiagoXTGlzdFRhc2tXb3JrbG9nc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB3Rhc2tfaWQYAiABKAkSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkiWwoYTGlzdFRhc2tXb3JrbG9nc1Jlc3BvbnNlEiYKCHdvcmtsb2dzGAEgAygLMhQucHJvamVjdHMudjEuV29ya2xvZxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkieAoXTGlzdFVzZXJXb3JrbG9nc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKB3VzZXJfaWQYAiABKAlIAIgBARIRCglmcm9tX2RhdGUYAyABKAkSDwoHdG9fZGF0ZRgEIAEoCUIKCghfdXNlcl9pZCJCChhMaXN0VXNlcldvcmtsb2dzUmVzcG9uc2USJgoId29ya2xvZ3MYASADKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nIuQCCgVUaW1lchIKCgJpZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSMwoKc3RhcnRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIbChNhY2N1bXVsYXRlZF9zZWNvbmRzGAYgASgFEjIKCXBhdXNlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBARIzCgxwYXVzZV9yZWFzb24YCCABKA4yHS5wcm9qZWN0cy52MS5UaW1lclBhdXNlUmVhc29uEhIKCnRhc2tfdGl0bGUYCSABKAkSEwoLdGFza19udW1iZXIYCiABKAUSFAoMcHJvamVjdF9zbHVnGAsgASgJQg0KC19zdGFydGVkX2F0QgwKCl9wYXVzZWRfYXQiZQoRU3RhcnRUaW1lclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB3Rhc2tfaWQYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEQoJd29ya19kYXRlGAQgASgJIn8KElN0YXJ0VGltZXJSZXNwb25zZRIhCgV0aW1lchgBIAEoCzISLnByb2plY3RzLnYxLlRpbWVyEjIKD3N0b3BwZWRfd29ya2xvZxgCIAEoCzIULnByb2plY3RzLnYxLldvcmtsb2dIAIgBAUISChBfc3RvcHBlZF93b3JrbG9nIiwKEVBhdXNlVGltZXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSI3ChJQYXVzZVRpbWVyUmVzcG9uc2USIQoFdGltZXIYASABKAsyEi5wcm9qZWN0cy52MS5UaW1lciItChJSZXN1bWVUaW1lclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIjgKE1Jlc3VtZVRpbWVyUmVzcG9uc2USIQoFdGltZXIYASABKAsyEi5wcm9qZWN0cy52MS5UaW1lciKtAQoQU3RvcFRpbWVyUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJd29ya19kYXRlGAIgASgJEhgKC2Rlc2NyaXB0aW9uGAMgASgJSACIAQESHQoQZHVyYXRpb25fbWludXRlcxgEIAEoBUgBiAEBEg8KB2Rpc2NhcmQYBSABKAhCDgoMX2Rlc2NyaXB0aW9uQhMKEV9kdXJhdGlvbl9taW51dGVzImwKEVN0b3BUaW1lclJlc3BvbnNlEioKB3dvcmtsb2cYASABKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nSACIAQESHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAVCCgoIX3dvcmtsb2ciMAoVR2V0QWN0aXZlVGltZXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSJKChZHZXRBY3RpdmVUaW1lclJlc3BvbnNlEiYKBXRpbWVyGAEgASgLMhIucHJvamVjdHMudjEuVGltZXJIAIgBAUIICgZfdGltZXIiwgQKClRpbWVQb2xpY3kSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2VuYWJsZWQYAiABKAgSMAoLcGVyaW9kX3R5cGUYAyABKA4yGy5wcm9qZWN0cy52MS5UaW1lUGVyaW9kVHlwZRISCgp3ZWVrX3N0YXJ0GAQgASgJEhcKD21vbnRoX3N0YXJ0X2RheRgFIAEoBRIZChFhcHByb3ZhbHNfZW5hYmxlZBgGIAEoCBIWCg5sb2NrX29uX3N1Ym1pdBgHIAEoCBIeChZwZXJpb2RfbG9ja19kZWxheV9kYXlzGAggASgFEhwKFGFsbG93X2xvZ19mb3Jfb3RoZXJzGAkgASgIEiAKGHJlcXVpcmVkX21pbnV0ZXNfcGVyX2RheRgKIAEoBRIeChZ0aW1lcl9yb3VuZGluZ19taW51dGVzGAsgASgFEhoKEmFsbG93X2Z1dHVyZV9kYXRlcxgMIAEoCBIaCg1tYXhfZGF5c19iYWNrGA0gASgFSACIAQESFwoPbWF4X3RpbWVyX2hvdXJzGA4gASgFEhMKC2F1dG9fc3VibWl0GA8gASgIEhAKCGhvbGlkYXlzGBAgAygJEiAKE2ludGVybmFsX3Byb2plY3RfaWQYESABKAlIAYgBARIZChFyZW1pbmRlcnNfZW5hYmxlZBgSIAEoCBIZChFyZW1pbmRlcl9ob3VyX3V0YxgTIAEoBUIQCg5fbWF4X2RheXNfYmFja0IWChRfaW50ZXJuYWxfcHJvamVjdF9pZCIvChRHZXRUaW1lUG9saWN5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiQAoVR2V0VGltZVBvbGljeVJlc3BvbnNlEicKBnBvbGljeRgBIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiWwoXVXBkYXRlVGltZVBvbGljeVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEicKBnBvbGljeRgCIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiQwoYVXBkYXRlVGltZVBvbGljeVJlc3BvbnNlEicKBnBvbGljeRgBIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiugEKGEFnZ3JlZ2F0ZVdvcmtsb2dzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFAoKcHJvamVjdF9pZBgCIAEoCUgAEhEKB3VzZXJfaWQYAyABKAlIABIRCglmcm9tX2RhdGUYBCABKAkSDwoHdG9fZGF0ZRgFIAEoCRIvCghncm91cF9ieRgGIAEoDjIdLnByb2plY3RzLnYxLkFnZ3JlZ2F0ZUdyb3VwQnlCBwoFc2NvcGUiTAoMQWdncmVnYXRlUm93EgsKA2tleRgBIAEoCRINCgVsYWJlbBgCIAEoCRIPCgdtaW51dGVzGAMgASgFEg8KB2VudHJpZXMYBCABKAUiWwoZQWdncmVnYXRlV29ya2xvZ3NSZXNwb25zZRInCgRyb3dzGAEgAygLMhkucHJvamVjdHMudjEuQWdncmVnYXRlUm93EhUKDXRvdGFsX21pbnV0ZXMYAiABKAUqmQEKDVdvcmtsb2dTb3VyY2USHgoaV09SS0xPR19TT1VSQ0VfVU5TUEVDSUZJRUQQABIZChVXT1JLTE9HX1NPVVJDRV9NQU5VQUwQARIYChRXT1JLTE9HX1NPVVJDRV9USU1FUhACEhkKFVdPUktMT0dfU09VUkNFX0lNUE9SVBADEhgKFFdPUktMT0dfU09VUkNFX0FHRU5UEAQqVAoQVGltZXJQYXVzZVJlYXNvbhIiCh5USU1FUl9QQVVTRV9SRUFTT05fVU5TUEVDSUZJRUQQABIcChhUSU1FUl9QQVVTRV9SRUFTT05fTElNSVQQASptCg5UaW1lUGVyaW9kVHlwZRIgChxUSU1FX1BFUklPRF9UWVBFX1VOU1BFQ0lGSUVEEAASGwoXVElNRV9QRVJJT0RfVFlQRV9XRUVLTFkQARIcChhUSU1FX1BFUklPRF9UWVBFX01PTlRITFkQAiqsAQoQQWdncmVnYXRlR3JvdXBCeRIiCh5BR0dSRUdBVEVfR1JPVVBfQllfVU5TUEVDSUZJRUQQABIaChZBR0dSRUdBVEVfR1JPVVBfQllfREFZEAESGwoXQUdHUkVHQVRFX0dST1VQX0JZX1RBU0sQAhIbChdBR0dSRUdBVEVfR1JPVVBfQllfVVNFUhADEh4KGkFHR1JFR0FURV9HUk9VUF9CWV9QUk9KRUNUEARCPVo7Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL3Byb2plY3RzL3YxO3Byb2plY3RzdjFiBnByb3RvMw", [file_google_protobuf_timestamp]);
+  fileDesc("ChZwcm9qZWN0cy92MS90aW1lLnByb3RvEgtwcm9qZWN0cy52MSL5AgoHV29ya2xvZxIKCgJpZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSDwoHdXNlcl9pZBgEIAEoCRIaChJjcmVhdGVkX2J5X3VzZXJfaWQYBSABKAkSEQoJd29ya19kYXRlGAYgASgJEjMKCnN0YXJ0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESGAoQZHVyYXRpb25fbWludXRlcxgIIAEoBRITCgtkZXNjcmlwdGlvbhgJIAEoCRIqCgZzb3VyY2UYCiABKA4yGi5wcm9qZWN0cy52MS5Xb3JrbG9nU291cmNlEi4KCmNyZWF0ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg0KC19zdGFydGVkX2F0IqQBChRDcmVhdGVXb3JrbG9nUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSDwoHdGFza19pZBgCIAEoCRIUCgd1c2VyX2lkGAMgASgJSACIAQESEQoJd29ya19kYXRlGAQgASgJEhgKEGR1cmF0aW9uX21pbnV0ZXMYBSABKAUSEwoLZGVzY3JpcHRpb24YBiABKAlCCgoIX3VzZXJfaWQiXwoVQ3JlYXRlV29ya2xvZ1Jlc3BvbnNlEiUKB3dvcmtsb2cYASABKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nEh8KF3Rhc2tfdGltZV9zcGVudF9taW51dGVzGAIgASgFIscBChRVcGRhdGVXb3JrbG9nUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEgoKd29ya2xvZ19pZBgCIAEoCRIWCgl3b3JrX2RhdGUYAyABKAlIAIgBARIdChBkdXJhdGlvbl9taW51dGVzGAQgASgFSAGIAQESGAoLZGVzY3JpcHRpb24YBSABKAlIAogBAUIMCgpfd29ya19kYXRlQhMKEV9kdXJhdGlvbl9taW51dGVzQg4KDF9kZXNjcmlwdGlvbiJfChVVcGRhdGVXb3JrbG9nUmVzcG9uc2USJQoHd29ya2xvZxgBIAEoCzIULnByb2plY3RzLnYxLldvcmtsb2cSHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAUiQwoURGVsZXRlV29ya2xvZ1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhIKCndvcmtsb2dfaWQYAiABKAkiSQoVRGVsZXRlV29ya2xvZ1Jlc3BvbnNlEg8KB3Rhc2tfaWQYASABKAkSHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAUiagoXTGlzdFRhc2tXb3JrbG9nc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB3Rhc2tfaWQYAiABKAkSEQoJcGFnZV9zaXplGAMgASgFEhIKCnBhZ2VfdG9rZW4YBCABKAkiWwoYTGlzdFRhc2tXb3JrbG9nc1Jlc3BvbnNlEiYKCHdvcmtsb2dzGAEgAygLMhQucHJvamVjdHMudjEuV29ya2xvZxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkieAoXTGlzdFVzZXJXb3JrbG9nc1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKB3VzZXJfaWQYAiABKAlIAIgBARIRCglmcm9tX2RhdGUYAyABKAkSDwoHdG9fZGF0ZRgEIAEoCUIKCghfdXNlcl9pZCJCChhMaXN0VXNlcldvcmtsb2dzUmVzcG9uc2USJgoId29ya2xvZ3MYASADKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nIuQCCgVUaW1lchIKCgJpZBgBIAEoCRIPCgd0YXNrX2lkGAIgASgJEhIKCnByb2plY3RfaWQYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSMwoKc3RhcnRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIbChNhY2N1bXVsYXRlZF9zZWNvbmRzGAYgASgFEjIKCXBhdXNlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBARIzCgxwYXVzZV9yZWFzb24YCCABKA4yHS5wcm9qZWN0cy52MS5UaW1lclBhdXNlUmVhc29uEhIKCnRhc2tfdGl0bGUYCSABKAkSEwoLdGFza19udW1iZXIYCiABKAUSFAoMcHJvamVjdF9zbHVnGAsgASgJQg0KC19zdGFydGVkX2F0QgwKCl9wYXVzZWRfYXQiZQoRU3RhcnRUaW1lclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB3Rhc2tfaWQYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSEQoJd29ya19kYXRlGAQgASgJIn8KElN0YXJ0VGltZXJSZXNwb25zZRIhCgV0aW1lchgBIAEoCzISLnByb2plY3RzLnYxLlRpbWVyEjIKD3N0b3BwZWRfd29ya2xvZxgCIAEoCzIULnByb2plY3RzLnYxLldvcmtsb2dIAIgBAUISChBfc3RvcHBlZF93b3JrbG9nIiwKEVBhdXNlVGltZXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSI3ChJQYXVzZVRpbWVyUmVzcG9uc2USIQoFdGltZXIYASABKAsyEi5wcm9qZWN0cy52MS5UaW1lciItChJSZXN1bWVUaW1lclJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJIjgKE1Jlc3VtZVRpbWVyUmVzcG9uc2USIQoFdGltZXIYASABKAsyEi5wcm9qZWN0cy52MS5UaW1lciKtAQoQU3RvcFRpbWVyUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJd29ya19kYXRlGAIgASgJEhgKC2Rlc2NyaXB0aW9uGAMgASgJSACIAQESHQoQZHVyYXRpb25fbWludXRlcxgEIAEoBUgBiAEBEg8KB2Rpc2NhcmQYBSABKAhCDgoMX2Rlc2NyaXB0aW9uQhMKEV9kdXJhdGlvbl9taW51dGVzImwKEVN0b3BUaW1lclJlc3BvbnNlEioKB3dvcmtsb2cYASABKAsyFC5wcm9qZWN0cy52MS5Xb3JrbG9nSACIAQESHwoXdGFza190aW1lX3NwZW50X21pbnV0ZXMYAiABKAVCCgoIX3dvcmtsb2ciMAoVR2V0QWN0aXZlVGltZXJSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCSJKChZHZXRBY3RpdmVUaW1lclJlc3BvbnNlEiYKBXRpbWVyGAEgASgLMhIucHJvamVjdHMudjEuVGltZXJIAIgBAUIICgZfdGltZXIiwgQKClRpbWVQb2xpY3kSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB2VuYWJsZWQYAiABKAgSMAoLcGVyaW9kX3R5cGUYAyABKA4yGy5wcm9qZWN0cy52MS5UaW1lUGVyaW9kVHlwZRISCgp3ZWVrX3N0YXJ0GAQgASgJEhcKD21vbnRoX3N0YXJ0X2RheRgFIAEoBRIZChFhcHByb3ZhbHNfZW5hYmxlZBgGIAEoCBIWCg5sb2NrX29uX3N1Ym1pdBgHIAEoCBIeChZwZXJpb2RfbG9ja19kZWxheV9kYXlzGAggASgFEhwKFGFsbG93X2xvZ19mb3Jfb3RoZXJzGAkgASgIEiAKGHJlcXVpcmVkX21pbnV0ZXNfcGVyX2RheRgKIAEoBRIeChZ0aW1lcl9yb3VuZGluZ19taW51dGVzGAsgASgFEhoKEmFsbG93X2Z1dHVyZV9kYXRlcxgMIAEoCBIaCg1tYXhfZGF5c19iYWNrGA0gASgFSACIAQESFwoPbWF4X3RpbWVyX2hvdXJzGA4gASgFEhMKC2F1dG9fc3VibWl0GA8gASgIEhAKCGhvbGlkYXlzGBAgAygJEiAKE2ludGVybmFsX3Byb2plY3RfaWQYESABKAlIAYgBARIZChFyZW1pbmRlcnNfZW5hYmxlZBgSIAEoCBIZChFyZW1pbmRlcl9ob3VyX3V0YxgTIAEoBUIQCg5fbWF4X2RheXNfYmFja0IWChRfaW50ZXJuYWxfcHJvamVjdF9pZCIvChRHZXRUaW1lUG9saWN5UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkiQAoVR2V0VGltZVBvbGljeVJlc3BvbnNlEicKBnBvbGljeRgBIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiWwoXVXBkYXRlVGltZVBvbGljeVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEicKBnBvbGljeRgCIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiQwoYVXBkYXRlVGltZVBvbGljeVJlc3BvbnNlEicKBnBvbGljeRgBIAEoCzIXLnByb2plY3RzLnYxLlRpbWVQb2xpY3kiugEKGEFnZ3JlZ2F0ZVdvcmtsb2dzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFAoKcHJvamVjdF9pZBgCIAEoCUgAEhEKB3VzZXJfaWQYAyABKAlIABIRCglmcm9tX2RhdGUYBCABKAkSDwoHdG9fZGF0ZRgFIAEoCRIvCghncm91cF9ieRgGIAEoDjIdLnByb2plY3RzLnYxLkFnZ3JlZ2F0ZUdyb3VwQnlCBwoFc2NvcGUiTAoMQWdncmVnYXRlUm93EgsKA2tleRgBIAEoCRINCgVsYWJlbBgCIAEoCRIPCgdtaW51dGVzGAMgASgFEg8KB2VudHJpZXMYBCABKAUiWwoZQWdncmVnYXRlV29ya2xvZ3NSZXNwb25zZRInCgRyb3dzGAEgAygLMhkucHJvamVjdHMudjEuQWdncmVnYXRlUm93EhUKDXRvdGFsX21pbnV0ZXMYAiABKAUi4AQKCVRpbWVzaGVldBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEhQKDHBlcmlvZF9zdGFydBgDIAEoCRISCgpwZXJpb2RfZW5kGAQgASgJEiwKBnN0YXR1cxgFIAEoDjIcLnByb2plY3RzLnYxLlRpbWVzaGVldFN0YXR1cxI1CgxzdWJtaXR0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSACIAQESIQoUc3VibWl0dGVkX2J5X3VzZXJfaWQYByABKAlIAYgBARIWCg5zdWJtaXRfY29tbWVudBgIIAEoCRIdChByZXZpZXdlcl91c2VyX2lkGAkgASgJSAKIAQESNAoLcmV2aWV3ZWRfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSAOIAQESFgoOcmV2aWV3X2NvbW1lbnQYCyABKAkSNAoLZ3JhY2VfdW50aWwYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wSASIAQESDgoGbG9ja2VkGA0gASgIEhUKDXBlcmlvZF9jbG9zZWQYDiABKAgSEgoKY2FuX3JldmlldxgPIAEoCBIVCg10b3RhbF9taW51dGVzGBAgASgFEhgKEHJlcXVpcmVkX21pbnV0ZXMYESABKAVCDwoNX3N1Ym1pdHRlZF9hdEIXChVfc3VibWl0dGVkX2J5X3VzZXJfaWRCEwoRX3Jldmlld2VyX3VzZXJfaWRCDgoMX3Jldmlld2VkX2F0Qg4KDF9ncmFjZV91bnRpbCJCCghEYXlUb3RhbBILCgNkYXkYASABKAkSDwoHbWludXRlcxgCIAEoBRIYChByZXF1aXJlZF9taW51dGVzGAMgASgFIuUBCgpUaW1lUGVyaW9kEgoKAmlkGAEgASgJEhIKCnN0YXJ0X2RhdGUYAiABKAkSEAoIZW5kX2RhdGUYAyABKAkSLQoGc3RhdHVzGAQgASgOMh0ucHJvamVjdHMudjEuVGltZVBlcmlvZFN0YXR1cxIeChFjbG9zZWRfYnlfdXNlcl9pZBgFIAEoCUgAiAEBEjIKCWNsb3NlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAYgBAUIUChJfY2xvc2VkX2J5X3VzZXJfaWRCDAoKX2Nsb3NlZF9hdCJmChNHZXRUaW1lc2hlZXRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIUCgd1c2VyX2lkGAIgASgJSACIAQESFAoMcGVyaW9kX3N0YXJ0GAMgASgJQgoKCF91c2VyX2lkIkEKFEdldFRpbWVzaGVldFJlc3BvbnNlEikKCXRpbWVzaGVldBgBIAEoCzIWLnByb2plY3RzLnYxLlRpbWVzaGVldCJ6ChZTdWJtaXRUaW1lc2hlZXRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIUCgd1c2VyX2lkGAIgASgJSACIAQESFAoMcGVyaW9kX3N0YXJ0GAMgASgJEg8KB2NvbW1lbnQYBCABKAlCCgoIX3VzZXJfaWQiRAoXU3VibWl0VGltZXNoZWV0UmVzcG9uc2USKQoJdGltZXNoZWV0GAEgASgLMhYucHJvamVjdHMudjEuVGltZXNoZWV0ImkKFlJlY2FsbFRpbWVzaGVldFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKB3VzZXJfaWQYAiABKAlIAIgBARIUCgxwZXJpb2Rfc3RhcnQYAyABKAlCCgoIX3VzZXJfaWQiRAoXUmVjYWxsVGltZXNoZWV0UmVzcG9uc2USKQoJdGltZXNoZWV0GAEgASgLMhYucHJvamVjdHMudjEuVGltZXNoZWV0IuIBChtMaXN0UmV2aWV3VGltZXNoZWV0c1JlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKDHBlcmlvZF9zdGFydBgCIAEoCRIxCgZzdGF0dXMYAyABKA4yHC5wcm9qZWN0cy52MS5UaW1lc2hlZXRTdGF0dXNIAIgBARIRCglwYWdlX3NpemUYBCABKAUSEgoKcGFnZV90b2tlbhgFIAEoCRINCgVxdWVyeRgGIAEoCRIUCgd0ZWFtX2lkGAcgASgJSAGIAQFCCQoHX3N0YXR1c0IKCghfdGVhbV9pZCLVAQoSUmV2aWV3VGltZXNoZWV0Um93Eg8KB3VzZXJfaWQYASABKAkSLAoGc3RhdHVzGAIgASgOMhwucHJvamVjdHMudjEuVGltZXNoZWV0U3RhdHVzEhYKDnBlcmlvZF9taW51dGVzGAMgASgFEhgKEHJlcXVpcmVkX21pbnV0ZXMYBCABKAUSIwoEZGF5cxgFIAMoCzIVLnByb2plY3RzLnYxLkRheVRvdGFsEikKCXRpbWVzaGVldBgGIAEoCzIWLnByb2plY3RzLnYxLlRpbWVzaGVldCK0AQocTGlzdFJldmlld1RpbWVzaGVldHNSZXNwb25zZRItCgRyb3dzGAEgAygLMh8ucHJvamVjdHMudjEuUmV2aWV3VGltZXNoZWV0Um93EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRInCgZwZXJpb2QYAyABKAsyFy5wcm9qZWN0cy52MS5UaW1lUGVyaW9kEiMKG3ZpZXdlcl9pc190aW1la2VlcGluZ19hZG1pbhgEIAEoCCJZChdBcHByb3ZlVGltZXNoZWV0UmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSFAoMdGltZXNoZWV0X2lkGAIgASgJEg8KB2NvbW1lbnQYAyABKAkiRQoYQXBwcm92ZVRpbWVzaGVldFJlc3BvbnNlEikKCXRpbWVzaGVldBgBIAEoCzIWLnByb2plY3RzLnYxLlRpbWVzaGVldCJYChZSZWplY3RUaW1lc2hlZXRSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIUCgx0aW1lc2hlZXRfaWQYAiABKAkSDwoHY29tbWVudBgDIAEoCSJEChdSZWplY3RUaW1lc2hlZXRSZXNwb25zZRIpCgl0aW1lc2hlZXQYASABKAsyFi5wcm9qZWN0cy52MS5UaW1lc2hlZXQiYgoRR3JhbnRHcmFjZVJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEg8KB3VzZXJfaWQYAiABKAkSFAoMcGVyaW9kX3N0YXJ0GAMgASgJEg0KBWhvdXJzGAQgASgFIj8KEkdyYW50R3JhY2VSZXNwb25zZRIpCgl0aW1lc2hlZXQYASABKAsyFi5wcm9qZWN0cy52MS5UaW1lc2hlZXQiQwoSQ2xvc2VQZXJpb2RSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRIUCgxwZXJpb2Rfc3RhcnQYAiABKAkiPgoTQ2xvc2VQZXJpb2RSZXNwb25zZRInCgZwZXJpb2QYASABKAsyFy5wcm9qZWN0cy52MS5UaW1lUGVyaW9kIkQKE1Jlb3BlblBlcmlvZFJlcXVlc3QSFwoPb3JnYW5pemF0aW9uX2lkGAEgASgJEhQKDHBlcmlvZF9zdGFydBgCIAEoCSI/ChRSZW9wZW5QZXJpb2RSZXNwb25zZRInCgZwZXJpb2QYASABKAsyFy5wcm9qZWN0cy52MS5UaW1lUGVyaW9kIlEKEkxpc3RQZXJpb2RzUmVxdWVzdBIXCg9vcmdhbml6YXRpb25faWQYASABKAkSEQoJZnJvbV9kYXRlGAIgASgJEg8KB3RvX2RhdGUYAyABKAkiPwoTTGlzdFBlcmlvZHNSZXNwb25zZRIoCgdwZXJpb2RzGAEgAygLMhcucHJvamVjdHMudjEuVGltZVBlcmlvZCqZAQoNV29ya2xvZ1NvdXJjZRIeChpXT1JLTE9HX1NPVVJDRV9VTlNQRUNJRklFRBAAEhkKFVdPUktMT0dfU09VUkNFX01BTlVBTBABEhgKFFdPUktMT0dfU09VUkNFX1RJTUVSEAISGQoVV09SS0xPR19TT1VSQ0VfSU1QT1JUEAMSGAoUV09SS0xPR19TT1VSQ0VfQUdFTlQQBCpUChBUaW1lclBhdXNlUmVhc29uEiIKHlRJTUVSX1BBVVNFX1JFQVNPTl9VTlNQRUNJRklFRBAAEhwKGFRJTUVSX1BBVVNFX1JFQVNPTl9MSU1JVBABKm0KDlRpbWVQZXJpb2RUeXBlEiAKHFRJTUVfUEVSSU9EX1RZUEVfVU5TUEVDSUZJRUQQABIbChdUSU1FX1BFUklPRF9UWVBFX1dFRUtMWRABEhwKGFRJTUVfUEVSSU9EX1RZUEVfTU9OVEhMWRACKqwBChBBZ2dyZWdhdGVHcm91cEJ5EiIKHkFHR1JFR0FURV9HUk9VUF9CWV9VTlNQRUNJRklFRBAAEhoKFkFHR1JFR0FURV9HUk9VUF9CWV9EQVkQARIbChdBR0dSRUdBVEVfR1JPVVBfQllfVEFTSxACEhsKF0FHR1JFR0FURV9HUk9VUF9CWV9VU0VSEAMSHgoaQUdHUkVHQVRFX0dST1VQX0JZX1BST0pFQ1QQBCqsAQoPVGltZXNoZWV0U3RhdHVzEiAKHFRJTUVTSEVFVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIZChVUSU1FU0hFRVRfU1RBVFVTX09QRU4QARIeChpUSU1FU0hFRVRfU1RBVFVTX1NVQk1JVFRFRBACEh0KGVRJTUVTSEVFVF9TVEFUVVNfQVBQUk9WRUQQAxIdChlUSU1FU0hFRVRfU1RBVFVTX1JFSkVDVEVEEAQqcgoQVGltZVBlcmlvZFN0YXR1cxIiCh5USU1FX1BFUklPRF9TVEFUVVNfVU5TUEVDSUZJRUQQABIbChdUSU1FX1BFUklPRF9TVEFUVVNfT1BFThABEh0KGVRJTUVfUEVSSU9EX1NUQVRVU19DTE9TRUQQAkI9WjtnaXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vcHJvamVjdHMvdjE7cHJvamVjdHN2MWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message projects.v1.Worklog
@@ -967,6 +967,724 @@ export const AggregateWorklogsResponseSchema: GenMessage<AggregateWorklogsRespon
   messageDesc(file_projects_v1_time, 29);
 
 /**
+ * One person's sheet for one period. A sheet with no row yet is open; the id
+ * is empty until the first state change creates it.
+ *
+ * @generated from message projects.v1.Timesheet
+ */
+export type Timesheet = Message<"projects.v1.Timesheet"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string period_start = 3;
+   */
+  periodStart: string;
+
+  /**
+   * @generated from field: string period_end = 4;
+   */
+  periodEnd: string;
+
+  /**
+   * @generated from field: projects.v1.TimesheetStatus status = 5;
+   */
+  status: TimesheetStatus;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp submitted_at = 6;
+   */
+  submittedAt?: Timestamp | undefined;
+
+  /**
+   * Unset on a submitted sheet means the period job submitted it.
+   *
+   * @generated from field: optional string submitted_by_user_id = 7;
+   */
+  submittedByUserId?: string | undefined;
+
+  /**
+   * @generated from field: string submit_comment = 8;
+   */
+  submitComment: string;
+
+  /**
+   * @generated from field: optional string reviewer_user_id = 9;
+   */
+  reviewerUserId?: string | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp reviewed_at = 10;
+   */
+  reviewedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: string review_comment = 11;
+   */
+  reviewComment: string;
+
+  /**
+   * While this instant is in the future the sheet's days accept edits again.
+   *
+   * @generated from field: optional google.protobuf.Timestamp grace_until = 12;
+   */
+  graceUntil?: Timestamp | undefined;
+
+  /**
+   * Whether the person's days in this period refuse writes right now.
+   *
+   * @generated from field: bool locked = 13;
+   */
+  locked: boolean;
+
+  /**
+   * The period itself is closed by a timekeeping admin.
+   *
+   * @generated from field: bool period_closed = 14;
+   */
+  periodClosed: boolean;
+
+  /**
+   * The caller reviews this person and is not the person.
+   *
+   * @generated from field: bool can_review = 15;
+   */
+  canReview: boolean;
+
+  /**
+   * @generated from field: int32 total_minutes = 16;
+   */
+  totalMinutes: number;
+
+  /**
+   * @generated from field: int32 required_minutes = 17;
+   */
+  requiredMinutes: number;
+};
+
+/**
+ * Describes the message projects.v1.Timesheet.
+ * Use `create(TimesheetSchema)` to create a new message.
+ */
+export const TimesheetSchema: GenMessage<Timesheet> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 30);
+
+/**
+ * @generated from message projects.v1.DayTotal
+ */
+export type DayTotal = Message<"projects.v1.DayTotal"> & {
+  /**
+   * @generated from field: string day = 1;
+   */
+  day: string;
+
+  /**
+   * @generated from field: int32 minutes = 2;
+   */
+  minutes: number;
+
+  /**
+   * @generated from field: int32 required_minutes = 3;
+   */
+  requiredMinutes: number;
+};
+
+/**
+ * Describes the message projects.v1.DayTotal.
+ * Use `create(DayTotalSchema)` to create a new message.
+ */
+export const DayTotalSchema: GenMessage<DayTotal> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 31);
+
+/**
+ * @generated from message projects.v1.TimePeriod
+ */
+export type TimePeriod = Message<"projects.v1.TimePeriod"> & {
+  /**
+   * Empty until an admin closes the period; open periods come from the policy.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string start_date = 2;
+   */
+  startDate: string;
+
+  /**
+   * @generated from field: string end_date = 3;
+   */
+  endDate: string;
+
+  /**
+   * @generated from field: projects.v1.TimePeriodStatus status = 4;
+   */
+  status: TimePeriodStatus;
+
+  /**
+   * @generated from field: optional string closed_by_user_id = 5;
+   */
+  closedByUserId?: string | undefined;
+
+  /**
+   * @generated from field: optional google.protobuf.Timestamp closed_at = 6;
+   */
+  closedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message projects.v1.TimePeriod.
+ * Use `create(TimePeriodSchema)` to create a new message.
+ */
+export const TimePeriodSchema: GenMessage<TimePeriod> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 32);
+
+/**
+ * Any day inside the period works as period_start; the server resolves the
+ * period containing it.
+ *
+ * @generated from message projects.v1.GetTimesheetRequest
+ */
+export type GetTimesheetRequest = Message<"projects.v1.GetTimesheetRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+   *
+   * @generated from field: optional string user_id = 2;
+   */
+  userId?: string | undefined;
+
+  /**
+   * @generated from field: string period_start = 3;
+   */
+  periodStart: string;
+};
+
+/**
+ * Describes the message projects.v1.GetTimesheetRequest.
+ * Use `create(GetTimesheetRequestSchema)` to create a new message.
+ */
+export const GetTimesheetRequestSchema: GenMessage<GetTimesheetRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 33);
+
+/**
+ * @generated from message projects.v1.GetTimesheetResponse
+ */
+export type GetTimesheetResponse = Message<"projects.v1.GetTimesheetResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.GetTimesheetResponse.
+ * Use `create(GetTimesheetResponseSchema)` to create a new message.
+ */
+export const GetTimesheetResponseSchema: GenMessage<GetTimesheetResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 34);
+
+/**
+ * @generated from message projects.v1.SubmitTimesheetRequest
+ */
+export type SubmitTimesheetRequest = Message<"projects.v1.SubmitTimesheetRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * Submit on behalf of someone else; reviewers and timekeeping admins only.
+   *
+   * @generated from field: optional string user_id = 2;
+   */
+  userId?: string | undefined;
+
+  /**
+   * @generated from field: string period_start = 3;
+   */
+  periodStart: string;
+
+  /**
+   * @generated from field: string comment = 4;
+   */
+  comment: string;
+};
+
+/**
+ * Describes the message projects.v1.SubmitTimesheetRequest.
+ * Use `create(SubmitTimesheetRequestSchema)` to create a new message.
+ */
+export const SubmitTimesheetRequestSchema: GenMessage<SubmitTimesheetRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 35);
+
+/**
+ * @generated from message projects.v1.SubmitTimesheetResponse
+ */
+export type SubmitTimesheetResponse = Message<"projects.v1.SubmitTimesheetResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.SubmitTimesheetResponse.
+ * Use `create(SubmitTimesheetResponseSchema)` to create a new message.
+ */
+export const SubmitTimesheetResponseSchema: GenMessage<SubmitTimesheetResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 36);
+
+/**
+ * @generated from message projects.v1.RecallTimesheetRequest
+ */
+export type RecallTimesheetRequest = Message<"projects.v1.RecallTimesheetRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: optional string user_id = 2;
+   */
+  userId?: string | undefined;
+
+  /**
+   * @generated from field: string period_start = 3;
+   */
+  periodStart: string;
+};
+
+/**
+ * Describes the message projects.v1.RecallTimesheetRequest.
+ * Use `create(RecallTimesheetRequestSchema)` to create a new message.
+ */
+export const RecallTimesheetRequestSchema: GenMessage<RecallTimesheetRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 37);
+
+/**
+ * @generated from message projects.v1.RecallTimesheetResponse
+ */
+export type RecallTimesheetResponse = Message<"projects.v1.RecallTimesheetResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.RecallTimesheetResponse.
+ * Use `create(RecallTimesheetResponseSchema)` to create a new message.
+ */
+export const RecallTimesheetResponseSchema: GenMessage<RecallTimesheetResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 38);
+
+/**
+ * @generated from message projects.v1.ListReviewTimesheetsRequest
+ */
+export type ListReviewTimesheetsRequest = Message<"projects.v1.ListReviewTimesheetsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string period_start = 2;
+   */
+  periodStart: string;
+
+  /**
+   * @generated from field: optional projects.v1.TimesheetStatus status = 3;
+   */
+  status?: TimesheetStatus | undefined;
+
+  /**
+   * Default 50, capped at 200.
+   *
+   * @generated from field: int32 page_size = 4;
+   */
+  pageSize: number;
+
+  /**
+   * @generated from field: string page_token = 5;
+   */
+  pageToken: string;
+
+  /**
+   * Matches the person's name or email.
+   *
+   * @generated from field: string query = 6;
+   */
+  query: string;
+
+  /**
+   * @generated from field: optional string team_id = 7;
+   */
+  teamId?: string | undefined;
+};
+
+/**
+ * Describes the message projects.v1.ListReviewTimesheetsRequest.
+ * Use `create(ListReviewTimesheetsRequestSchema)` to create a new message.
+ */
+export const ListReviewTimesheetsRequestSchema: GenMessage<ListReviewTimesheetsRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 39);
+
+/**
+ * @generated from message projects.v1.ReviewTimesheetRow
+ */
+export type ReviewTimesheetRow = Message<"projects.v1.ReviewTimesheetRow"> & {
+  /**
+   * @generated from field: string user_id = 1;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: projects.v1.TimesheetStatus status = 2;
+   */
+  status: TimesheetStatus;
+
+  /**
+   * @generated from field: int32 period_minutes = 3;
+   */
+  periodMinutes: number;
+
+  /**
+   * @generated from field: int32 required_minutes = 4;
+   */
+  requiredMinutes: number;
+
+  /**
+   * @generated from field: repeated projects.v1.DayTotal days = 5;
+   */
+  days: DayTotal[];
+
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 6;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.ReviewTimesheetRow.
+ * Use `create(ReviewTimesheetRowSchema)` to create a new message.
+ */
+export const ReviewTimesheetRowSchema: GenMessage<ReviewTimesheetRow> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 40);
+
+/**
+ * @generated from message projects.v1.ListReviewTimesheetsResponse
+ */
+export type ListReviewTimesheetsResponse = Message<"projects.v1.ListReviewTimesheetsResponse"> & {
+  /**
+   * @generated from field: repeated projects.v1.ReviewTimesheetRow rows = 1;
+   */
+  rows: ReviewTimesheetRow[];
+
+  /**
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * @generated from field: projects.v1.TimePeriod period = 3;
+   */
+  period?: TimePeriod | undefined;
+
+  /**
+   * The caller may close and reopen periods and reviews people nobody else reviews.
+   *
+   * @generated from field: bool viewer_is_timekeeping_admin = 4;
+   */
+  viewerIsTimekeepingAdmin: boolean;
+};
+
+/**
+ * Describes the message projects.v1.ListReviewTimesheetsResponse.
+ * Use `create(ListReviewTimesheetsResponseSchema)` to create a new message.
+ */
+export const ListReviewTimesheetsResponseSchema: GenMessage<ListReviewTimesheetsResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 41);
+
+/**
+ * @generated from message projects.v1.ApproveTimesheetRequest
+ */
+export type ApproveTimesheetRequest = Message<"projects.v1.ApproveTimesheetRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string timesheet_id = 2;
+   */
+  timesheetId: string;
+
+  /**
+   * @generated from field: string comment = 3;
+   */
+  comment: string;
+};
+
+/**
+ * Describes the message projects.v1.ApproveTimesheetRequest.
+ * Use `create(ApproveTimesheetRequestSchema)` to create a new message.
+ */
+export const ApproveTimesheetRequestSchema: GenMessage<ApproveTimesheetRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 42);
+
+/**
+ * @generated from message projects.v1.ApproveTimesheetResponse
+ */
+export type ApproveTimesheetResponse = Message<"projects.v1.ApproveTimesheetResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.ApproveTimesheetResponse.
+ * Use `create(ApproveTimesheetResponseSchema)` to create a new message.
+ */
+export const ApproveTimesheetResponseSchema: GenMessage<ApproveTimesheetResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 43);
+
+/**
+ * @generated from message projects.v1.RejectTimesheetRequest
+ */
+export type RejectTimesheetRequest = Message<"projects.v1.RejectTimesheetRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string timesheet_id = 2;
+   */
+  timesheetId: string;
+
+  /**
+   * Required; the worker sees it on the sheet.
+   *
+   * @generated from field: string comment = 3;
+   */
+  comment: string;
+};
+
+/**
+ * Describes the message projects.v1.RejectTimesheetRequest.
+ * Use `create(RejectTimesheetRequestSchema)` to create a new message.
+ */
+export const RejectTimesheetRequestSchema: GenMessage<RejectTimesheetRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 44);
+
+/**
+ * @generated from message projects.v1.RejectTimesheetResponse
+ */
+export type RejectTimesheetResponse = Message<"projects.v1.RejectTimesheetResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.RejectTimesheetResponse.
+ * Use `create(RejectTimesheetResponseSchema)` to create a new message.
+ */
+export const RejectTimesheetResponseSchema: GenMessage<RejectTimesheetResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 45);
+
+/**
+ * @generated from message projects.v1.GrantGraceRequest
+ */
+export type GrantGraceRequest = Message<"projects.v1.GrantGraceRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string user_id = 2;
+   */
+  userId: string;
+
+  /**
+   * @generated from field: string period_start = 3;
+   */
+  periodStart: string;
+
+  /**
+   * 1 to 336 hours from now.
+   *
+   * @generated from field: int32 hours = 4;
+   */
+  hours: number;
+};
+
+/**
+ * Describes the message projects.v1.GrantGraceRequest.
+ * Use `create(GrantGraceRequestSchema)` to create a new message.
+ */
+export const GrantGraceRequestSchema: GenMessage<GrantGraceRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 46);
+
+/**
+ * @generated from message projects.v1.GrantGraceResponse
+ */
+export type GrantGraceResponse = Message<"projects.v1.GrantGraceResponse"> & {
+  /**
+   * @generated from field: projects.v1.Timesheet timesheet = 1;
+   */
+  timesheet?: Timesheet | undefined;
+};
+
+/**
+ * Describes the message projects.v1.GrantGraceResponse.
+ * Use `create(GrantGraceResponseSchema)` to create a new message.
+ */
+export const GrantGraceResponseSchema: GenMessage<GrantGraceResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 47);
+
+/**
+ * @generated from message projects.v1.ClosePeriodRequest
+ */
+export type ClosePeriodRequest = Message<"projects.v1.ClosePeriodRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string period_start = 2;
+   */
+  periodStart: string;
+};
+
+/**
+ * Describes the message projects.v1.ClosePeriodRequest.
+ * Use `create(ClosePeriodRequestSchema)` to create a new message.
+ */
+export const ClosePeriodRequestSchema: GenMessage<ClosePeriodRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 48);
+
+/**
+ * @generated from message projects.v1.ClosePeriodResponse
+ */
+export type ClosePeriodResponse = Message<"projects.v1.ClosePeriodResponse"> & {
+  /**
+   * @generated from field: projects.v1.TimePeriod period = 1;
+   */
+  period?: TimePeriod | undefined;
+};
+
+/**
+ * Describes the message projects.v1.ClosePeriodResponse.
+ * Use `create(ClosePeriodResponseSchema)` to create a new message.
+ */
+export const ClosePeriodResponseSchema: GenMessage<ClosePeriodResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 49);
+
+/**
+ * @generated from message projects.v1.ReopenPeriodRequest
+ */
+export type ReopenPeriodRequest = Message<"projects.v1.ReopenPeriodRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string period_start = 2;
+   */
+  periodStart: string;
+};
+
+/**
+ * Describes the message projects.v1.ReopenPeriodRequest.
+ * Use `create(ReopenPeriodRequestSchema)` to create a new message.
+ */
+export const ReopenPeriodRequestSchema: GenMessage<ReopenPeriodRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 50);
+
+/**
+ * @generated from message projects.v1.ReopenPeriodResponse
+ */
+export type ReopenPeriodResponse = Message<"projects.v1.ReopenPeriodResponse"> & {
+  /**
+   * @generated from field: projects.v1.TimePeriod period = 1;
+   */
+  period?: TimePeriod | undefined;
+};
+
+/**
+ * Describes the message projects.v1.ReopenPeriodResponse.
+ * Use `create(ReopenPeriodResponseSchema)` to create a new message.
+ */
+export const ReopenPeriodResponseSchema: GenMessage<ReopenPeriodResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 51);
+
+/**
+ * Every period touching the inclusive range, computed from the policy, with
+ * the closed ones marked.
+ *
+ * @generated from message projects.v1.ListPeriodsRequest
+ */
+export type ListPeriodsRequest = Message<"projects.v1.ListPeriodsRequest"> & {
+  /**
+   * @generated from field: string organization_id = 1;
+   */
+  organizationId: string;
+
+  /**
+   * @generated from field: string from_date = 2;
+   */
+  fromDate: string;
+
+  /**
+   * @generated from field: string to_date = 3;
+   */
+  toDate: string;
+};
+
+/**
+ * Describes the message projects.v1.ListPeriodsRequest.
+ * Use `create(ListPeriodsRequestSchema)` to create a new message.
+ */
+export const ListPeriodsRequestSchema: GenMessage<ListPeriodsRequest> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 52);
+
+/**
+ * @generated from message projects.v1.ListPeriodsResponse
+ */
+export type ListPeriodsResponse = Message<"projects.v1.ListPeriodsResponse"> & {
+  /**
+   * @generated from field: repeated projects.v1.TimePeriod periods = 1;
+   */
+  periods: TimePeriod[];
+};
+
+/**
+ * Describes the message projects.v1.ListPeriodsResponse.
+ * Use `create(ListPeriodsResponseSchema)` to create a new message.
+ */
+export const ListPeriodsResponseSchema: GenMessage<ListPeriodsResponse> = /*@__PURE__*/
+  messageDesc(file_projects_v1_time, 53);
+
+/**
  * @generated from enum projects.v1.WorklogSource
  */
 export enum WorklogSource {
@@ -1086,4 +1804,66 @@ export enum AggregateGroupBy {
  */
 export const AggregateGroupBySchema: GenEnum<AggregateGroupBy> = /*@__PURE__*/
   enumDesc(file_projects_v1_time, 3);
+
+/**
+ * @generated from enum projects.v1.TimesheetStatus
+ */
+export enum TimesheetStatus {
+  /**
+   * @generated from enum value: TIMESHEET_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TIMESHEET_STATUS_OPEN = 1;
+   */
+  OPEN = 1,
+
+  /**
+   * @generated from enum value: TIMESHEET_STATUS_SUBMITTED = 2;
+   */
+  SUBMITTED = 2,
+
+  /**
+   * @generated from enum value: TIMESHEET_STATUS_APPROVED = 3;
+   */
+  APPROVED = 3,
+
+  /**
+   * @generated from enum value: TIMESHEET_STATUS_REJECTED = 4;
+   */
+  REJECTED = 4,
+}
+
+/**
+ * Describes the enum projects.v1.TimesheetStatus.
+ */
+export const TimesheetStatusSchema: GenEnum<TimesheetStatus> = /*@__PURE__*/
+  enumDesc(file_projects_v1_time, 4);
+
+/**
+ * @generated from enum projects.v1.TimePeriodStatus
+ */
+export enum TimePeriodStatus {
+  /**
+   * @generated from enum value: TIME_PERIOD_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TIME_PERIOD_STATUS_OPEN = 1;
+   */
+  OPEN = 1,
+
+  /**
+   * @generated from enum value: TIME_PERIOD_STATUS_CLOSED = 2;
+   */
+  CLOSED = 2,
+}
+
+/**
+ * Describes the enum projects.v1.TimePeriodStatus.
+ */
+export const TimePeriodStatusSchema: GenEnum<TimePeriodStatus> = /*@__PURE__*/
+  enumDesc(file_projects_v1_time, 5);
 

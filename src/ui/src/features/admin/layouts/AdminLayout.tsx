@@ -19,6 +19,7 @@ import {
   CaretRight,
   Key,
   Envelope,
+  Kanban,
   Phone,
   ChatCircle,
   LockKey,
@@ -76,6 +77,7 @@ const orgGroups: NavGroup[] = [
       { name: "Storage", path: "/admin/storage", icon: Database },
       { name: "Email", path: "/admin/email", icon: Envelope },
       { name: "Calls", path: "/admin/calls", icon: Phone },
+      { name: "Projects", path: "/admin/projects", icon: Kanban },
     ],
   },
 ];

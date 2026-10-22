@@ -203,6 +203,13 @@ class Action:
     WORKLOG_DELETED = "worklog.deleted"
     WORKLOG_OVERRIDE = "worklog.override"
     TIME_POLICY_UPDATED = "time_policy.updated"
+    TIMESHEET_SUBMITTED = "timesheet.submitted"
+    TIMESHEET_RECALLED = "timesheet.recalled"
+    TIMESHEET_APPROVED = "timesheet.approved"
+    TIMESHEET_REJECTED = "timesheet.rejected"
+    TIMESHEET_GRACE_GRANTED = "timesheet.grace_granted"
+    TIME_PERIOD_CLOSED = "time_period.closed"
+    TIME_PERIOD_REOPENED = "time_period.reopened"
 
     # Chat
     CHAT_CHANNEL_CREATED = "chat_channel.created"

@@ -260,3 +260,187 @@ message AggregateWorklogsResponse {
   repeated AggregateRow rows = 1;
   int32 total_minutes = 2;
 }
+
+enum TimesheetStatus {
+  TIMESHEET_STATUS_UNSPECIFIED = 0;
+  TIMESHEET_STATUS_OPEN = 1;
+  TIMESHEET_STATUS_SUBMITTED = 2;
+  TIMESHEET_STATUS_APPROVED = 3;
+  TIMESHEET_STATUS_REJECTED = 4;
+}
+
+enum TimePeriodStatus {
+  TIME_PERIOD_STATUS_UNSPECIFIED = 0;
+  TIME_PERIOD_STATUS_OPEN = 1;
+  TIME_PERIOD_STATUS_CLOSED = 2;
+}
+
+// One person's sheet for one period. A sheet with no row yet is open; the id
+// is empty until the first state change creates it.
+message Timesheet {
+  string id = 1;
+  string user_id = 2;
+  string period_start = 3;
+  string period_end = 4;
+  TimesheetStatus status = 5;
+  optional google.protobuf.Timestamp submitted_at = 6;
+  // Unset on a submitted sheet means the period job submitted it.
+  optional string submitted_by_user_id = 7;
+  string submit_comment = 8;
+  optional string reviewer_user_id = 9;
+  optional google.protobuf.Timestamp reviewed_at = 10;
+  string review_comment = 11;
+  // While this instant is in the future the sheet's days accept edits again.
+  optional google.protobuf.Timestamp grace_until = 12;
+  // Whether the person's days in this period refuse writes right now.
+  bool locked = 13;
+  // The period itself is closed by a timekeeping admin.
+  bool period_closed = 14;
+  // The caller reviews this person and is not the person.
+  bool can_review = 15;
+  int32 total_minutes = 16;
+  int32 required_minutes = 17;
+}
+
+message DayTotal {
+  string day = 1;
+  int32 minutes = 2;
+  int32 required_minutes = 3;
+}
+
+message TimePeriod {
+  // Empty until an admin closes the period; open periods come from the policy.
+  string id = 1;
+  string start_date = 2;
+  string end_date = 3;
+  TimePeriodStatus status = 4;
+  optional string closed_by_user_id = 5;
+  optional google.protobuf.Timestamp closed_at = 6;
+}
+
+// Any day inside the period works as period_start; the server resolves the
+// period containing it.
+message GetTimesheetRequest {
+  string organization_id = 1;
+  // Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+  optional string user_id = 2;
+  string period_start = 3;
+}
+
+message GetTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message SubmitTimesheetRequest {
+  string organization_id = 1;
+  // Submit on behalf of someone else; reviewers and timekeeping admins only.
+  optional string user_id = 2;
+  string period_start = 3;
+  string comment = 4;
+}
+
+message SubmitTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message RecallTimesheetRequest {
+  string organization_id = 1;
+  optional string user_id = 2;
+  string period_start = 3;
+}
+
+message RecallTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message ListReviewTimesheetsRequest {
+  string organization_id = 1;
+  string period_start = 2;
+  optional TimesheetStatus status = 3;
+  // Default 50, capped at 200.
+  int32 page_size = 4;
+  string page_token = 5;
+  // Matches the person's name or email.
+  string query = 6;
+  optional string team_id = 7;
+}
+
+message ReviewTimesheetRow {
+  string user_id = 1;
+  TimesheetStatus status = 2;
+  int32 period_minutes = 3;
+  int32 required_minutes = 4;
+  repeated DayTotal days = 5;
+  Timesheet timesheet = 6;
+}
+
+message ListReviewTimesheetsResponse {
+  repeated ReviewTimesheetRow rows = 1;
+  string next_page_token = 2;
+  TimePeriod period = 3;
+  // The caller may close and reopen periods and reviews people nobody else reviews.
+  bool viewer_is_timekeeping_admin = 4;
+}
+
+message ApproveTimesheetRequest {
+  string organization_id = 1;
+  string timesheet_id = 2;
+  string comment = 3;
+}
+
+message ApproveTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message RejectTimesheetRequest {
+  string organization_id = 1;
+  string timesheet_id = 2;
+  // Required; the worker sees it on the sheet.
+  string comment = 3;
+}
+
+message RejectTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message GrantGraceRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string period_start = 3;
+  // 1 to 336 hours from now.
+  int32 hours = 4;
+}
+
+message GrantGraceResponse {
+  Timesheet timesheet = 1;
+}
+
+message ClosePeriodRequest {
+  string organization_id = 1;
+  string period_start = 2;
+}
+
+message ClosePeriodResponse {
+  TimePeriod period = 1;
+}
+
+message ReopenPeriodRequest {
+  string organization_id = 1;
+  string period_start = 2;
+}
+
+message ReopenPeriodResponse {
+  TimePeriod period = 1;
+}
+
+// Every period touching the inclusive range, computed from the policy, with
+// the closed ones marked.
+message ListPeriodsRequest {
+  string organization_id = 1;
+  string from_date = 2;
+  string to_date = 3;
+}
+
+message ListPeriodsResponse {
+  repeated TimePeriod periods = 1;
+}

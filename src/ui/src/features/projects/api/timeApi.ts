@@ -3,20 +3,32 @@ import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
 import { ProjectsService } from "@uniffy/proto/projects/v1/projects_pb";
 import {
+  TimePeriodStatus as ProtoTimePeriodStatus,
   TimePeriodType as ProtoTimePeriodType,
   TimerPauseReason as ProtoTimerPauseReason,
+  TimesheetStatus as ProtoTimesheetStatus,
   WorklogSource as ProtoWorklogSource,
+  type ReviewTimesheetRow as ProtoReviewTimesheetRow,
+  type TimePeriod as ProtoTimePeriod,
   type TimePolicy as ProtoTimePolicy,
   type Timer as ProtoTimer,
+  type Timesheet as ProtoTimesheet,
   type Worklog as ProtoWorklog,
 } from "@uniffy/proto/projects/v1/time_pb";
 import type {
   CreateWorklogInput,
+  ReviewPage,
+  ReviewQuery,
+  ReviewRow,
   StartTimerInput,
   StopTimerInput,
+  TimePeriod,
+  TimePeriodStatus,
   TimePeriodType,
   TimePolicy,
   Timer,
+  Timesheet,
+  TimesheetStatus,
   UpdateWorklogInput,
   Worklog,
   WorklogSource,
@@ -38,8 +50,86 @@ const PERIOD_FROM_PROTO: Record<ProtoTimePeriodType, TimePeriodType> = {
   [ProtoTimePeriodType.MONTHLY]: "monthly",
 };
 
+const PERIOD_TO_PROTO: Record<TimePeriodType, ProtoTimePeriodType> = {
+  weekly: ProtoTimePeriodType.WEEKLY,
+  monthly: ProtoTimePeriodType.MONTHLY,
+};
+
+const SHEET_STATUS_FROM_PROTO: Record<ProtoTimesheetStatus, TimesheetStatus> = {
+  [ProtoTimesheetStatus.UNSPECIFIED]: "open",
+  [ProtoTimesheetStatus.OPEN]: "open",
+  [ProtoTimesheetStatus.SUBMITTED]: "submitted",
+  [ProtoTimesheetStatus.APPROVED]: "approved",
+  [ProtoTimesheetStatus.REJECTED]: "rejected",
+};
+
+const SHEET_STATUS_TO_PROTO: Record<TimesheetStatus, ProtoTimesheetStatus> = {
+  open: ProtoTimesheetStatus.OPEN,
+  submitted: ProtoTimesheetStatus.SUBMITTED,
+  approved: ProtoTimesheetStatus.APPROVED,
+  rejected: ProtoTimesheetStatus.REJECTED,
+};
+
+const PERIOD_STATUS_FROM_PROTO: Record<ProtoTimePeriodStatus, TimePeriodStatus> = {
+  [ProtoTimePeriodStatus.UNSPECIFIED]: "open",
+  [ProtoTimePeriodStatus.OPEN]: "open",
+  [ProtoTimePeriodStatus.CLOSED]: "closed",
+};
+
 function isoOrEmpty(ts?: { seconds: bigint; nanos: number }): string {
   return ts ? timestampDate(ts).toISOString() : "";
+}
+
+function isoOrNull(ts?: { seconds: bigint; nanos: number }): string | null {
+  return ts ? timestampDate(ts).toISOString() : null;
+}
+
+export function protoTimesheetToFrontend(proto: ProtoTimesheet): Timesheet {
+  return {
+    id: proto.id,
+    userId: proto.userId,
+    periodStart: proto.periodStart,
+    periodEnd: proto.periodEnd,
+    status: SHEET_STATUS_FROM_PROTO[proto.status] ?? "open",
+    submittedAt: isoOrNull(proto.submittedAt),
+    submittedByUserId: proto.submittedByUserId ?? null,
+    submitComment: proto.submitComment,
+    reviewerUserId: proto.reviewerUserId ?? null,
+    reviewedAt: isoOrNull(proto.reviewedAt),
+    reviewComment: proto.reviewComment,
+    graceUntil: isoOrNull(proto.graceUntil),
+    locked: proto.locked,
+    periodClosed: proto.periodClosed,
+    canReview: proto.canReview,
+    totalMinutes: proto.totalMinutes,
+    requiredMinutes: proto.requiredMinutes,
+  };
+}
+
+export function protoPeriodToFrontend(proto: ProtoTimePeriod): TimePeriod {
+  return {
+    id: proto.id,
+    startDate: proto.startDate,
+    endDate: proto.endDate,
+    status: PERIOD_STATUS_FROM_PROTO[proto.status] ?? "open",
+    closedByUserId: proto.closedByUserId ?? null,
+    closedAt: isoOrNull(proto.closedAt),
+  };
+}
+
+function protoReviewRowToFrontend(proto: ProtoReviewTimesheetRow): ReviewRow {
+  return {
+    userId: proto.userId,
+    status: SHEET_STATUS_FROM_PROTO[proto.status] ?? "open",
+    periodMinutes: proto.periodMinutes,
+    requiredMinutes: proto.requiredMinutes,
+    days: proto.days.map((day) => ({
+      day: day.day,
+      minutes: day.minutes,
+      requiredMinutes: day.requiredMinutes,
+    })),
+    timesheet: protoTimesheetToFrontend(proto.timesheet!),
+  };
 }
 
 export function protoWorklogToFrontend(proto: ProtoWorklog): Worklog {
@@ -214,5 +304,145 @@ export const timeApi = {
   getTimePolicy: async (organizationId: string): Promise<TimePolicy> => {
     const response = await timeClient.getTimePolicy({ organizationId });
     return protoPolicyToFrontend(response.policy!);
+  },
+
+  updateTimePolicy: async (policy: TimePolicy, organizationId: string): Promise<TimePolicy> => {
+    const response = await timeClient.updateTimePolicy({
+      organizationId,
+      policy: {
+        organizationId,
+        enabled: policy.enabled,
+        periodType: PERIOD_TO_PROTO[policy.periodType],
+        weekStart: policy.weekStart,
+        monthStartDay: policy.monthStartDay,
+        approvalsEnabled: policy.approvalsEnabled,
+        lockOnSubmit: policy.lockOnSubmit,
+        periodLockDelayDays: policy.periodLockDelayDays,
+        allowLogForOthers: policy.allowLogForOthers,
+        requiredMinutesPerDay: policy.requiredMinutesPerDay,
+        timerRoundingMinutes: policy.timerRoundingMinutes,
+        allowFutureDates: policy.allowFutureDates,
+        ...(policy.maxDaysBack !== null ? { maxDaysBack: policy.maxDaysBack } : {}),
+        maxTimerHours: policy.maxTimerHours,
+        autoSubmit: policy.autoSubmit,
+        holidays: policy.holidays,
+        ...(policy.internalProjectId ? { internalProjectId: policy.internalProjectId } : {}),
+        remindersEnabled: policy.remindersEnabled,
+        reminderHourUtc: policy.reminderHourUtc,
+      },
+    });
+    return protoPolicyToFrontend(response.policy!);
+  },
+
+  /** Any day inside the period works; the server resolves the period containing it. */
+  getTimesheet: async (
+    day: string,
+    organizationId: string,
+    userId?: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.getTimesheet({
+      organizationId,
+      ...(userId ? { userId } : {}),
+      periodStart: day,
+    });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  submitTimesheet: async (
+    day: string,
+    comment: string,
+    organizationId: string,
+    userId?: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.submitTimesheet({
+      organizationId,
+      ...(userId ? { userId } : {}),
+      periodStart: day,
+      comment,
+    });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  recallTimesheet: async (
+    day: string,
+    organizationId: string,
+    userId?: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.recallTimesheet({
+      organizationId,
+      ...(userId ? { userId } : {}),
+      periodStart: day,
+    });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  listReviewTimesheets: async (query: ReviewQuery, organizationId: string): Promise<ReviewPage> => {
+    const response = await timeClient.listReviewTimesheets({
+      organizationId,
+      periodStart: query.periodStart,
+      ...(query.status ? { status: SHEET_STATUS_TO_PROTO[query.status] } : {}),
+      pageSize: 50,
+      pageToken: query.pageToken ?? "",
+      query: query.query ?? "",
+      ...(query.teamId ? { teamId: query.teamId } : {}),
+    });
+    return {
+      rows: response.rows.map(protoReviewRowToFrontend),
+      nextPageToken: response.nextPageToken,
+      period: protoPeriodToFrontend(response.period!),
+      viewerIsTimekeepingAdmin: response.viewerIsTimekeepingAdmin,
+    };
+  },
+
+  approveTimesheet: async (
+    timesheetId: string,
+    comment: string,
+    organizationId: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.approveTimesheet({ organizationId, timesheetId, comment });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  rejectTimesheet: async (
+    timesheetId: string,
+    comment: string,
+    organizationId: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.rejectTimesheet({ organizationId, timesheetId, comment });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  grantGrace: async (
+    userId: string,
+    day: string,
+    hours: number,
+    organizationId: string,
+  ): Promise<Timesheet> => {
+    const response = await timeClient.grantGrace({
+      organizationId,
+      userId,
+      periodStart: day,
+      hours,
+    });
+    return protoTimesheetToFrontend(response.timesheet!);
+  },
+
+  closePeriod: async (day: string, organizationId: string): Promise<TimePeriod> => {
+    const response = await timeClient.closePeriod({ organizationId, periodStart: day });
+    return protoPeriodToFrontend(response.period!);
+  },
+
+  reopenPeriod: async (day: string, organizationId: string): Promise<TimePeriod> => {
+    const response = await timeClient.reopenPeriod({ organizationId, periodStart: day });
+    return protoPeriodToFrontend(response.period!);
+  },
+
+  listPeriods: async (
+    fromDate: string,
+    toDate: string,
+    organizationId: string,
+  ): Promise<TimePeriod[]> => {
+    const response = await timeClient.listPeriods({ organizationId, fromDate, toDate });
+    return response.periods.map(protoPeriodToFrontend);
   },
 };

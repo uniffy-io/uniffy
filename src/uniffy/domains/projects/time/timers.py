@@ -77,7 +77,7 @@ class StopResult:
     task_time_spent_minutes: int
 
 
-def _timer_changed(organization_id: UUID) -> dict[str, str]:
+def timer_changed_payload(organization_id: UUID) -> dict[str, str]:
     return {"_type": NotificationPayloadType.TIMER_CHANGED, "organization_id": str(organization_id)}
 
 
@@ -151,10 +151,24 @@ class TimerOperations:
         await self.session.flush()
         row = await self._require(organization_id, actor_id)
         await self.session.commit()
-        await publish_notification(actor_id, _timer_changed(organization_id))
+        await publish_notification(actor_id, timer_changed_payload(organization_id))
         if replaced is not None and replaced.worklog is not None:
             await publish_content_changed(ContentType.TASK, replaced.task_id, organization_id)
         return row, replaced
+
+    async def stage_stop_active(
+        self,
+        actor_id: UUID,
+        organization_id: UUID,
+        policy: ResolvedTimePolicy,
+        *,
+        work_date: date,
+    ) -> StopResult | None:
+        """Stop the person's timer into a worklog without committing; None when nothing runs."""
+        row = await self._get(organization_id, actor_id)
+        if row is None:
+            return None
+        return await self._stage_stop(row, actor_id, organization_id, policy, work_date=work_date)
 
     async def pause(self, actor_id: UUID, organization_id: UUID) -> TimerRow:
         await self.access.require_active_actor(actor_id, organization_id)
@@ -163,7 +177,7 @@ class TimerOperations:
             raise ValidationError("timer", "the timer is already paused")
         stage_pause(row.timer, datetime.now(UTC))
         await self.session.commit()
-        await publish_notification(actor_id, _timer_changed(organization_id))
+        await publish_notification(actor_id, timer_changed_payload(organization_id))
         return row
 
     async def resume(self, actor_id: UUID, organization_id: UUID) -> TimerRow:
@@ -177,7 +191,7 @@ class TimerOperations:
         timer.paused_at = None
         timer.updated_at = now
         await self.session.commit()
-        await publish_notification(actor_id, _timer_changed(organization_id))
+        await publish_notification(actor_id, timer_changed_payload(organization_id))
         return row
 
     async def stop(
@@ -205,7 +219,7 @@ class TimerOperations:
             discard=discard,
         )
         await self.session.commit()
-        await publish_notification(actor_id, _timer_changed(organization_id))
+        await publish_notification(actor_id, timer_changed_payload(organization_id))
         if result.worklog is not None:
             await publish_content_changed(ContentType.TASK, result.task_id, organization_id)
         return result
@@ -282,7 +296,7 @@ async def pause_timers_past_limit(session: AsyncSession, now: datetime | None = 
         return 0
     await session.commit()
     for timer, task_title, limit_hours in paused:
-        await publish_notification(timer.user_id, _timer_changed(timer.organization_id))
+        await publish_notification(timer.user_id, timer_changed_payload(timer.organization_id))
         await emit_notification(
             NotificationEvent(
                 notification_type=NotificationType.TIMER_LIMIT_REACHED,

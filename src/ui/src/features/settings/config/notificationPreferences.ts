@@ -82,10 +82,35 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         label: "Task overdue",
         defaults: { in_app: true, browser: true, email: true },
       },
+    ],
+  },
+  {
+    label: "Time tracking",
+    rows: [
       {
         type: "TIMER_LIMIT_REACHED",
         label: "Timer paused at the limit",
         defaults: { in_app: true, browser: true, email: false },
+      },
+      {
+        type: "TIMESHEET_SUBMITTED",
+        label: "Timesheet waiting for your review",
+        defaults: { in_app: true, browser: true, email: true },
+      },
+      {
+        type: "TIMESHEET_APPROVED",
+        label: "Your timesheet was approved",
+        defaults: { in_app: true, browser: false, email: false },
+      },
+      {
+        type: "TIMESHEET_REJECTED",
+        label: "Your timesheet was rejected",
+        defaults: { in_app: true, browser: true, email: true },
+      },
+      {
+        type: "TIMESHEET_REMINDER",
+        label: "Timesheet reminders",
+        defaults: { in_app: true, browser: true, email: true },
       },
     ],
   },

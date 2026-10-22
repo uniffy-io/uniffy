@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest";
+import type { RootState } from "@/app/store";
 import type { Timer, Worklog } from "@/features/projects/types/time";
-import { initialTimeState, timeReducer } from "@/features/projects/store/timeSlice";
 import {
+  initialTimeState,
+  selectSheetsTouching,
+  timeReducer,
+} from "@/features/projects/store/timeSlice";
+import {
+  approveTimesheet,
+  closePeriod,
   createWorklog,
   deleteWorklog,
   fetchActiveTimer,
+  fetchReviewTimesheets,
   fetchTaskWorklogs,
+  fetchTimesheet,
   fetchUserWorklogs,
   pauseTimer,
   startTimer,
@@ -268,5 +277,94 @@ describe("timeSlice weeks", () => {
       ),
     );
     expect(state.weeks[key]).toEqual([]);
+  });
+});
+
+describe("timeSlice approvals", () => {
+  const sheet = {
+    id: "s1",
+    userId: "u1",
+    periodStart: "2026-10-12",
+    periodEnd: "2026-10-18",
+    status: "submitted" as const,
+    submittedAt: "2026-10-19T08:00:00Z",
+    submittedByUserId: "u1",
+    submitComment: "",
+    reviewerUserId: null,
+    reviewedAt: null,
+    reviewComment: "",
+    graceUntil: null,
+    locked: true,
+    periodClosed: false,
+    canReview: true,
+    totalMinutes: 600,
+    requiredMinutes: 2400,
+  };
+  const row = {
+    userId: "u1",
+    status: "submitted" as const,
+    periodMinutes: 600,
+    requiredMinutes: 2400,
+    days: [],
+    timesheet: sheet,
+  };
+  const period = {
+    id: "",
+    startDate: "2026-10-12",
+    endDate: "2026-10-18",
+    status: "open" as const,
+    closedByUserId: null,
+    closedAt: null,
+  };
+
+  it("files the person's own sheet by period start and finds it by touching range", () => {
+    const state = timeReducer(initialTimeState, {
+      type: fetchTimesheet.fulfilled.type,
+      payload: sheet,
+    });
+    expect(state.sheets["2026-10-12"]).toEqual(sheet);
+    const root = { time: state } as unknown as RootState;
+    expect(selectSheetsTouching("2026-10-14", "2026-10-20")(root)).toEqual([sheet]);
+    expect(selectSheetsTouching("2026-10-19", "2026-10-25")(root)).toEqual([]);
+  });
+
+  it("appends inbox pages and patches a reviewed row everywhere", () => {
+    let state = timeReducer(initialTimeState, {
+      type: fetchReviewTimesheets.fulfilled.type,
+      payload: { rows: [row], nextPageToken: "50", period, viewerIsTimekeepingAdmin: true },
+      meta: { arg: { periodStart: "2026-10-12" } },
+    });
+    state = timeReducer(state, {
+      type: fetchReviewTimesheets.fulfilled.type,
+      payload: {
+        rows: [{ ...row, userId: "u2", timesheet: { ...sheet, userId: "u2" } }],
+        nextPageToken: "",
+        period,
+        viewerIsTimekeepingAdmin: true,
+      },
+      meta: { arg: { periodStart: "2026-10-12", pageToken: "50" } },
+    });
+    expect(state.review.rows.map((r) => r.userId)).toEqual(["u1", "u2"]);
+    expect(state.review.loaded).toBe(true);
+    state = timeReducer(state, {
+      type: approveTimesheet.fulfilled.type,
+      payload: { ...sheet, status: "approved" as const },
+    });
+    expect(state.review.rows[0].status).toBe("approved");
+    expect(state.review.rows[0].timesheet.status).toBe("approved");
+    expect(state.personSheets["u1:2026-10-12"].status).toBe("approved");
+  });
+
+  it("marks every sheet of a closed period as closed and locked", () => {
+    let state = timeReducer(initialTimeState, {
+      type: fetchTimesheet.fulfilled.type,
+      payload: { ...sheet, status: "open" as const, locked: false },
+    });
+    state = timeReducer(state, {
+      type: closePeriod.fulfilled.type,
+      payload: { ...period, status: "closed" as const },
+    });
+    expect(state.sheets["2026-10-12"].periodClosed).toBe(true);
+    expect(state.sheets["2026-10-12"].locked).toBe(true);
   });
 });

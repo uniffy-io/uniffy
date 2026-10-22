@@ -5,6 +5,7 @@ import inspect
 from uniffy_proto.projects.v1.projects_connect import ProjectsService
 
 from uniffy.domains.projects.service import ProjectsServiceImpl
+from uniffy.domains.projects.time.approvals import TimesheetHandlers
 from uniffy.domains.projects.time.handlers import TimeHandlers
 
 TIME_RPCS = (
@@ -21,11 +22,22 @@ TIME_RPCS = (
     "resume_timer",
     "stop_timer",
     "get_active_timer",
+    "get_timesheet",
+    "submit_timesheet",
+    "recall_timesheet",
+    "list_review_timesheets",
+    "approve_timesheet",
+    "reject_timesheet",
+    "grant_grace",
+    "close_period",
+    "reopen_period",
+    "list_periods",
 )
 
 
 def test_projects_service_exposes_the_time_rpcs() -> None:
     assert issubclass(ProjectsServiceImpl, TimeHandlers)
+    assert issubclass(ProjectsServiceImpl, TimesheetHandlers)
     for name in TIME_RPCS:
         assert callable(getattr(ProjectsServiceImpl, name)), name
 

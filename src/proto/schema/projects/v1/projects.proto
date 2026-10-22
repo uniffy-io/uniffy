@@ -75,6 +75,16 @@ service ProjectsService {
   rpc GetTimePolicy(GetTimePolicyRequest) returns (GetTimePolicyResponse);
   rpc UpdateTimePolicy(UpdateTimePolicyRequest) returns (UpdateTimePolicyResponse);
   rpc AggregateWorklogs(AggregateWorklogsRequest) returns (AggregateWorklogsResponse);
+  rpc GetTimesheet(GetTimesheetRequest) returns (GetTimesheetResponse);
+  rpc SubmitTimesheet(SubmitTimesheetRequest) returns (SubmitTimesheetResponse);
+  rpc RecallTimesheet(RecallTimesheetRequest) returns (RecallTimesheetResponse);
+  rpc ListReviewTimesheets(ListReviewTimesheetsRequest) returns (ListReviewTimesheetsResponse);
+  rpc ApproveTimesheet(ApproveTimesheetRequest) returns (ApproveTimesheetResponse);
+  rpc RejectTimesheet(RejectTimesheetRequest) returns (RejectTimesheetResponse);
+  rpc GrantGrace(GrantGraceRequest) returns (GrantGraceResponse);
+  rpc ClosePeriod(ClosePeriodRequest) returns (ClosePeriodResponse);
+  rpc ReopenPeriod(ReopenPeriodRequest) returns (ReopenPeriodResponse);
+  rpc ListPeriods(ListPeriodsRequest) returns (ListPeriodsResponse);
 }
 
 // ============================================================================
