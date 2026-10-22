@@ -17,7 +17,6 @@ from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.reaction import ChatReaction
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
@@ -28,6 +27,7 @@ from uniffy.domains.chat.threads import handlers as threads
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _insert_chat_channel,
+    _insert_organization,
     _insert_organization_member,
     _migrate_to,
     _provision_to,
@@ -40,9 +40,9 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            org = Organization(name="History", slug="history")
+            org_id = await _insert_organization(session, name="History", slug="history")
             user = User(username="reader", email="reader@example.test")
-            session.add_all([org, user])
+            session.add(user)
             await session.flush()
             agent_id, skill_id, version_id = generate_id(), generate_id(), generate_id()
             await session.execute(
@@ -50,7 +50,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                     "INSERT INTO agents_agents (id, organization_id, owner_id, name) "
                     "VALUES (:id, :org, :owner, 'Assistant')"
                 ),
-                {"id": agent_id, "org": org.id, "owner": user.id},
+                {"id": agent_id, "org": org_id, "owner": user.id},
             )
             await session.execute(
                 text(
@@ -60,7 +60,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                     "VALUES (:id, :org, 'organization', 'summary', 'Summary', "
                     "'Summarize the conversation.', :version, now())"
                 ),
-                {"id": skill_id, "org": org.id, "version": version_id},
+                {"id": skill_id, "org": org_id, "version": version_id},
             )
             await session.execute(
                 text(
@@ -72,17 +72,17 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             )
             channel_id = await _insert_chat_channel(
                 session,
-                organization_id=org.id,
+                organization_id=org_id,
                 owner_id=user.id,
                 name="History",
                 channel_type=ChannelType.PUBLIC,
             )
             await _insert_organization_member(
-                session, organization_id=org.id, user_id=user.id, role=OrganizationRole.ADMIN
+                session, organization_id=org_id, user_id=user.id, role=OrganizationRole.ADMIN
             )
             await session.flush()
             conversation = AgentSession(
-                organization_id=org.id,
+                organization_id=org_id,
                 agent_id=agent_id,
                 user_id=user.id,
                 kind=AgentSessionKind.DIRECT,
@@ -109,7 +109,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 content="Thread answer",
             )
             run = AgentRunLog(
-                organization_id=org.id,
+                organization_id=org_id,
                 agent_id=agent_id,
                 user_id=user.id,
                 session_id=conversation.id,
@@ -127,7 +127,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 ),
                 {
                     "id": generate_id(),
-                    "org": org.id,
+                    "org": org_id,
                     "user": user.id,
                     "skill": skill_id,
                     "evidence": dumps_str([str(reply.id)]),
@@ -200,7 +200,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             for module in (sessions, threads):
                 monkeypatch.setattr(module, "open_session", open_history)
                 monkeypatch.setattr(module, "current_user_id", lambda: user.id)
-                monkeypatch.setattr(module, "resolve_organization_id", lambda _: org.id)
+                monkeypatch.setattr(module, "resolve_organization_id", lambda _: org_id)
             sender = SimpleNamespace(
                 resolve_many=AsyncMock(
                     return_value={
@@ -212,14 +212,14 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 monkeypatch.setattr(module, "SenderResolver", lambda _: sender)
 
             history = await sessions.SessionsHandlers().list_messages(
-                ListMessagesRequest(organization_id=str(org.id), session_id=str(conversation.id)),
+                ListMessagesRequest(organization_id=str(org_id), session_id=str(conversation.id)),
                 None,
             )
             assert [message.content for message in history.messages] == ["Session answer"]
             assert "Reasoning" in history.messages[0].thinking_json
             thread = await threads.ThreadHandlers().get_thread_messages(
                 GetThreadMessagesRequest(
-                    organization_id=str(org.id),
+                    organization_id=str(org_id),
                     channel_id=str(channel_id),
                     root_message_id=str(root.id),
                 ),
@@ -231,7 +231,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 session,
                 [chat_reply],
                 user.id,
-                org.id,
+                org_id,
                 ChatAccessChecker(session),
             )
             assert enriched[0].content == "Thread answer"

@@ -11,14 +11,17 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.rule import AgentRule, RuleSource, RuleStatus
 from uniffy.core.models.agents.rule_version import AgentRuleVersion
 from uniffy.core.models.agents.agent import Agent
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.rules import bundled, resolution
 from uniffy.domains.agents.rules.versions import stage_rule_version
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
-from uniffy.tests.integration.internal.migrations.test_migration_run import _provision_to, _query
+from uniffy.tests.integration.internal.migrations.test_migration_run import (
+    _insert_organization,
+    _provision_to,
+    _query,
+)
 
 
 async def test_rules_are_selected_per_agent_and_ignore_global_settings(
@@ -30,12 +33,12 @@ async def test_rules_are_selected_per_agent_and_ignore_global_settings(
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            org = Organization(name="Rules", slug="rules")
+            org_id = await _insert_organization(session, name="Rules", slug="rules")
             user = User(username="builder", email="builder@example.test")
-            session.add_all([org, user])
+            session.add(user)
             await session.flush()
             rule = AgentRule(
-                organization_id=org.id,
+                organization_id=org_id,
                 source=RuleSource.ORGANIZATION,
                 name="selected",
                 display_name="Selected",
@@ -46,30 +49,30 @@ async def test_rules_are_selected_per_agent_and_ignore_global_settings(
             await session.flush()
             await stage_rule_version(session, rule, author_id=user.id)
             first = Agent(
-                organization_id=org.id,
+                organization_id=org_id,
                 owner_id=user.id,
                 name="First",
                 enabled_rules=[str(rule.id)],
             )
-            second = Agent(organization_id=org.id, owner_id=user.id, name="Second")
+            second = Agent(organization_id=org_id, owner_id=user.id, name="Second")
             session.add_all([
                 first,
                 second,
                 OrgSetting(
-                    organization_id=org.id,
+                    organization_id=org_id,
                     namespace="agents",
                     key="enabled_rules",
                     value=[str(rule.id)],
                 ),
                 OrgSetting(
-                    organization_id=org.id, namespace="agents", key="runtime", value={"keep": True}
+                    organization_id=org_id, namespace="agents", key="runtime", value={"keep": True}
                 ),
             ])
             await session.commit()
             assert (
                 await resolution.resolve_enabled_rules(
                     session,
-                    organization_id=org.id,
+                    organization_id=org_id,
                     agent_id=second.id,
                     enabled_rule_ids=[],
                 )
@@ -77,7 +80,7 @@ async def test_rules_are_selected_per_agent_and_ignore_global_settings(
             )
             selected = await resolution.resolve_enabled_rules(
                 session,
-                organization_id=org.id,
+                organization_id=org_id,
                 agent_id=first.id,
                 enabled_rule_ids=first.enabled_rules,
             )
@@ -138,12 +141,10 @@ async def test_rule_resolution_isolates_tenants_and_uses_pinned_body(scratch_dat
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            first = Organization(name="First", slug="first")
-            second = Organization(name="Second", slug="second")
-            session.add_all([first, second])
-            await session.flush()
+            first_id = await _insert_organization(session, name="First", slug="first")
+            second_id = await _insert_organization(session, name="Second", slug="second")
             rule = AgentRule(
-                organization_id=first.id,
+                organization_id=first_id,
                 source=RuleSource.ORGANIZATION,
                 name="same_name",
                 display_name="Pinned",
@@ -159,7 +160,7 @@ async def test_rule_resolution_isolates_tenants_and_uses_pinned_body(scratch_dat
             await session.commit()
             result = await resolution.resolve_enabled_rules(
                 session,
-                organization_id=first.id,
+                organization_id=first_id,
                 agent_id=generate_id(),
                 enabled_rule_ids=[str(rule.id)],
             )
@@ -168,7 +169,7 @@ async def test_rule_resolution_isolates_tenants_and_uses_pinned_body(scratch_dat
             with pytest.raises(ValidationError, match="unavailable"):
                 await resolution.resolve_enabled_rules(
                     session,
-                    organization_id=second.id,
+                    organization_id=second_id,
                     agent_id=generate_id(),
                     enabled_rule_ids=[str(rule.id)],
                 )

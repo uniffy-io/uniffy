@@ -114,6 +114,19 @@ async def _insert_organization_member(
     return membership_id
 
 
+async def _insert_organization(session: AsyncSession, *, name: str, slug: str) -> UUID:
+    """Write the organization row an older revision has; the head model carries later columns."""
+    organization_id = generate_id()
+    await session.execute(
+        text(
+            "INSERT INTO login_organizations (id, name, slug, created_at) "
+            "VALUES (:id, :name, :slug, now())"
+        ),
+        {"id": organization_id, "name": name, "slug": slug},
+    )
+    return organization_id
+
+
 def _migrate_to(revision: str) -> None:
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False

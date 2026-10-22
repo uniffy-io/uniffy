@@ -4,13 +4,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from uniffy.core.models.chat.channel import ChannelType
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _insert_chat_channel,
+    _insert_organization,
     _migrate_to,
     _provision_to,
     _query,
@@ -27,12 +27,12 @@ async def test_capacity_upgrade_preserves_calls_and_snapshots_policy(scratch_dat
             session.add(user)
             await session.flush()
             for capacity in (None, 1, 75):
-                org = Organization(name=f"Calls {capacity}", slug=f"calls-{capacity}")
-                session.add(org)
-                await session.flush()
+                org_id = await _insert_organization(
+                    session, name=f"Calls {capacity}", slug=f"calls-{capacity}"
+                )
                 channel_id = await _insert_chat_channel(
                     session,
-                    organization_id=org.id,
+                    organization_id=org_id,
                     owner_id=user.id,
                     name="Calls",
                     channel_type=ChannelType.PUBLIC,
@@ -40,7 +40,7 @@ async def test_capacity_upgrade_preserves_calls_and_snapshots_policy(scratch_dat
                 if capacity is not None:
                     session.add(
                         OrgSetting(
-                            organization_id=org.id,
+                            organization_id=org_id,
                             namespace="calls",
                             key="policy",
                             value={"max_participants": capacity},
@@ -57,7 +57,7 @@ async def test_capacity_upgrade_preserves_calls_and_snapshots_policy(scratch_dat
                     ),
                     {
                         "id": call_id,
-                        "org": org.id,
+                        "org": org_id,
                         "channel": channel_id,
                         "user": user.id,
                         "room": str(call_id),
