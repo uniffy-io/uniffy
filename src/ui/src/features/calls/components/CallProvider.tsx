@@ -805,7 +805,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [endedInfo, room, teardown]);
 
-  // Switching org context mid-call (/select-org lives inside this provider) must
+  // Switching org context mid-call (/welcome lives inside this provider) must
   // leave the call in the previous org: the room stays connected otherwise, and
   // the new org's ListActiveCalls resync would flag the now-absent call as ended
   // while the mic keeps transmitting. currentUserId-clear (logout) is handled above.

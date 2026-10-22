@@ -249,10 +249,11 @@ it("reloads an organization list that the switch interrupted", async () => {
 });
 
 it("summarizes memberships and keeps the last list when a reload fails", async () => {
-  shared.list.mockResolvedValueOnce({ organizations: [acme] });
+  shared.list.mockResolvedValueOnce({ organizations: [acme], canCreateOrganization: true });
   await dispatch()(fetchMyOrganizations()).unwrap();
   expect(store.getState().organizations).toMatchObject({
     status: "ready",
+    canCreateOrganization: true,
     items: [
       {
         id: "org-acme",
@@ -269,4 +270,5 @@ it("summarizes memberships and keeps the last list when a reload fails", async (
   await expect(dispatch()(fetchMyOrganizations()).unwrap()).rejects.toBe("network unavailable");
   expect(store.getState().organizations.status).toBe("error");
   expect(store.getState().organizations.items).toHaveLength(1);
+  expect(store.getState().organizations.canCreateOrganization).toBe(true);
 });

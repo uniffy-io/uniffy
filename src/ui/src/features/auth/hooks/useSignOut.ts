@@ -144,6 +144,8 @@ export function usePendingOrganizations(): () => Promise<PendingOrganization[]> 
 export interface SignOutOptions {
   /** The caller confirmed that edits no checkpoint covers yet may be lost. */
   discardUnsynced?: boolean;
+  /** Where the tab lands signed out instead of `/auth`, in place of the current entry. */
+  returnTo?: string;
 }
 
 /**
@@ -170,7 +172,8 @@ export function useSignOut(): (options?: SignOutOptions) => Promise<boolean> {
       teardownStorageEncryption();
       void clearSessionCaches(dispatch, { reason: "sign-out", userId: userId ?? undefined });
       dispatch(logout());
-      navigate("/auth");
+      if (options?.returnTo) navigate(options.returnTo, { replace: true });
+      else navigate("/auth");
       return true;
     },
     [dispatch, navigate, refreshToken, userId],

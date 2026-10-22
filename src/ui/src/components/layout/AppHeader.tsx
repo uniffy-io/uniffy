@@ -14,6 +14,8 @@ import { UrnType } from "@/shared/utils/urn";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useAgentsBuilderAccess } from "@/features/agents/hooks/useAgentsBuilderAccess";
+import { selectPendingInvitationsStatus } from "@/features/auth/store/invitationsSlice";
+import { fetchMyInvitations } from "@/features/auth/store/invitationsThunks";
 import { selectOrganizationsStatus } from "@/features/auth/store/organizationsSlice";
 import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
@@ -239,6 +241,7 @@ export function AppHeader() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const userId = useAppSelector((state) => state.auth.user?.id);
   const organizationsStatus = useAppSelector(selectOrganizationsStatus);
+  const invitationsStatus = useAppSelector(selectPendingInvitationsStatus);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavItems = useVisibleNavItems();
   const lastOpenedChannelId =
@@ -247,11 +250,16 @@ export function AppHeader() {
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
-  // The list resets to idle on sign-out, so this loads it once per signed-in user.
+  // Both lists reset to idle on sign-out, so each loads once per signed-in user.
   useEffect(() => {
     if (!userId || organizationsStatus !== "idle") return;
     void dispatch(fetchMyOrganizations());
   }, [dispatch, organizationsStatus, userId]);
+
+  useEffect(() => {
+    if (!userId || invitationsStatus !== "idle") return;
+    void dispatch(fetchMyInvitations());
+  }, [dispatch, invitationsStatus, userId]);
 
   useEffect(() => {
     if (!organizationId || !userId || location.pathname.startsWith("/chat")) return;

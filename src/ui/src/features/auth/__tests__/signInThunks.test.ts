@@ -155,7 +155,7 @@ it("signs a multi-organization user into the organization remembered on this dev
   expect(store.getState().organizations.items.map((item) => item.slug)).toEqual(["acme", "globex"]);
 });
 
-it("leaves a multi-organization user without a memory to the picker", async () => {
+it("leaves a multi-organization user without a memory to the welcome page", async () => {
   shared.list.mockResolvedValue({ organizations: [membership("acme"), membership("globex")] });
 
   await expect(signIn(login)).resolves.toEqual({ organizationId: null });

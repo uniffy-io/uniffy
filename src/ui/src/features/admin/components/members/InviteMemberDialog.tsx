@@ -43,12 +43,7 @@ export function InviteMemberDialog({
         email: trimmed,
         role: Number(roleStr) as OrganizationRole,
       });
-      if (response.result.case === "addedMember") {
-        const member = response.result.value;
-        toast.success(`${member.displayName || trimmed} added to the organization`);
-      } else {
-        toast.success(`Invitation sent to ${trimmed}`);
-      }
+      toast.success(`Invitation sent to ${response.invitation?.email || trimmed}.`);
       onInvited();
       onClose();
     } catch (err) {
@@ -65,7 +60,7 @@ export function InviteMemberDialog({
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-md">
       <ModalHeader
         title="Invite member"
-        description="Existing accounts are added right away. Anyone else gets an invitation link by email."
+        description="The person gets an invitation by email. They join once they accept it."
       />
 
       <ModalBody>

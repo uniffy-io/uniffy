@@ -18,12 +18,15 @@ export interface OrganizationsState {
   items: OrganizationSummary[];
   status: "idle" | "loading" | "ready" | "error";
   switchingSlug: string | null;
+  /** The deployment's creation policy as the server applied it to this user at the last load. */
+  canCreateOrganization: boolean;
 }
 
 const initialState: OrganizationsState = {
   items: [],
   status: "idle",
   switchingSlug: null,
+  canCreateOrganization: false,
 };
 
 export function summarizeOrganization(proto: MyOrganization): OrganizationSummary {
@@ -44,9 +47,24 @@ export const organizationsSlice = createSlice({
     organizationsLoading: (state) => {
       state.status = "loading";
     },
-    organizationsLoaded: (state, action: PayloadAction<OrganizationSummary[]>) => {
-      state.items = action.payload;
-      state.status = "ready";
+    organizationsLoaded: {
+      reducer: (
+        state,
+        action: PayloadAction<{ items: OrganizationSummary[]; canCreateOrganization: boolean }>,
+      ) => {
+        state.items = action.payload.items;
+        state.canCreateOrganization = action.payload.canCreateOrganization;
+        state.status = "ready";
+      },
+      prepare: (items: OrganizationSummary[], canCreateOrganization = false) => ({
+        payload: { items, canCreateOrganization },
+      }),
+    },
+    organizationAdded: (state, action: PayloadAction<OrganizationSummary>) => {
+      state.items = [
+        ...state.items.filter((item) => item.id !== action.payload.id),
+        action.payload,
+      ];
     },
     // A failed reload keeps the last good list so the switcher stays usable.
     organizationsFailed: (state) => {
@@ -69,6 +87,7 @@ export const organizationsSlice = createSlice({
 export const {
   organizationsLoading,
   organizationsLoaded,
+  organizationAdded,
   organizationsFailed,
   switchStarted,
   switchFinished,
@@ -80,6 +99,8 @@ type OrganizationsRootState = Pick<RootState, "auth" | "organizations">;
 export const selectOrganizations = (state: OrganizationsRootState) => state.organizations.items;
 export const selectOrganizationsStatus = (state: OrganizationsRootState) =>
   state.organizations.status;
+export const selectCanCreateOrganization = (state: OrganizationsRootState) =>
+  state.organizations.canCreateOrganization;
 export const selectCurrentOrganization = (
   state: OrganizationsRootState,
 ): OrganizationSummary | null => {

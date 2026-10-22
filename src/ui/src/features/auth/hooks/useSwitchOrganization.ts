@@ -28,14 +28,15 @@ interface SwitchInterruptions {
 }
 
 interface PendingSwitch {
-  slug: string;
-  target?: string;
+  work: () => Promise<void>;
   interruptions: SwitchInterruptions;
 }
 
 export interface OrganizationSwitchControls {
   /** Lands on `target` (default `/`) in the organization; the current one only navigates. */
   requestSwitch: (slug: string, target?: string) => Promise<void>;
+  /** Runs `work`, which moves this tab into another organization, once the same confirmation passes. */
+  guardSwitch: (work: () => Promise<void>) => Promise<void>;
   isSwitching: boolean;
   /** Confirmation for work the switch would interrupt; mount it where it outlives the menu that asked. */
   confirmDialog: ReactNode;
@@ -85,13 +86,9 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
     [dispatch, here, navigate],
   );
 
-  const requestSwitch = useCallback(
-    async (slug: string, target?: string) => {
+  const guardSwitch = useCallback(
+    async (work: () => Promise<void>) => {
       if (isSwitching) return;
-      if (slug === currentSlug) {
-        navigate(target ?? "/");
-        return;
-      }
       // Pending edits keep their rows and drain once a tab returns to this organization; only
       // this tab's uploads end with the switch.
       const interruptions: SwitchInterruptions = {
@@ -101,28 +98,32 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
         uploads: uploadService.hasActiveUploads(),
       };
       if (interruptions.recording || interruptions.unsyncedEdits || interruptions.uploads) {
-        setPending({ slug, target, interruptions });
+        setPending({ work, interruptions });
         return;
       }
-      await performSwitch(slug, target);
+      await work();
     },
-    [
-      currentOrganizationId,
-      currentSlug,
-      isSwitching,
-      navigate,
-      performSwitch,
-      recordingState,
-      userId,
-    ],
+    [currentOrganizationId, isSwitching, recordingState, userId],
+  );
+
+  const requestSwitch = useCallback(
+    async (slug: string, target?: string) => {
+      if (isSwitching) return;
+      if (slug === currentSlug) {
+        navigate(target ?? "/");
+        return;
+      }
+      await guardSwitch(() => performSwitch(slug, target));
+    },
+    [currentSlug, guardSwitch, isSwitching, navigate, performSwitch],
   );
 
   const confirmSwitch = async () => {
     if (!pending) return;
-    const { slug, target, interruptions } = pending;
+    const { work, interruptions } = pending;
     setPending(null);
     if (interruptions.recording) await dispatch(cancelRecording());
-    await performSwitch(slug, target);
+    await work();
   };
 
   const recording = pending?.interruptions.recording ?? false;
@@ -139,5 +140,5 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
     variant: "warning",
   });
 
-  return { requestSwitch, isSwitching, confirmDialog };
+  return { requestSwitch, guardSwitch, isSwitching, confirmDialog };
 }

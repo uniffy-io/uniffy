@@ -81,7 +81,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!currentOrganizationId) {
-    return <Navigate to="/select-org" state={{ from: location }} replace />;
+    return <Navigate to="/welcome" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

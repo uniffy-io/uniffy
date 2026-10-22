@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Books,
+  Buildings,
+  PlusCircle,
   SignOut,
   Moon,
   ShieldCheck,
@@ -12,7 +14,9 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CreateOrganizationDialog } from "@/features/auth/components/CreateOrganizationDialog";
 import { OrganizationList } from "@/features/auth/components/OrganizationList";
 import {
   pendingOrganizationNames,
@@ -21,7 +25,11 @@ import {
   type PendingOrganization,
 } from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
-import { selectOrganizations } from "@/features/auth/store/organizationsSlice";
+import { selectPendingInvitationCount } from "@/features/auth/store/invitationsSlice";
+import {
+  selectCanCreateOrganization,
+  selectOrganizations,
+} from "@/features/auth/store/organizationsSlice";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
@@ -84,11 +92,12 @@ export function UserMenu() {
   const signOut = useSignOut();
   const listPendingOrganizations = usePendingOrganizations();
   const recordingState = useAppSelector((state) => state.recording.state);
-  const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
+  const { canAccessAdmin, isOrgAdmin, isSystemAdmin } = useAdminAccess();
   const { themeMode, setTheme, availableModes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
   // The organizations holding unsynced edits while the sign-out waits for a decision.
   const [unsynced, setUnsynced] = useState<PendingOrganization[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -98,6 +107,8 @@ export function UserMenu() {
   const organizations = useAppSelector(selectOrganizations);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
+  const canCreateOrganization = useAppSelector(selectCanCreateOrganization);
+  const pendingInvitationCount = useAppSelector(selectPendingInvitationCount);
   const { requestSwitch, confirmDialog: switchConfirmDialog } = useSwitchOrganization();
 
   useEffect(() => {
@@ -250,16 +261,56 @@ export function UserMenu() {
                 />
               </div>
             )}
+            {canCreateOrganization && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setCreatingOrganization(true);
+                }}
+                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+              >
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                <PlusCircle
+                  size={16}
+                  weight="duotone"
+                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
+                />
+                <span>Create organization</span>
+              </button>
+            )}
+            {isOrgAdmin && (
+              <button
+                onClick={() => {
+                  navigate("/admin/organization");
+                  setIsOpen(false);
+                }}
+                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+              >
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                <Buildings
+                  size={16}
+                  weight="duotone"
+                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
+                />
+                <span>Organization settings</span>
+              </button>
+            )}
             <Button
               variant="ghost"
               size="sm"
               className="w-full min-h-11 justify-start"
               onClick={() => {
                 setIsOpen(false);
-                navigate("/select-org");
+                navigate("/welcome");
               }}
             >
               All organizations
+              {pendingInvitationCount > 0 && (
+                <Badge className="ml-auto px-1.5 py-0 text-[10px] leading-4">
+                  {pendingInvitationCount}
+                  <span className="sr-only"> pending invitations</span>
+                </Badge>
+              )}
             </Button>
           </div>
 
@@ -468,6 +519,9 @@ export function UserMenu() {
         variant="warning"
       />
       {switchConfirmDialog}
+      {creatingOrganization && (
+        <CreateOrganizationDialog onClose={() => setCreatingOrganization(false)} />
+      )}
     </div>
   );
 }

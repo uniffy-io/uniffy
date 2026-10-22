@@ -16,6 +16,7 @@ import {
   writeLastOrganization,
 } from "@/features/auth/store/lastOrganizationStorage";
 import {
+  organizationAdded,
   organizationsFailed,
   organizationsLoaded,
   organizationsLoading,
@@ -31,6 +32,12 @@ const SESSION_CHANGED_MESSAGE = "Session changed";
 
 export interface OrganizationSwitch {
   organizationId: string;
+}
+
+export interface CreatedOrganization {
+  organizationId: string;
+  slug: string;
+  name: string;
 }
 
 export type ContentOrganization = Pick<OrganizationSummary, "id" | "name" | "slug" | "role">;
@@ -52,7 +59,7 @@ export const fetchMyOrganizations = thunk<OrganizationSummary[], void>(
     try {
       const response = await organizationsApi.listMyOrganizations();
       const items = response.organizations.map(summarizeOrganization);
-      dispatch(organizationsLoaded(items));
+      dispatch(organizationsLoaded(items, response.canCreateOrganization));
       return items;
     } catch (error) {
       dispatch(organizationsFailed());
@@ -182,4 +189,29 @@ export function switchOrganization(
       getState,
       undefined,
     ).unwrap();
+}
+
+/**
+ * Creates the organization and switches this tab into it. A refused create rejects with its
+ * ConnectError and no toast, so the form can place the message; a failed switch afterwards rejects
+ * with the message the switch already toasted.
+ */
+export function createOrganization(request: {
+  name: string;
+  slug?: string;
+}): ThunkAction<Promise<CreatedOrganization>, RootState, unknown, UnknownAction> {
+  return async (dispatch) => {
+    const response = await organizationsApi.createOrganization({
+      name: request.name,
+      slug: request.slug || undefined,
+    });
+    const created = response.organization ? summarizeOrganization(response.organization) : null;
+    if (!created?.id || !created.slug) {
+      throw new ConnectError("The created organization was not returned", Code.Internal);
+    }
+    // The switch ends this scope and drops later dispatches, so the list learns of it first.
+    dispatch(organizationAdded(created));
+    const { organizationId } = await dispatch(switchOrganization(created.slug));
+    return { organizationId, slug: created.slug, name: created.name };
+  };
 }

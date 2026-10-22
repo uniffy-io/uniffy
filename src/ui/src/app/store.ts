@@ -16,6 +16,7 @@ import { credentialSafeStorage } from "@/features/auth/store/credentialStorage";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { authReducer } from "@/features/auth/store/authSlice";
 import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
+import { invitationsReducer } from "@/features/auth/store/invitationsSlice";
 import { setPreferredTimeZone } from "@/shared/utils/timezone";
 import { setPreferredWeekStart } from "@/shared/utils/weekStart";
 import type { AuthState } from "@/features/auth/store/authSlice";
@@ -172,6 +173,7 @@ const agentsUiTransform = createTransform(
 const rootReducer = combineReducers({
   auth: authReducer,
   organizations: organizationsReducer,
+  invitations: invitationsReducer,
   bookmarks: bookmarksReducer,
   libraryGraph: libraryGraphReducer,
   theme: themeReducer,

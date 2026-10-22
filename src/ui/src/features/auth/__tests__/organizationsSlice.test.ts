@@ -11,10 +11,12 @@ import {
   setCredentials,
 } from "@/features/auth/store/authSlice";
 import {
+  organizationAdded,
   organizationsFailed,
   organizationsLoaded,
   organizationsLoading,
   organizationsReducer,
+  selectCanCreateOrganization,
   selectCurrentOrganization,
   selectOrganizations,
   selectOrganizationsStatus,
@@ -108,6 +110,33 @@ describe("organizationsSlice", () => {
     expect(selectOrganizations(state)).toHaveLength(1);
   });
 
+  it("takes the creation flag from each load and reads a load without it as not allowed", () => {
+    let state = reducer(undefined, { type: "@@init" });
+    expect(selectCanCreateOrganization(state)).toBe(false);
+
+    state = reducer(state, organizationsLoaded([summary("org-a", "acme")], true));
+    expect(selectCanCreateOrganization(state)).toBe(true);
+
+    state = reducer(state, organizationsLoaded([summary("org-a", "acme")]));
+    expect(selectCanCreateOrganization(state)).toBe(false);
+  });
+
+  it("adds a created organization once, replacing a listed row with the same id", () => {
+    let state = signedIn("org-a");
+    state = reducer(state, organizationAdded(summary("org-c", "initech")));
+    state = reducer(
+      state,
+      organizationAdded(summary("org-c", "initech", { role: OrganizationRole.OWNER })),
+    );
+
+    expect(selectOrganizations(state).map((item) => item.slug)).toEqual([
+      "acme",
+      "globex",
+      "initech",
+    ]);
+    expect(selectOrganizations(state)[2].role).toBe(OrganizationRole.OWNER);
+  });
+
   it("records the slug being switched to until the switch settles", () => {
     let state = reducer(undefined, switchStarted("globex"));
     expect(state.organizations.switchingSlug).toBe("globex");
@@ -129,12 +158,22 @@ describe("organizationsSlice", () => {
     const before = reducer(signedIn("org-a"), switchStarted("globex"));
     const after = reducer(before, logout());
 
-    expect(after.organizations).toEqual({ items: [], status: "idle", switchingSlug: null });
+    expect(after.organizations).toEqual({
+      items: [],
+      status: "idle",
+      switchingSlug: null,
+      canCreateOrganization: false,
+    });
   });
 
   it("resets when rehydration fails", () => {
     const after = reducer(signedIn("org-a"), rehydrateFailed());
 
-    expect(after.organizations).toEqual({ items: [], status: "idle", switchingSlug: null });
+    expect(after.organizations).toEqual({
+      items: [],
+      status: "idle",
+      switchingSlug: null,
+      canCreateOrganization: false,
+    });
   });
 });

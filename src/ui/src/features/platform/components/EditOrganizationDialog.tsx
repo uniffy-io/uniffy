@@ -8,6 +8,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Select } from "@/components/ui/select";
 import { friendlyErrorMessage } from "@/config";
 import { platformOrgsApi } from "@/features/platform/api/systemDirectoryApi";
+import { MAX_SLUG_LENGTH, MIN_SLUG_LENGTH, toSlugDraft } from "@/shared/utils/slug";
 import type { PlatformOrganizationDetail } from "@uniffy/proto/superadmin/v1/system_directory_pb";
 
 interface Props {
@@ -17,14 +18,6 @@ interface Props {
 }
 
 const KNOWN_PLANS = ["free", "pro", "team", "business", "enterprise"];
-
-function slugFrom(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[-\s]+/g, "-")
-    .replace(/^-+/, "");
-}
 
 export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
   const summary = detail.summary;
@@ -69,7 +62,7 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
     hasChanges &&
     reason.trim().length > 0 &&
     name.trim().length > 0 &&
-    slug.length >= 2 &&
+    slug.length >= MIN_SLUG_LENGTH &&
     maxValid;
 
   const handleSubmit = async () => {
@@ -120,8 +113,8 @@ export function EditOrganizationDialog({ detail, onClose, onSaved }: Props) {
           <Input
             id="org-edit-slug"
             value={slug}
-            onChange={(e) => setSlug(slugFrom(e.target.value))}
-            maxLength={255}
+            onChange={(e) => setSlug(toSlugDraft(e.target.value))}
+            maxLength={MAX_SLUG_LENGTH}
             className="font-mono"
             disabled={submitting}
           />

@@ -5,6 +5,7 @@ import {
   AuthService,
   LoginRequestSchema,
   RegisterRequestSchema,
+  SetupDeploymentRequestSchema,
 } from "@uniffy/proto/auth/v1/auth_pb";
 
 /** Calls made before a session exists, so they ride the transport without the auth interceptor. */
@@ -21,5 +22,10 @@ export const authApi = {
 
   register: async (request: MessageInitShape<typeof RegisterRequestSchema>) => {
     return publicAuthClient.register(request);
+  },
+
+  /** Refused with FAILED_PRECONDITION once the deployment has any account. */
+  setupDeployment: async (request: MessageInitShape<typeof SetupDeploymentRequestSchema>) => {
+    return publicAuthClient.setupDeployment(request);
   },
 };

@@ -11,6 +11,7 @@ import { NotificationsSection } from "@/features/settings/components/Notificatio
 import { AccountSection } from "@/features/settings/components/AccountSection";
 import { SecuritySection } from "@/features/settings/components/SecuritySection";
 import { AgentsSection } from "@/features/settings/components/AgentsSection";
+import { OrganizationMembershipSection } from "@/features/settings/components/OrganizationMembershipSection";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 
 export function SettingsPage() {
@@ -62,6 +63,8 @@ export function SettingsPage() {
             <p className="text-muted-foreground">General application settings. Coming soon.</p>
           </div>
         );
+      case "organization":
+        return <OrganizationMembershipSection />;
       default:
         return null;
     }

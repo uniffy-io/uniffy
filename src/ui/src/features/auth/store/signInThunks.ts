@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { createClient } from "@connectrpc/connect";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { AuthService, type AuthResult } from "@uniffy/proto/auth/v1/auth_pb";
 import type { AppDispatch, RootState } from "@/app/store";
 import {
   clearMemoryAccessToken,
@@ -38,6 +38,29 @@ export interface SignInCompletion {
   organizationId: string | null;
 }
 
+type AuthResultFields = Pick<
+  AuthResult,
+  | "accessToken"
+  | "refreshToken"
+  | "organizationId"
+  | "organizationSlug"
+  | "organizationRole"
+  | "sessionId"
+  | "domainAdminDomains"
+>;
+
+export function signInResultFrom(result: AuthResultFields): SignInResult {
+  return {
+    accessToken: result.accessToken,
+    refreshToken: result.refreshToken,
+    organizationId: result.organizationId,
+    organizationSlug: result.organizationSlug,
+    organizationRole: result.organizationRole,
+    sessionId: result.sessionId,
+    domainAdminDomains: Array.from(result.domainAdminDomains),
+  };
+}
+
 const thunk = createAsyncThunk.withTypes<{
   state: RootState;
   dispatch: AppDispatch;
@@ -66,21 +89,23 @@ async function fetchSignedInUser(accessToken: string) {
   };
 }
 
-/** Mints the only organization or the remembered one; any other case leaves the choice to the picker. */
+/** Mints the only organization or the remembered one; any other case leaves the choice to the welcome page. */
 async function chooseOrganization(
   result: SignInResult,
   userId: string,
   dispatch: AppDispatch,
 ): Promise<SignInResult> {
   let organizations: OrganizationSummary[];
+  let canCreateOrganization: boolean;
   try {
     const response = await organizationsApi.listMyOrganizations();
     organizations = response.organizations.map(summarizeOrganization);
+    canCreateOrganization = response.canCreateOrganization;
   } catch {
-    // The picker loads the list on its own, so a failed list only skips the automatic choice.
+    // The welcome page loads the list on its own, so a failed list only skips the automatic choice.
     return result;
   }
-  dispatch(organizationsLoaded(organizations));
+  dispatch(organizationsLoaded(organizations, canCreateOrganization));
 
   const remembered = readLastOrganizationSlug(userId);
   if (remembered && !organizations.some((organization) => organization.slug === remembered)) {
@@ -112,8 +137,8 @@ async function chooseOrganization(
 }
 
 /**
- * Picks the organization before the credentials land, so the picker only shows when the user has
- * to choose. Resolves with a null organization when the picker is next.
+ * Picks the organization before the credentials land, so the welcome page only shows when the user
+ * has to choose. Resolves with a null organization when the welcome page is next.
  */
 export const completeSignIn = thunk<SignInCompletion, SignInResult>(
   "auth/completeSignIn",

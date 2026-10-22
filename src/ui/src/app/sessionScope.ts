@@ -11,10 +11,14 @@ import type { ProjectsUiState } from "@/features/projects/types/ui";
 type ChatUiState = ReturnType<typeof chatUiReducer>;
 type CalendarUiState = ReturnType<typeof calendarUiReducer>;
 
-/** Device preferences survive; auth and organizations handle logout in their own reducers. */
+/**
+ * Device preferences survive, and so do the slices that belong to the user rather than to one
+ * organization: auth, organizations and invitations handle logout in their own reducers.
+ */
 const SESSION_INDEPENDENT_SLICES = [
   "auth",
   "organizations",
+  "invitations",
   "theme",
   "zenMode",
   "editor",

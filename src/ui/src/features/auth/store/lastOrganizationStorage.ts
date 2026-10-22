@@ -36,7 +36,7 @@ export function writeLastOrganization(userId: string, organization: LastOrganiza
   try {
     localStorage.setItem(getStorageKey(userId), JSON.stringify(organization));
   } catch {
-    // Storage can be unavailable (private mode, quota); the picker covers a missing memory.
+    // Storage can be unavailable (private mode, quota); the welcome page covers a missing memory.
   }
 }
 

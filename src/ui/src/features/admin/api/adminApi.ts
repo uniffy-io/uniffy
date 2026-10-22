@@ -2,7 +2,9 @@ import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import {
   OrganizationsService,
+  DeleteOrganizationRequestSchema,
   GetOrganizationOverviewRequestSchema,
+  GetOrganizationRequestSchema,
   GetPermissionDefaultsRequestSchema,
   GetUserDomainAdminsRequestSchema,
   GrantDomainAdminRequestSchema,
@@ -11,7 +13,9 @@ import {
   RemoveMemberRequestSchema,
   RevokeDomainAdminRequestSchema,
   RotateEncryptionKeyRequestSchema,
+  TransferOwnershipRequestSchema,
   UpdateMemberRoleRequestSchema,
+  UpdateOrganizationRequestSchema,
   UpdatePermissionDefaultsRequestSchema,
 } from "@uniffy/proto/organizations/v1/organizations_pb";
 import {
@@ -30,6 +34,22 @@ const organizationsClient = createClient(OrganizationsService, unaryTransport);
 const groupsClient = createClient(GroupsService, unaryTransport);
 
 export const adminApi = {
+  getOrganization: async (request: MessageInitShape<typeof GetOrganizationRequestSchema>) => {
+    return organizationsClient.getOrganization(request);
+  },
+
+  updateOrganization: async (request: MessageInitShape<typeof UpdateOrganizationRequestSchema>) => {
+    return organizationsClient.updateOrganization(request);
+  },
+
+  transferOwnership: async (request: MessageInitShape<typeof TransferOwnershipRequestSchema>) => {
+    return organizationsClient.transferOwnership(request);
+  },
+
+  deleteOrganization: async (request: MessageInitShape<typeof DeleteOrganizationRequestSchema>) => {
+    return organizationsClient.deleteOrganization(request);
+  },
+
   getPermissionDefaults: async (
     request: MessageInitShape<typeof GetPermissionDefaultsRequestSchema>,
   ) => {

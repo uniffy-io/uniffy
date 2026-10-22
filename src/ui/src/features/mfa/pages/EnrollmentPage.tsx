@@ -1,10 +1,11 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAppDispatch } from "@/app/hooks";
 import { Card } from "@/components/ui/card";
 import { clearEnrollmentToken } from "@/config/api";
 import { completeSignIn } from "@/features/auth/store/signInThunks";
 import { EnrollmentWizard } from "@/features/mfa/components/EnrollmentWizard";
+import { pathAfterEnrollment } from "@/features/mfa/utils/enrollmentReturn";
 
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 
@@ -13,6 +14,7 @@ export function EnrollmentPage() {
   useDocumentTitle("Two factor enrollment");
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const completeAndSignIn = async (result: {
     accessToken: string;
@@ -40,7 +42,7 @@ export function EnrollmentPage() {
       // The rejected sign-in already reached the error toast.
       return;
     }
-    navigate("/", { replace: true });
+    navigate(pathAfterEnrollment(location.state), { replace: true });
   };
 
   return (

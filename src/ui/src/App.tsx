@@ -62,10 +62,8 @@ if (import.meta.env.DEV) {
 // Lazy-loaded page components (route-level code splitting)
 // Auth pages
 const AuthForms = lazyImport(() => import("@/features/auth/components/AuthForms"), "AuthForms");
-const OrganizationPicker = lazyImport(
-  () => import("@/features/auth/components/OrganizationPicker"),
-  "OrganizationPicker",
-);
+const WelcomePage = lazyImport(() => import("@/features/auth/pages/WelcomePage"), "WelcomePage");
+const SetupPage = lazyImport(() => import("@/features/auth/pages/SetupPage"), "SetupPage");
 const AcceptInvitePage = lazyImport(
   () => import("@/features/auth/pages/AcceptInvitePage"),
   "AcceptInvitePage",
@@ -112,6 +110,10 @@ const EmailPage = lazyImport(() => import("@/features/admin/pages/EmailPage"), "
 const SecurityPage = lazyImport(
   () => import("@/features/admin/pages/SecurityPage"),
   "SecurityPage",
+);
+const OrganizationPage = lazyImport(
+  () => import("@/features/admin/pages/OrganizationPage"),
+  "OrganizationPage",
 );
 const AuditLogsPage = lazyImport(
   () => import("@/features/admin/pages/AuditLogsPage"),
@@ -500,11 +502,24 @@ export function App() {
                   />
 
                   <Route
-                    path="/select-org"
+                    path="/welcome"
                     element={
                       <AuthLayout>
                         <LazyRoute>
-                          <OrganizationPicker />
+                          <WelcomePage />
+                        </LazyRoute>
+                      </AuthLayout>
+                    }
+                  />
+
+                  <Route path="/select-org" element={<Navigate to="/welcome" replace />} />
+
+                  <Route
+                    path="/setup"
+                    element={
+                      <AuthLayout>
+                        <LazyRoute>
+                          <SetupPage />
                         </LazyRoute>
                       </AuthLayout>
                     }
@@ -524,6 +539,14 @@ export function App() {
                     <Route index element={<AdminIndexRedirect />} />
 
                     {/* Organization Admin Pages */}
+                    <Route
+                      path="organization"
+                      element={
+                        <LazyRoute>
+                          <OrganizationPage />
+                        </LazyRoute>
+                      }
+                    />
                     <Route
                       path="members"
                       element={

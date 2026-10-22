@@ -7,6 +7,7 @@ import {
   GetRealtimeBufferStatusRequestSchema,
   SetPublicRegistrationRequestSchema,
   SetMfaPolicyRequestSchema,
+  type OrgCreationPolicy,
 } from "@uniffy/proto/superadmin/v1/system_config_pb";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 
@@ -19,6 +20,9 @@ export const systemConfigApi = {
   setPublicRegistration: async (
     request: MessageInitShape<typeof SetPublicRegistrationRequestSchema>,
   ) => client.setPublicRegistration(request),
+
+  setOrgCreationPolicy: async (policy: OrgCreationPolicy) =>
+    client.setOrgCreationPolicy({ policy }),
 
   getMfaPolicy: async (request: MessageInitShape<typeof GetMfaPolicyRequestSchema> = {}) =>
     client.getMfaPolicy(request),

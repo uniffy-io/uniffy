@@ -466,15 +466,25 @@ function readErrorInfo(value: Uint8Array): { reason: string; domain: string } | 
   }
 }
 
+/** The typed reason the server attached to a refusal, such as `sign_in_required`, or null. */
+export function decodeErrorReason(err: unknown): string | null {
+  if (!(err instanceof ConnectError)) return null;
+  for (const detail of err.details) {
+    if (!("type" in detail) || detail.type !== ERROR_INFO_TYPE) continue;
+    const info = readErrorInfo(detail.value);
+    if (info?.domain === ERROR_INFO_DOMAIN && info.reason) return info.reason;
+  }
+  return null;
+}
+
 /** The server refused because the caller is no active member of the organization. Only a hint:
  * the refresh it triggers decides whether the grant is gone. */
 export function decodeMembershipRequired(err: unknown): boolean {
-  if (!(err instanceof ConnectError) || err.code !== Code.PermissionDenied) return false;
-  return err.details.some((detail) => {
-    if (!("type" in detail) || detail.type !== ERROR_INFO_TYPE) return false;
-    const info = readErrorInfo(detail.value);
-    return info?.domain === ERROR_INFO_DOMAIN && info.reason === MEMBERSHIP_REQUIRED_REASON;
-  });
+  return (
+    err instanceof ConnectError &&
+    err.code === Code.PermissionDenied &&
+    decodeErrorReason(err) === MEMBERSHIP_REQUIRED_REASON
+  );
 }
 
 // One removal reaches the tab as many refusals, every RPC in flight at once. They share one
