@@ -174,6 +174,15 @@ export const projectsSlice = createSlice({
       task.description = action.payload.description;
     },
 
+    /** The server's rollup after a worklog write; confirmed, so no snapshot is taken. */
+    applyTaskTimeSpent: (
+      state,
+      action: PayloadAction<{ id: string; timeSpentMinutes: number | null }>,
+    ) => {
+      const task = state.tasks[action.payload.id];
+      if (task) task.timeSpentMinutes = action.payload.timeSpentMinutes;
+    },
+
     bulkUpdateTasks: (state, action: PayloadAction<{ ids: string[]; changes: Partial<Task> }>) => {
       action.payload.ids.forEach((id) => {
         if (state.tasks[id]) {
@@ -563,6 +572,7 @@ export const {
   clearErrors,
   optimisticUpdateTask,
   applyLiveDescription,
+  applyTaskTimeSpent,
   bulkUpdateTasks,
   addFieldDefinition,
   removeFieldDefinition,

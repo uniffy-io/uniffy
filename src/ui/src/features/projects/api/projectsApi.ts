@@ -251,6 +251,14 @@ function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAct
       return "assigned";
     case ProtoActivityAction.TYPE_CHANGED:
       return "type_changed";
+    case ProtoActivityAction.SPRINT_CHANGED:
+      return "sprint_changed";
+    case ProtoActivityAction.TIME_LOGGED:
+      return "time_logged";
+    case ProtoActivityAction.TIME_UPDATED:
+      return "time_updated";
+    case ProtoActivityAction.TIME_REMOVED:
+      return "time_removed";
     default:
       return "created";
   }
@@ -510,9 +518,6 @@ export const projectsApi = {
       ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
       ...(data.estimatedMinutes !== undefined
         ? { estimatedMinutes: data.estimatedMinutes ?? 0 }
-        : {}),
-      ...(data.timeSpentMinutes !== undefined
-        ? { timeSpentMinutes: data.timeSpentMinutes ?? 0 }
         : {}),
       ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
       ...(data.tagIds !== undefined ? { tagIds: { ids: data.tagIds } } : {}),

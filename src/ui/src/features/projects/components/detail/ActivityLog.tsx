@@ -15,6 +15,7 @@ import { SubjectAvatar } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import type { Subject } from "@/components/subject/types";
 import type { TaskActivity, ActivityAction } from "@/features/projects/types/activity";
+import { formatMinutes } from "@/shared/utils/durationFormatting";
 
 interface ActivityLogProps {
   taskId: string;
@@ -157,6 +158,10 @@ function renderActivityIcon(action: ActivityAction) {
       return <PencilSimple size={12} />;
     case "sprint_changed":
       return <ArrowsLeftRight size={12} />;
+    case "time_logged":
+    case "time_updated":
+    case "time_removed":
+      return <Clock size={12} />;
     default:
       return <PencilSimple size={12} />;
   }
@@ -192,6 +197,27 @@ function renderActivityContent(activity: TaskActivity) {
       );
     case "sprint_changed":
       return "moved to another sprint";
+    case "time_logged":
+      return (
+        <span>
+          logged <span className="font-medium">{formatMinutes(Number(activity.newValue))}</span>
+        </span>
+      );
+    case "time_updated":
+      return (
+        <span>
+          changed a time entry from{" "}
+          <span className="font-medium">{formatMinutes(Number(activity.previousValue))}</span> to{" "}
+          <span className="font-medium">{formatMinutes(Number(activity.newValue))}</span>
+        </span>
+      );
+    case "time_removed":
+      return (
+        <span>
+          removed a time entry of{" "}
+          <span className="font-medium">{formatMinutes(Number(activity.previousValue))}</span>
+        </span>
+      );
     case "field_updated":
       return (
         <span>

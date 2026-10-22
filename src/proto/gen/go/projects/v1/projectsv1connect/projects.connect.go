@@ -128,6 +128,45 @@ const (
 	// ProjectsServiceBulkCheckTaskWatchersProcedure is the fully-qualified name of the
 	// ProjectsService's BulkCheckTaskWatchers RPC.
 	ProjectsServiceBulkCheckTaskWatchersProcedure = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
+	// ProjectsServiceCreateWorklogProcedure is the fully-qualified name of the ProjectsService's
+	// CreateWorklog RPC.
+	ProjectsServiceCreateWorklogProcedure = "/projects.v1.ProjectsService/CreateWorklog"
+	// ProjectsServiceUpdateWorklogProcedure is the fully-qualified name of the ProjectsService's
+	// UpdateWorklog RPC.
+	ProjectsServiceUpdateWorklogProcedure = "/projects.v1.ProjectsService/UpdateWorklog"
+	// ProjectsServiceDeleteWorklogProcedure is the fully-qualified name of the ProjectsService's
+	// DeleteWorklog RPC.
+	ProjectsServiceDeleteWorklogProcedure = "/projects.v1.ProjectsService/DeleteWorklog"
+	// ProjectsServiceListTaskWorklogsProcedure is the fully-qualified name of the ProjectsService's
+	// ListTaskWorklogs RPC.
+	ProjectsServiceListTaskWorklogsProcedure = "/projects.v1.ProjectsService/ListTaskWorklogs"
+	// ProjectsServiceListUserWorklogsProcedure is the fully-qualified name of the ProjectsService's
+	// ListUserWorklogs RPC.
+	ProjectsServiceListUserWorklogsProcedure = "/projects.v1.ProjectsService/ListUserWorklogs"
+	// ProjectsServiceStartTimerProcedure is the fully-qualified name of the ProjectsService's
+	// StartTimer RPC.
+	ProjectsServiceStartTimerProcedure = "/projects.v1.ProjectsService/StartTimer"
+	// ProjectsServicePauseTimerProcedure is the fully-qualified name of the ProjectsService's
+	// PauseTimer RPC.
+	ProjectsServicePauseTimerProcedure = "/projects.v1.ProjectsService/PauseTimer"
+	// ProjectsServiceResumeTimerProcedure is the fully-qualified name of the ProjectsService's
+	// ResumeTimer RPC.
+	ProjectsServiceResumeTimerProcedure = "/projects.v1.ProjectsService/ResumeTimer"
+	// ProjectsServiceStopTimerProcedure is the fully-qualified name of the ProjectsService's StopTimer
+	// RPC.
+	ProjectsServiceStopTimerProcedure = "/projects.v1.ProjectsService/StopTimer"
+	// ProjectsServiceGetActiveTimerProcedure is the fully-qualified name of the ProjectsService's
+	// GetActiveTimer RPC.
+	ProjectsServiceGetActiveTimerProcedure = "/projects.v1.ProjectsService/GetActiveTimer"
+	// ProjectsServiceGetTimePolicyProcedure is the fully-qualified name of the ProjectsService's
+	// GetTimePolicy RPC.
+	ProjectsServiceGetTimePolicyProcedure = "/projects.v1.ProjectsService/GetTimePolicy"
+	// ProjectsServiceUpdateTimePolicyProcedure is the fully-qualified name of the ProjectsService's
+	// UpdateTimePolicy RPC.
+	ProjectsServiceUpdateTimePolicyProcedure = "/projects.v1.ProjectsService/UpdateTimePolicy"
+	// ProjectsServiceAggregateWorklogsProcedure is the fully-qualified name of the ProjectsService's
+	// AggregateWorklogs RPC.
+	ProjectsServiceAggregateWorklogsProcedure = "/projects.v1.ProjectsService/AggregateWorklogs"
 )
 
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
@@ -172,6 +211,20 @@ type ProjectsServiceClient interface {
 	ToggleTaskWatcher(context.Context, *connect.Request[v1.ToggleTaskWatcherRequest]) (*connect.Response[v1.ToggleTaskWatcherResponse], error)
 	ListTaskWatchers(context.Context, *connect.Request[v1.ListTaskWatchersRequest]) (*connect.Response[v1.ListTaskWatchersResponse], error)
 	BulkCheckTaskWatchers(context.Context, *connect.Request[v1.BulkCheckTaskWatchersRequest]) (*connect.Response[v1.BulkCheckTaskWatchersResponse], error)
+	// ----- Time tracking -----
+	CreateWorklog(context.Context, *connect.Request[v1.CreateWorklogRequest]) (*connect.Response[v1.CreateWorklogResponse], error)
+	UpdateWorklog(context.Context, *connect.Request[v1.UpdateWorklogRequest]) (*connect.Response[v1.UpdateWorklogResponse], error)
+	DeleteWorklog(context.Context, *connect.Request[v1.DeleteWorklogRequest]) (*connect.Response[v1.DeleteWorklogResponse], error)
+	ListTaskWorklogs(context.Context, *connect.Request[v1.ListTaskWorklogsRequest]) (*connect.Response[v1.ListTaskWorklogsResponse], error)
+	ListUserWorklogs(context.Context, *connect.Request[v1.ListUserWorklogsRequest]) (*connect.Response[v1.ListUserWorklogsResponse], error)
+	StartTimer(context.Context, *connect.Request[v1.StartTimerRequest]) (*connect.Response[v1.StartTimerResponse], error)
+	PauseTimer(context.Context, *connect.Request[v1.PauseTimerRequest]) (*connect.Response[v1.PauseTimerResponse], error)
+	ResumeTimer(context.Context, *connect.Request[v1.ResumeTimerRequest]) (*connect.Response[v1.ResumeTimerResponse], error)
+	StopTimer(context.Context, *connect.Request[v1.StopTimerRequest]) (*connect.Response[v1.StopTimerResponse], error)
+	GetActiveTimer(context.Context, *connect.Request[v1.GetActiveTimerRequest]) (*connect.Response[v1.GetActiveTimerResponse], error)
+	GetTimePolicy(context.Context, *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error)
+	UpdateTimePolicy(context.Context, *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error)
+	AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error)
 }
 
 // NewProjectsServiceClient constructs a client for the projects.v1.ProjectsService service. By
@@ -377,6 +430,84 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("BulkCheckTaskWatchers")),
 			connect.WithClientOptions(opts...),
 		),
+		createWorklog: connect.NewClient[v1.CreateWorklogRequest, v1.CreateWorklogResponse](
+			httpClient,
+			baseURL+ProjectsServiceCreateWorklogProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("CreateWorklog")),
+			connect.WithClientOptions(opts...),
+		),
+		updateWorklog: connect.NewClient[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse](
+			httpClient,
+			baseURL+ProjectsServiceUpdateWorklogProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("UpdateWorklog")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteWorklog: connect.NewClient[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse](
+			httpClient,
+			baseURL+ProjectsServiceDeleteWorklogProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("DeleteWorklog")),
+			connect.WithClientOptions(opts...),
+		),
+		listTaskWorklogs: connect.NewClient[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse](
+			httpClient,
+			baseURL+ProjectsServiceListTaskWorklogsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ListTaskWorklogs")),
+			connect.WithClientOptions(opts...),
+		),
+		listUserWorklogs: connect.NewClient[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse](
+			httpClient,
+			baseURL+ProjectsServiceListUserWorklogsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ListUserWorklogs")),
+			connect.WithClientOptions(opts...),
+		),
+		startTimer: connect.NewClient[v1.StartTimerRequest, v1.StartTimerResponse](
+			httpClient,
+			baseURL+ProjectsServiceStartTimerProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("StartTimer")),
+			connect.WithClientOptions(opts...),
+		),
+		pauseTimer: connect.NewClient[v1.PauseTimerRequest, v1.PauseTimerResponse](
+			httpClient,
+			baseURL+ProjectsServicePauseTimerProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("PauseTimer")),
+			connect.WithClientOptions(opts...),
+		),
+		resumeTimer: connect.NewClient[v1.ResumeTimerRequest, v1.ResumeTimerResponse](
+			httpClient,
+			baseURL+ProjectsServiceResumeTimerProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("ResumeTimer")),
+			connect.WithClientOptions(opts...),
+		),
+		stopTimer: connect.NewClient[v1.StopTimerRequest, v1.StopTimerResponse](
+			httpClient,
+			baseURL+ProjectsServiceStopTimerProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("StopTimer")),
+			connect.WithClientOptions(opts...),
+		),
+		getActiveTimer: connect.NewClient[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetActiveTimerProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetActiveTimer")),
+			connect.WithClientOptions(opts...),
+		),
+		getTimePolicy: connect.NewClient[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetTimePolicyProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetTimePolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateTimePolicy: connect.NewClient[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse](
+			httpClient,
+			baseURL+ProjectsServiceUpdateTimePolicyProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("UpdateTimePolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		aggregateWorklogs: connect.NewClient[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse](
+			httpClient,
+			baseURL+ProjectsServiceAggregateWorklogsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("AggregateWorklogs")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -414,6 +545,19 @@ type projectsServiceClient struct {
 	toggleTaskWatcher     *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
 	listTaskWatchers      *connect.Client[v1.ListTaskWatchersRequest, v1.ListTaskWatchersResponse]
 	bulkCheckTaskWatchers *connect.Client[v1.BulkCheckTaskWatchersRequest, v1.BulkCheckTaskWatchersResponse]
+	createWorklog         *connect.Client[v1.CreateWorklogRequest, v1.CreateWorklogResponse]
+	updateWorklog         *connect.Client[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse]
+	deleteWorklog         *connect.Client[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse]
+	listTaskWorklogs      *connect.Client[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse]
+	listUserWorklogs      *connect.Client[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse]
+	startTimer            *connect.Client[v1.StartTimerRequest, v1.StartTimerResponse]
+	pauseTimer            *connect.Client[v1.PauseTimerRequest, v1.PauseTimerResponse]
+	resumeTimer           *connect.Client[v1.ResumeTimerRequest, v1.ResumeTimerResponse]
+	stopTimer             *connect.Client[v1.StopTimerRequest, v1.StopTimerResponse]
+	getActiveTimer        *connect.Client[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse]
+	getTimePolicy         *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
+	updateTimePolicy      *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
+	aggregateWorklogs     *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
@@ -576,6 +720,71 @@ func (c *projectsServiceClient) BulkCheckTaskWatchers(ctx context.Context, req *
 	return c.bulkCheckTaskWatchers.CallUnary(ctx, req)
 }
 
+// CreateWorklog calls projects.v1.ProjectsService.CreateWorklog.
+func (c *projectsServiceClient) CreateWorklog(ctx context.Context, req *connect.Request[v1.CreateWorklogRequest]) (*connect.Response[v1.CreateWorklogResponse], error) {
+	return c.createWorklog.CallUnary(ctx, req)
+}
+
+// UpdateWorklog calls projects.v1.ProjectsService.UpdateWorklog.
+func (c *projectsServiceClient) UpdateWorklog(ctx context.Context, req *connect.Request[v1.UpdateWorklogRequest]) (*connect.Response[v1.UpdateWorklogResponse], error) {
+	return c.updateWorklog.CallUnary(ctx, req)
+}
+
+// DeleteWorklog calls projects.v1.ProjectsService.DeleteWorklog.
+func (c *projectsServiceClient) DeleteWorklog(ctx context.Context, req *connect.Request[v1.DeleteWorklogRequest]) (*connect.Response[v1.DeleteWorklogResponse], error) {
+	return c.deleteWorklog.CallUnary(ctx, req)
+}
+
+// ListTaskWorklogs calls projects.v1.ProjectsService.ListTaskWorklogs.
+func (c *projectsServiceClient) ListTaskWorklogs(ctx context.Context, req *connect.Request[v1.ListTaskWorklogsRequest]) (*connect.Response[v1.ListTaskWorklogsResponse], error) {
+	return c.listTaskWorklogs.CallUnary(ctx, req)
+}
+
+// ListUserWorklogs calls projects.v1.ProjectsService.ListUserWorklogs.
+func (c *projectsServiceClient) ListUserWorklogs(ctx context.Context, req *connect.Request[v1.ListUserWorklogsRequest]) (*connect.Response[v1.ListUserWorklogsResponse], error) {
+	return c.listUserWorklogs.CallUnary(ctx, req)
+}
+
+// StartTimer calls projects.v1.ProjectsService.StartTimer.
+func (c *projectsServiceClient) StartTimer(ctx context.Context, req *connect.Request[v1.StartTimerRequest]) (*connect.Response[v1.StartTimerResponse], error) {
+	return c.startTimer.CallUnary(ctx, req)
+}
+
+// PauseTimer calls projects.v1.ProjectsService.PauseTimer.
+func (c *projectsServiceClient) PauseTimer(ctx context.Context, req *connect.Request[v1.PauseTimerRequest]) (*connect.Response[v1.PauseTimerResponse], error) {
+	return c.pauseTimer.CallUnary(ctx, req)
+}
+
+// ResumeTimer calls projects.v1.ProjectsService.ResumeTimer.
+func (c *projectsServiceClient) ResumeTimer(ctx context.Context, req *connect.Request[v1.ResumeTimerRequest]) (*connect.Response[v1.ResumeTimerResponse], error) {
+	return c.resumeTimer.CallUnary(ctx, req)
+}
+
+// StopTimer calls projects.v1.ProjectsService.StopTimer.
+func (c *projectsServiceClient) StopTimer(ctx context.Context, req *connect.Request[v1.StopTimerRequest]) (*connect.Response[v1.StopTimerResponse], error) {
+	return c.stopTimer.CallUnary(ctx, req)
+}
+
+// GetActiveTimer calls projects.v1.ProjectsService.GetActiveTimer.
+func (c *projectsServiceClient) GetActiveTimer(ctx context.Context, req *connect.Request[v1.GetActiveTimerRequest]) (*connect.Response[v1.GetActiveTimerResponse], error) {
+	return c.getActiveTimer.CallUnary(ctx, req)
+}
+
+// GetTimePolicy calls projects.v1.ProjectsService.GetTimePolicy.
+func (c *projectsServiceClient) GetTimePolicy(ctx context.Context, req *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error) {
+	return c.getTimePolicy.CallUnary(ctx, req)
+}
+
+// UpdateTimePolicy calls projects.v1.ProjectsService.UpdateTimePolicy.
+func (c *projectsServiceClient) UpdateTimePolicy(ctx context.Context, req *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error) {
+	return c.updateTimePolicy.CallUnary(ctx, req)
+}
+
+// AggregateWorklogs calls projects.v1.ProjectsService.AggregateWorklogs.
+func (c *projectsServiceClient) AggregateWorklogs(ctx context.Context, req *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error) {
+	return c.aggregateWorklogs.CallUnary(ctx, req)
+}
+
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
@@ -618,6 +827,20 @@ type ProjectsServiceHandler interface {
 	ToggleTaskWatcher(context.Context, *connect.Request[v1.ToggleTaskWatcherRequest]) (*connect.Response[v1.ToggleTaskWatcherResponse], error)
 	ListTaskWatchers(context.Context, *connect.Request[v1.ListTaskWatchersRequest]) (*connect.Response[v1.ListTaskWatchersResponse], error)
 	BulkCheckTaskWatchers(context.Context, *connect.Request[v1.BulkCheckTaskWatchersRequest]) (*connect.Response[v1.BulkCheckTaskWatchersResponse], error)
+	// ----- Time tracking -----
+	CreateWorklog(context.Context, *connect.Request[v1.CreateWorklogRequest]) (*connect.Response[v1.CreateWorklogResponse], error)
+	UpdateWorklog(context.Context, *connect.Request[v1.UpdateWorklogRequest]) (*connect.Response[v1.UpdateWorklogResponse], error)
+	DeleteWorklog(context.Context, *connect.Request[v1.DeleteWorklogRequest]) (*connect.Response[v1.DeleteWorklogResponse], error)
+	ListTaskWorklogs(context.Context, *connect.Request[v1.ListTaskWorklogsRequest]) (*connect.Response[v1.ListTaskWorklogsResponse], error)
+	ListUserWorklogs(context.Context, *connect.Request[v1.ListUserWorklogsRequest]) (*connect.Response[v1.ListUserWorklogsResponse], error)
+	StartTimer(context.Context, *connect.Request[v1.StartTimerRequest]) (*connect.Response[v1.StartTimerResponse], error)
+	PauseTimer(context.Context, *connect.Request[v1.PauseTimerRequest]) (*connect.Response[v1.PauseTimerResponse], error)
+	ResumeTimer(context.Context, *connect.Request[v1.ResumeTimerRequest]) (*connect.Response[v1.ResumeTimerResponse], error)
+	StopTimer(context.Context, *connect.Request[v1.StopTimerRequest]) (*connect.Response[v1.StopTimerResponse], error)
+	GetActiveTimer(context.Context, *connect.Request[v1.GetActiveTimerRequest]) (*connect.Response[v1.GetActiveTimerResponse], error)
+	GetTimePolicy(context.Context, *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error)
+	UpdateTimePolicy(context.Context, *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error)
+	AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error)
 }
 
 // NewProjectsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -819,6 +1042,84 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("BulkCheckTaskWatchers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceCreateWorklogHandler := connect.NewUnaryHandler(
+		ProjectsServiceCreateWorklogProcedure,
+		svc.CreateWorklog,
+		connect.WithSchema(projectsServiceMethods.ByName("CreateWorklog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceUpdateWorklogHandler := connect.NewUnaryHandler(
+		ProjectsServiceUpdateWorklogProcedure,
+		svc.UpdateWorklog,
+		connect.WithSchema(projectsServiceMethods.ByName("UpdateWorklog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceDeleteWorklogHandler := connect.NewUnaryHandler(
+		ProjectsServiceDeleteWorklogProcedure,
+		svc.DeleteWorklog,
+		connect.WithSchema(projectsServiceMethods.ByName("DeleteWorklog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceListTaskWorklogsHandler := connect.NewUnaryHandler(
+		ProjectsServiceListTaskWorklogsProcedure,
+		svc.ListTaskWorklogs,
+		connect.WithSchema(projectsServiceMethods.ByName("ListTaskWorklogs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceListUserWorklogsHandler := connect.NewUnaryHandler(
+		ProjectsServiceListUserWorklogsProcedure,
+		svc.ListUserWorklogs,
+		connect.WithSchema(projectsServiceMethods.ByName("ListUserWorklogs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceStartTimerHandler := connect.NewUnaryHandler(
+		ProjectsServiceStartTimerProcedure,
+		svc.StartTimer,
+		connect.WithSchema(projectsServiceMethods.ByName("StartTimer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServicePauseTimerHandler := connect.NewUnaryHandler(
+		ProjectsServicePauseTimerProcedure,
+		svc.PauseTimer,
+		connect.WithSchema(projectsServiceMethods.ByName("PauseTimer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceResumeTimerHandler := connect.NewUnaryHandler(
+		ProjectsServiceResumeTimerProcedure,
+		svc.ResumeTimer,
+		connect.WithSchema(projectsServiceMethods.ByName("ResumeTimer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceStopTimerHandler := connect.NewUnaryHandler(
+		ProjectsServiceStopTimerProcedure,
+		svc.StopTimer,
+		connect.WithSchema(projectsServiceMethods.ByName("StopTimer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceGetActiveTimerHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetActiveTimerProcedure,
+		svc.GetActiveTimer,
+		connect.WithSchema(projectsServiceMethods.ByName("GetActiveTimer")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceGetTimePolicyHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetTimePolicyProcedure,
+		svc.GetTimePolicy,
+		connect.WithSchema(projectsServiceMethods.ByName("GetTimePolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceUpdateTimePolicyHandler := connect.NewUnaryHandler(
+		ProjectsServiceUpdateTimePolicyProcedure,
+		svc.UpdateTimePolicy,
+		connect.WithSchema(projectsServiceMethods.ByName("UpdateTimePolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceAggregateWorklogsHandler := connect.NewUnaryHandler(
+		ProjectsServiceAggregateWorklogsProcedure,
+		svc.AggregateWorklogs,
+		connect.WithSchema(projectsServiceMethods.ByName("AggregateWorklogs")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/projects.v1.ProjectsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectsServiceCreateProjectProcedure:
@@ -885,6 +1186,32 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceListTaskWatchersHandler.ServeHTTP(w, r)
 		case ProjectsServiceBulkCheckTaskWatchersProcedure:
 			projectsServiceBulkCheckTaskWatchersHandler.ServeHTTP(w, r)
+		case ProjectsServiceCreateWorklogProcedure:
+			projectsServiceCreateWorklogHandler.ServeHTTP(w, r)
+		case ProjectsServiceUpdateWorklogProcedure:
+			projectsServiceUpdateWorklogHandler.ServeHTTP(w, r)
+		case ProjectsServiceDeleteWorklogProcedure:
+			projectsServiceDeleteWorklogHandler.ServeHTTP(w, r)
+		case ProjectsServiceListTaskWorklogsProcedure:
+			projectsServiceListTaskWorklogsHandler.ServeHTTP(w, r)
+		case ProjectsServiceListUserWorklogsProcedure:
+			projectsServiceListUserWorklogsHandler.ServeHTTP(w, r)
+		case ProjectsServiceStartTimerProcedure:
+			projectsServiceStartTimerHandler.ServeHTTP(w, r)
+		case ProjectsServicePauseTimerProcedure:
+			projectsServicePauseTimerHandler.ServeHTTP(w, r)
+		case ProjectsServiceResumeTimerProcedure:
+			projectsServiceResumeTimerHandler.ServeHTTP(w, r)
+		case ProjectsServiceStopTimerProcedure:
+			projectsServiceStopTimerHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetActiveTimerProcedure:
+			projectsServiceGetActiveTimerHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetTimePolicyProcedure:
+			projectsServiceGetTimePolicyHandler.ServeHTTP(w, r)
+		case ProjectsServiceUpdateTimePolicyProcedure:
+			projectsServiceUpdateTimePolicyHandler.ServeHTTP(w, r)
+		case ProjectsServiceAggregateWorklogsProcedure:
+			projectsServiceAggregateWorklogsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1020,4 +1347,56 @@ func (UnimplementedProjectsServiceHandler) ListTaskWatchers(context.Context, *co
 
 func (UnimplementedProjectsServiceHandler) BulkCheckTaskWatchers(context.Context, *connect.Request[v1.BulkCheckTaskWatchersRequest]) (*connect.Response[v1.BulkCheckTaskWatchersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.BulkCheckTaskWatchers is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) CreateWorklog(context.Context, *connect.Request[v1.CreateWorklogRequest]) (*connect.Response[v1.CreateWorklogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateWorklog is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) UpdateWorklog(context.Context, *connect.Request[v1.UpdateWorklogRequest]) (*connect.Response[v1.UpdateWorklogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateWorklog is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) DeleteWorklog(context.Context, *connect.Request[v1.DeleteWorklogRequest]) (*connect.Response[v1.DeleteWorklogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.DeleteWorklog is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ListTaskWorklogs(context.Context, *connect.Request[v1.ListTaskWorklogsRequest]) (*connect.Response[v1.ListTaskWorklogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListTaskWorklogs is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ListUserWorklogs(context.Context, *connect.Request[v1.ListUserWorklogsRequest]) (*connect.Response[v1.ListUserWorklogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListUserWorklogs is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) StartTimer(context.Context, *connect.Request[v1.StartTimerRequest]) (*connect.Response[v1.StartTimerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.StartTimer is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) PauseTimer(context.Context, *connect.Request[v1.PauseTimerRequest]) (*connect.Response[v1.PauseTimerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.PauseTimer is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) ResumeTimer(context.Context, *connect.Request[v1.ResumeTimerRequest]) (*connect.Response[v1.ResumeTimerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ResumeTimer is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) StopTimer(context.Context, *connect.Request[v1.StopTimerRequest]) (*connect.Response[v1.StopTimerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.StopTimer is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetActiveTimer(context.Context, *connect.Request[v1.GetActiveTimerRequest]) (*connect.Response[v1.GetActiveTimerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetActiveTimer is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetTimePolicy(context.Context, *connect.Request[v1.GetTimePolicyRequest]) (*connect.Response[v1.GetTimePolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetTimePolicy is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) UpdateTimePolicy(context.Context, *connect.Request[v1.UpdateTimePolicyRequest]) (*connect.Response[v1.UpdateTimePolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateTimePolicy is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) AggregateWorklogs(context.Context, *connect.Request[v1.AggregateWorklogsRequest]) (*connect.Response[v1.AggregateWorklogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.AggregateWorklogs is not implemented"))
 }

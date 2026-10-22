@@ -51,6 +51,19 @@ const (
 	ProjectsService_ToggleTaskWatcher_FullMethodName     = "/projects.v1.ProjectsService/ToggleTaskWatcher"
 	ProjectsService_ListTaskWatchers_FullMethodName      = "/projects.v1.ProjectsService/ListTaskWatchers"
 	ProjectsService_BulkCheckTaskWatchers_FullMethodName = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
+	ProjectsService_CreateWorklog_FullMethodName         = "/projects.v1.ProjectsService/CreateWorklog"
+	ProjectsService_UpdateWorklog_FullMethodName         = "/projects.v1.ProjectsService/UpdateWorklog"
+	ProjectsService_DeleteWorklog_FullMethodName         = "/projects.v1.ProjectsService/DeleteWorklog"
+	ProjectsService_ListTaskWorklogs_FullMethodName      = "/projects.v1.ProjectsService/ListTaskWorklogs"
+	ProjectsService_ListUserWorklogs_FullMethodName      = "/projects.v1.ProjectsService/ListUserWorklogs"
+	ProjectsService_StartTimer_FullMethodName            = "/projects.v1.ProjectsService/StartTimer"
+	ProjectsService_PauseTimer_FullMethodName            = "/projects.v1.ProjectsService/PauseTimer"
+	ProjectsService_ResumeTimer_FullMethodName           = "/projects.v1.ProjectsService/ResumeTimer"
+	ProjectsService_StopTimer_FullMethodName             = "/projects.v1.ProjectsService/StopTimer"
+	ProjectsService_GetActiveTimer_FullMethodName        = "/projects.v1.ProjectsService/GetActiveTimer"
+	ProjectsService_GetTimePolicy_FullMethodName         = "/projects.v1.ProjectsService/GetTimePolicy"
+	ProjectsService_UpdateTimePolicy_FullMethodName      = "/projects.v1.ProjectsService/UpdateTimePolicy"
+	ProjectsService_AggregateWorklogs_FullMethodName     = "/projects.v1.ProjectsService/AggregateWorklogs"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -97,6 +110,20 @@ type ProjectsServiceClient interface {
 	ToggleTaskWatcher(ctx context.Context, in *ToggleTaskWatcherRequest, opts ...grpc.CallOption) (*ToggleTaskWatcherResponse, error)
 	ListTaskWatchers(ctx context.Context, in *ListTaskWatchersRequest, opts ...grpc.CallOption) (*ListTaskWatchersResponse, error)
 	BulkCheckTaskWatchers(ctx context.Context, in *BulkCheckTaskWatchersRequest, opts ...grpc.CallOption) (*BulkCheckTaskWatchersResponse, error)
+	// ----- Time tracking -----
+	CreateWorklog(ctx context.Context, in *CreateWorklogRequest, opts ...grpc.CallOption) (*CreateWorklogResponse, error)
+	UpdateWorklog(ctx context.Context, in *UpdateWorklogRequest, opts ...grpc.CallOption) (*UpdateWorklogResponse, error)
+	DeleteWorklog(ctx context.Context, in *DeleteWorklogRequest, opts ...grpc.CallOption) (*DeleteWorklogResponse, error)
+	ListTaskWorklogs(ctx context.Context, in *ListTaskWorklogsRequest, opts ...grpc.CallOption) (*ListTaskWorklogsResponse, error)
+	ListUserWorklogs(ctx context.Context, in *ListUserWorklogsRequest, opts ...grpc.CallOption) (*ListUserWorklogsResponse, error)
+	StartTimer(ctx context.Context, in *StartTimerRequest, opts ...grpc.CallOption) (*StartTimerResponse, error)
+	PauseTimer(ctx context.Context, in *PauseTimerRequest, opts ...grpc.CallOption) (*PauseTimerResponse, error)
+	ResumeTimer(ctx context.Context, in *ResumeTimerRequest, opts ...grpc.CallOption) (*ResumeTimerResponse, error)
+	StopTimer(ctx context.Context, in *StopTimerRequest, opts ...grpc.CallOption) (*StopTimerResponse, error)
+	GetActiveTimer(ctx context.Context, in *GetActiveTimerRequest, opts ...grpc.CallOption) (*GetActiveTimerResponse, error)
+	GetTimePolicy(ctx context.Context, in *GetTimePolicyRequest, opts ...grpc.CallOption) (*GetTimePolicyResponse, error)
+	UpdateTimePolicy(ctx context.Context, in *UpdateTimePolicyRequest, opts ...grpc.CallOption) (*UpdateTimePolicyResponse, error)
+	AggregateWorklogs(ctx context.Context, in *AggregateWorklogsRequest, opts ...grpc.CallOption) (*AggregateWorklogsResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -436,6 +463,136 @@ func (c *projectsServiceClient) BulkCheckTaskWatchers(ctx context.Context, in *B
 	return out, nil
 }
 
+func (c *projectsServiceClient) CreateWorklog(ctx context.Context, in *CreateWorklogRequest, opts ...grpc.CallOption) (*CreateWorklogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateWorklogResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_CreateWorklog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) UpdateWorklog(ctx context.Context, in *UpdateWorklogRequest, opts ...grpc.CallOption) (*UpdateWorklogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateWorklogResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_UpdateWorklog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) DeleteWorklog(ctx context.Context, in *DeleteWorklogRequest, opts ...grpc.CallOption) (*DeleteWorklogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteWorklogResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_DeleteWorklog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ListTaskWorklogs(ctx context.Context, in *ListTaskWorklogsRequest, opts ...grpc.CallOption) (*ListTaskWorklogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTaskWorklogsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ListTaskWorklogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ListUserWorklogs(ctx context.Context, in *ListUserWorklogsRequest, opts ...grpc.CallOption) (*ListUserWorklogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUserWorklogsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ListUserWorklogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) StartTimer(ctx context.Context, in *StartTimerRequest, opts ...grpc.CallOption) (*StartTimerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartTimerResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_StartTimer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) PauseTimer(ctx context.Context, in *PauseTimerRequest, opts ...grpc.CallOption) (*PauseTimerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PauseTimerResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_PauseTimer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResumeTimer(ctx context.Context, in *ResumeTimerRequest, opts ...grpc.CallOption) (*ResumeTimerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeTimerResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResumeTimer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) StopTimer(ctx context.Context, in *StopTimerRequest, opts ...grpc.CallOption) (*StopTimerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StopTimerResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_StopTimer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) GetActiveTimer(ctx context.Context, in *GetActiveTimerRequest, opts ...grpc.CallOption) (*GetActiveTimerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetActiveTimerResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetActiveTimer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) GetTimePolicy(ctx context.Context, in *GetTimePolicyRequest, opts ...grpc.CallOption) (*GetTimePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTimePolicyResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetTimePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) UpdateTimePolicy(ctx context.Context, in *UpdateTimePolicyRequest, opts ...grpc.CallOption) (*UpdateTimePolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateTimePolicyResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_UpdateTimePolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) AggregateWorklogs(ctx context.Context, in *AggregateWorklogsRequest, opts ...grpc.CallOption) (*AggregateWorklogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AggregateWorklogsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_AggregateWorklogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -480,6 +637,20 @@ type ProjectsServiceServer interface {
 	ToggleTaskWatcher(context.Context, *ToggleTaskWatcherRequest) (*ToggleTaskWatcherResponse, error)
 	ListTaskWatchers(context.Context, *ListTaskWatchersRequest) (*ListTaskWatchersResponse, error)
 	BulkCheckTaskWatchers(context.Context, *BulkCheckTaskWatchersRequest) (*BulkCheckTaskWatchersResponse, error)
+	// ----- Time tracking -----
+	CreateWorklog(context.Context, *CreateWorklogRequest) (*CreateWorklogResponse, error)
+	UpdateWorklog(context.Context, *UpdateWorklogRequest) (*UpdateWorklogResponse, error)
+	DeleteWorklog(context.Context, *DeleteWorklogRequest) (*DeleteWorklogResponse, error)
+	ListTaskWorklogs(context.Context, *ListTaskWorklogsRequest) (*ListTaskWorklogsResponse, error)
+	ListUserWorklogs(context.Context, *ListUserWorklogsRequest) (*ListUserWorklogsResponse, error)
+	StartTimer(context.Context, *StartTimerRequest) (*StartTimerResponse, error)
+	PauseTimer(context.Context, *PauseTimerRequest) (*PauseTimerResponse, error)
+	ResumeTimer(context.Context, *ResumeTimerRequest) (*ResumeTimerResponse, error)
+	StopTimer(context.Context, *StopTimerRequest) (*StopTimerResponse, error)
+	GetActiveTimer(context.Context, *GetActiveTimerRequest) (*GetActiveTimerResponse, error)
+	GetTimePolicy(context.Context, *GetTimePolicyRequest) (*GetTimePolicyResponse, error)
+	UpdateTimePolicy(context.Context, *UpdateTimePolicyRequest) (*UpdateTimePolicyResponse, error)
+	AggregateWorklogs(context.Context, *AggregateWorklogsRequest) (*AggregateWorklogsResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -585,6 +756,45 @@ func (UnimplementedProjectsServiceServer) ListTaskWatchers(context.Context, *Lis
 }
 func (UnimplementedProjectsServiceServer) BulkCheckTaskWatchers(context.Context, *BulkCheckTaskWatchersRequest) (*BulkCheckTaskWatchersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BulkCheckTaskWatchers not implemented")
+}
+func (UnimplementedProjectsServiceServer) CreateWorklog(context.Context, *CreateWorklogRequest) (*CreateWorklogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateWorklog not implemented")
+}
+func (UnimplementedProjectsServiceServer) UpdateWorklog(context.Context, *UpdateWorklogRequest) (*UpdateWorklogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateWorklog not implemented")
+}
+func (UnimplementedProjectsServiceServer) DeleteWorklog(context.Context, *DeleteWorklogRequest) (*DeleteWorklogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteWorklog not implemented")
+}
+func (UnimplementedProjectsServiceServer) ListTaskWorklogs(context.Context, *ListTaskWorklogsRequest) (*ListTaskWorklogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTaskWorklogs not implemented")
+}
+func (UnimplementedProjectsServiceServer) ListUserWorklogs(context.Context, *ListUserWorklogsRequest) (*ListUserWorklogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUserWorklogs not implemented")
+}
+func (UnimplementedProjectsServiceServer) StartTimer(context.Context, *StartTimerRequest) (*StartTimerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartTimer not implemented")
+}
+func (UnimplementedProjectsServiceServer) PauseTimer(context.Context, *PauseTimerRequest) (*PauseTimerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseTimer not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResumeTimer(context.Context, *ResumeTimerRequest) (*ResumeTimerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeTimer not implemented")
+}
+func (UnimplementedProjectsServiceServer) StopTimer(context.Context, *StopTimerRequest) (*StopTimerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopTimer not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetActiveTimer(context.Context, *GetActiveTimerRequest) (*GetActiveTimerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetActiveTimer not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetTimePolicy(context.Context, *GetTimePolicyRequest) (*GetTimePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTimePolicy not implemented")
+}
+func (UnimplementedProjectsServiceServer) UpdateTimePolicy(context.Context, *UpdateTimePolicyRequest) (*UpdateTimePolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateTimePolicy not implemented")
+}
+func (UnimplementedProjectsServiceServer) AggregateWorklogs(context.Context, *AggregateWorklogsRequest) (*AggregateWorklogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AggregateWorklogs not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -1176,6 +1386,240 @@ func _ProjectsService_BulkCheckTaskWatchers_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_CreateWorklog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWorklogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).CreateWorklog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_CreateWorklog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).CreateWorklog(ctx, req.(*CreateWorklogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_UpdateWorklog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateWorklogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).UpdateWorklog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_UpdateWorklog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).UpdateWorklog(ctx, req.(*UpdateWorklogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_DeleteWorklog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteWorklogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).DeleteWorklog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_DeleteWorklog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).DeleteWorklog(ctx, req.(*DeleteWorklogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ListTaskWorklogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTaskWorklogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ListTaskWorklogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ListTaskWorklogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ListTaskWorklogs(ctx, req.(*ListTaskWorklogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ListUserWorklogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUserWorklogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ListUserWorklogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ListUserWorklogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ListUserWorklogs(ctx, req.(*ListUserWorklogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_StartTimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartTimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).StartTimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_StartTimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).StartTimer(ctx, req.(*StartTimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_PauseTimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PauseTimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).PauseTimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_PauseTimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).PauseTimer(ctx, req.(*PauseTimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResumeTimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeTimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResumeTimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResumeTimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResumeTimer(ctx, req.(*ResumeTimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_StopTimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopTimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).StopTimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_StopTimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).StopTimer(ctx, req.(*StopTimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_GetActiveTimer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetActiveTimerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetActiveTimer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetActiveTimer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetActiveTimer(ctx, req.(*GetActiveTimerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_GetTimePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTimePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetTimePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetTimePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetTimePolicy(ctx, req.(*GetTimePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_UpdateTimePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTimePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).UpdateTimePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_UpdateTimePolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).UpdateTimePolicy(ctx, req.(*UpdateTimePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_AggregateWorklogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AggregateWorklogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).AggregateWorklogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_AggregateWorklogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).AggregateWorklogs(ctx, req.(*AggregateWorklogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1306,6 +1750,58 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BulkCheckTaskWatchers",
 			Handler:    _ProjectsService_BulkCheckTaskWatchers_Handler,
+		},
+		{
+			MethodName: "CreateWorklog",
+			Handler:    _ProjectsService_CreateWorklog_Handler,
+		},
+		{
+			MethodName: "UpdateWorklog",
+			Handler:    _ProjectsService_UpdateWorklog_Handler,
+		},
+		{
+			MethodName: "DeleteWorklog",
+			Handler:    _ProjectsService_DeleteWorklog_Handler,
+		},
+		{
+			MethodName: "ListTaskWorklogs",
+			Handler:    _ProjectsService_ListTaskWorklogs_Handler,
+		},
+		{
+			MethodName: "ListUserWorklogs",
+			Handler:    _ProjectsService_ListUserWorklogs_Handler,
+		},
+		{
+			MethodName: "StartTimer",
+			Handler:    _ProjectsService_StartTimer_Handler,
+		},
+		{
+			MethodName: "PauseTimer",
+			Handler:    _ProjectsService_PauseTimer_Handler,
+		},
+		{
+			MethodName: "ResumeTimer",
+			Handler:    _ProjectsService_ResumeTimer_Handler,
+		},
+		{
+			MethodName: "StopTimer",
+			Handler:    _ProjectsService_StopTimer_Handler,
+		},
+		{
+			MethodName: "GetActiveTimer",
+			Handler:    _ProjectsService_GetActiveTimer_Handler,
+		},
+		{
+			MethodName: "GetTimePolicy",
+			Handler:    _ProjectsService_GetTimePolicy_Handler,
+		},
+		{
+			MethodName: "UpdateTimePolicy",
+			Handler:    _ProjectsService_UpdateTimePolicy_Handler,
+		},
+		{
+			MethodName: "AggregateWorklogs",
+			Handler:    _ProjectsService_AggregateWorklogs_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

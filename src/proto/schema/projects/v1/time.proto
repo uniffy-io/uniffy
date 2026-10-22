@@ -1,0 +1,258 @@
+syntax = "proto3";
+
+package projects.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
+
+// Time tracking. A worklog is the unit of effort, a task's time spent is the
+// sum of its live worklogs, a server-side timer produces worklogs without
+// typing, and the org policy drives periods, approvals and rounding.
+
+enum WorklogSource {
+  WORKLOG_SOURCE_UNSPECIFIED = 0;
+  WORKLOG_SOURCE_MANUAL = 1;
+  WORKLOG_SOURCE_TIMER = 2;
+  WORKLOG_SOURCE_IMPORT = 3;
+  WORKLOG_SOURCE_AGENT = 4;
+}
+
+enum TimerPauseReason {
+  TIMER_PAUSE_REASON_UNSPECIFIED = 0;
+  // Paused by the overrun job once the elapsed time passed the org limit.
+  TIMER_PAUSE_REASON_LIMIT = 1;
+}
+
+enum TimePeriodType {
+  TIME_PERIOD_TYPE_UNSPECIFIED = 0;
+  TIME_PERIOD_TYPE_WEEKLY = 1;
+  TIME_PERIOD_TYPE_MONTHLY = 2;
+}
+
+enum AggregateGroupBy {
+  AGGREGATE_GROUP_BY_UNSPECIFIED = 0;
+  AGGREGATE_GROUP_BY_DAY = 1;
+  AGGREGATE_GROUP_BY_TASK = 2;
+  AGGREGATE_GROUP_BY_USER = 3;
+  AGGREGATE_GROUP_BY_PROJECT = 4;
+}
+
+message Worklog {
+  string id = 1;
+  string task_id = 2;
+  string project_id = 3;
+  // Whose time this is.
+  string user_id = 4;
+  // Who logged it; differs from user_id on an on-behalf entry.
+  string created_by_user_id = 5;
+  // The worker's calendar day as YYYY-MM-DD, chosen by the client in the
+  // person's own zone.
+  string work_date = 6;
+  optional google.protobuf.Timestamp started_at = 7;
+  int32 duration_minutes = 8;
+  string description = 9;
+  WorklogSource source = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateWorklogRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  // Log on behalf of someone else; reviewers and timekeeping admins only.
+  optional string user_id = 3;
+  string work_date = 4;
+  int32 duration_minutes = 5;
+  string description = 6;
+}
+
+message CreateWorklogResponse {
+  Worklog worklog = 1;
+  // The task's rollup after the write, so the client patches state without a refetch.
+  int32 task_time_spent_minutes = 2;
+}
+
+message UpdateWorklogRequest {
+  string organization_id = 1;
+  string worklog_id = 2;
+  optional string work_date = 3;
+  optional int32 duration_minutes = 4;
+  optional string description = 5;
+}
+
+message UpdateWorklogResponse {
+  Worklog worklog = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message DeleteWorklogRequest {
+  string organization_id = 1;
+  string worklog_id = 2;
+}
+
+message DeleteWorklogResponse {
+  string task_id = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message ListTaskWorklogsRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  // Default 200, capped at 500.
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListTaskWorklogsResponse {
+  repeated Worklog worklogs = 1;
+  string next_page_token = 2;
+}
+
+message ListUserWorklogsRequest {
+  string organization_id = 1;
+  // Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+  optional string user_id = 2;
+  // Inclusive YYYY-MM-DD bounds, at most 62 days apart.
+  string from_date = 3;
+  string to_date = 4;
+}
+
+message ListUserWorklogsResponse {
+  repeated Worklog worklogs = 1;
+}
+
+message Timer {
+  string id = 1;
+  string task_id = 2;
+  string project_id = 3;
+  string description = 4;
+  // Start of the running segment; unset while paused.
+  optional google.protobuf.Timestamp started_at = 5;
+  // Seconds from finished segments; elapsed is this plus the running segment.
+  int32 accumulated_seconds = 6;
+  optional google.protobuf.Timestamp paused_at = 7;
+  TimerPauseReason pause_reason = 8;
+}
+
+message StartTimerRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string description = 3;
+  // Day of the worklog written for a running timer this start replaces.
+  string work_date = 4;
+}
+
+message StartTimerResponse {
+  Timer timer = 1;
+  // The worklog written for the timer this start replaced, if any.
+  optional Worklog stopped_worklog = 2;
+}
+
+message PauseTimerRequest {
+  string organization_id = 1;
+}
+
+message PauseTimerResponse {
+  Timer timer = 1;
+}
+
+message ResumeTimerRequest {
+  string organization_id = 1;
+}
+
+message ResumeTimerResponse {
+  Timer timer = 1;
+}
+
+message StopTimerRequest {
+  string organization_id = 1;
+  string work_date = 2;
+  optional string description = 3;
+  // Replaces the rounded elapsed value when the person corrects it in the stop dialog.
+  optional int32 duration_minutes = 4;
+  // Drop the timer without writing a worklog.
+  bool discard = 5;
+}
+
+message StopTimerResponse {
+  optional Worklog worklog = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message GetActiveTimerRequest {
+  string organization_id = 1;
+}
+
+message GetActiveTimerResponse {
+  optional Timer timer = 1;
+}
+
+message TimePolicy {
+  string organization_id = 1;
+  bool enabled = 2;
+  TimePeriodType period_type = 3;
+  // monday, saturday or sunday; org-wide so one team shares a period.
+  string week_start = 4;
+  int32 month_start_day = 5;
+  bool approvals_enabled = 6;
+  bool lock_on_submit = 7;
+  // Days after a period ends before its open sheets lock; auto-submit fires then too.
+  int32 period_lock_delay_days = 8;
+  bool allow_log_for_others = 9;
+  int32 required_minutes_per_day = 10;
+  // 1, 5, 6, 10 or 15.
+  int32 timer_rounding_minutes = 11;
+  bool allow_future_dates = 12;
+  // Unset means a worker may log back until the day is locked.
+  optional int32 max_days_back = 13;
+  int32 max_timer_hours = 14;
+  bool auto_submit = 15;
+  // Org-wide YYYY-MM-DD dates with zero required minutes.
+  repeated string holidays = 16;
+  optional string internal_project_id = 17;
+  bool reminders_enabled = 18;
+  int32 reminder_hour_utc = 19;
+}
+
+message GetTimePolicyRequest {
+  string organization_id = 1;
+}
+
+message GetTimePolicyResponse {
+  TimePolicy policy = 1;
+}
+
+message UpdateTimePolicyRequest {
+  string organization_id = 1;
+  TimePolicy policy = 2;
+}
+
+message UpdateTimePolicyResponse {
+  TimePolicy policy = 1;
+}
+
+message AggregateWorklogsRequest {
+  string organization_id = 1;
+  oneof scope {
+    string project_id = 2;
+    string user_id = 3;
+  }
+  // Inclusive YYYY-MM-DD bounds.
+  string from_date = 4;
+  string to_date = 5;
+  AggregateGroupBy group_by = 6;
+}
+
+message AggregateRow {
+  // A YYYY-MM-DD day, a task id, a user id or a project id, per group_by.
+  string key = 1;
+  string label = 2;
+  int32 minutes = 3;
+  int32 entries = 4;
+}
+
+message AggregateWorklogsResponse {
+  repeated AggregateRow rows = 1;
+  int32 total_minutes = 2;
+}

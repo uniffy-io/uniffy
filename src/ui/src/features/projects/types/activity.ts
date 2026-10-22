@@ -7,7 +7,10 @@ export type ActivityAction =
   | "blocked_by_removed"
   | "assigned"
   | "type_changed"
-  | "sprint_changed";
+  | "sprint_changed"
+  | "time_logged"
+  | "time_updated"
+  | "time_removed";
 
 export interface TaskActivity {
   id: string;

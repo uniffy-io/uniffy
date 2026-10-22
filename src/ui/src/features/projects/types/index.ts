@@ -20,6 +20,16 @@ export type {
   TaskStatusSemantic,
 } from "./fields";
 
+export type {
+  AggregateRow,
+  CreateWorklogInput,
+  TimePeriodType,
+  TimePolicy,
+  UpdateWorklogInput,
+  Worklog,
+  WorklogSource,
+} from "./time";
+
 export {
   FIELD_TYPES,
   SYSTEM_FIELD_IDS,

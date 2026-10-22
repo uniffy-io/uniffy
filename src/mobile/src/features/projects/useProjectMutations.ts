@@ -171,7 +171,6 @@ export function useUpdateTask() {
       parentId?: string | null;
       blockedByTaskIds?: string[];
       estimatedMinutes?: number | null;
-      timeSpentMinutes?: number | null;
       tagIds?: string[];
       recurrenceRule?: string | null;
     }) =>
@@ -195,8 +194,6 @@ export function useUpdateTask() {
         blockedByTaskIds: args.blockedByTaskIds,
         estimatedMinutes:
           args.estimatedMinutes !== undefined ? (args.estimatedMinutes ?? 0) : undefined,
-        timeSpentMinutes:
-          args.timeSpentMinutes !== undefined ? (args.timeSpentMinutes ?? 0) : undefined,
         tagIds: args.tagIds ? { ids: args.tagIds } : undefined,
         recurrenceRule: args.recurrenceRule !== undefined ? (args.recurrenceRule ?? "") : undefined,
       }),
@@ -328,7 +325,7 @@ export function useToggleTaskWatcher() {
  * names of a task's unresolved blockers - and wraps them in a field prefix that
  * means nothing to a reader. Strip the prefix, keep the sentence.
  */
-function serverMessage(error: unknown, fallback: string): string {
+export function serverMessage(error: unknown, fallback: string): string {
   const raw =
     error instanceof ConnectError ? error.rawMessage : error instanceof Error ? error.message : "";
   if (!raw) return fallback;

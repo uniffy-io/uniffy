@@ -39,6 +39,8 @@ import { TaskTypePickerSheet } from "@features/projects/components/TaskTypePicke
 import { SprintPickerSheet } from "@features/projects/components/SprintPickerSheet";
 import { TaskPickerSheet } from "@features/projects/components/TaskPickerSheet";
 import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
+import { LogTimeSheet } from "@features/projects/components/LogTimeSheet";
+import { useCreateWorklog } from "@features/projects/useTimeMutations";
 import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
 import { RecurrenceSheet } from "@features/projects/components/RecurrenceSheet";
 import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
@@ -77,7 +79,7 @@ type DetailSheet =
   | "sprint"
   | "parent"
   | "estimate"
-  | "spent"
+  | "logTime"
   | "tags"
   | "blockers"
   | "repeat"
@@ -125,6 +127,7 @@ export function TaskDetailScreen() {
   const currentUserId = user?.id;
   const watchersQuery = useTaskWatchers(id);
   const updateTask = useUpdateTask();
+  const createWorklog = useCreateWorklog();
   const deleteTask = useDeleteTask();
   const toggleWatcher = useToggleTaskWatcher();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -440,11 +443,8 @@ export function TaskDetailScreen() {
               <CaretRight size={13} color={T.textDim} weight="bold" />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.metaRow, { borderBottomColor: T.border }]}
-            onPress={() => setSheet("spent")}
-            activeOpacity={0.6}
-          >
+          {/* Time spent is the sum of the task's worklogs, never typed. */}
+          <View style={[styles.metaRow, { borderBottomColor: T.border }]}>
             <Text style={[styles.metaLabel, { color: T.textDim }]}>Time spent</Text>
             <View style={styles.metaValue}>
               <Text
@@ -455,6 +455,16 @@ export function TaskDetailScreen() {
               >
                 {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "Not set"}
               </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.metaRow, { borderBottomColor: T.border }]}
+            onPress={() => setSheet("logTime")}
+            activeOpacity={0.6}
+            testID="log-time-open"
+          >
+            <Text style={[styles.metaLabel, { color: T.accent }]}>Log time</Text>
+            <View style={styles.metaValue}>
               <CaretRight size={13} color={T.textDim} weight="bold" />
             </View>
           </TouchableOpacity>
@@ -779,13 +789,18 @@ export function TaskDetailScreen() {
         onSave={(estimatedMinutes) => patch({ estimatedMinutes })}
       />
 
-      <TimeInputSheet
-        visible={sheet === "spent"}
+      <LogTimeSheet
+        visible={sheet === "logTime"}
         onClose={() => setSheet(null)}
-        title="Time spent"
-        minutes={task.timeSpentMinutes}
+        taskTitle={task.title}
         accentColor={T.accent}
-        onSave={(timeSpentMinutes) => patch({ timeSpentMinutes })}
+        saving={createWorklog.isPending}
+        onSave={(entry) =>
+          createWorklog.mutate(
+            { taskId: task.id, projectId: task.projectId, ...entry },
+            { onSuccess: () => setSheet(null) },
+          )
+        }
       />
 
       <TagPickerSheet

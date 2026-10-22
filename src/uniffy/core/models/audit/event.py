@@ -53,9 +53,12 @@ class AuditResourceType(StrEnum):
     TAG = "TAG"
     TASK = "TASK"
     TEAM = "TEAM"
+    TIME_PERIOD = "TIME_PERIOD"
+    TIMESHEET = "TIMESHEET"
     USER = "USER"
     USER_QUOTA = "USER_QUOTA"
     USER_SESSION = "USER_SESSION"
+    WORKLOG = "WORKLOG"
 
 
 class AuditActorKind(StrEnum):

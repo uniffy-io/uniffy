@@ -28,6 +28,10 @@ import {
   UpdateViewRequestSchema,
   DeleteViewRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  CreateWorklogRequestSchema,
+  ListTaskWorklogsRequestSchema,
+} from "@uniffy/proto/projects/v1/time_pb";
 import { transport } from "@core/api/transport";
 
 const client = createClient(ProjectsService, transport);
@@ -63,6 +67,12 @@ export const projectsApi = {
 
   deleteTask: (request: MessageInitShape<typeof DeleteTaskRequestSchema>) =>
     client.deleteTask(request),
+
+  createWorklog: (request: MessageInitShape<typeof CreateWorklogRequestSchema>) =>
+    client.createWorklog(request),
+
+  listTaskWorklogs: (request: MessageInitShape<typeof ListTaskWorklogsRequestSchema>) =>
+    client.listTaskWorklogs(request),
 
   moveTask: (request: MessageInitShape<typeof MoveTaskRequestSchema>) => client.moveTask(request),
 

@@ -216,6 +216,23 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     ],
   },
   {
+    domain: "worklog",
+    label: "Time tracking",
+    badgeClass: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+    actions: [
+      { value: "worklog.created", label: "Logged on behalf" },
+      { value: "worklog.updated", label: "Entry changed by admin" },
+      { value: "worklog.deleted", label: "Entry removed by admin" },
+      { value: "worklog.override", label: "Lock overridden" },
+    ],
+  },
+  {
+    domain: "time_policy",
+    label: "Time policy",
+    badgeClass: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
+    actions: [{ value: "time_policy.updated", label: "Updated" }],
+  },
+  {
     domain: "chat_channel",
     label: "Chat",
     badgeClass: "bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-400",
