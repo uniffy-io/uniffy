@@ -5,7 +5,7 @@ import { Envelope, IdentificationCard, Lock, User, WarningCircle } from "@phosph
 import { toast } from "sonner";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import type { GetInvitationResponse } from "@uniffy/proto/auth/v1/auth_pb";
-import { friendlyErrorMessage, setEnrollmentToken, unaryTransport } from "@/config";
+import { setEnrollmentToken, unaryTransport } from "@/config";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -16,7 +16,13 @@ import { useSignOut } from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { acceptInvitation } from "@/features/auth/store/invitationsThunks";
 import { completeSignIn } from "@/features/auth/store/signInThunks";
-import { isSignInRequired, resolveAcceptState } from "@/features/auth/utils/acceptInviteState";
+import {
+  invitationErrorMessage,
+  invitationHeading,
+  isSignInRequired,
+  resolveAcceptState,
+  type SignInInvitation,
+} from "@/features/auth/utils/acceptInviteState";
 import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
@@ -121,8 +127,7 @@ export function AcceptInvitePage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const raw = err instanceof Error ? err.message : "";
-        setPreviewError(friendlyErrorMessage(raw) ?? "Could not load the invitation.");
+        setPreviewError(invitationErrorMessage(err) ?? "Could not load the invitation.");
       })
       .finally(() => {
         if (!cancelled) setPreviewLoading(false);
@@ -185,12 +190,22 @@ export function AcceptInvitePage() {
         setSignInRequired(true);
         return;
       }
-      const raw = err instanceof Error ? err.message : "";
-      setSubmitError(friendlyErrorMessage(raw) ?? ACCEPT_FAILED_MESSAGE);
+      setSubmitError(invitationErrorMessage(err) ?? ACCEPT_FAILED_MESSAGE);
     }
   };
 
-  const signInToAccept = () => navigate("/auth", { state: { from: returnTo } });
+  const signInToAccept = () =>
+    navigate("/auth", {
+      state: {
+        from: returnTo,
+        invitation: invitation
+          ? ({
+              email: invitation.email,
+              organizationName: invitation.organizationName,
+            } satisfies SignInInvitation)
+          : undefined,
+      },
+    });
 
   // Joining moves this tab into the organization, so the switch confirmation runs first.
   const handleJoin = () =>
@@ -204,7 +219,7 @@ export function AcceptInvitePage() {
       } catch (err) {
         setJoining(false);
         if (err instanceof ConnectError) {
-          setSubmitError(friendlyErrorMessage(err.message) ?? ACCEPT_FAILED_MESSAGE);
+          setSubmitError(invitationErrorMessage(err) ?? ACCEPT_FAILED_MESSAGE);
           return;
         }
         // The membership landed and only the switch failed, which toasted already.
@@ -224,6 +239,7 @@ export function AcceptInvitePage() {
 
   const organizationName = invitation?.organizationName ?? "";
   const roleLabel = invitation ? getRoleLabel(invitation.role) : "";
+  const heading = invitation && view ? invitationHeading(invitation, view) : null;
 
   return (
     <AuthShell>
@@ -249,16 +265,13 @@ export function AcceptInvitePage() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
           Accept invitation
         </p>
-        {!previewLoading && invitation && (
+        {!previewLoading && heading && (
           <>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
-              Join {organizationName}
+              {heading.title}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              {invitation.inviterDisplayName
-                ? `${invitation.inviterDisplayName} invited you`
-                : "You were invited"}{" "}
-              as <span className="font-medium text-foreground">{roleLabel}</span>.
+              {heading.invited} as <span className="font-medium text-foreground">{roleLabel}</span>.
             </p>
           </>
         )}

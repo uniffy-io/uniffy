@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { PaperPlaneTilt } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -15,6 +16,8 @@ const ROLE_OPTIONS = [
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// The one conflict an invite reports: the address belongs to an active member already.
+const ALREADY_MEMBER = "This person is already a member of the organization.";
 
 interface InviteMemberDialogProps {
   organizationId: string;
@@ -30,6 +33,7 @@ export function InviteMemberDialog({
   const [email, setEmail] = useState("");
   const [roleStr, setRoleStr] = useState(String(OrganizationRole.MEMBER));
   const [submitting, setSubmitting] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const trimmed = email.trim();
   const canSubmit = !submitting && EMAIL_RE.test(trimmed);
@@ -47,6 +51,10 @@ export function InviteMemberDialog({
       onInvited();
       onClose();
     } catch (err) {
+      if (err instanceof ConnectError && err.code === Code.AlreadyExists) {
+        setEmailError(ALREADY_MEMBER);
+        return;
+      }
       const friendly =
         friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
         "Could not send invitation";
@@ -65,15 +73,32 @@ export function InviteMemberDialog({
 
       <ModalBody>
         <div>
-          <label className="block text-sm text-muted-foreground mb-1">Email</label>
+          <label htmlFor="invite-member-email" className="block text-sm text-muted-foreground mb-1">
+            Email
+          </label>
           <Input
+            id="invite-member-email"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setEmailError(null);
+            }}
             placeholder="person@example.com"
             autoFocus
             disabled={submitting}
+            aria-invalid={emailError ? true : undefined}
+            aria-describedby={emailError ? "invite-member-email-error" : undefined}
           />
+          {emailError && (
+            <p
+              id="invite-member-email-error"
+              className="mt-1.5 text-xs text-destructive"
+              role="alert"
+            >
+              {emailError}
+            </p>
+          )}
         </div>
 
         <div>

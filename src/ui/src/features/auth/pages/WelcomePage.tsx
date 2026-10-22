@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -26,6 +26,7 @@ import {
 } from "@/features/auth/store/organizationsSlice";
 import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
+import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 
 function slideUp(delaySeconds: number, durationSeconds = 0.5) {
   return { animation: `welcome-slide-up ${durationSeconds}s ease-out ${delaySeconds}s forwards` };
@@ -50,6 +51,8 @@ export function WelcomePage() {
   useEffect(() => {
     if (isAuthenticated) void dispatch(fetchMyOrganizations());
   }, [dispatch, isAuthenticated]);
+  const reloadOrganizations = useCallback(() => void dispatch(fetchMyOrganizations()), [dispatch]);
+  useRefreshOnReturn(reloadOrganizations, isAuthenticated);
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
 

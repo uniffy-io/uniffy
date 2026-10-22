@@ -3,8 +3,11 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { BinaryWriter, WireType } from "@bufbuild/protobuf/wire";
 import { decodeErrorReason, decodeMembershipRequired } from "@/config/api";
 import {
+  invitationErrorMessage,
+  invitationHeading,
   isSignInRequired,
   resolveAcceptState,
+  signInInvitationFrom,
   type AcceptInviteInput,
 } from "@/features/auth/utils/acceptInviteState";
 
@@ -133,5 +136,73 @@ describe("isSignInRequired", () => {
       isSignInRequired(refusal(Code.FailedPrecondition, errorInfo("invitation_expired", "uniffy"))),
     ).toBe(false);
     expect(isSignInRequired(refusal(Code.FailedPrecondition))).toBe(false);
+  });
+});
+
+describe("invitationHeading", () => {
+  const invitation = {
+    organizationName: "Globex",
+    email: "pat@example.com",
+    inviterDisplayName: "Sam Admin",
+  };
+
+  it("addresses the invitee while the page can accept for them", () => {
+    for (const state of ["form", "sign-in", "join"] as const) {
+      expect(invitationHeading(invitation, state)).toEqual({
+        title: "Join Globex",
+        invited: "Sam Admin invited you",
+      });
+    }
+    expect(invitationHeading({ ...invitation, inviterDisplayName: "" }, "join").invited).toBe(
+      "You were invited",
+    );
+  });
+
+  it("names the invitee when another account is signed in", () => {
+    expect(invitationHeading(invitation, "mismatch")).toEqual({
+      title: "Invitation to Globex",
+      invited: "Sam Admin invited pat@example.com",
+    });
+    expect(invitationHeading({ ...invitation, inviterDisplayName: undefined }, "mismatch")).toEqual(
+      {
+        title: "Invitation to Globex",
+        invited: "pat@example.com was invited",
+      },
+    );
+  });
+});
+
+describe("invitationErrorMessage", () => {
+  it("names a missing invitation instead of a missing page", () => {
+    const message = invitationErrorMessage(new ConnectError("Invitation not found", Code.NotFound));
+    expect(message).toMatch(/^No invitation matches this link\./);
+  });
+
+  it("keeps the server's reason for an invitation that cannot be used", () => {
+    expect(
+      invitationErrorMessage(
+        new ConnectError("Invitation has already been accepted", Code.FailedPrecondition),
+      ),
+    ).toBe("Invitation has already been accepted");
+  });
+});
+
+describe("signInInvitationFrom", () => {
+  it("reads the invitation the accept page handed to sign-in", () => {
+    expect(
+      signInInvitationFrom({
+        from: { pathname: "/auth/accept-invite", search: "?token=abc" },
+        invitation: { email: "pat@example.com", organizationName: "Globex" },
+      }),
+    ).toEqual({ email: "pat@example.com", organizationName: "Globex" });
+  });
+
+  it("ignores state without a usable invitation", () => {
+    expect(signInInvitationFrom(null)).toBeNull();
+    expect(signInInvitationFrom({ from: "/notes" })).toBeNull();
+    expect(
+      signInInvitationFrom({ invitation: { email: "", organizationName: "Globex" } }),
+    ).toBeNull();
+    expect(signInInvitationFrom({ invitation: { email: "pat@example.com" } })).toBeNull();
   });
 });

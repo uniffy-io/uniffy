@@ -64,3 +64,19 @@ export async function saveOrganizationChanges(
   const organization = response.organization;
   return organization ? { name: organization.name, slug: organization.slug } : null;
 }
+
+/**
+ * Hands the organization to another member. The previous owner's role changes, so a refresh puts it
+ * into this tab's credentials and the organization list reloads for the user menu.
+ */
+export async function transferOrganizationOwnership(
+  dispatch: AppDispatch,
+  organizationId: string,
+  newOwnerUserId: string,
+): Promise<void> {
+  await adminApi.transferOwnership({ organizationId, newOwnerUserId });
+  await refreshAccessToken().catch((error: unknown) => {
+    console.warn("[admin] refresh after ownership transfer failed", error);
+  });
+  void dispatch(fetchMyOrganizations());
+}

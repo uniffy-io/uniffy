@@ -23,6 +23,7 @@ import { Select } from "@/components/ui/select";
 import { invitationsApi } from "@/features/admin/api/invitationsApi";
 import { InvitationStatus, type Invitation } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
+import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
 
@@ -180,22 +181,34 @@ export function InvitationsTable({ organizationId, refreshKey }: InvitationsTabl
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await invitationsApi.list({ organizationId });
-      setInvitations(response.invitations ?? []);
-    } catch (err) {
-      const friendly =
-        friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-        "Could not load invitations";
-      setError(friendly);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
+  const load = useCallback(
+    async (quiet: boolean) => {
+      if (!organizationId) return;
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const response = await invitationsApi.list({ organizationId });
+        setInvitations(response.invitations ?? []);
+        setError(null);
+      } catch (err) {
+        // A background refresh keeps the rows on screen rather than replacing them with an error.
+        if (quiet) return;
+        const friendly =
+          friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
+          "Could not load invitations";
+        setError(friendly);
+      } finally {
+        if (!quiet) setLoading(false);
+      }
+    },
+    [organizationId],
+  );
+  const reload = useCallback(() => load(false), [load]);
+  // Invitees accept and decline from their own sessions, so a return to the tab picks that up.
+  const refreshQuietly = useCallback(() => void load(true), [load]);
+  useRefreshOnReturn(refreshQuietly);
 
   useEffect(() => {
     // eslint-disable-next-line react/react-compiler -- fetch on mount and on every refreshKey bump; reload raises the loading flag before awaiting the API

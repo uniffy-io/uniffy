@@ -121,12 +121,14 @@ export function isOverdue(dateStr: string): boolean {
   return calendarDayKey(dateStr) < effectiveDayKey(new Date());
 }
 
-/** "Just now" / "5m ago" / "3d ago"; falls back to short date past 7 days. */
+/** "Just now" / "5m ago" / "3d ago" / "in 2h"; falls back to a short date past 30 days either way. */
 export function formatRelativeTime(dateStr: string | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const now = Date.now();
   const diffMs = now - date.getTime();
+  // Clock skew can put a fresh server timestamp just ahead of this clock; that still reads as now.
+  if (diffMs <= -60000) return formatTimeUntil(date, -diffMs);
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
@@ -137,6 +139,23 @@ export function formatRelativeTime(dateStr: string | undefined): string {
   if (diffDay === 1) return "Yesterday";
   if (diffDay < 7) return `${diffDay}d ago`;
   if (diffDay < 30) return `${diffDay}d ago`;
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: displayTimeZone(),
+  });
+}
+
+function formatTimeUntil(date: Date, aheadMs: number): string {
+  const aheadMin = Math.floor(aheadMs / 60000);
+  const aheadHr = Math.floor(aheadMin / 60);
+  const aheadDay = Math.floor(aheadHr / 24);
+
+  if (aheadMin < 60) return `in ${aheadMin}m`;
+  if (aheadHr < 24) return `in ${aheadHr}h`;
+  if (aheadDay === 1) return "Tomorrow";
+  if (aheadDay < 30) return `in ${aheadDay}d`;
 
   return date.toLocaleDateString(undefined, {
     month: "short",

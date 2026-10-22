@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ConnectError } from "@connectrpc/connect";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import {
   fetchMyInvitations,
 } from "@/features/auth/store/invitationsThunks";
 import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
+import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 import { cn } from "@/shared/utils/cn";
 
 function invitedAs(invitation: PendingInvitation): string {
@@ -43,11 +44,13 @@ export function PendingInvitations({ className }: { className?: string }) {
   const { guardSwitch, isSwitching, confirmDialog } = useSwitchOrganization();
   const [decliningId, setDecliningId] = useState<string | null>(null);
 
-  // Invitations arrive while the app is open, so every mount reloads; a load that a switch
-  // interrupted settles back to idle and runs again.
+  // Invitations arrive while the app is open, so every mount and every return to the tab reloads;
+  // a load that a switch interrupted settles back to idle and runs again.
+  const reloadInvitations = useCallback(() => void dispatch(fetchMyInvitations()), [dispatch]);
   useEffect(() => {
-    void dispatch(fetchMyInvitations());
-  }, [dispatch]);
+    reloadInvitations();
+  }, [reloadInvitations]);
+  useRefreshOnReturn(reloadInvitations);
   useEffect(() => {
     if (status === "idle") void dispatch(fetchMyInvitations());
   }, [dispatch, status]);

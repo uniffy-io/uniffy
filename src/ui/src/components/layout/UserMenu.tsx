@@ -26,10 +26,12 @@ import {
 } from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { selectPendingInvitationCount } from "@/features/auth/store/invitationsSlice";
+import { fetchMyInvitations } from "@/features/auth/store/invitationsThunks";
 import {
   selectCanCreateOrganization,
   selectOrganizations,
 } from "@/features/auth/store/organizationsSlice";
+import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
@@ -170,6 +172,16 @@ export function UserMenu() {
     }
   };
 
+  // Other sessions and other people change memberships and invitations with no push to this tab,
+  // so opening the menu reloads both.
+  const toggleMenu = () => {
+    if (!isOpen) {
+      void dispatch(fetchMyOrganizations());
+      void dispatch(fetchMyInvitations());
+    }
+    setIsOpen(!isOpen);
+  };
+
   const selectOrganization = (slug: string) => {
     setIsOpen(false);
     void requestSwitch(slug);
@@ -191,7 +203,7 @@ export function UserMenu() {
         aria-label="User menu"
         aria-haspopup="true"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={toggleMenu}
         className={cn(
           "flex items-center justify-center w-8 h-8 rounded-full overflow-hidden",
           "border border-border-nav transition-all duration-150",

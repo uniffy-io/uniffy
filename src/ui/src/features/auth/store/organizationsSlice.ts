@@ -60,11 +60,12 @@ export const organizationsSlice = createSlice({
         payload: { items, canCreateOrganization },
       }),
     },
+    // Placed by name, the order the server lists memberships in, so a reload does not reorder it.
     organizationAdded: (state, action: PayloadAction<OrganizationSummary>) => {
-      state.items = [
-        ...state.items.filter((item) => item.id !== action.payload.id),
-        action.payload,
-      ];
+      const items = state.items.filter((item) => item.id !== action.payload.id);
+      const before = items.findIndex((item) => item.name.localeCompare(action.payload.name) > 0);
+      items.splice(before === -1 ? items.length : before, 0, action.payload);
+      state.items = items;
     },
     // A failed reload keeps the last good list so the switcher stays usable.
     organizationsFailed: (state) => {

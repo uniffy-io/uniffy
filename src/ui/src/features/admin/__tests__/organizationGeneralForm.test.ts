@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { combineReducers, configureStore, type Store } from "@reduxjs/toolkit";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import type { AppDispatch, RootState } from "@/app/store";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { setStoreRef } from "@/app/storeRef";
@@ -9,16 +10,23 @@ import {
   changedOrganizationFields,
   organizationFieldError,
   saveOrganizationChanges,
+  transferOrganizationOwnership,
 } from "@/features/admin/components/organization/organizationChanges";
 import { authReducer, setCredentials } from "@/features/auth/store/authSlice";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
 
-const shared = vi.hoisted(() => ({ update: vi.fn(), refresh: vi.fn(), list: vi.fn() }));
+const shared = vi.hoisted(() => ({
+  update: vi.fn(),
+  transfer: vi.fn(),
+  refresh: vi.fn(),
+  list: vi.fn(),
+}));
 vi.mock("@connectrpc/connect", async (original) => ({
   ...(await original<typeof import("@connectrpc/connect")>()),
   createClient: () => ({
     updateOrganization: shared.update,
+    transferOwnership: shared.transfer,
     refreshToken: shared.refresh,
     listMyOrganizations: shared.list,
   }),
@@ -46,6 +54,7 @@ function dispatch() {
 
 beforeEach(() => {
   shared.update.mockReset();
+  shared.transfer.mockReset();
   shared.refresh.mockReset();
   shared.list.mockReset().mockResolvedValue({ organizations: [], canCreateOrganization: false });
   for (const name of ["localStorage", "sessionStorage"]) {
@@ -188,6 +197,53 @@ describe("saveOrganizationChanges", () => {
     shared.update.mockRejectedValue(refusal);
 
     await expect(saveOrganizationChanges(dispatch(), "org-acme", { slug: "globex" })).rejects.toBe(
+      refusal,
+    );
+    expect(shared.refresh).not.toHaveBeenCalled();
+    expect(shared.list).not.toHaveBeenCalled();
+  });
+});
+
+describe("transferOrganizationOwnership", () => {
+  it("carries the new role into the credentials and the organization list", async () => {
+    shared.transfer.mockResolvedValue({});
+    shared.refresh.mockResolvedValue({
+      accessToken: "access-acme-2",
+      refreshToken: "second",
+      organizationId: "org-acme",
+      organizationSlug: "acme",
+      organizationRole: "ADMIN",
+      sessionId: "session",
+      domainAdminDomains: [],
+    });
+    shared.list.mockResolvedValue({
+      organizations: [
+        {
+          organization: { id: "org-acme", name: "Acme", slug: "acme" },
+          role: OrganizationRole.ADMIN,
+          suspended: false,
+        },
+      ],
+      canCreateOrganization: false,
+    });
+
+    await transferOrganizationOwnership(dispatch(), "org-acme", "user-b");
+
+    expect(shared.transfer).toHaveBeenCalledWith({
+      organizationId: "org-acme",
+      newOwnerUserId: "user-b",
+    });
+    expect(store.getState().auth.currentOrganizationRole).toBe("ADMIN");
+    await vi.waitFor(() =>
+      expect(store.getState().organizations.items[0]?.role).toBe(OrganizationRole.ADMIN),
+    );
+  });
+
+  it("rejects with the server refusal and reloads nothing", async () => {
+    const refusal = new ConnectError("Only the owner can transfer", Code.PermissionDenied);
+    shared.transfer.mockRejectedValue(refusal);
+
+    await expect(transferOrganizationOwnership(dispatch(), "org-acme", "user-b")).rejects.toBe(
       refusal,
     );
     expect(shared.refresh).not.toHaveBeenCalled();

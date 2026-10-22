@@ -8,6 +8,7 @@ import {
   signInResultFrom,
   type SignInResult,
 } from "@/features/auth/store/signInThunks";
+import { signInInvitationFrom } from "@/features/auth/utils/acceptInviteState";
 import { returnPathFrom } from "@/features/auth/utils/returnPath";
 import { friendlyErrorMessage, setEnrollmentToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
@@ -29,6 +30,8 @@ export function AuthForms() {
   const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
   const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
   const returnPath = returnPathFrom(location.state);
+  // An invitation sent the visitor here, so the form names it and starts from the invited email.
+  const invitation = signInInvitationFrom(location.state);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,7 +61,7 @@ export function AuthForms() {
     navigate(returnPath ?? (currentOrganizationId ? "/" : "/welcome"), { replace: true });
   }, [isAuthenticated, currentOrganizationId, navigate, returnPath]);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => invitation?.email ?? "");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -180,6 +183,17 @@ export function AuthForms() {
         </div>
       )}
 
+      {invitation && mode === "login" && (
+        <p
+          className="mb-5 text-sm text-muted-foreground opacity-0"
+          style={{ animation: "auth-slide-up 0.5s ease-out 0.25s forwards" }}
+          data-testid="auth-invitation-context"
+        >
+          Sign in to accept the invitation to{" "}
+          <span className="font-medium text-foreground">{invitation.organizationName}</span>.
+        </p>
+      )}
+
       {error && (
         <div
           className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
@@ -280,7 +294,7 @@ export function AuthForms() {
               onChange={setEmail}
               required
               icon={Envelope}
-              autoFocus
+              autoFocus={!invitation}
             />
             <AuthInput
               id="login-password"
@@ -290,6 +304,7 @@ export function AuthForms() {
               onChange={setPassword}
               required
               icon={Lock}
+              autoFocus={!!invitation}
             />
 
             <button

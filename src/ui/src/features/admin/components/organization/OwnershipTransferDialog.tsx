@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { MemberInfo } from "@uniffy/proto/common/v1/common_pb";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
 import { Button } from "@/components/ui/button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
@@ -9,8 +9,8 @@ import { OptionTile } from "@/components/ui/option-tile";
 import { SearchField } from "@/components/ui/search-field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { friendlyErrorMessage } from "@/config";
-import { refreshAccessToken } from "@/config/api";
 import { adminApi } from "@/features/admin/api/adminApi";
+import { transferOrganizationOwnership } from "@/features/admin/components/organization/organizationChanges";
 import { DIRECTORY_MEMBERS_PAGE_SIZE } from "@/features/admin/store/adminThunks";
 
 const SEARCH_DELAY_MS = 300;
@@ -34,6 +34,7 @@ export function OwnershipTransferDialog({
   onClose,
   onTransferred,
 }: OwnershipTransferDialogProps) {
+  const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null);
   const [search, setSearch] = useState("");
   const [result, setResult] = useState<MemberResult | null>(null);
@@ -81,12 +82,8 @@ export function OwnershipTransferDialog({
     if (!selected || submitting) return;
     setSubmitting(true);
     try {
-      await adminApi.transferOwnership({ organizationId, newOwnerUserId: selected.userId });
+      await transferOrganizationOwnership(dispatch, organizationId, selected.userId);
       toast.success(`${selected.displayName} now owns ${organizationName}.`);
-      // The role in this tab's credentials follows only after a refresh.
-      await refreshAccessToken().catch((error: unknown) => {
-        console.warn("[admin] refresh after ownership transfer failed", error);
-      });
       onTransferred();
     } catch (err) {
       const message = friendlyErrorMessage(err instanceof Error ? err.message : String(err));
@@ -99,7 +96,7 @@ export function OwnershipTransferDialog({
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-lg">
       <ModalHeader
         title="Transfer ownership"
-        description={`Pick the member who will own ${organizationName}.`}
+        description={confirming ? undefined : `Pick the member who will own ${organizationName}.`}
       />
 
       {confirming && selected ? (

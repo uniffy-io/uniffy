@@ -137,6 +137,19 @@ describe("organizationsSlice", () => {
     expect(selectOrganizations(state)[2].role).toBe(OrganizationRole.OWNER);
   });
 
+  it("places an added organization by name, where a reload would list it", () => {
+    let state = signedIn("org-a");
+    state = reducer(state, organizationAdded(summary("org-c", "beta")));
+    state = reducer(state, organizationAdded(summary("org-d", "zeta")));
+
+    expect(selectOrganizations(state).map((item) => item.slug)).toEqual([
+      "acme",
+      "beta",
+      "globex",
+      "zeta",
+    ]);
+  });
+
   it("records the slug being switched to until the switch settles", () => {
     let state = reducer(undefined, switchStarted("globex"));
     expect(state.organizations.switchingSlug).toBe("globex");

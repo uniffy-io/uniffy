@@ -250,7 +250,8 @@ export function AppHeader() {
 
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
 
-  // Both lists reset to idle on sign-out, so each loads once per signed-in user.
+  // Both lists reset to idle on sign-out, so each first loads here once per signed-in user; the user
+  // menu reloads them each time it opens.
   useEffect(() => {
     if (!userId || organizationsStatus !== "idle") return;
     void dispatch(fetchMyOrganizations());

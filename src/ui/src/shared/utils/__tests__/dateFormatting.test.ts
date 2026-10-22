@@ -171,6 +171,28 @@ describe("formatRelativeTime", () => {
     const result = formatRelativeTime("2020-01-15T12:00:00Z");
     expect(result).toContain("Jan");
   });
+
+  it("reads a timestamp slightly ahead of this clock as now", () => {
+    const skewed = new Date(Date.now() + 30_000).toISOString();
+    expect(formatRelativeTime(skewed)).toBe("Just now");
+  });
+
+  it("counts forward to a future date", () => {
+    expect(formatRelativeTime(new Date(Date.now() + 5 * 60000 + 1000).toISOString())).toBe("in 5m");
+    expect(formatRelativeTime(new Date(Date.now() + 3 * 3600000 + 1000).toISOString())).toBe(
+      "in 3h",
+    );
+    expect(formatRelativeTime(new Date(Date.now() + 25 * 3600000).toISOString())).toBe("Tomorrow");
+    expect(formatRelativeTime(new Date(Date.now() + 29 * 86400000 + 1000).toISOString())).toBe(
+      "in 29d",
+    );
+  });
+
+  it("falls back to date string for far future dates", () => {
+    const result = formatRelativeTime(new Date(Date.now() + 90 * 86400000).toISOString());
+    expect(result).not.toMatch(/^in |Just now/);
+    expect(result).toMatch(/\d/);
+  });
 });
 
 describe("formatMediaTime", () => {
