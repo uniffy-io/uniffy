@@ -99,6 +99,7 @@ async def test_denied_state_stream_includes_cooldown() -> None:
 
     publish.assert_awaited_once_with(
         user_id=request.requester_id,
+        organization_id=request.organization_id,
         request_id=request.id,
         requested_urn=request.requested_urn,
         state=_ProtoAccessRequestState.DENIED,

@@ -21,6 +21,7 @@ from uniffy_proto.organizations.v1.organizations_pb import (
     ListMyInvitationsRequest,
     ListMyOrganizationsRequest,
     TransferOwnershipRequest,
+    UpdateOrganizationRequest,
 )
 
 from uniffy.core.auth.principal import (
@@ -666,3 +667,25 @@ class TestInviteMember:
 
         assert error.code is Code.ALREADY_EXISTS
         assert error.message == str(conflict)
+
+
+class TestUpdateOrganization:
+    async def test_an_org_admin_changes_only_name_and_slug(self) -> None:
+        user_id = generate_id()
+        org = _org()
+        operations = MagicMock(require_org_admin=AsyncMock(), update=AsyncMock(return_value=org))
+
+        with (
+            _signed_in(user_id, org.id),
+            patch(f"{_HANDLERS}.open_session", _open_session(MagicMock())),
+            patch(f"{_HANDLERS}.OrganizationOperations", return_value=operations),
+        ):
+            response = await _service().update_organization(
+                UpdateOrganizationRequest(name="Acme Labs"), MagicMock()
+            )
+
+        operations.require_org_admin.assert_awaited_once_with(user_id, org.id)
+        operations.update.assert_awaited_once_with(
+            org_id=org.id, name="Acme Labs", slug=None, actor_user_id=user_id
+        )
+        assert response.organization.id == str(org.id)

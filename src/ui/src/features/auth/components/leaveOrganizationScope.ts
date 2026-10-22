@@ -1,6 +1,7 @@
 import type { NavigateFunction } from "react-router-dom";
 import type { AppDispatch } from "@/app/store";
 import {
+  expectOrganizationLoss,
   ORGANIZATION_LOST_EVENT,
   refreshAccessToken,
   takePendingOrganizationLost,
@@ -19,9 +20,9 @@ interface LeftOrganization {
 
 /**
  * Moves this tab out of an organization the user just left or deleted, running the cleanup the
- * lost-grant listeners would run. The loss the refresh announces is taken the moment it fires,
- * before a redirect can mount ProtectedRoute and replay it as "Your access to that organization
- * ended."
+ * lost-grant listeners would run. The caller confirms with its own toast, so the loss the refresh
+ * announces is marked expected for a ProtectedRoute already mounted, and taken the moment it fires
+ * so a redirect cannot mount one that replays it as "Your access to that organization ended."
  */
 export async function leaveCurrentOrganizationScope(
   dispatch: AppDispatch,
@@ -41,6 +42,7 @@ export async function leaveCurrentOrganizationScope(
   const takeAnnouncedLoss = () => {
     takePendingOrganizationLost(userId);
   };
+  const releaseExpectedLoss = expectOrganizationLoss(organizationId);
   window.addEventListener(ORGANIZATION_LOST_EVENT, takeAnnouncedLoss);
   try {
     // The server dropped the grant, so this comes back org-less and the tab leaves the org.
@@ -49,6 +51,7 @@ export async function leaveCurrentOrganizationScope(
     console.warn("[auth] refresh after leaving an organization failed", error);
   } finally {
     window.removeEventListener(ORGANIZATION_LOST_EVENT, takeAnnouncedLoss);
+    releaseExpectedLoss();
   }
   navigate(WELCOME_PATH, { replace: true });
 }

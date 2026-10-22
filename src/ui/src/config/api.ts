@@ -48,6 +48,19 @@ export const ORGANIZATION_LOST_EVENT = "uniffy:auth:org-lost";
 /** Detail of `ORGANIZATION_LOST_EVENT`. The id is absent when the tab knew the organization by slug only. */
 export interface OrganizationLostDetail {
   organizationId?: string;
+  /** Set when the user left or deleted the organization from this tab, which confirms that itself. */
+  expected?: boolean;
+}
+
+// The organization this tab is leaving on the user's own action while the refresh that drops it runs.
+let expectedOrganizationLoss: string | null = null;
+
+/** Marks the coming loss of `organizationId` as the user's own action until the returned release runs. */
+export function expectOrganizationLoss(organizationId: string): () => void {
+  expectedOrganizationLoss = organizationId;
+  return () => {
+    if (expectedOrganizationLoss === organizationId) expectedOrganizationLoss = null;
+  };
 }
 
 // A lost grant the shell has not handled yet. A reload notices one before any listener mounts.
@@ -61,12 +74,14 @@ export function takePendingOrganizationLost(userId: string): OrganizationLostDet
 }
 
 function announceOrganizationLost(userId: string, organizationId: string | undefined): void {
-  pendingOrganizationLost = { userId, detail: { organizationId } };
+  const detail: OrganizationLostDetail =
+    organizationId && organizationId === expectedOrganizationLoss
+      ? { organizationId, expected: true }
+      : { organizationId };
+  pendingOrganizationLost = { userId, detail };
   if (typeof window === "undefined") return;
   window.dispatchEvent(
-    new CustomEvent<OrganizationLostDetail>(ORGANIZATION_LOST_EVENT, {
-      detail: { organizationId },
-    }),
+    new CustomEvent<OrganizationLostDetail>(ORGANIZATION_LOST_EVENT, { detail: { ...detail } }),
   );
 }
 

@@ -280,7 +280,6 @@ class OrganizationOperations:
         slug: str | None = None,
         domain: str | None = None,
         plan: str | None = None,
-        is_active: bool | None = None,
         actor_user_id: UUID | None = None,
     ) -> Organization:
         org = await self.get_by_id(org_id)
@@ -305,9 +304,6 @@ class OrganizationOperations:
         if plan is not None and org.plan != plan:
             org.plan = plan
             changed_keys.append("plan")
-        if is_active is not None and org.is_active != is_active:
-            org.is_active = is_active
-            changed_keys.append("is_active")
 
         if changed_keys:
             details: dict[str, object] = {"changed_keys": changed_keys}
@@ -969,6 +965,7 @@ class OrganizationOperations:
         await publish_notification(
             target_user_id,
             {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+            organization_id=org_id,
         )
 
         user_result = await self._session.execute(select(User).where(User.id == target_user_id))
@@ -1019,6 +1016,7 @@ class OrganizationOperations:
         await publish_notification(
             target_user_id,
             {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+            organization_id=org_id,
         )
 
         return True

@@ -278,7 +278,7 @@ class InvitationOperations(InvitationReader):
                 user_id=user.id,
                 org_id=invitation.organization_id,
                 role=invitation.role,
-                actor_user_id=invitation.invited_by_user_id,
+                actor_user_id=user.id,
                 source=OrganizationMemberSource.INVITE,
                 invited_by_user_id=invitation.invited_by_user_id,
             )
@@ -356,7 +356,7 @@ class InvitationOperations(InvitationReader):
                 user_id=user.id,
                 org_id=invitation.organization_id,
                 role=invitation.role,
-                actor_user_id=invitation.invited_by_user_id,
+                actor_user_id=user.id,
                 source=OrganizationMemberSource.INVITE,
                 invited_by_user_id=invitation.invited_by_user_id,
             )

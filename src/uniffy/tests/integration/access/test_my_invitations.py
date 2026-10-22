@@ -180,6 +180,16 @@ async def test_accepting_by_id_joins_without_verifying_the_address(session, inbo
     recipient = await session.get(User, inbox.recipient_id)
     await session.refresh(recipient)
     assert recipient.email_verified is False
+    added = (
+        await session.execute(
+            select(AuditEvent).where(
+                AuditEvent.organization_id == inbox.first_org_id,
+                AuditEvent.action == Action.ORGANIZATION_MEMBER_ADDED,
+                AuditEvent.resource_id == inbox.recipient_id,
+            )
+        )
+    ).scalar_one()
+    assert added.actor_user_id == inbox.recipient_id
     assert await _pending_ids(session, inbox.recipient_id) == [inbox.second_id]
 
 

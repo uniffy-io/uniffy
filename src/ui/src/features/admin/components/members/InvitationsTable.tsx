@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Clock,
   CheckCircle,
@@ -23,13 +23,12 @@ import { Select } from "@/components/ui/select";
 import { invitationsApi } from "@/features/admin/api/invitationsApi";
 import { InvitationStatus, type Invitation } from "@uniffy/proto/organizations/v1/organizations_pb";
 import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
-import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
 
 interface InvitationsTableProps {
   organizationId: string;
-  /** Bumps when the parent wants a forced refresh after sending a new invite. */
+  /** Bumps when the parent wants the rows reloaded in place, with no loading state. */
   refreshKey: number;
 }
 
@@ -206,14 +205,18 @@ export function InvitationsTable({ organizationId, refreshKey }: InvitationsTabl
     [organizationId],
   );
   const reload = useCallback(() => load(false), [load]);
-  // Invitees accept and decline from their own sessions, so a return to the tab picks that up.
-  const refreshQuietly = useCallback(() => void load(true), [load]);
-  useRefreshOnReturn(refreshQuietly);
 
   useEffect(() => {
-    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every refreshKey bump; reload raises the loading flag before awaiting the API
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; reload raises the loading flag before awaiting the API
     void reload();
-  }, [reload, refreshKey]);
+  }, [reload]);
+
+  const seenRefreshKey = useRef(refreshKey);
+  useEffect(() => {
+    if (seenRefreshKey.current === refreshKey) return;
+    seenRefreshKey.current = refreshKey;
+    void load(true);
+  }, [load, refreshKey]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return invitations;

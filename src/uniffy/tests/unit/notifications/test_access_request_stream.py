@@ -30,6 +30,7 @@ def test_access_request_notification_types_round_trip() -> None:
 
 async def test_access_request_stream_publisher_targets_requester() -> None:
     requester_id = generate_id()
+    organization_id = generate_id()
     request_id = generate_id()
     retry_at = datetime(2026, 8, 17, 12, 0, tzinfo=UTC)
     publish = AsyncMock()
@@ -37,6 +38,7 @@ async def test_access_request_stream_publisher_targets_requester() -> None:
     with patch.object(realtime, "publish_to_channel", publish):
         await realtime.publish_access_request_changed(
             user_id=requester_id,
+            organization_id=organization_id,
             request_id=request_id,
             requested_urn="urn:uniffy:content:NOTE:019fc01f-12b6-7c82-bb38-2849821c22cb",
             state=_ProtoAccessRequestState.DENIED,
@@ -51,5 +53,6 @@ async def test_access_request_stream_publisher_targets_requester() -> None:
             "requested_urn": "urn:uniffy:content:NOTE:019fc01f-12b6-7c82-bb38-2849821c22cb",
             "state": _ProtoAccessRequestState.DENIED,
             "can_request_again_at": retry_at.isoformat(),
+            "organization_id": str(organization_id),
         },
     )

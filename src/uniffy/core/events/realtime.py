@@ -32,8 +32,14 @@ def notification_channel(user_id: UUID) -> str:
     return f"notifications:{user_id}"
 
 
-async def publish_notification(user_id: UUID, payload: dict[str, Any]) -> None:
-    await publish_to_channel(notification_channel(user_id), payload)
+async def publish_notification(
+    user_id: UUID, payload: dict[str, Any], *, organization_id: UUID
+) -> None:
+    """`notifications:{user_id}` carries every organization; the stamp lets a stream keep its own."""
+    await publish_to_channel(
+        notification_channel(user_id),
+        {**payload, "organization_id": str(organization_id)},
+    )
 
 
 async def publish_content_access_changed(
@@ -49,17 +55,19 @@ async def publish_content_access_changed(
         "content_type": content_type,
         "content_id": str(content_id),
         "action": action,
+        "organization_id": str(organization_id),
     }
     if target_user_ids is None:
         await publish_to_channel(f"content:{organization_id}", payload)
         return
     for user_id in target_user_ids:
-        await publish_notification(user_id, payload)
+        await publish_notification(user_id, payload, organization_id=organization_id)
 
 
 async def publish_access_request_changed(
     *,
     user_id: UUID,
+    organization_id: UUID,
     request_id: UUID,
     requested_urn: str,
     state: int,
@@ -73,7 +81,7 @@ async def publish_access_request_changed(
     }
     if can_request_again_at is not None:
         payload["can_request_again_at"] = can_request_again_at.isoformat()
-    await publish_notification(user_id, payload)
+    await publish_notification(user_id, payload, organization_id=organization_id)
 
 
 async def publish_content_changed(

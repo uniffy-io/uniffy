@@ -7,7 +7,7 @@ import {
 
 const harness = vi.hoisted(() => ({
   effects: [] as Array<() => void | (() => void)>,
-  pending: null as { organizationId: string } | null,
+  pending: null as { organizationId: string; expected?: boolean } | null,
   dispatch: vi.fn(),
   clearLibrary: vi.fn(),
   clearBlobs: vi.fn(),
@@ -127,4 +127,14 @@ it("clears memory and tab identity when the lost organization is still current",
   expect(harness.clearBlobs).toHaveBeenCalledOnce();
   expect(harness.purgeOrganization).toHaveBeenCalledWith("org-a", "alice");
   expect(readTabOrganization("alice")).toBeNull();
+});
+
+it("cleans up without the warning when the user left the organization from this tab", () => {
+  harness.pending = { organizationId: "org-a", expected: true };
+  writeTabOrganization("alice", { id: "org-b", slug: "b" });
+  mount();
+
+  expect(harness.purgeOrganization).toHaveBeenCalledWith("org-a", "alice");
+  expect(harness.clearRecents).toHaveBeenCalledWith("org-a", "alice");
+  expect(harness.warning).not.toHaveBeenCalled();
 });

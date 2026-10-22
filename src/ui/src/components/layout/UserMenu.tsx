@@ -31,7 +31,7 @@ import {
   selectCanCreateOrganization,
   selectOrganizations,
 } from "@/features/auth/store/organizationsSlice";
-import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
+import { reloadOrganizationsAndRole } from "@/features/auth/store/organizationsThunks";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
@@ -172,11 +172,11 @@ export function UserMenu() {
     }
   };
 
-  // Other sessions and other people change memberships and invitations with no push to this tab,
-  // so opening the menu reloads both.
+  // Other sessions and other people change memberships, roles and invitations with no push to this
+  // tab, so opening the menu reloads them.
   const toggleMenu = () => {
     if (!isOpen) {
-      void dispatch(fetchMyOrganizations());
+      void dispatch(reloadOrganizationsAndRole());
       void dispatch(fetchMyInvitations());
     }
     setIsOpen(!isOpen);

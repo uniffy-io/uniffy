@@ -71,6 +71,7 @@ from uniffy.domains.notifications.operations import (
     NotificationOperations,
     PushSubscriptionOperations,
 )
+from uniffy.domains.notifications.scope import NotificationOrganizationFilter
 from uniffy.domains.notifications.tags import TagEventRelay
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.pubsub import subscribe_channels
@@ -529,7 +530,7 @@ class NotificationsHandlers:
         request: StreamNotificationsRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamNotificationsResponse]:
-        """Stream notification events plus periodic heartbeats for the user."""
+        """Stream the user's notification events of the request organization plus heartbeats."""
         user_id = current_user_id()
         organization_id = resolve_organization_id(request.organization_id)
 
@@ -547,6 +548,7 @@ class NotificationsHandlers:
         disconnect = get_disconnect_event()
 
         relay = TagEventRelay(user_id, organization_id, open_session)
+        organization_scope = NotificationOrganizationFilter(organization_id)
 
         try:
             async with aclosing(
@@ -592,6 +594,9 @@ class NotificationsHandlers:
                                 timestamp=ts,
                             )
                             last_send = now
+                        continue
+
+                    if not organization_scope.admits(payload):
                         continue
 
                     if payload.get("_type") == NotificationPayloadType.CONTENT_CHANGED:

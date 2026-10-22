@@ -3,7 +3,7 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
 import type { AppDispatch, RootState } from "@/app/store";
 import { getStoreRefOrThrow } from "@/app/storeRef";
-import { publicUnaryTransport, setMemoryAccessToken } from "@/config/api";
+import { publicUnaryTransport, refreshAccessToken, setMemoryAccessToken } from "@/config/api";
 import { organizationsApi } from "@/features/auth/api/organizationsApi";
 import { withAuthLock } from "@/features/auth/authLock";
 import { clearSessionCaches } from "@/features/auth/hooks/useSignOut";
@@ -25,6 +25,7 @@ import {
   switchStarted,
   type OrganizationSummary,
 } from "@/features/auth/store/organizationsSlice";
+import { listedRoleDiffers } from "@/features/auth/utils/organizationRoles";
 import { parseUrn } from "@/shared/utils/urn";
 
 export const LOST_ORGANIZATION_ACCESS_MESSAGE = "You no longer have access to that organization";
@@ -69,6 +70,26 @@ export const fetchMyOrganizations = thunk<OrganizationSummary[], void>(
     }
   },
 );
+
+/**
+ * Reloads the membership list, then refreshes this tab's credentials once when the list names another
+ * role for its organization, so role-gated surfaces follow a change made in another session.
+ */
+export function reloadOrganizationsAndRole(): ThunkAction<
+  Promise<void>,
+  RootState,
+  undefined,
+  UnknownAction
+> {
+  return async (dispatch, getState) => {
+    const result = await dispatch(fetchMyOrganizations());
+    if (!fetchMyOrganizations.fulfilled.match(result)) return;
+    const { currentOrganizationId, currentOrganizationRole } = getState().auth;
+    if (!listedRoleDiffers(result.payload, currentOrganizationId, currentOrganizationRole)) return;
+    // A failed refresh leaves the tab on its current token; the next expiry refresh catches up.
+    await refreshAccessToken().catch(() => null);
+  };
+}
 
 // The server reads only `urn:uniffy:content:{TYPE}:{id}`, while `buildUrn` writes the short form.
 function toContentUrn(urn: string): string {

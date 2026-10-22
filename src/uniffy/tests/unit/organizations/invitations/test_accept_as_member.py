@@ -151,7 +151,7 @@ class TestAcceptAsMember:
         assert staged["role"] is OrganizationRole.ADMIN
         assert staged["source"] is OrganizationMemberSource.INVITE
         assert staged["invited_by_user_id"] == invitation.invited_by_user_id
-        assert staged["actor_user_id"] == invitation.invited_by_user_id
+        assert staged["actor_user_id"] == user.id
         assert invitation.accepted_at is not None
         assert invitation.accepted_by_user_id == user.id
         assert user.email_verified is True

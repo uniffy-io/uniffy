@@ -76,6 +76,7 @@ export function PendingInvitations({ className }: { className?: string }) {
     setDecliningId(invitation.id);
     try {
       await dispatch(declineInvitation({ invitationId: invitation.id }));
+      toast.success("Invitation declined.");
     } catch (error) {
       toastFailure(error);
     } finally {

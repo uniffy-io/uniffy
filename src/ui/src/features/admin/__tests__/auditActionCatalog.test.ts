@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  ACTION_GROUPS,
   actionDomain,
   actionDomainColor,
   actionLabel,
@@ -50,5 +51,27 @@ describe("actionLabel", () => {
 
   it("falls back to the raw string for fully unknown actions", () => {
     expect(actionLabel("mystery.event")).toBe("mystery.event");
+  });
+
+  it("labels organization lifecycle, deployment and system actions", () => {
+    expect(actionLabel("organization.invitation_declined")).toBe(
+      "Organizations: Invitation declined",
+    );
+    expect(actionLabel("organization.member_left")).toBe("Organizations: Member left");
+    expect(actionLabel("organization.ownership_transferred")).toBe(
+      "Organizations: Ownership transferred",
+    );
+    expect(actionLabel("deployment.setup_completed")).toBe("Deployment: Setup completed");
+    expect(actionLabel("system.org_creation_changed")).toBe(
+      "System: Organization creation changed",
+    );
+  });
+});
+
+describe("ACTION_GROUPS", () => {
+  const values = ACTION_GROUPS.flatMap((group) => group.actions.map((entry) => entry.value));
+
+  it("lists every action once", () => {
+    expect(new Set(values).size).toBe(values.length);
   });
 });

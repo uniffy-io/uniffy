@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -91,6 +91,8 @@ class DeploymentSettingsOperations:
                     "value_encrypted": ciphertext,
                     "is_secret": is_secret,
                     "updated_by_user_id": updated_by_user_id,
+                    # The model's onupdate hook does not run for ON CONFLICT DO UPDATE.
+                    "updated_at": func.now(),
                 },
             )
         )

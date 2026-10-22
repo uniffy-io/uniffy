@@ -82,6 +82,7 @@ class AccessRequestNotifier:
         )
         await publish_access_request_changed(
             user_id=request.requester_id,
+            organization_id=request.organization_id,
             request_id=request.id,
             requested_urn=request.requested_urn,
             state=_REQUEST_STATE_TO_PROTO[request.state],

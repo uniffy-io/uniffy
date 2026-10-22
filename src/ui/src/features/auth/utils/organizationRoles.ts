@@ -23,3 +23,24 @@ export function getRoleBadgeClasses(role: OrganizationRole): string {
       return "bg-muted text-muted-foreground";
   }
 }
+
+const TOKEN_ROLES: Partial<Record<OrganizationRole, string>> = {
+  [OrganizationRole.OWNER]: "OWNER",
+  [OrganizationRole.ADMIN]: "ADMIN",
+  [OrganizationRole.MEMBER]: "MEMBER",
+};
+
+/**
+ * Whether the membership list names another role for the tab's organization than its token carries,
+ * as after an ownership transfer or a role change made from another session.
+ */
+export function listedRoleDiffers(
+  organizations: readonly { id: string; role: OrganizationRole }[],
+  organizationId: string | null,
+  tokenRole: string | null,
+): boolean {
+  if (!organizationId) return false;
+  const listed = organizations.find((organization) => organization.id === organizationId);
+  const listedRole = listed ? TOKEN_ROLES[listed.role] : undefined;
+  return listedRole !== undefined && listedRole !== tokenRole;
+}

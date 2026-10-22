@@ -1290,7 +1290,6 @@ type UpdateOrganizationRequest struct {
 	Name           *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Slug           *string                `protobuf:"bytes,3,opt,name=slug,proto3,oneof" json:"slug,omitempty"`
 	LogoUrl        *string                `protobuf:"bytes,4,opt,name=logo_url,json=logoUrl,proto3,oneof" json:"logo_url,omitempty"`
-	IsActive       *bool                  `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1351,13 +1350,6 @@ func (x *UpdateOrganizationRequest) GetLogoUrl() string {
 		return *x.LogoUrl
 	}
 	return ""
-}
-
-func (x *UpdateOrganizationRequest) GetIsActive() bool {
-	if x != nil && x.IsActive != nil {
-		return *x.IsActive
-	}
-	return false
 }
 
 type GetOrganizationOverviewRequest struct {
@@ -3630,18 +3622,15 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x17GetOrganizationResponse\x12H\n" +
 	"\forganization\x18\x01 \x01(\v2$.organizations.v1.OrganizationDetailR\forganization\"]\n" +
 	"\x1aUpdateOrganizationResponse\x12?\n" +
-	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\"\xe5\x01\n" +
+	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\"\xb5\x01\n" +
 	"\x19UpdateOrganizationRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
 	"\x04slug\x18\x03 \x01(\tH\x01R\x04slug\x88\x01\x01\x12\x1e\n" +
-	"\blogo_url\x18\x04 \x01(\tH\x02R\alogoUrl\x88\x01\x01\x12 \n" +
-	"\tis_active\x18\x05 \x01(\bH\x03R\bisActive\x88\x01\x01B\a\n" +
+	"\blogo_url\x18\x04 \x01(\tH\x02R\alogoUrl\x88\x01\x01B\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_slugB\v\n" +
-	"\t_logo_urlB\f\n" +
-	"\n" +
-	"_is_active\"I\n" +
+	"\t_logo_url\"I\n" +
 	"\x1eGetOrganizationOverviewRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"e\n" +
 	"\x1fGetOrganizationOverviewResponse\x12B\n" +

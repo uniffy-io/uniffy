@@ -12,8 +12,10 @@ import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { setStoreRef } from "@/app/storeRef";
 import {
   ORGANIZATION_LOST_EVENT,
+  refreshAccessToken,
   setMemoryAccessToken,
   takePendingOrganizationLost,
+  type OrganizationLostDetail,
 } from "@/config/api";
 import {
   leaveCurrentOrganizationScope,
@@ -148,6 +150,53 @@ it("takes the loss the refresh announces so no later mount replays it as a warni
 
   expect(announced).toHaveBeenCalledOnce();
   expect(takePendingOrganizationLost("user")).toBeNull();
+});
+
+function recordLosses(): OrganizationLostDetail[] {
+  const details: OrganizationLostDetail[] = [];
+  window.addEventListener(ORGANIZATION_LOST_EVENT, (event) => {
+    details.push((event as CustomEvent<OrganizationLostDetail>).detail);
+  });
+  return details;
+}
+
+it("marks the loss expected for a lost-grant listener that is already mounted", async () => {
+  shared.refresh.mockResolvedValue(orgLessMint);
+  const losses = recordLosses();
+
+  await leaveCurrentOrganizationScope(dispatch(), {
+    organizationId: "org-acme",
+    userId: "user",
+    navigate: vi.fn(),
+  });
+
+  expect(losses).toEqual([{ organizationId: "org-acme", expected: true }]);
+});
+
+it("announces a later loss of the same organization as unexpected", async () => {
+  shared.refresh.mockResolvedValue(orgLessMint);
+  await leaveCurrentOrganizationScope(dispatch(), {
+    organizationId: "org-acme",
+    userId: "user",
+    navigate: vi.fn(),
+  });
+  store.dispatch(
+    setCredentials({
+      user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
+      accessToken: "access-acme",
+      refreshToken: "second",
+      organizationId: "org-acme",
+      organizationSlug: "acme",
+      organizationRole: "MEMBER",
+      sessionId: "session",
+    }),
+  );
+  const losses = recordLosses();
+
+  await refreshAccessToken();
+
+  expect(losses).toEqual([{ organizationId: "org-acme" }]);
+  expect(losses[0]?.expected).toBeUndefined();
 });
 
 it("still leaves for the welcome page when the refresh fails", async () => {

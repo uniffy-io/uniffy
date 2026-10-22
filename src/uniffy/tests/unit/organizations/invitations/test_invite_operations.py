@@ -400,7 +400,7 @@ class TestPreview:
 
 
 class TestAcceptStagesInvitedMembership:
-    async def test_membership_records_invite_source_and_inviter(self) -> None:
+    async def test_membership_records_the_inviter_and_the_new_account_as_actor(self) -> None:
         inviter_id = generate_id()
         inv = _pending_invitation(email="new@acme.io", invited_by_user_id=inviter_id)
         org = _FakeOrg(id=inv.organization_id)
@@ -453,6 +453,7 @@ class TestAcceptStagesInvitedMembership:
         assert staged["user_id"] == new_user.id
         assert staged["source"] is OrganizationMemberSource.INVITE
         assert staged["invited_by_user_id"] == inviter_id
+        assert staged["actor_user_id"] == new_user.id
         assert inv.accepted_by_user_id == new_user.id
         session.commit.assert_awaited_once()
         org_ops.finish_member_add_after_commit.assert_awaited_once()

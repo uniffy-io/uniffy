@@ -58,7 +58,6 @@ class Action:
     ORGANIZATION_ENCRYPTION_KEY_ROTATED = "organization.encryption_key_rotated"
     ORGANIZATION_PERMISSION_DEFAULTS_CHANGED = "organization.permission_defaults_changed"
     ORGANIZATION_MEMBER_INVITED = "organization.member_invited"
-    ORGANIZATION_MEMBER_ADDED_VIA_INVITE = "organization.member_added_via_invite"
     ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
     ORGANIZATION_INVITATION_RESENT = "organization.invitation_resent"
     ORGANIZATION_INVITATION_DECLINED = "organization.invitation_declined"

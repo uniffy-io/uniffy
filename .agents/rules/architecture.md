@@ -122,6 +122,9 @@ facts commit together through focused `stage_*` collaborators; search, cache, re
 queue effects run after commit or through an owner-defined durable recovery path. Detailed backend
 rules and executable boundaries live in `backend.md` and root `pyproject.toml`.
 
+A notification stream serves only its request organization. `publish_notification` stamps `organization_id` on
+every `notifications:{user_id}` payload, and `NotificationOrganizationFilter` drops those of another organization.
+
 ---
 
 ## Project Structure

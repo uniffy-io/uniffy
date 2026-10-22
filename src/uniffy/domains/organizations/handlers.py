@@ -216,7 +216,6 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers):
                     org_id=org_id,
                     name=request.name if request.has_field("name") else None,
                     slug=request.slug if request.has_field("slug") else None,
-                    is_active=request.is_active if request.has_field("is_active") else None,
                     actor_user_id=user_id,
                 )
 

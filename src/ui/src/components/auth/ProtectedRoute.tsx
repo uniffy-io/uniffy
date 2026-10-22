@@ -44,7 +44,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (!userId) return;
     const handleLost = (event: Event) => {
       takePendingOrganizationLost(userId);
-      const lost = (event as CustomEvent<OrganizationLostDetail>).detail?.organizationId;
+      const detail = (event as CustomEvent<OrganizationLostDetail>).detail;
+      const lost = detail?.organizationId;
       if (lost && readTabOrganization(userId)?.id === lost) clearTabOrganization(userId);
       void clearSessionCaches(dispatch, {
         reason: "lost-grant",
@@ -54,7 +55,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
           lost && currentOrganizationId && currentOrganizationId !== lost,
         ),
       });
-      toast.warning("Your access to that organization ended.");
+      if (!detail?.expected) toast.warning("Your access to that organization ended.");
     };
     window.addEventListener(ORGANIZATION_LOST_EVENT, handleLost);
     // Device cleanup still belongs to the lost organization after this tab enters another one.

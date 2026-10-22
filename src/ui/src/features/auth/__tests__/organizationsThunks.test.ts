@@ -29,6 +29,7 @@ import {
 import {
   fetchMyOrganizations,
   LOST_ORGANIZATION_ACCESS_MESSAGE,
+  reloadOrganizationsAndRole,
   switchOrganization,
 } from "@/features/auth/store/organizationsThunks";
 import { readTabOrganization } from "@/features/auth/store/tabOrganizationStorage";
@@ -271,4 +272,68 @@ it("summarizes memberships and keeps the last list when a reload fails", async (
   expect(store.getState().organizations.status).toBe("error");
   expect(store.getState().organizations.items).toHaveLength(1);
   expect(store.getState().organizations.canCreateOrganization).toBe(true);
+});
+
+function holdRole(organizationRole: string) {
+  store.dispatch(
+    setCredentials({
+      user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
+      accessToken: "access-acme",
+      refreshToken: "first",
+      organizationId: "org-acme",
+      organizationSlug: "acme",
+      organizationRole,
+      sessionId: "session",
+    }),
+  );
+}
+
+it("refreshes the tab's credentials once when the list names another role for its organization", async () => {
+  holdRole("MEMBER");
+  shared.list.mockResolvedValue({ organizations: [acme, globex] });
+  shared.refresh.mockResolvedValue({
+    accessToken: "access-acme-owner",
+    refreshToken: "second",
+    organizationId: "org-acme",
+    organizationSlug: "acme",
+    organizationRole: "OWNER",
+    sessionId: "session",
+    domainAdminDomains: [],
+  });
+
+  await dispatch()(reloadOrganizationsAndRole());
+
+  expect(shared.refresh).toHaveBeenCalledOnce();
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "first",
+    organizationId: "org-acme",
+    organizationSlug: "acme",
+  });
+  expect(store.getState().auth).toMatchObject({
+    currentOrganizationId: "org-acme",
+    currentOrganizationRole: "OWNER",
+  });
+  expect(getAccessToken()).toBe("access-acme-owner");
+  expect(actions).not.toContain("auth/resetOrganizationScope");
+});
+
+it("leaves the credentials alone when the listed role matches the tab's", async () => {
+  holdRole("OWNER");
+  shared.list.mockResolvedValue({ organizations: [acme, globex] });
+
+  await dispatch()(reloadOrganizationsAndRole());
+
+  expect(shared.list).toHaveBeenCalledOnce();
+  expect(shared.refresh).not.toHaveBeenCalled();
+  expect(getAccessToken()).toBe("access-acme");
+});
+
+it("leaves the credentials alone when the list fails to load", async () => {
+  holdRole("MEMBER");
+  shared.list.mockRejectedValue(new Error("network unavailable"));
+
+  await dispatch()(reloadOrganizationsAndRole());
+
+  expect(shared.refresh).not.toHaveBeenCalled();
+  expect(store.getState().auth.currentOrganizationRole).toBe("MEMBER");
 });

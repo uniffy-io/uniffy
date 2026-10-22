@@ -22,7 +22,7 @@ You cannot remove the owner, and the owner badge is read only. Ownership moves t
 
 Admin and Member are the only roles you assign here. A change applies immediately, with no confirmation step.
 
-Promoting someone to admin gives them everything you have. There is no limited admin tier. When you want to hand out a narrower scope, use [domain admins](/docs/administration/access/domain-admins/) instead.
+Promoting someone to admin gives them everything you have. There is no limited admin tier. When you want to hand out a narrower scope, use [domain admins](/docs/administration/security/access-model/#narrower-admins) instead.
 
 ## Removing someone
 
@@ -62,7 +62,7 @@ Inviting someone who is already an active member is refused. Change their role i
 
 Inviting the same address again replaces the pending invitation. The earlier link stops working.
 
-The mail goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email](/docs/administration/workspace/email/) for how that resolves.
+The mail goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email and SMTP](/docs/deployment/configure/#email-and-smtp-optional-system-default) for how that resolves.
 
 When no mail is configured at all, the invitation is still created. Someone who already has an account finds it on their welcome page. Someone new has no other way to reach the link, so set up mail before you invite people who are new to Uniffy.
 
@@ -107,7 +107,6 @@ Each row records who acted, the target user or email, the old and new role where
 ## See also
 
 - [Organization](/docs/administration/access/organization/): rename the organization, transfer ownership, or delete it.
-- [Groups](/docs/administration/access/groups/): bundle members for permission grants.
-- [Domain Admins](/docs/administration/access/domain-admins/): narrower admin scopes per feature area.
-- [Default Permissions](/docs/administration/security/default-permissions/): what new content inherits when a member creates it.
+- [Teams and groups](/docs/administration/access/teams-and-groups/): bundle members for permission grants.
+- [Access and privacy](/docs/administration/security/access-model/): what new content starts with, narrower admin scopes per feature area, and what no admin can see.
 - [Audit Log](/docs/administration/security/audit-log/): the full event history for member changes.
