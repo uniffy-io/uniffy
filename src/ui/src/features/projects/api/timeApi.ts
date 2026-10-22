@@ -1,6 +1,13 @@
 import { createClient } from "@connectrpc/connect";
-import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
+import { calendarApi } from "@/features/calendar/api/calendarApi";
+import {
+  AttendeeStatus as ProtoAttendeeStatus,
+  EventStatus as ProtoEventStatus,
+  EventTransparency as ProtoEventTransparency,
+  type CalendarEvent as ProtoCalendarEvent,
+} from "@uniffy/proto/cal/v1/calendar_pb";
 import { ProjectsService } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   AggregateGroupBy as ProtoAggregateGroupBy,
@@ -39,9 +46,29 @@ import type {
   TimesheetStatus,
   UpdateWorklogInput,
   UserWeek,
+  WeekEvent,
   Worklog,
   WorklogSource,
 } from "../types/time";
+
+const DAY_MS = 86_400_000;
+
+function protoWeekEventToFrontend(proto: ProtoCalendarEvent): WeekEvent {
+  return {
+    id: proto.id,
+    title: proto.title,
+    startTime: proto.startTime ? timestampDate(proto.startTime).toISOString() : "",
+    endTime: proto.endTime ? timestampDate(proto.endTime).toISOString() : "",
+    allDay: proto.isAllDay,
+    outOfOffice: proto.isOutOfOffice,
+    focusTime: proto.isFocusTime,
+    cancelled: proto.status === ProtoEventStatus.CANCELLED,
+    transparent: proto.transparency === ProtoEventTransparency.TRANSPARENT,
+    participantIds: proto.attendees
+      .filter((attendee) => attendee.status !== ProtoAttendeeStatus.DECLINED)
+      .map((attendee) => attendee.id),
+  };
+}
 
 const timeClient = createClient(ProjectsService, unaryTransport);
 
@@ -277,6 +304,22 @@ export const timeApi = {
       worklogs: response.worklogs.map(protoWorklogToFrontend),
       days: response.days.map(protoDayTotalToFrontend),
     };
+  },
+
+  /** Every visible event touching the days, padded a day each side so any zone's week is covered. */
+  listWeekEvents: async (
+    organizationId: string,
+    fromDate: string,
+    toDate: string,
+  ): Promise<WeekEvent[]> => {
+    const start = new Date(Date.parse(`${fromDate}T00:00:00Z`) - DAY_MS);
+    const end = new Date(Date.parse(`${toDate}T00:00:00Z`) + 2 * DAY_MS);
+    const response = await calendarApi.getEventsInRange({
+      organizationId,
+      startDate: timestampFromDate(start),
+      endDate: timestampFromDate(end),
+    });
+    return response.events.map(protoWeekEventToFrontend);
   },
 
   getSprintCapacity: async (sprintId: string, organizationId: string): Promise<SprintCapacity> => {

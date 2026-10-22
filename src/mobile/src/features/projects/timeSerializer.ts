@@ -2,6 +2,8 @@ import { timestampDate } from "@bufbuild/protobuf/wkt";
 import {
   TimerPauseReason,
   WorklogSource,
+  type DayTotal,
+  type TimePolicy,
   type Timer,
   type Worklog,
 } from "@uniffy/proto/projects/v1/time_pb";
@@ -97,4 +99,39 @@ export function localDayKey(date: Date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export interface SerializedDayTotal {
+  day: string;
+  minutes: number;
+  requiredMinutes: number;
+  /** A holiday or a day away; a half day keeps half the requirement. */
+  off: boolean;
+}
+
+export function dayTotalToPlain(total: DayTotal): SerializedDayTotal {
+  return {
+    day: total.day,
+    minutes: total.minutes,
+    requiredMinutes: total.requiredMinutes,
+    off: total.off,
+  };
+}
+
+export interface SerializedTimePolicy {
+  enabled: boolean;
+  weekStart: string;
+  approvalsEnabled: boolean;
+  requiredMinutesPerDay: number;
+  internalProjectId: string | null;
+}
+
+export function timePolicyToPlain(policy: TimePolicy): SerializedTimePolicy {
+  return {
+    enabled: policy.enabled,
+    weekStart: policy.weekStart,
+    approvalsEnabled: policy.approvalsEnabled,
+    requiredMinutesPerDay: policy.requiredMinutesPerDay,
+    internalProjectId: policy.internalProjectId ?? null,
+  };
 }

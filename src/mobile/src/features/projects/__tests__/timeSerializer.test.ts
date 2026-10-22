@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { WorklogSchema, WorklogSource } from "@uniffy/proto/projects/v1/time_pb";
-import { localDayKey, worklogToPlain } from "@features/projects/timeSerializer";
+import {
+  DayTotalSchema,
+  TimePolicySchema,
+  WorklogSchema,
+  WorklogSource,
+} from "@uniffy/proto/projects/v1/time_pb";
+import {
+  dayTotalToPlain,
+  localDayKey,
+  timePolicyToPlain,
+  worklogToPlain,
+} from "@features/projects/timeSerializer";
 import { parseTimeInput } from "@features/projects/timeFormatting";
 
 describe("worklogToPlain", () => {
@@ -88,5 +98,34 @@ describe("timerToPlain", () => {
     expect(timerElapsedSeconds({ ...plain, startedAt: null }, Date.now())).toBe(30);
     expect(formatClock(3661)).toBe("1:01:01");
     expect(formatClock(65)).toBe("01:05");
+  });
+});
+
+describe("week serializers", () => {
+  it("maps a day total and the policy fields the week needs", () => {
+    expect(
+      dayTotalToPlain(
+        create(DayTotalSchema, { day: "2026-10-22", minutes: 90, requiredMinutes: 240, off: true }),
+      ),
+    ).toEqual({ day: "2026-10-22", minutes: 90, requiredMinutes: 240, off: true });
+
+    const policy = timePolicyToPlain(
+      create(TimePolicySchema, {
+        enabled: true,
+        weekStart: "sunday",
+        approvalsEnabled: true,
+        requiredMinutesPerDay: 420,
+      }),
+    );
+    expect(policy).toEqual({
+      enabled: true,
+      weekStart: "sunday",
+      approvalsEnabled: true,
+      requiredMinutesPerDay: 420,
+      internalProjectId: null,
+    });
+    expect(
+      timePolicyToPlain(create(TimePolicySchema, { internalProjectId: "p-int" })).internalProjectId,
+    ).toBe("p-int");
   });
 });

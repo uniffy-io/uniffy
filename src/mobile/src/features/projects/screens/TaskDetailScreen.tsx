@@ -798,10 +798,7 @@ export function TaskDetailScreen() {
         accentColor={T.accent}
         saving={createWorklog.isPending}
         onSave={(entry) =>
-          createWorklog.mutate(
-            { taskId: task.id, projectId: task.projectId, ...entry },
-            { onSuccess: () => setSheet(null) },
-          )
+          createWorklog.mutate({ taskId: task.id, ...entry }, { onSuccess: () => setSheet(null) })
         }
       />
 

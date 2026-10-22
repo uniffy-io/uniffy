@@ -68,6 +68,7 @@ import {
   sumMinutes,
   taskUrn,
   weekDays,
+  weekdayShort,
   weekRangeKey,
   weekStartOf,
   type DayStatus,
@@ -76,7 +77,7 @@ import {
 } from "@/features/projects/utils/timeWeek";
 import { LogTimeModal } from "./LogTimeModal";
 import { PeriodBanner } from "./PeriodBanner";
-import { RecentTasksRail } from "./RecentTasksRail";
+import { SuggestionsRail } from "./SuggestionsRail";
 import { useTaskLabels } from "./useTaskLabels";
 
 const STATUS_COLOR: Record<DayStatus, string | undefined> = {
@@ -87,18 +88,14 @@ const STATUS_COLOR: Record<DayStatus, string | undefined> = {
   over: STATUS_HEX_COLORS.success,
 };
 
-const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function weekdayShort(key: string): string {
-  const [year, month, day] = key.split("-").map(Number);
-  return WEEKDAY_SHORT[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
-}
-
 interface CellEditor {
   taskId: string;
   title: string;
   workDate: string;
   worklog?: Worklog;
+  /** Prefill from a suggestion. */
+  durationMinutes?: number;
+  description?: string;
 }
 
 function EntriesPopover({
@@ -548,10 +545,13 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
         </div>
         {!isMobileOrTablet && (
           <div className="w-60 shrink-0">
-            <RecentTasksRail
+            <SuggestionsRail
+              days={days}
               pinnedProjectId={policy?.internalProjectId ?? null}
               excludeTaskIds={excluded}
+              worklogs={worklogs}
               onPick={(ref) => addRows([ref])}
+              onLog={(entry) => setEditor(entry)}
             />
           </div>
         )}
@@ -562,6 +562,8 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
           task={{ id: editor.taskId, title: editor.title }}
           worklog={editor.worklog}
           workDate={editor.workDate}
+          durationMinutes={editor.durationMinutes}
+          description={editor.description}
           onClose={() => setEditor(null)}
         />
       )}

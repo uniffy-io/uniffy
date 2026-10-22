@@ -30,12 +30,16 @@ import {
 } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   CreateWorklogRequestSchema,
+  DeleteWorklogRequestSchema,
   GetActiveTimerRequestSchema,
+  GetTimePolicyRequestSchema,
   ListTaskWorklogsRequestSchema,
+  ListUserWorklogsRequestSchema,
   PauseTimerRequestSchema,
   ResumeTimerRequestSchema,
   StartTimerRequestSchema,
   StopTimerRequestSchema,
+  UpdateWorklogRequestSchema,
 } from "@uniffy/proto/projects/v1/time_pb";
 import { transport } from "@core/api/transport";
 
@@ -78,6 +82,18 @@ export const projectsApi = {
 
   listTaskWorklogs: (request: MessageInitShape<typeof ListTaskWorklogsRequestSchema>) =>
     client.listTaskWorklogs(request),
+
+  updateWorklog: (request: MessageInitShape<typeof UpdateWorklogRequestSchema>) =>
+    client.updateWorklog(request),
+
+  deleteWorklog: (request: MessageInitShape<typeof DeleteWorklogRequestSchema>) =>
+    client.deleteWorklog(request),
+
+  listUserWorklogs: (request: MessageInitShape<typeof ListUserWorklogsRequestSchema>) =>
+    client.listUserWorklogs(request),
+
+  getTimePolicy: (request: MessageInitShape<typeof GetTimePolicyRequestSchema>) =>
+    client.getTimePolicy(request),
 
   getActiveTimer: (request: MessageInitShape<typeof GetActiveTimerRequestSchema>) =>
     client.getActiveTimer(request),

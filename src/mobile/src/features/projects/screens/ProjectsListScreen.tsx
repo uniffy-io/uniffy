@@ -19,6 +19,7 @@ import {
   Buildings,
   Lock,
   ChartBar,
+  Clock,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -214,6 +215,14 @@ export function ProjectsListScreen() {
         icon="projects"
         rightActions={
           <>
+            <TouchableOpacity
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              onPress={() => router.push("/projects/time" as any)}
+              accessibilityLabel="My time"
+              testID="projects-my-time"
+            >
+              <Clock size={20} color={T.text} weight="duotone" />
+            </TouchableOpacity>
             <TouchableOpacity
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               onPress={() => router.push("/projects/portfolio" as any)}

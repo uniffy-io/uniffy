@@ -161,6 +161,8 @@ function applyNotificationEvent(
     }
     case StreamNotificationsResponse_EventType.TIMER_CHANGED: {
       void queryClient.invalidateQueries({ queryKey: ["timer", orgId] });
+      // A stop elsewhere wrote an entry into the week.
+      void queryClient.invalidateQueries({ queryKey: ["my-week", orgId] });
       break;
     }
     case StreamNotificationsResponse_EventType.NEW_NOTIFICATION: {

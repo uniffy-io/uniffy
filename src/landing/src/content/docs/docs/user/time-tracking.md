@@ -28,7 +28,9 @@ Start a timer on another task and the running one stops into an entry first. For
 
 My time is your week on one page: a row per task, a column per day, and the total at the bottom of each column against the hours your organization expects. Days under that number read as a warning, days that meet it read as done, and holidays and weekends expect nothing.
 
-The rail beside the grid lists the tasks you worked on recently so you can fill a day without searching. Copy last week brings the same tasks into an empty week with no minutes, which is usually most of the typing.
+The rail beside the grid suggests what the week probably held. Meetings from your own calendar appear with their day and length; one click opens the entry on the internal project's Meetings task with the title as the note, and a meeting you logged stops being offered. Tasks you finished this week and tasks you worked on recently are one click from a row. Copy last week brings the same tasks into an empty week with no minutes, which is usually most of the typing.
+
+On the phone, My time opens from the clock in the Projects header: a strip of the week's days with their totals, the chosen day's entries, and a plus to add one on a task from this week, the internal project or a search. Tap an entry to change it, the bin to remove it.
 
 ## Time on a project
 

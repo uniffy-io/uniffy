@@ -21,6 +21,9 @@ export function LogTimeSheet({
   onSave,
   accentColor,
   saving = false,
+  initial,
+  defaultDay,
+  title,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -28,6 +31,11 @@ export function LogTimeSheet({
   onSave: (entry: LogTimeEntry) => void;
   accentColor?: string;
   saving?: boolean;
+  /** The entry being edited; absent when logging a new one. */
+  initial?: LogTimeEntry;
+  /** The day a new entry starts on; today when absent. */
+  defaultDay?: string;
+  title?: string;
 }) {
   const T = useTheme();
   const accent = accentColor || T.accent;
@@ -40,9 +48,9 @@ export function LogTimeSheet({
   const [open, setOpen] = useState(false);
   if (visible && !open) {
     setOpen(true);
-    setWorkDate(localDayKey());
-    setValue("");
-    setNote("");
+    setWorkDate(initial?.workDate ?? defaultDay ?? localDayKey());
+    setValue(initial ? formatMinutes(initial.durationMinutes) : "");
+    setNote(initial?.description ?? "");
   }
   if (!visible && open) setOpen(false);
 
@@ -64,9 +72,15 @@ export function LogTimeSheet({
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <SheetHeader
-        title="Log time"
+        title={title ?? "Log time"}
         accentColor={accent}
-        actions={[{ label: saving ? "Saving" : "Log", onPress: save, disabled: !canSave }]}
+        actions={[
+          {
+            label: saving ? "Saving" : initial ? "Save" : "Log",
+            onPress: save,
+            disabled: !canSave,
+          },
+        ]}
       />
 
       <View style={styles.body}>

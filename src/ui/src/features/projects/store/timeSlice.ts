@@ -10,6 +10,7 @@ import {
   type TimePolicy,
   type Timer,
   type Timesheet,
+  type WeekEvent,
   type Worklog,
 } from "../types/time";
 import {
@@ -28,6 +29,7 @@ import {
   fetchTimePolicy,
   fetchTimesheet,
   fetchUserWorklogs,
+  fetchWeekEvents,
   grantGrace,
   pauseTimer,
   recallTimesheet,
@@ -64,6 +66,8 @@ export interface TimeState {
   /** What each day of a loaded range asks of the person, days off included. */
   weekDays: Record<string, DayTotal[]>;
   weekLoading: Record<string, boolean>;
+  /** The person's calendar for a loaded range, the source of suggested entries. */
+  weekEvents: Record<string, WeekEvent[]>;
   /** The person's own sheets keyed by period start. */
   sheets: Record<string, Timesheet>;
   sheetBusy: boolean;
@@ -90,6 +94,7 @@ export const initialTimeState: TimeState = {
   weeks: {},
   weekDays: {},
   weekLoading: {},
+  weekEvents: {},
   sheets: {},
   sheetBusy: false,
   review: {
@@ -291,6 +296,9 @@ export const timeSlice = createSlice({
         const { from, to } = action.meta.arg;
         state.weekLoading[`${from}:${to}`] = false;
       })
+      .addCase(fetchWeekEvents.fulfilled, (state, action) => {
+        state.weekEvents[action.payload.key] = action.payload.events;
+      })
       .addCase(fetchTimesheet.fulfilled, (state, action) => {
         state.sheets[action.payload.periodStart] = action.payload;
       })
@@ -404,6 +412,11 @@ export const selectWeekDays = (key: string) => (state: RootState) =>
 
 export const selectPersonWeekDays = (key: string) => (state: RootState) =>
   state.time.personWeekDays[key] ?? NO_DAYS;
+
+const NO_EVENTS: WeekEvent[] = [];
+
+export const selectWeekEvents = (key: string) => (state: RootState) =>
+  state.time.weekEvents[key] ?? NO_EVENTS;
 
 export const selectSprintCapacity = (sprintId: string) => (state: RootState) =>
   state.time.sprintCapacity[sprintId] ?? null;

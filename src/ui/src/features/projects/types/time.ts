@@ -211,3 +211,20 @@ export interface ReviewPage {
   period: TimePeriod;
   viewerIsTimekeepingAdmin: boolean;
 }
+
+/** A calendar event inside a loaded week, the material for a suggested entry. */
+export interface WeekEvent {
+  id: string;
+  title: string;
+  /** ISO instants. */
+  startTime: string;
+  endTime: string;
+  allDay: boolean;
+  outOfOffice: boolean;
+  focusTime: boolean;
+  cancelled: boolean;
+  /** Free in free/busy terms; nobody sat in a meeting. */
+  transparent: boolean;
+  /** Attendees who did not decline; the organizer is among them. */
+  participantIds: string[];
+}

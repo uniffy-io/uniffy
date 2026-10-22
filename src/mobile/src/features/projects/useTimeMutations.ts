@@ -4,6 +4,7 @@ import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
 import { localDayKey, timerToPlain, worklogToPlain } from "@features/projects/timeSerializer";
 import { timerQueryKey } from "@features/projects/useActiveTimer";
+import { myWeekQueryKey } from "@features/projects/useMyTime";
 import { serverMessage } from "@features/projects/useProjectMutations";
 
 export function useCreateWorklog() {
@@ -13,7 +14,6 @@ export function useCreateWorklog() {
   return useMutation({
     mutationFn: async (args: {
       taskId: string;
-      projectId: string;
       workDate: string;
       durationMinutes: number;
       description?: string;
@@ -30,12 +30,77 @@ export function useCreateWorklog() {
         taskTimeSpentMinutes: response.taskTimeSpentMinutes,
       };
     },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.worklog.taskId] });
+      queryClient.invalidateQueries({
+        queryKey: ["tasks", organizationId, data.worklog.projectId],
+      });
+      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
     },
     onError: (error) => {
       Alert.alert("Could not log time", timeErrorMessage(error, "The time entry was not saved"));
+    },
+  });
+}
+
+export function useUpdateWorklog() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      worklogId: string;
+      workDate?: string;
+      durationMinutes?: number;
+      description?: string;
+    }) => {
+      const response = await projectsApi.updateWorklog({
+        organizationId: organizationId!,
+        worklogId: args.worklogId,
+        workDate: args.workDate,
+        durationMinutes: args.durationMinutes,
+        description: args.description,
+      });
+      return {
+        worklog: worklogToPlain(response.worklog!),
+        taskTimeSpentMinutes: response.taskTimeSpentMinutes,
+      };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.worklog.taskId] });
+      queryClient.invalidateQueries({
+        queryKey: ["tasks", organizationId, data.worklog.projectId],
+      });
+      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
+    },
+    onError: (error) => {
+      Alert.alert("Could not save the entry", timeErrorMessage(error, "The entry was not changed"));
+    },
+  });
+}
+
+export function useDeleteWorklog() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: { worklogId: string; projectId: string }) => {
+      const response = await projectsApi.deleteWorklog({
+        organizationId: organizationId!,
+        worklogId: args.worklogId,
+      });
+      return { taskId: response.taskId, taskTimeSpentMinutes: response.taskTimeSpentMinutes };
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.taskId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
+    },
+    onError: (error) => {
+      Alert.alert(
+        "Could not delete the entry",
+        timeErrorMessage(error, "The entry is still there"),
+      );
     },
   });
 }
@@ -129,6 +194,7 @@ export function useStopTimer() {
       queryClient.setQueryData(timerQueryKey(organizationId), null);
       queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
     },
     onError: (error) => {
       Alert.alert(

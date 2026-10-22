@@ -3186,6 +3186,16 @@ they belong to; with neither, org admins review.
 - [ ] My time (`/projects/time`): the week grid shows the entries, each day total colors against
       the required hours, holidays and weekends expect nothing; Copy last week brings the rows into
       an empty week with no minutes; the previous and next week navigate.
+- [ ] My time rail: a timed meeting on your calendar this week is listed under Meetings with its
+      day and length (all-day, out of office, declined and cancelled events are not); with the
+      internal project in place, clicking it opens Log time on the Meetings task with the day, the
+      length and the title filled in, and the meeting leaves the rail once logged; without the
+      internal project the rail says so. A task of yours completed this week sits under Completed
+      this week and a click adds its row.
+- [ ] Mobile: Projects header > clock opens My time; the day strip totals match the web week and
+      mark days off; Add entry picks a task from this week, the internal project or a search and
+      logs it on the chosen day; tapping an entry edits it; the bin deletes it after a confirm; the
+      week refreshes after a timer stops. (`(both products)`)
 - [ ] Project header > Time report (`/projects/:id/time`): This week, 4 weeks and 12 weeks change
       the range; grouping by person, task and day keeps the same total; the total matches the sum
       of the task worklog lists in range. A member without access to the project lands on

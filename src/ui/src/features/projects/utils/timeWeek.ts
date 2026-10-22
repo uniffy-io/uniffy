@@ -53,6 +53,13 @@ export function weekdayOf(key: string): WeekdayName {
   return WEEKDAY_NAMES[new Date(utcOf(key)).getUTCDay()];
 }
 
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** "Mon" to "Sun" for a day key. */
+export function weekdayShort(key: string): string {
+  return WEEKDAY_SHORT[new Date(utcOf(key)).getUTCDay()];
+}
+
 export function normalizeWeekStart(value: string | null | undefined): WeekStart {
   return value === "sunday" || value === "saturday" ? value : "monday";
 }

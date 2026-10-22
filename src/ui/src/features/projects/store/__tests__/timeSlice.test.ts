@@ -6,6 +6,7 @@ import {
   selectSheetsTouching,
   selectSprintCapacity,
   selectWeekDays,
+  selectWeekEvents,
   timeReducer,
 } from "@/features/projects/store/timeSlice";
 import {
@@ -20,6 +21,7 @@ import {
   fetchTaskWorklogs,
   fetchTimesheet,
   fetchUserWorklogs,
+  fetchWeekEvents,
   pauseTimer,
   startTimer,
   stopTimer,
@@ -430,5 +432,30 @@ describe("timeSlice approvals", () => {
       ),
     );
     expect(state.policy?.internalProjectId).toBe("p-int");
+  });
+
+  it("keeps the calendar of a loaded range for the suggestions rail", () => {
+    const event = {
+      id: "e1",
+      title: "Standup",
+      startTime: "2026-10-20T09:00:00.000Z",
+      endTime: "2026-10-20T09:15:00.000Z",
+      allDay: false,
+      outOfOffice: false,
+      focusTime: false,
+      cancelled: false,
+      transparent: false,
+      participantIds: ["user-1"],
+    };
+    const state = timeReducer(
+      initialTimeState,
+      fetchWeekEvents.fulfilled({ key: "2026-10-19:2026-10-25", events: [event] }, "req", {
+        from: "2026-10-19",
+        to: "2026-10-25",
+      }),
+    );
+    const root = { time: state } as RootState;
+    expect(selectWeekEvents("2026-10-19:2026-10-25")(root)).toEqual([event]);
+    expect(selectWeekEvents("2026-10-26:2026-11-01")(root)).toEqual([]);
   });
 });

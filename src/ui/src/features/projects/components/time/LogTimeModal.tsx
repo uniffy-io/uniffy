@@ -25,6 +25,9 @@ interface LogTimeModalProps {
   timer?: Timer;
   /** The day a new entry starts on; today in the person's zone when absent. */
   workDate?: string;
+  /** Prefilled length and note of a new entry, as a suggestion proposes them. */
+  durationMinutes?: number;
+  description?: string;
   onClose: () => void;
 }
 
@@ -33,6 +36,8 @@ export function LogTimeModal({
   worklog,
   timer,
   workDate: initialWorkDate,
+  durationMinutes: initialMinutes,
+  description: initialDescription,
   onClose,
 }: LogTimeModalProps) {
   const dispatch = useAppDispatch();
@@ -49,9 +54,11 @@ export function LogTimeModal({
       const rounding = policy?.timerRoundingMinutes ?? 1;
       return roundTimerMinutes(timerElapsedSeconds(timer, Date.now()), rounding);
     }
-    return worklog?.durationMinutes ?? null;
+    return worklog?.durationMinutes ?? initialMinutes ?? null;
   });
-  const [description, setDescription] = useState(timer?.description ?? worklog?.description ?? "");
+  const [description, setDescription] = useState(
+    timer?.description ?? worklog?.description ?? initialDescription ?? "",
+  );
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const canSave = Boolean(workDate) && minutes !== null && minutes > 0 && !saving;
 

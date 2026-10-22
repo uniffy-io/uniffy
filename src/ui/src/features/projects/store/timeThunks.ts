@@ -19,6 +19,7 @@ import type {
   Timesheet,
   UpdateWorklogInput,
   UserWeek,
+  WeekEvent,
   Worklog,
 } from "../types/time";
 import { applyTaskTimeSpent } from "./projectsSlice";
@@ -215,6 +216,21 @@ export const fetchUserWorklogs = createAsyncThunk<
     return { key: weekRangeKey(from, to), ...week };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to load your time"));
+  }
+});
+
+export const fetchWeekEvents = createAsyncThunk<
+  { key: string; events: WeekEvent[] },
+  { from: string; to: string },
+  ThunkConfig
+>("time/fetchWeekEvents", async ({ from, to }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const events = await timeApi.listWeekEvents(orgId, from, to);
+    return { key: weekRangeKey(from, to), events };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to load your calendar"));
   }
 });
 
