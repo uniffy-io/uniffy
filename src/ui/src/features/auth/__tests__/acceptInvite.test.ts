@@ -5,6 +5,7 @@ import { decodeErrorReason, decodeMembershipRequired } from "@/config/api";
 import {
   invitationErrorMessage,
   invitationHeading,
+  isSessionPending,
   isSignInRequired,
   resolveAcceptState,
   signInInvitationFrom,
@@ -80,6 +81,26 @@ describe("resolveAcceptState", () => {
         }),
       ),
     ).toBe("mismatch");
+  });
+});
+
+describe("isSessionPending", () => {
+  it("waits while a stored session rehydrates or has not produced a sign-in yet", () => {
+    expect(
+      isSessionPending({ isAuthenticated: false, isRehydrating: true, refreshToken: "stored" }),
+    ).toBe(true);
+    expect(
+      isSessionPending({ isAuthenticated: false, isRehydrating: false, refreshToken: "stored" }),
+    ).toBe(true);
+  });
+
+  it("resolves at once for a visitor without a stored session and for a signed-in one", () => {
+    expect(
+      isSessionPending({ isAuthenticated: false, isRehydrating: false, refreshToken: null }),
+    ).toBe(false);
+    expect(
+      isSessionPending({ isAuthenticated: true, isRehydrating: false, refreshToken: "stored" }),
+    ).toBe(false);
   });
 });
 
@@ -176,6 +197,25 @@ describe("invitationErrorMessage", () => {
   it("names a missing invitation instead of a missing page", () => {
     const message = invitationErrorMessage(new ConnectError("Invitation not found", Code.NotFound));
     expect(message).toMatch(/^No invitation matches this link\./);
+  });
+
+  it("names a suspended organization and an inactive account instead of a generic denial", () => {
+    expect(
+      invitationErrorMessage(
+        new ConnectError("This organization is suspended", Code.PermissionDenied),
+      ),
+    ).toBe("This organization is suspended");
+    expect(
+      invitationErrorMessage(new ConnectError("Account is not active", Code.PermissionDenied)),
+    ).toBe("Account is not active");
+    expect(
+      invitationErrorMessage(
+        new ConnectError(
+          "This invitation was sent to a different email address",
+          Code.PermissionDenied,
+        ),
+      ),
+    ).toBe("You do not have permission to perform this action.");
   });
 
   it("keeps the server's reason for an invitation that cannot be used", () => {

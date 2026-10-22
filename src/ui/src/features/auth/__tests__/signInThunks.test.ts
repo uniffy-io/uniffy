@@ -10,7 +10,9 @@ import { authReducer } from "@/features/auth/store/authSlice";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { readStoredAuth } from "@/features/auth/store/credentialStorage";
 import {
+  readLastOrganization,
   readLastOrganizationSlug,
+  writeLastOrganization,
   writeLastOrganizationSlug,
 } from "@/features/auth/store/lastOrganizationStorage";
 import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
@@ -153,6 +155,42 @@ it("signs a multi-organization user into the organization remembered on this dev
   expect(credentialDispatches()).toBe(1);
   expect(store.getState().auth.currentOrganizationId).toBe("org-globex");
   expect(store.getState().organizations.items.map((item) => item.slug)).toEqual(["acme", "globex"]);
+});
+
+it("finds the remembered organization by id after a slug rename and records the new slug", async () => {
+  writeLastOrganization("user", { id: "org-globex", slug: "globex-old" });
+  shared.list.mockResolvedValue({ organizations: [membership("acme"), membership("globex")] });
+  shared.refresh.mockResolvedValue(mint("globex"));
+
+  await expect(signIn(login)).resolves.toEqual({ organizationId: "org-globex" });
+
+  expect(shared.refresh).toHaveBeenCalledWith({
+    refreshToken: "login-refresh",
+    organizationId: "org-globex",
+    organizationSlug: "globex",
+  });
+  expect(readLastOrganization("user")).toEqual({ id: "org-globex", slug: "globex" });
+});
+
+it("forgets a remembered id that is no longer listed even when another organization took its slug", async () => {
+  writeLastOrganization("user", { id: "org-gone", slug: "globex" });
+  shared.list.mockResolvedValue({ organizations: [membership("acme"), membership("globex")] });
+
+  await expect(signIn(login)).resolves.toEqual({ organizationId: null });
+
+  expect(shared.refresh).not.toHaveBeenCalled();
+  expect(readLastOrganization("user")).toBeNull();
+});
+
+it("adds the id to a record that names the organization by slug alone", async () => {
+  writeLastOrganizationSlug("user", "globex");
+  shared.list.mockResolvedValue({
+    organizations: [membership("acme"), membership("globex", true)],
+  });
+
+  await expect(signIn(login)).resolves.toEqual({ organizationId: null });
+
+  expect(readLastOrganization("user")).toEqual({ id: "org-globex", slug: "globex" });
 });
 
 it("leaves a multi-organization user without a memory to the welcome page", async () => {

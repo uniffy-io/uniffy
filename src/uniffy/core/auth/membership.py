@@ -67,6 +67,20 @@ async def get_active_memberships(
     return list(result.scalars().all())
 
 
+async def has_active_membership(
+    session: AsyncSession,
+    user_id: UUID,
+    *,
+    owner_only: bool = False,
+) -> bool:
+    from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+
+    query = _active_memberships_query(user_id).with_only_columns(OrganizationMember.id).limit(1)
+    if owner_only:
+        query = query.where(OrganizationMember.role == OrganizationRole.OWNER)
+    return (await session.execute(query)).scalar_one_or_none() is not None
+
+
 async def is_active_member(
     user_id: UUID,
     organization_id: UUID,

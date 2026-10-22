@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { friendlyErrorMessage } from "@/config";
-import { ORG_CREATION_POLICY_OPTIONS } from "@/features/admin/components/organization/orgCreationPolicies";
+import { ORG_CREATION_POLICY_OPTIONS } from "@/features/platform/api/orgCreationPolicies";
 import { systemConfigApi } from "@/features/platform/api/systemConfigApi";
 import { OrgCreationPolicy } from "@uniffy/proto/superadmin/v1/system_config_pb";
 import {

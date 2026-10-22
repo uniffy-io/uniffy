@@ -45,22 +45,23 @@ async def _bootstrap_deployment_locked(
             result = await session.execute(select(Organization.id).limit(1))
             if result.scalar_one_or_none() is not None:
                 logger.info("Deployment already initialized. Skipping bootstrap.")
-            else:
-                admin_password = (os.getenv("INITIAL_ADMIN_PASSWORD") or "").strip()
-                if admin_password:
-                    logger.info("No organizations found. Bootstrapping deployment...")
-                    await _seed_accounts(
-                        session,
-                        search_indexer,
-                        admin_email=admin_email,
-                        admin_password=admin_password,
-                    )
-                else:
-                    logger.info(
-                        "INITIAL_ADMIN_PASSWORD is not set, so no user is seeded. "
-                        "The deployment waits for first-run setup."
-                    )
+                return
+            admin_password = (os.getenv("INITIAL_ADMIN_PASSWORD") or "").strip()
+            if not admin_password:
+                # Setup seeds the push keys with the operator's address instead of this default.
+                logger.info(
+                    "INITIAL_ADMIN_PASSWORD is not set, so no user is seeded. "
+                    "The deployment waits for first-run setup."
+                )
+                return
 
+            logger.info("No organizations found. Bootstrapping deployment...")
+            await _seed_accounts(
+                session,
+                search_indexer,
+                admin_email=admin_email,
+                admin_password=admin_password,
+            )
             await seed_vapid_keys(session, admin_email)
             await session.commit()
         except Exception as e:
@@ -124,9 +125,9 @@ async def _seed_accounts(
     org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
     org_slug = os.getenv("DEFAULT_ORG_SLUG")
     if not org_slug:
-        from uniffy.core.types import slugify
+        from uniffy.domains.organizations.naming import normalize_slug
 
-        org_slug = slugify(org_name)
+        org_slug = normalize_slug("", fallback_name=org_name)
 
     org_ops = OrganizationOperations(session)
     default_org = await org_ops.create(

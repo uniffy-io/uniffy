@@ -11,8 +11,8 @@ function getStorageKey(userId: string): string {
   return `${STORAGE_KEY_PREFIX}:${userId}`;
 }
 
-// Older records hold the bare slug; a JSON record adds the id so a refused fresh tab can still
-// name the lost organization.
+// Older records hold the bare slug. A JSON record adds the id, which survives a slug rename and
+// lets a refused fresh tab name the lost organization; sign-in adds it to a record without one.
 export function readLastOrganization(userId: string): LastOrganization | null {
   try {
     const raw = localStorage.getItem(getStorageKey(userId));

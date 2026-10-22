@@ -150,14 +150,14 @@ async def test_invitation_creation_is_committed_before_email_enqueue(
         "uniffy.domains.organizations.invitations.operations.enqueue_job",
         observe_enqueue,
     )
-    result = await InvitationOperations(session).invite(
+    invitation = await InvitationOperations(session).invite(
         invitation_env.org_id,
         email,
         OrganizationRole.MEMBER,
         invitation_env.admin_id,
     )
 
-    assert result.invitation is not None
+    assert invitation.email == email
     assert observed == [(1, 1)]
 
 
@@ -263,6 +263,88 @@ async def test_acceptance_failure_rolls_back_every_authoritative_fact(
     assert await _action_count(session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_ADDED) == 0
     assert await _action_count(session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED) == 0
     assert await InvitationOperations(session)._load_by_token(invitation_env.raw_token)
+
+
+async def test_the_account_an_anonymous_accept_creates_has_a_verified_email(
+    session, invitation_env, search_indexer, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "uniffy.domains.organizations.invitations.operations.check_rate_limit",
+        AsyncMock(),
+    )
+    monkeypatch.setattr(UserDirectoryProjection, "index_for_organization", AsyncMock())
+
+    await InvitationOperations(session).accept(
+        raw_token=invitation_env.raw_token,
+        username=f"verified-{invitation_env.suffix}",
+        password="Strong invitation password",
+        full_name="Invited User",
+        user_agent="pytest",
+        search_indexer=search_indexer,
+    )
+
+    await session.rollback()
+    account = (
+        await session.execute(select(User).where(User.email == invitation_env.invite_email))
+    ).scalar_one()
+    assert account.email_verified is True
+
+
+async def _blocked_behind(pid: int, waiter: asyncio.Task) -> None:
+    """Wait until a statement waits for a lock the backend ``pid`` holds."""
+    async with asyncio.timeout(10):
+        while not waiter.done():
+            async with open_session() as observer:
+                waiting = await observer.scalar(
+                    text(
+                        "SELECT count(*) FROM pg_stat_activity"
+                        " WHERE :pid = ANY(pg_blocking_pids(pid))"
+                    ),
+                    {"pid": pid},
+                )
+            if waiting:
+                return
+            await asyncio.sleep(0.02)
+    await waiter
+
+
+async def test_a_reinvite_waits_for_an_accept_in_flight_and_leaves_it_accepted(
+    session, invitation_env, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "uniffy.domains.organizations.invitations.operations.enqueue_job", AsyncMock()
+    )
+
+    async def reinvite() -> Invitation:
+        async with open_session() as inviting:
+            return await InvitationOperations(inviting).invite(
+                invitation_env.org_id,
+                invitation_env.invite_email,
+                OrganizationRole.MEMBER,
+                invitation_env.admin_id,
+            )
+
+    async with open_session() as accepting:
+        held = (
+            await accepting.execute(
+                select(Invitation).where(Invitation.id == invitation_env.invite_id).with_for_update()
+            )
+        ).scalar_one()
+        held.accepted_at = datetime.now(UTC)
+        await accepting.flush()
+        pid = await accepting.scalar(text("SELECT pg_backend_pid()"))
+        reinviting = asyncio.create_task(reinvite())
+        await _blocked_behind(pid, reinviting)
+        await accepting.commit()
+    fresh = await reinviting
+
+    original = await session.get(Invitation, invitation_env.invite_id)
+    await session.refresh(original)
+    assert original.accepted_at is not None
+    assert original.revoked_at is None
+    assert original.revoked_by_user_id is None
+    assert fresh.id != invitation_env.invite_id
+    assert fresh.revoked_at is None
 
 
 async def test_concurrent_token_consumption_has_exactly_one_success(

@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import NamedTuple
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import exists, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -17,6 +17,7 @@ from uniffy.core.auth.emails import normalize_email
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.domains.organizations.invitations.errors import (
@@ -71,6 +72,12 @@ def require_pending(invitation: Invitation) -> None:
         raise InvitationAlreadyUsedError("Invitation has already been accepted")
     if invitation.expires_at < datetime.now(UTC):
         raise InvitationExpiredError("Invitation has expired")
+
+
+def require_verified_email(user: User) -> None:
+    """Anyone can register an address; only the mail link proves the account controls it."""
+    if not user.email_verified:
+        raise PermissionDeniedError("Open the invitation link from your email to accept")
 
 
 class InvitationReader:
@@ -128,7 +135,7 @@ class InvitationReader:
         return [(row[0], row[1]) for row in result.all()]
 
     async def list_for_user(self, user_id: UUID) -> list[MyInvitationRow]:
-        """Pending invitations addressed to the caller's email in organizations that still exist."""
+        """Pending invitations to the verified caller from live organizations they are not in."""
         recipient = aliased(User)
         inviter = aliased(User)
         result = await self._session.execute(
@@ -137,6 +144,7 @@ class InvitationReader:
                 recipient,
                 (recipient.id == user_id)
                 & recipient.is_active.is_(True)
+                & recipient.email_verified.is_(True)
                 & (recipient.email == Invitation.email),
             )
             .join(Organization, Organization.id == Invitation.organization_id)
@@ -147,6 +155,13 @@ class InvitationReader:
                 Invitation.expires_at > datetime.now(UTC),
                 Organization.deleted_at.is_(None),
                 Organization.is_suspended.is_(False),
+                not_(
+                    exists().where(
+                        OrganizationMember.organization_id == Invitation.organization_id,
+                        OrganizationMember.user_id == user_id,
+                        OrganizationMember.is_active.is_(True),
+                    )
+                ),
             )
             .order_by(Invitation.created_at.desc())
         )

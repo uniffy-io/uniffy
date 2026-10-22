@@ -1,24 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { X } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import type { MemberInfo } from "@uniffy/proto/common/v1/common_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { SubjectAvatarById } from "@/components/subject";
+import { SubjectAvatar, SubjectPicker, type Subject } from "@/components/subject";
 import { Button } from "@/components/ui/button";
+import { controlShellClass } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
-import { OptionTile } from "@/components/ui/option-tile";
-import { SearchField } from "@/components/ui/search-field";
-import { Skeleton } from "@/components/ui/skeleton";
 import { friendlyErrorMessage } from "@/config";
-import { adminApi } from "@/features/admin/api/adminApi";
-import { transferOrganizationOwnership } from "@/features/admin/components/organization/organizationChanges";
-import { DIRECTORY_MEMBERS_PAGE_SIZE } from "@/features/admin/store/adminThunks";
+import { transferOrganizationOwnership } from "@/features/admin/store/organizationThunks";
+import { cn } from "@/shared/utils/cn";
 
-const SEARCH_DELAY_MS = 300;
-
-interface MemberResult {
-  query: string;
-  members: MemberInfo[];
-  error: string | null;
+/** A refusal that names its reason, such as a new owner whose account is inactive. */
+function refusalMessage(error: unknown): string | null {
+  if (!(error instanceof ConnectError) || error.code !== Code.PermissionDenied) return null;
+  return error.rawMessage || null;
 }
 
 interface OwnershipTransferDialogProps {
@@ -36,61 +32,44 @@ export function OwnershipTransferDialog({
 }: OwnershipTransferDialogProps) {
   const dispatch = useAppDispatch();
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? null);
-  const [search, setSearch] = useState("");
-  const [result, setResult] = useState<MemberResult | null>(null);
-  const [selected, setSelected] = useState<MemberInfo | null>(null);
+  const [selected, setSelected] = useState<Subject | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    const query = search.trim();
-    const timer = setTimeout(
-      () => {
-        adminApi
-          .listMembers({
-            organizationId,
-            pagination: { page: 1, pageSize: DIRECTORY_MEMBERS_PAGE_SIZE },
-            search: query || undefined,
-          })
-          .then((response) => {
-            if (cancelled) return;
-            const members = response.members.filter(
-              (member) => member.isActive && member.userId !== currentUserId,
-            );
-            setResult({ query: search, members, error: null });
-          })
-          .catch((err: unknown) => {
-            if (cancelled) return;
-            const message =
-              friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-              "Members could not be loaded.";
-            setResult({ query: search, members: [], error: message });
-          });
-      },
-      query ? SEARCH_DELAY_MS : 0,
-    );
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [currentUserId, organizationId, search]);
+  // Only the owner opens this dialog, so leaving out the current user leaves out the owner.
+  const excludeIds = currentUserId ? [currentUserId] : [];
 
-  const loading = result?.query !== search;
+  const pick = (subject: Subject | null) => {
+    setSelected(subject);
+    setRefusal(null);
+  };
 
   const transfer = async () => {
     if (!selected || submitting) return;
     setSubmitting(true);
+    setRefusal(null);
     try {
-      await transferOrganizationOwnership(dispatch, organizationId, selected.userId);
-      toast.success(`${selected.displayName} now owns ${organizationName}.`);
+      await dispatch(transferOrganizationOwnership(organizationId, selected.id));
+      toast.success(`${selected.name} now owns ${organizationName}.`);
       onTransferred();
     } catch (err) {
-      const message = friendlyErrorMessage(err instanceof Error ? err.message : String(err));
-      if (message) toast.error(message);
       setSubmitting(false);
+      const message = refusalMessage(err);
+      if (message) {
+        setRefusal(message);
+        return;
+      }
+      const friendly = friendlyErrorMessage(err instanceof Error ? err.message : String(err));
+      if (friendly) toast.error(friendly);
     }
   };
+
+  const refusalNotice = refusal && (
+    <p className="text-sm text-destructive" role="alert">
+      {refusal}
+    </p>
+  );
 
   return (
     <Modal onClose={onClose} closeDisabled={submitting} maxWidth="max-w-lg">
@@ -102,62 +81,56 @@ export function OwnershipTransferDialog({
       {confirming && selected ? (
         <ModalBody>
           <p className="text-sm text-foreground">
-            {selected.displayName} becomes the owner. You stay as an admin.
+            {selected.name} becomes the owner. You stay as an admin.
           </p>
           <p className="text-sm text-muted-foreground">
             Only the owner can transfer ownership or delete the organization.
           </p>
+          {refusalNotice}
         </ModalBody>
       ) : (
         <ModalBody>
-          <SearchField
-            value={search}
-            onChange={setSearch}
-            placeholder="Search members"
-            aria-label="Search members"
-            autoFocus
-          />
-          {loading && !result ? (
-            <div className="space-y-2">
-              {Array.from({ length: 3 }, (_, i) => (
-                <Skeleton key={i} variant="rectangular" className="h-14 w-full" />
-              ))}
-            </div>
-          ) : result?.error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {result.error}
-            </p>
-          ) : result && result.members.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {result.query.trim()
-                ? "No active member matches that search."
-                : "No other active members. Invite someone first, or delete the organization."}
-            </p>
-          ) : (
-            <div
-              role="radiogroup"
-              aria-label="New owner"
-              className={loading ? "space-y-2 opacity-60" : "space-y-2"}
-            >
-              {result?.members.map((member) => (
-                <OptionTile
-                  key={member.userId}
-                  selected={selected?.userId === member.userId}
-                  icon={
-                    <SubjectAvatarById
-                      userId={member.userId}
-                      displayName={member.displayName}
-                      avatarUrl={member.avatarUrl || undefined}
-                      size="md"
-                    />
-                  }
-                  label={member.displayName}
-                  description={member.email}
-                  onSelect={() => setSelected(member)}
+          <div>
+            <label className="mb-1 block text-sm text-muted-foreground">New owner</label>
+            {selected ? (
+              <div
+                className={cn(
+                  controlShellClass,
+                  "hover:border-border flex items-center gap-2.5 px-3 py-2",
+                )}
+              >
+                <SubjectAvatar subject={selected} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-foreground">{selected.name}</p>
+                  {selected.email && (
+                    <p className="truncate text-xs text-muted-foreground">{selected.email}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => pick(null)}
+                  className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Pick another member"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            ) : (
+              // The picker's results float below its search box; the height keeps them in view.
+              <div className="min-h-64">
+                <SubjectPicker
+                  mode="single"
+                  subjectTypes="users"
+                  value={[]}
+                  excludeIds={excludeIds}
+                  onChange={(_ids, subjects) => pick(subjects[0] ?? null)}
+                  placeholder="Search members..."
+                  autoFocus
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+          {refusalNotice}
         </ModalBody>
       )}
 
@@ -167,7 +140,12 @@ export function OwnershipTransferDialog({
             <Button variant="ghost" onClick={() => setConfirming(false)} disabled={submitting}>
               Back
             </Button>
-            <Button variant="warning" onClick={() => void transfer()} loading={submitting}>
+            <Button
+              variant="warning"
+              onClick={() => void transfer()}
+              disabled={refusal !== null}
+              loading={submitting}
+            >
               {submitting ? "Transferring..." : "Transfer ownership"}
             </Button>
           </>
@@ -176,7 +154,7 @@ export function OwnershipTransferDialog({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={() => setConfirming(true)} disabled={!selected}>
+            <Button onClick={() => setConfirming(true)} disabled={!selected || refusal !== null}>
               Continue
             </Button>
           </>

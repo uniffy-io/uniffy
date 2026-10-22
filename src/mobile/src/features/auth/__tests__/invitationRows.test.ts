@@ -41,12 +41,12 @@ describe("invitationSubtitle", () => {
   it("names the role and the inviter", () => {
     expect(
       invitationSubtitle({ role: OrganizationRole.ADMIN, inviterDisplayName: "Grace Hopper" }),
-    ).toBe("Invited as admin by Grace Hopper");
+    ).toBe("Invited as Admin by Grace Hopper");
   });
 
   it("leaves the inviter out when there is none", () => {
     expect(invitationSubtitle({ role: OrganizationRole.MEMBER, inviterDisplayName: null })).toBe(
-      "Invited as member",
+      "Invited as Member",
     );
   });
 });

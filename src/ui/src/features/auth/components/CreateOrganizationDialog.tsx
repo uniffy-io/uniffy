@@ -9,9 +9,10 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/moda
 import { friendlyErrorMessage } from "@/config/errorMessages";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { createOrganization } from "@/features/auth/store/organizationsThunks";
+import { fieldErrorFor, MAX_ORGANIZATION_NAME_LENGTH } from "@/features/auth/utils/fieldErrors";
 import { MAX_SLUG_LENGTH, MIN_SLUG_LENGTH, toSlug, toSlugDraft } from "@/shared/utils/slug";
 
-const MAX_NAME_LENGTH = 255;
+const FIELDS = ["name", "slug"] as const;
 const CREATION_NOT_ALLOWED = "Organization creation is not allowed for this account.";
 
 interface FieldErrors {
@@ -22,10 +23,8 @@ interface FieldErrors {
 
 /** Places a refused create on the field its message names, or on the form for policy and limits. */
 function fieldErrorsFor(error: ConnectError): FieldErrors | null {
-  if (error.code === Code.InvalidArgument) {
-    const message = friendlyErrorMessage(error.message) ?? "Check the name and slug.";
-    return /\bslug\b/i.test(error.rawMessage) ? { slug: message } : { name: message };
-  }
+  const placed = fieldErrorFor(error, FIELDS);
+  if (placed) return { [placed.field]: placed.message };
   if (error.code === Code.PermissionDenied) return { form: CREATION_NOT_ALLOWED };
   if (error.code === Code.ResourceExhausted) {
     const message = friendlyErrorMessage(error.message);
@@ -105,7 +104,7 @@ export function CreateOrganizationDialog({ onClose }: CreateOrganizationDialogPr
                   setName(event.target.value);
                   setErrors((current) => ({ ...current, name: undefined, form: undefined }));
                 }}
-                maxLength={MAX_NAME_LENGTH}
+                maxLength={MAX_ORGANIZATION_NAME_LENGTH}
                 placeholder="Acme Inc"
                 autoFocus
                 disabled={busy}

@@ -26,6 +26,6 @@ export function invitationSubtitle({
   role,
   inviterDisplayName,
 }: Pick<InvitationSummary, "role" | "inviterDisplayName">): string {
-  const invitedAs = `Invited as ${organizationRoleLabel(role).toLowerCase()}`;
+  const invitedAs = `Invited as ${organizationRoleLabel(role)}`;
   return inviterDisplayName ? `${invitedAs} by ${inviterDisplayName}` : invitedAs;
 }

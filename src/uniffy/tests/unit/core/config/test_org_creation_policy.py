@@ -7,6 +7,7 @@ import pytest
 from loguru import logger
 from sqlalchemy.dialects import postgresql
 
+from uniffy.core.config import org_creation
 from uniffy.core.config.org_creation import (
     DEFAULT_ORG_CREATION_POLICY,
     ORG_CREATION_KEY,
@@ -28,6 +29,8 @@ _ACTIVE_MEMBER_FILTER = "login_organization_members.is_active IS true"
 _LIVE_ORG_FILTER = "login_organizations.deleted_at IS NULL"
 _UNSUSPENDED_ORG_FILTER = "login_organizations.is_suspended IS false"
 _SINGLE_ROW = "LIMIT"
+_JOINED_ORG = "JOIN login_organizations ON"
+_ACTIVE_ACCOUNT_FILTER = "login_users.is_active IS true"
 
 
 def _settings(row_value: object | None = None, *, is_secret: bool = False) -> MagicMock:
@@ -66,6 +69,7 @@ def _compiled(session: MagicMock) -> str:
 
 @pytest.fixture
 def logged_warnings() -> Iterator[list[str]]:
+    org_creation._warned_values.clear()
     messages: list[str] = []
     sink = logger.add(
         lambda message: messages.append(str(message)), level="WARNING", format="{message} {extra}"
@@ -145,6 +149,17 @@ class TestResolveOrgCreation:
         assert len(logged_warnings) == 1
         assert repr(_UNKNOWN_POLICY) in logged_warnings[0]
 
+    async def test_a_bad_value_warns_once_per_process(
+        self, monkeypatch: pytest.MonkeyPatch, logged_warnings: list[str]
+    ) -> None:
+        monkeypatch.setenv(_ENV, _UNKNOWN_POLICY)
+        with patch(_SETTINGS, return_value=_settings()):
+            for _ in range(3):
+                state = await resolve_org_creation(MagicMock())
+
+        assert state.policy is DEFAULT_ORG_CREATION_POLICY
+        assert len(logged_warnings) == 1
+
     async def test_blank_env_counts_as_unset_without_a_warning(
         self, monkeypatch: pytest.MonkeyPatch, logged_warnings: list[str]
     ) -> None:
@@ -206,6 +221,8 @@ class TestUserCanCreateOrganization:
         assert _ACTIVE_MEMBER_FILTER in sql
         assert _LIVE_ORG_FILTER in sql
         assert _UNSUSPENDED_ORG_FILTER in sql
+        assert _ACTIVE_ACCOUNT_FILTER in sql
+        assert _JOINED_ORG in sql
         assert _SINGLE_ROW in sql
 
     async def test_members_rung_accepts_any_role(self, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { friendlyErrorMessage } from "@/config";
-import { adminApi } from "@/features/admin/api/adminApi";
-import { leaveCurrentOrganizationScope } from "@/features/auth/components/leaveOrganizationScope";
-import type { OrganizationFields } from "@/features/admin/components/organization/organizationChanges";
+import {
+  deleteOrganization,
+  type OrganizationFields,
+} from "@/features/admin/store/organizationThunks";
 
 const CONSEQUENCES = [
   "Everyone loses access now.",
@@ -29,24 +30,24 @@ export function DeleteOrganizationDialog({
 }: DeleteOrganizationDialogProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const [confirmSlug, setConfirmSlug] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   const confirmed = confirmSlug.trim() === organization.slug;
 
   const remove = async () => {
-    if (!confirmed || deleting || !userId) return;
+    if (!confirmed || deleting) return;
     setDeleting(true);
     try {
-      await adminApi.deleteOrganization({ organizationId, confirmSlug: confirmSlug.trim() });
+      await dispatch(
+        deleteOrganization({ organizationId, confirmSlug: confirmSlug.trim(), navigate }),
+      );
     } catch (err) {
       const message = friendlyErrorMessage(err instanceof Error ? err.message : String(err));
       if (message) toast.error(message);
       setDeleting(false);
       return;
     }
-    await leaveCurrentOrganizationScope(dispatch, { organizationId, userId, navigate });
     toast.success(`${organization.name} was deleted.`);
   };
 

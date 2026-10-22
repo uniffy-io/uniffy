@@ -19,12 +19,17 @@ import { OrganizationList } from "@/features/auth/components/OrganizationList";
 import { PendingInvitations } from "@/features/auth/components/PendingInvitations";
 import { useSignOut } from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
+import { selectInvitationActingId } from "@/features/auth/store/invitationsSlice";
 import {
   selectCanCreateOrganization,
   selectOrganizations,
+  selectOrganizationsSettled,
   selectOrganizationsStatus,
 } from "@/features/auth/store/organizationsSlice";
-import { fetchMyOrganizations } from "@/features/auth/store/organizationsThunks";
+import {
+  fetchMyOrganizations,
+  refreshMyOrganizationsQuietly,
+} from "@/features/auth/store/organizationsThunks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 
@@ -41,8 +46,10 @@ export function WelcomePage() {
   const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
   const organizations = useAppSelector(selectOrganizations);
   const status = useAppSelector(selectOrganizationsStatus);
+  const settled = useAppSelector(selectOrganizationsSettled);
   const canCreateOrganization = useAppSelector(selectCanCreateOrganization);
   const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
+  const invitationActingId = useAppSelector(selectInvitationActingId);
   const handleLogout = useSignOut();
   const { requestSwitch, confirmDialog } = useSwitchOrganization();
   const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
@@ -51,14 +58,20 @@ export function WelcomePage() {
   useEffect(() => {
     if (isAuthenticated) void dispatch(fetchMyOrganizations());
   }, [dispatch, isAuthenticated]);
-  const reloadOrganizations = useCallback(() => void dispatch(fetchMyOrganizations()), [dispatch]);
+  const reloadOrganizations = useCallback(
+    () => void dispatch(refreshMyOrganizationsQuietly()),
+    [dispatch],
+  );
   useRefreshOnReturn(reloadOrganizations, isAuthenticated);
 
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
 
   const hasOrganizations = organizations.length > 0;
-  const isLoading = !hasOrganizations && (status === "idle" || status === "loading");
-  const loadFailed = !hasOrganizations && status === "error";
+  // Only the first load shows the spinner; a reload keeps what the last settled load showed.
+  const isLoading = !hasOrganizations && settled === null;
+  const loadFailed = !hasOrganizations && settled === "error";
+  // An accept switches this tab too, so no other switch starts while an invitation action runs.
+  const busy = switchingSlug !== null || invitationActingId !== null;
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
   const greetingName = firstName || user?.email || "";
 
@@ -143,6 +156,7 @@ export function WelcomePage() {
               <Button
                 variant="ghost"
                 size="sm"
+                loading={status === "loading"}
                 onClick={() => void dispatch(fetchMyOrganizations())}
                 className="-my-1"
               >
@@ -188,6 +202,7 @@ export function WelcomePage() {
                       organizations={organizations}
                       currentOrganizationId={currentOrganizationId}
                       switchingSlug={switchingSlug}
+                      disabled={busy}
                       onSelect={(slug) => void requestSwitch(slug)}
                     />
                   </Card>
@@ -210,7 +225,7 @@ export function WelcomePage() {
                       <Button
                         className="mt-4"
                         onClick={() => setCreating(true)}
-                        disabled={switchingSlug !== null}
+                        disabled={busy}
                         data-testid="welcome-create-organization"
                       >
                         Create organization

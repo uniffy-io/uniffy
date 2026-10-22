@@ -278,6 +278,10 @@ class TestOrganizationShutdown:
                 AsyncMock(),
             ),
             patch(
+                "uniffy.domains.platform.directory.operations.lock_organization",
+                AsyncMock(return_value=org),
+            ),
+            patch(
                 "uniffy.domains.platform.directory.operations.write_audit_event",
                 audit,
             ),

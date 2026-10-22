@@ -13,6 +13,7 @@ from connectrpc.errors import ConnectError
 from protobuf import Oneof
 from uniffy_proto.organizations.v1.organizations_pb import (
     AcceptMyInvitationRequest,
+    AddMemberRequest,
     CreateOrganizationRequest,
     DeclineMyInvitationRequest,
     DeleteOrganizationRequest,
@@ -20,6 +21,7 @@ from uniffy_proto.organizations.v1.organizations_pb import (
     LeaveOrganizationRequest,
     ListMyInvitationsRequest,
     ListMyOrganizationsRequest,
+    ResendInvitationRequest,
     TransferOwnershipRequest,
     UpdateOrganizationRequest,
 )
@@ -127,6 +129,10 @@ _INVITATION_CODES = [
     (NotFoundError("Invitation", "x"), Code.NOT_FOUND),
     (
         PermissionDeniedError("This invitation was sent to a different address"),
+        Code.PERMISSION_DENIED,
+    ),
+    (
+        PermissionDeniedError("Open the invitation link from your email to accept"),
         Code.PERMISSION_DENIED,
     ),
 ]
@@ -622,7 +628,7 @@ class TestInviteMember:
             token_hash="hash",
             expires_at=datetime.now(UTC) + timedelta(days=30),
         )
-        operations = MagicMock(invite=AsyncMock(return_value=SimpleNamespace(invitation=invitation)))
+        operations = MagicMock(invite=AsyncMock(return_value=invitation))
         session = MagicMock()
         session.execute = AsyncMock(
             return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=inviter))
@@ -667,6 +673,92 @@ class TestInviteMember:
 
         assert error.code is Code.ALREADY_EXISTS
         assert error.message == str(conflict)
+
+    async def test_an_owner_role_reaches_the_operation_and_is_refused(self) -> None:
+        refusal = PermissionDeniedError("Ownership moves only through a transfer")
+        operations = MagicMock(invite=AsyncMock(side_effect=refusal))
+        inviter_id = generate_id()
+        org_id = generate_id()
+
+        with (
+            _signed_in(inviter_id, org_id),
+            patch(f"{_HANDLERS}.open_session", _open_session(MagicMock())),
+            patch(f"{_HANDLERS}.InvitationOperations", return_value=operations),
+        ):
+            error = await _refusal(
+                _service().invite_member(
+                    InviteMemberRequest(
+                        email="owner@example.com", role=org_role_to_proto(OrganizationRole.OWNER)
+                    ),
+                    MagicMock(),
+                )
+            )
+
+        assert operations.invite.await_args.kwargs["role"] is OrganizationRole.OWNER
+        assert error.code is Code.PERMISSION_DENIED
+        assert error.message == str(refusal)
+
+
+class TestInvitationSendLimit:
+    async def test_invite_answers_resource_exhausted(self) -> None:
+        spent = RateLimitExceededError("invitation emails (per organization)", 200, 3600)
+        operations = MagicMock(invite=AsyncMock(side_effect=spent))
+
+        with (
+            _signed_in(generate_id(), generate_id()),
+            patch(f"{_HANDLERS}.open_session", _open_session(MagicMock())),
+            patch(f"{_HANDLERS}.InvitationOperations", return_value=operations),
+        ):
+            error = await _refusal(
+                _service().invite_member(InviteMemberRequest(email="new@example.com"), MagicMock())
+            )
+
+        assert error.code is Code.RESOURCE_EXHAUSTED
+        assert error.message == str(spent)
+
+    async def test_resend_answers_resource_exhausted(self) -> None:
+        spent = RateLimitExceededError("invitation emails (per user)", 50, 3600)
+        operations = MagicMock(resend=AsyncMock(side_effect=spent))
+
+        with (
+            _signed_in(generate_id(), generate_id()),
+            patch(f"{_HANDLERS}.open_session", _open_session(MagicMock())),
+            patch(f"{_HANDLERS}.InvitationOperations", return_value=operations),
+        ):
+            error = await _refusal(
+                _service().resend_invitation(
+                    ResendInvitationRequest(invitation_id=str(generate_id())), MagicMock()
+                )
+            )
+
+        assert error.code is Code.RESOURCE_EXHAUSTED
+        assert error.message == str(spent)
+
+
+class TestAddMember:
+    async def test_an_admin_cannot_add_an_owner(self) -> None:
+        admin_id = generate_id()
+        org_id = generate_id()
+        operations = MagicMock(require_org_admin=AsyncMock(), add_member=AsyncMock())
+
+        with (
+            _signed_in(admin_id, org_id),
+            patch(f"{_HANDLERS}.open_session", _open_session(MagicMock())),
+            patch(f"{_HANDLERS}.OrganizationOperations", return_value=operations),
+        ):
+            error = await _refusal(
+                _service().add_member(
+                    AddMemberRequest(
+                        user_id=str(generate_id()), role=org_role_to_proto(OrganizationRole.OWNER)
+                    ),
+                    MagicMock(),
+                )
+            )
+
+        assert error.code is Code.PERMISSION_DENIED
+        assert error.message == str(PermissionDeniedError("Ownership moves only through a transfer"))
+        operations.require_org_admin.assert_awaited_once_with(admin_id, org_id)
+        operations.add_member.assert_not_awaited()
 
 
 class TestUpdateOrganization:

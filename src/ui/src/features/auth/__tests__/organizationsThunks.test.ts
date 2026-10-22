@@ -29,6 +29,7 @@ import {
 import {
   fetchMyOrganizations,
   LOST_ORGANIZATION_ACCESS_MESSAGE,
+  refreshMyOrganizationsQuietly,
   reloadOrganizationsAndRole,
   switchOrganization,
 } from "@/features/auth/store/organizationsThunks";
@@ -274,6 +275,39 @@ it("summarizes memberships and keeps the last list when a reload fails", async (
   expect(store.getState().organizations.canCreateOrganization).toBe(true);
 });
 
+it("skips a load while one is running", async () => {
+  let reply!: (response: unknown) => void;
+  shared.list.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        reply = resolve;
+      }),
+  );
+
+  const first = dispatch()(fetchMyOrganizations());
+  void dispatch()(fetchMyOrganizations());
+  void dispatch()(refreshMyOrganizationsQuietly());
+  reply({ organizations: [acme] });
+  await first;
+
+  expect(shared.list).toHaveBeenCalledOnce();
+  expect(store.getState().organizations.items.map((item) => item.slug)).toEqual(["acme"]);
+});
+
+it("reloads quietly in place and keeps the list and its status when the reload fails", async () => {
+  shared.list.mockResolvedValueOnce({ organizations: [acme, globex], canCreateOrganization: true });
+  await expect(dispatch()(refreshMyOrganizationsQuietly()).unwrap()).resolves.toHaveLength(2);
+  expect(store.getState().organizations).toMatchObject({ status: "ready", settled: "ready" });
+
+  shared.list.mockRejectedValueOnce(new Error("network unavailable"));
+  await expect(dispatch()(refreshMyOrganizationsQuietly()).unwrap()).resolves.toBeNull();
+
+  // No rejected action, so errorToastMiddleware has nothing to toast.
+  expect(actions.some((type) => type.endsWith("/rejected"))).toBe(false);
+  expect(store.getState().organizations).toMatchObject({ status: "ready", settled: "ready" });
+  expect(store.getState().organizations.items.map((item) => item.slug)).toEqual(["acme", "globex"]);
+});
+
 function holdRole(organizationRole: string) {
   store.dispatch(
     setCredentials({
@@ -328,12 +362,13 @@ it("leaves the credentials alone when the listed role matches the tab's", async 
   expect(getAccessToken()).toBe("access-acme");
 });
 
-it("leaves the credentials alone when the list fails to load", async () => {
+it("leaves the credentials alone and raises no toast when the list fails to load", async () => {
   holdRole("MEMBER");
   shared.list.mockRejectedValue(new Error("network unavailable"));
 
   await dispatch()(reloadOrganizationsAndRole());
 
   expect(shared.refresh).not.toHaveBeenCalled();
+  expect(actions.some((type) => type.endsWith("/rejected"))).toBe(false);
   expect(store.getState().auth.currentOrganizationRole).toBe("MEMBER");
 });

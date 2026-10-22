@@ -22,7 +22,7 @@ from uniffy.core.models.login.organization_member import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
-from uniffy.domains.organizations.lifecycle import PURGE_GRACE_DAYS
+from uniffy.domains.organizations.lifecycle import PURGE_GRACE_DAYS, purge_at_from
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
 
@@ -111,7 +111,7 @@ async def notify_pending_org_purges(ctx: dict[str, Any]) -> dict[str, Any]:
                 .all()
             )
             for org in eligible:
-                purge_at = org.deleted_at + timedelta(days=PURGE_GRACE_DAYS)
+                purge_at = purge_at_from(org.deleted_at)
                 owners = (
                     await session.execute(
                         select(User.id, User.email)

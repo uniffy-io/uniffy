@@ -56,15 +56,15 @@ An invitation carries an email address and the role the person joins with. Every
 
 Someone new to Uniffy follows the link in the mail and creates their account on the way in.
 
-Someone who already has an account accepts signed in. The mail link asks them to sign in first and brings them back to the invitation. They can also skip the mail, because their welcome page lists every pending invitation sent to their address and their user menu shows the count.
+Someone who already has an account accepts signed in. The mail link asks them to sign in first and brings them back to the invitation. Once their address is confirmed through an invitation link, their welcome page also lists every pending invitation sent to it and their user menu shows the count.
 
 Inviting someone who is already an active member is refused. Change their role instead. A removed member is no longer a member, so you can invite them back.
 
 Inviting the same address again replaces the pending invitation. The earlier link stops working.
 
-The mail goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email and SMTP](/docs/deployment/configure/#email-and-smtp-optional-system-default) for how that resolves.
+The mail goes out through the mail server set on your organization's Email page. Until you set one there, it goes out through the system default the deployment provides.
 
-When no mail is configured at all, the invitation is still created. Someone who already has an account finds it on their welcome page. Someone new has no other way to reach the link, so set up mail before you invite people who are new to Uniffy.
+When no mail is configured at all, the invitation is still created. Someone whose address is already confirmed finds it on their welcome page. Anyone else has no other way to reach the link, so set up mail before you invite them.
 
 Invitations expire after 30 days.
 
@@ -96,7 +96,7 @@ Each row records who acted, the target user or email, the old and new role where
 
 ## Troubleshooting
 
-**The invitation email never arrived.** Open the Email page and look at Deliveries. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, clear the suppression, then resend. If the person already has an account, they can accept from their welcome page while you sort out the mail.
+**The invitation email never arrived.** Open the Email page and look at Deliveries. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, clear the suppression, then resend. If the person already has an account with a confirmed address, they can accept from their welcome page while you sort out the mail.
 
 **The invite is refused as already a member.** That person is in your roster already. Find them there and change their role if that is what you meant.
 

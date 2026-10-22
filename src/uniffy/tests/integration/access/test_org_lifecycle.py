@@ -1,5 +1,6 @@
 """Self-service creation, leaving, ownership transfer and owner deletion on real rows."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from uuid import UUID
 
@@ -38,9 +39,11 @@ from uniffy.domains.organizations.lifecycle import (
     OWNER_DELETION_REASON,
     delete_organization_by_owner,
     leave_organization,
+    lock_organization,
     transfer_ownership,
 )
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.platform.directory.operations import PlatformDirectoryOperations
 from uniffy.infrastructure.database import open_session
 from uniffy.tests.integration.access.calls import _make_system_admin
 from uniffy.tests.integration.access.conftest import teardown_organizations
@@ -49,6 +52,8 @@ from uniffy.tests.integration.access.recording_search import recording_indexer
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 _ORG_CREATION_ENV = "ALLOW_ORG_CREATION"
+_LOCK_WAIT_SECONDS = 0.3
+_DELETE_TIMEOUT_SECONDS = 10
 
 
 async def _user_org_ids(session, user_id: UUID) -> list[UUID]:
@@ -301,3 +306,43 @@ class TestOwnerDelete:
                 confirm_slug=(await session.get(Organization, access.org_id)).slug,
                 call_lifecycle=CallsLifecycle(open_session),
             )
+
+    async def test_an_operator_delete_queued_behind_the_owner_stages_nothing(
+        self, session, access
+    ) -> None:
+        await _make_system_admin(session, access.outsider_id)
+        slug = (await session.get(Organization, access.org_id)).slug
+        # The owner's transaction holds the row while the operator's delete starts.
+        await lock_organization(session, access.org_id)
+
+        async with open_session() as operator_session:
+            operator_delete = asyncio.create_task(
+                PlatformDirectoryOperations(
+                    operator_session, CallsLifecycle(open_session)
+                ).delete_organization(
+                    user_id=access.outsider_id,
+                    organization_id=access.org_id,
+                    confirm_slug=slug,
+                    reason="Abuse report",
+                )
+            )
+            await asyncio.sleep(_LOCK_WAIT_SECONDS)
+            assert not operator_delete.done()
+
+            await delete_organization_by_owner(
+                session,
+                user_id=access.owner_id,
+                org_id=access.org_id,
+                confirm_slug=slug,
+                call_lifecycle=CallsLifecycle(open_session),
+            )
+            await asyncio.wait_for(operator_delete, timeout=_DELETE_TIMEOUT_SECONDS)
+
+        org = await session.get(Organization, access.org_id, populate_existing=True)
+        assert org.deleted_by_user_id == access.owner_id
+        assert org.deletion_reason == OWNER_DELETION_REASON
+        assert await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED) == 1
+        assert (
+            await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED_BY_PLATFORM)
+            == 0
+        )

@@ -63,6 +63,7 @@ from uniffy.core.auth.cookies import (
 from uniffy.core.auth.devices import request_user_agent
 from uniffy.core.auth.identity import get_user_by_id, require_system_admin
 from uniffy.core.auth.principal import current_session_id, current_user_id
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.auth.tokens import decode_refresh_token
 from uniffy.core.config.registration import public_registration_enabled
 from uniffy.core.converters import (
@@ -106,7 +107,7 @@ from uniffy.domains.organizations.invitations import (
     InvitationOperations,
     InvitationRevokedError,
 )
-from uniffy.domains.platform.setup import setup_deployment, setup_required
+from uniffy.domains.platform.setup import setup_deployment
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.handlers")
@@ -250,6 +251,8 @@ class AuthHandlers:
                     domain_admin_domains=_domain_admins_to_proto(result),
                     asset_cookie=asset_cookie,
                 )
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except RegistrationError as e:
             logger.warning(f"Registration failed: {e}")
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
@@ -537,7 +540,6 @@ class AuthHandlers:
                 ),
                 user_agent=request_user_agent(ctx),
                 search_indexer=self.search_indexer,
-                call_lifecycle=self.call_lifecycle,
             )
             auth_result = _auth_result_to_proto(result)
             auth_result.asset_cookie = _set_asset_cookie(ctx, result)

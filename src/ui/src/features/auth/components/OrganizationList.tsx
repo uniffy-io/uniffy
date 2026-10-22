@@ -36,6 +36,8 @@ interface OrganizationListProps {
   organizations: OrganizationSummary[];
   currentOrganizationId: string | null;
   switchingSlug: string | null;
+  /** Holds every row, as a switch in flight does, while other work is about to switch the tab. */
+  disabled?: boolean;
   onSelect: (slug: string) => void;
   compact?: boolean;
 }
@@ -44,10 +46,11 @@ export function OrganizationList({
   organizations,
   currentOrganizationId,
   switchingSlug,
+  disabled = false,
   onSelect,
   compact = false,
 }: OrganizationListProps) {
-  const isBusy = switchingSlug !== null;
+  const isBusy = switchingSlug !== null || disabled;
 
   return (
     <ul className="flex flex-col gap-0.5">

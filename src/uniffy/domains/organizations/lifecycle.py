@@ -39,10 +39,25 @@ def purge_at_from(deleted_at: datetime | None) -> datetime | None:
 
 
 def _purge_at(org: Organization) -> datetime:
-    deleted_at = org.deleted_at
-    if deleted_at is None:
+    purge_at = purge_at_from(org.deleted_at)
+    if purge_at is None:
         raise ValidationError("organization", "Organization is not deleted")
-    return deleted_at + timedelta(days=PURGE_GRACE_DAYS)
+    return purge_at
+
+
+async def lock_organization(session: AsyncSession, org_id: UUID) -> Organization:
+    """Concurrent deletes queue on this row lock, so the loser sees the winner's deleted_at."""
+    org = (
+        await session.execute(
+            select(Organization)
+            .where(Organization.id == org_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if org is None:
+        raise NotFoundError("Organization", str(org_id))
+    return org
 
 
 async def _lock_membership(
@@ -156,7 +171,7 @@ async def transfer_ownership(
     return new_owner, previous_owner
 
 
-async def _active_member_ids(session: AsyncSession, org_id: UUID) -> list[UUID]:
+async def active_member_ids(session: AsyncSession, org_id: UUID) -> list[UUID]:
     rows = (
         await session.execute(
             select(OrganizationMember.user_id)
@@ -182,7 +197,7 @@ async def stage_organization_deletion(
     org.purge_warning_sent_at = None
     session.add(org)
 
-    member_ids = await _active_member_ids(session, org.id)
+    member_ids = await active_member_ids(session, org.id)
 
     await write_audit_event(
         session,
@@ -273,16 +288,7 @@ async def delete_organization_by_owner(
     call_lifecycle: CallRevocationLifecycle,
 ) -> datetime:
     await OrganizationOperations(session).require_org_owner(user_id, org_id)
-    org = (
-        await session.execute(
-            select(Organization)
-            .where(Organization.id == org_id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
-    ).scalar_one_or_none()
-    if org is None:
-        raise NotFoundError("Organization", str(org_id))
+    org = await lock_organization(session, org_id)
     # A concurrent delete won the row lock.
     if org.deleted_at is not None:
         return _purge_at(org)

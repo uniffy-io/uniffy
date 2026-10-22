@@ -4,6 +4,7 @@ import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { OrganizationInfoSchema, OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { MyOrganizationSchema } from "@uniffy/proto/organizations/v1/organizations_pb";
+import { resetOrganizationScope } from "@/features/auth/store/authActions";
 import {
   authReducer,
   logout,
@@ -11,14 +12,17 @@ import {
   setCredentials,
 } from "@/features/auth/store/authSlice";
 import {
+  isCurrentOrganizationSlug,
   organizationAdded,
   organizationsFailed,
   organizationsLoaded,
   organizationsLoading,
   organizationsReducer,
+  organizationsReloadFailed,
   selectCanCreateOrganization,
   selectCurrentOrganization,
   selectOrganizations,
+  selectOrganizationsSettled,
   selectOrganizationsStatus,
   summarizeOrganization,
   switchFinished,
@@ -110,6 +114,39 @@ describe("organizationsSlice", () => {
     expect(selectOrganizations(state)).toHaveLength(1);
   });
 
+  it("keeps the last settled outcome while a reload runs and after a quiet one fails", () => {
+    let state = reducer(undefined, { type: "@@init" });
+    expect(selectOrganizationsSettled(state)).toBeNull();
+
+    state = reducer(state, organizationsLoading());
+    expect(selectOrganizationsSettled(state)).toBeNull();
+
+    state = reducer(state, organizationsFailed());
+    state = reducer(state, organizationsLoading());
+    expect(selectOrganizationsSettled(state)).toBe("error");
+
+    state = reducer(state, organizationsLoaded([summary("org-a", "acme")]));
+    state = reducer(state, organizationsLoading());
+    expect(selectOrganizationsSettled(state)).toBe("ready");
+
+    state = reducer(state, organizationsReloadFailed("ready"));
+    expect(selectOrganizationsStatus(state)).toBe("ready");
+    expect(selectOrganizationsSettled(state)).toBe("ready");
+  });
+
+  it("lets a load that a switch interrupted run again and keeps the list", () => {
+    let state = reducer(signedIn("org-a"), organizationsLoading());
+
+    state = reducer(state, resetOrganizationScope());
+
+    expect(selectOrganizationsStatus(state)).toBe("idle");
+    expect(selectOrganizationsSettled(state)).toBe("ready");
+    expect(selectOrganizations(state)).toHaveLength(2);
+    expect(selectOrganizationsStatus(reducer(signedIn("org-a"), resetOrganizationScope()))).toBe(
+      "ready",
+    );
+  });
+
   it("takes the creation flag from each load and reads a load without it as not allowed", () => {
     let state = reducer(undefined, { type: "@@init" });
     expect(selectCanCreateOrganization(state)).toBe(false);
@@ -167,6 +204,21 @@ describe("organizationsSlice", () => {
     expect(selectCurrentOrganization(signedIn("org-gone"))).toBeNull();
   });
 
+  it("recognises the tab's organization by its listed id whichever slug names it", () => {
+    const listed = [summary("org-a", "acme-renamed"), summary("org-b", "globex")];
+    const current = { id: "org-a", slug: "acme" };
+
+    expect(isCurrentOrganizationSlug("acme-renamed", listed, current)).toBe(true);
+    expect(isCurrentOrganizationSlug("globex", listed, current)).toBe(false);
+    // Another organization took the slug the credentials still carry.
+    expect(
+      isCurrentOrganizationSlug("acme", [summary("org-c", "acme")], { id: "org-a", slug: "acme" }),
+    ).toBe(false);
+    // An unlisted organization falls back to the slug.
+    expect(isCurrentOrganizationSlug("acme", [], current)).toBe(true);
+    expect(isCurrentOrganizationSlug("initech", [], current)).toBe(false);
+  });
+
   it("resets on logout", () => {
     const before = reducer(signedIn("org-a"), switchStarted("globex"));
     const after = reducer(before, logout());
@@ -174,6 +226,7 @@ describe("organizationsSlice", () => {
     expect(after.organizations).toEqual({
       items: [],
       status: "idle",
+      settled: null,
       switchingSlug: null,
       canCreateOrganization: false,
     });
@@ -185,6 +238,7 @@ describe("organizationsSlice", () => {
     expect(after.organizations).toEqual({
       items: [],
       status: "idle",
+      settled: null,
       switchingSlug: null,
       canCreateOrganization: false,
     });

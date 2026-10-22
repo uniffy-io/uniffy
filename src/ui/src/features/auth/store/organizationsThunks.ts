@@ -20,6 +20,7 @@ import {
   organizationsFailed,
   organizationsLoaded,
   organizationsLoading,
+  organizationsReloadFailed,
   summarizeOrganization,
   switchFinished,
   switchStarted,
@@ -53,15 +54,22 @@ const thunk = createAsyncThunk.withTypes<{
   rejectValue: string;
 }>();
 
+async function loadMyOrganizations(dispatch: AppDispatch): Promise<OrganizationSummary[]> {
+  const response = await organizationsApi.listMyOrganizations();
+  const items = response.organizations.map(summarizeOrganization);
+  dispatch(organizationsLoaded(items, response.canCreateOrganization));
+  return items;
+}
+
+const notLoading = (_: void, { getState }: { getState: () => RootState }) =>
+  getState().organizations.status !== "loading";
+
 export const fetchMyOrganizations = thunk<OrganizationSummary[], void>(
   "organizations/fetchMyOrganizations",
   async (_, { dispatch, rejectWithValue }) => {
     dispatch(organizationsLoading());
     try {
-      const response = await organizationsApi.listMyOrganizations();
-      const items = response.organizations.map(summarizeOrganization);
-      dispatch(organizationsLoaded(items, response.canCreateOrganization));
-      return items;
+      return await loadMyOrganizations(dispatch);
     } catch (error) {
       dispatch(organizationsFailed());
       return rejectWithValue(
@@ -69,11 +77,32 @@ export const fetchMyOrganizations = thunk<OrganizationSummary[], void>(
       );
     }
   },
+  { condition: notLoading },
 );
 
 /**
- * Reloads the membership list, then refreshes this tab's credentials once when the list names another
- * role for its organization, so role-gated surfaces follow a change made in another session.
+ * Reloads the list for a background refresh (tab return, menu open): a failure keeps the list and
+ * its status and resolves with null instead of toasting through errorToastMiddleware.
+ */
+export const refreshMyOrganizationsQuietly = thunk<OrganizationSummary[] | null, void>(
+  "organizations/refreshMyOrganizationsQuietly",
+  async (_, { dispatch, getState }) => {
+    const previous = getState().organizations.status;
+    dispatch(organizationsLoading());
+    try {
+      return await loadMyOrganizations(dispatch);
+    } catch {
+      dispatch(organizationsReloadFailed(previous));
+      return null;
+    }
+  },
+  { condition: notLoading },
+);
+
+/**
+ * Quietly reloads the membership list, then refreshes this tab's credentials once when the list
+ * names another role for its organization, so role-gated surfaces follow a change made in another
+ * session.
  */
 export function reloadOrganizationsAndRole(): ThunkAction<
   Promise<void>,
@@ -82,8 +111,8 @@ export function reloadOrganizationsAndRole(): ThunkAction<
   UnknownAction
 > {
   return async (dispatch, getState) => {
-    const result = await dispatch(fetchMyOrganizations());
-    if (!fetchMyOrganizations.fulfilled.match(result)) return;
+    const result = await dispatch(refreshMyOrganizationsQuietly());
+    if (!refreshMyOrganizationsQuietly.fulfilled.match(result) || !result.payload) return;
     const { currentOrganizationId, currentOrganizationRole } = getState().auth;
     if (!listedRoleDiffers(result.payload, currentOrganizationId, currentOrganizationRole)) return;
     // A failed refresh leaves the tab on its current token; the next expiry refresh catches up.
@@ -166,6 +195,8 @@ const runOrganizationSwitch = thunk<OrganizationSwitch, string>(
         }
 
         const organizationSlug = response.organizationSlug || slug;
+        // The scope reset aborts a list load still in flight, so it runs again in the new scope.
+        const listInterrupted = getState().organizations.status === "loading";
         void clearSessionCaches(dispatch, { reason: "switch" });
         dispatch(resetOrganizationScope());
         setMemoryAccessToken(response.accessToken);
@@ -182,8 +213,7 @@ const runOrganizationSwitch = thunk<OrganizationSwitch, string>(
           }),
         );
         writeLastOrganization(user.id, { id: response.organizationId, slug: organizationSlug });
-        // The scope reset aborts a list load still in flight, which would otherwise stay loading.
-        if (getState().organizations.status === "loading") void dispatch(fetchMyOrganizations());
+        if (listInterrupted) void dispatch(fetchMyOrganizations());
         return { organizationId: response.organizationId };
       });
     } catch (error) {
@@ -215,13 +245,17 @@ export function switchOrganization(
 /**
  * Creates the organization and switches this tab into it. A refused create rejects with its
  * ConnectError and no toast, so the form can place the message; a failed switch afterwards rejects
- * with the message the switch already toasted.
+ * with the message the switch already toasted. The membership belongs to the user rather than to
+ * the tab's organization, so its outcome lands on the store itself: the session scope guard would
+ * drop it when a scope ends while the call is out.
  */
 export function createOrganization(request: {
   name: string;
   slug?: string;
 }): ThunkAction<Promise<CreatedOrganization>, RootState, unknown, UnknownAction> {
-  return async (dispatch) => {
+  return async (_dispatch, getState) => {
+    const dispatch = getStoreRefOrThrow().dispatch as AppDispatch;
+    const userId = getState().auth.user?.id;
     const response = await organizationsApi.createOrganization({
       name: request.name,
       slug: request.slug || undefined,
@@ -230,7 +264,14 @@ export function createOrganization(request: {
     if (!created?.id || !created.slug) {
       throw new ConnectError("The created organization was not returned", Code.Internal);
     }
-    // The switch ends this scope and drops later dispatches, so the list learns of it first.
+    // The account signed out or changed while the call was out; its list is gone already.
+    if (!userId || getState().auth.user?.id !== userId) {
+      throw new ConnectError(
+        "The session changed before the organization was created",
+        Code.Unauthenticated,
+      );
+    }
+    // The switch ends this scope, so the list learns of the organization first.
     dispatch(organizationAdded(created));
     const { organizationId } = await dispatch(switchOrganization(created.slug));
     return { organizationId, slug: created.slug, name: created.name };

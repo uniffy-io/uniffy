@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { Buildings } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { friendlyErrorMessage } from "@/config";
-import { adminApi } from "@/features/admin/api/adminApi";
 import { DeleteOrganizationDialog } from "@/features/admin/components/organization/DeleteOrganizationDialog";
 import { LeaveOrganizationCard } from "@/features/auth/components/LeaveOrganizationCard";
 import { OrganizationGeneralForm } from "@/features/admin/components/organization/OrganizationGeneralForm";
-import type { OrganizationFields } from "@/features/admin/components/organization/organizationChanges";
 import { OwnershipTransferDialog } from "@/features/admin/components/organization/OwnershipTransferDialog";
+import {
+  loadOrganization,
+  type LoadedOrganization,
+} from "@/features/admin/store/organizationThunks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
-
-interface LoadedOrganization extends OrganizationFields {
-  id: string;
-}
 
 export function OrganizationSection() {
   useDocumentTitle("Organization");
+  const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
 
@@ -32,10 +31,9 @@ export function OrganizationSection() {
     setLoading(true);
     setError(null);
     try {
-      const response = await adminApi.getOrganization({ organizationId });
-      const info = response.organization?.organization;
-      setOrganization(info ? { id: info.id, name: info.name, slug: info.slug } : null);
-      if (!info) setError("Could not load this organization.");
+      const loaded = await dispatch(loadOrganization(organizationId));
+      setOrganization(loaded);
+      if (!loaded) setError("Could not load this organization.");
     } catch (err) {
       setError(
         friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
@@ -44,7 +42,7 @@ export function OrganizationSection() {
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [dispatch, organizationId]);
 
   useEffect(() => {
     // eslint-disable-next-line react/react-compiler -- fetch on mount; reload raises the loading flag before awaiting the API

@@ -192,6 +192,8 @@ message UpdateOrganizationRequest {
   optional string name = 2;
   optional string slug = 3;
   optional string logo_url = 4;
+  reserved 5;
+  reserved "is_active";
 }
 
 // Organization Overview Messages (Org Admin)
@@ -378,7 +380,9 @@ message InviteMemberRequest {
 
 // Every email gets a pending invitation; an existing account accepts it signed in.
 message InviteMemberResponse {
-  Invitation invitation = 1;
+  reserved 1, 2;
+  reserved "added_member";
+  Invitation invitation = 3;
 }
 
 message ListInvitationsRequest {

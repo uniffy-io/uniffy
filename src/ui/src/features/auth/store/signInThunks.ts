@@ -14,7 +14,7 @@ import { organizationsApi } from "@/features/auth/api/organizationsApi";
 import { setCredentials } from "@/features/auth/store/authSlice";
 import {
   clearLastOrganizationSlug,
-  readLastOrganizationSlug,
+  readLastOrganization,
   writeLastOrganization,
 } from "@/features/auth/store/lastOrganizationStorage";
 import {
@@ -107,14 +107,18 @@ async function chooseOrganization(
   }
   dispatch(organizationsLoaded(organizations, canCreateOrganization));
 
-  const remembered = readLastOrganizationSlug(userId);
-  if (remembered && !organizations.some((organization) => organization.slug === remembered)) {
-    clearLastOrganizationSlug(userId);
+  // The id survives a slug rename; a record without one matches by slug and gains the id here.
+  const last = readLastOrganization(userId);
+  const remembered = last
+    ? organizations.find((organization) =>
+        last.id ? organization.id === last.id : organization.slug === last.slug,
+      )
+    : undefined;
+  if (last && !remembered) clearLastOrganizationSlug(userId);
+  if (last && remembered && (last.id !== remembered.id || last.slug !== remembered.slug)) {
+    writeLastOrganization(userId, { id: remembered.id, slug: remembered.slug });
   }
-  const candidate =
-    organizations.length === 1
-      ? organizations[0]
-      : organizations.find((organization) => organization.slug === remembered);
+  const candidate = organizations.length === 1 ? organizations[0] : remembered;
   if (!candidate || candidate.suspended) return result;
 
   const client = createClient(AuthService, publicUnaryTransport);

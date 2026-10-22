@@ -1,4 +1,4 @@
-"""A staged organization session binds its tokens to a membership the caller just created."""
+"""A bootstrap session binds its tokens to a membership the caller just created."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,9 +10,8 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import DomainType, generate_id
-from uniffy.domains.auth.contracts import hash_refresh_token
+from uniffy.domains.auth.contracts import hash_refresh_token, stage_bootstrap_authentication
 from uniffy.domains.auth.errors import AuthenticationError
-from uniffy.domains.auth.operations import AuthOperations
 
 _SLUG = "acme"
 
@@ -61,11 +60,11 @@ async def test_mints_tokens_for_the_organization_and_leaves_the_commit_to_the_ca
     session = _session(membership)
 
     with patch(
-        "uniffy.core.auth.domain_admin.get_user_domain_admins",
+        "uniffy.domains.auth.contracts.get_user_domain_admins",
         AsyncMock(return_value=[DomainType.NOTES]),
     ):
-        result = await AuthOperations(session, AsyncMock()).stage_organization_session(
-            user, organization, user_agent="Mozilla/5.0"
+        result = await stage_bootstrap_authentication(
+            session, user, organization, user_agent="Mozilla/5.0"
         )
 
     assert result.user_id == user.id
@@ -92,8 +91,6 @@ async def test_refuses_a_user_without_an_active_membership() -> None:
     session = _session(None)
 
     with pytest.raises(AuthenticationError):
-        await AuthOperations(session, AsyncMock()).stage_organization_session(
-            _user(), _organization()
-        )
+        await stage_bootstrap_authentication(session, _user(), _organization(), user_agent="")
 
     session.add.assert_not_called()

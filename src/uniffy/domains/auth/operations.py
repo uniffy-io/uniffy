@@ -8,7 +8,7 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
+from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.devices import parse_device_label
 from uniffy.core.auth.emails import normalize_email
@@ -20,6 +20,7 @@ from uniffy.core.auth.revocation import (
     mark_token_version_revoked,
 )
 from uniffy.core.auth.sessions import stage_revoke_user_sessions
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.auth.tokens import (
     create_access_token,
     create_refresh_token,
@@ -58,6 +59,10 @@ logger = logger.bind(component="auth.operations")
 LOGIN_RATE_LIMIT_EMAIL = 10
 LOGIN_RATE_LIMIT_IP = 30
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
+
+REGISTER_RATE_LIMIT_EMAIL = 5
+REGISTER_RATE_LIMIT_IP = 20
+REGISTER_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 
 # Grace window in which a previously-issued refresh token still resolves to the
 # current pair without tripping the reuse alarm. Covers the brief race when two
@@ -280,14 +285,21 @@ class AuthOperations:
     ) -> AuthResult:
         """Register a new user; refused when public registration is disabled.
 
-        Every reject path - public-registration disabled, collision,
-        password-policy failure - writes ``AUTH_REGISTER_REJECTED`` with a
+        Every reject path - rate limit, pending setup, public-registration disabled,
+        collision, password-policy failure - writes ``AUTH_REGISTER_REJECTED`` with a
         ``reason`` tag so an attacker trying to enumerate accounts shows
         up as a burst of rejects in the audit log instead of disappearing
         into application logs.
         """
         email = normalize_email(email)
         try:
+            await self._enforce_register_rate_limit(email)
+
+            # The first user closes setup for good, so it must come from the setup page.
+            if await setup_required(self._session):
+                await self._audit_register_rejected(email=email, reason="setup_required")
+                raise RegistrationError("Complete the deployment setup first")
+
             if not await public_registration_enabled(self._session):
                 await self._audit_register_rejected(
                     email=email, reason="public_registration_disabled"
@@ -371,6 +383,10 @@ class AuthOperations:
                 user_id=user.id,
                 session_id=session_record.id,
             )
+        except RateLimitExceededError:
+            AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="rate_limited").inc()
+            await self._audit_register_rejected(email=email, reason="rate_limited")
+            raise
         except RegistrationError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="failure").inc()
             raise
@@ -800,52 +816,6 @@ class AuthOperations:
             )
             logger.info(f"Logout: session {session_id} revoked for user {user_id}")
 
-    async def stage_organization_session(
-        self,
-        user: User,
-        organization: Organization,
-        *,
-        user_agent: str = "",
-    ) -> AuthResult:
-        """Mint an org-bound session in the caller's transaction, which commits it.
-
-        Runs no password, rate-limit or MFA step, so only a flow that just created the
-        credentials itself may call it.
-        """
-        (
-            organization_id,
-            organization_slug,
-            organization_role,
-            domain_admin_domains,
-        ) = await self._finalize_org_membership(user.id, organization)
-        session_record = await self._stage_session(
-            user.id, user_agent, organization_id=organization_id
-        )
-        access_token = create_access_token(
-            user.id,
-            organization_id,
-            token_version=user.token_version,
-            session_id=session_record.id,
-            full_name=user.full_name,
-            avatar_key=user.avatar_key,
-        )
-        refresh_token = create_refresh_token(
-            user.id,
-            token_version=user.token_version,
-            session_id=session_record.id,
-        )
-        session_record.refresh_token_hash = hash_refresh_token(refresh_token)
-        return AuthResult(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            user_id=user.id,
-            organization_id=organization_id,
-            organization_slug=organization_slug,
-            organization_role=organization_role,
-            session_id=session_record.id,
-            domain_admin_domains=domain_admin_domains,
-        )
-
     async def _audit_register_rejected(
         self,
         *,
@@ -951,6 +921,24 @@ class AuthOperations:
                 limit=LOGIN_RATE_LIMIT_IP,
                 window_seconds=LOGIN_RATE_LIMIT_WINDOW_SECONDS,
                 resource="login attempts (per ip)",
+            )
+
+    async def _enforce_register_rate_limit(self, email: str) -> None:
+        """Same two buckets as login; the email bucket is keyed by hash, the address stays out."""
+        if email:
+            await check_rate_limit(
+                key=f"rl:auth:register:email:{email_hash(email)}",
+                limit=REGISTER_RATE_LIMIT_EMAIL,
+                window_seconds=REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+                resource="registration attempts (per email)",
+            )
+        ip = client_ip_for_rate_limit()
+        if ip:
+            await check_rate_limit(
+                key=f"rl:auth:register:ip:{ip}",
+                limit=REGISTER_RATE_LIMIT_IP,
+                window_seconds=REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+                resource="registration attempts (per ip)",
             )
 
     async def _get_user_by_id(self, user_id: UUID) -> User | None:

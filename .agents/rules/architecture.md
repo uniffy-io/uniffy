@@ -36,6 +36,10 @@ Uniffy uses **domain-driven vertical slices**. Each feature is self-contained:
 **API layer**: ConnectRPC (Protocol Buffers + Connect). All API communication goes through generated clients rather than REST. Proto definitions are the source of truth. Generated code is imported as `from uniffy_proto.` (Python) and `@uniffy/proto/` (TypeScript).
 
 **Multi-tenancy**: All content is scoped to `organization_id`. Users are global; memberships are org-scoped.
+A notification stream serves only its request organization: `publish_notification` stamps
+`organization_id` on every `notifications:{user_id}` payload, and `NotificationOrganizationFilter`
+drops another organization's payloads except the `_ORGANIZATION_CHANNEL_TYPES` allowlist in
+`domains/notifications/scope.py`, whose events ride channels named after one organization.
 
 **Permission system**: Every content row carries an `access_mode` + optional `baseline_role`, resolved by `PermissionChecker.effective_role`. Personal content is private until shared - org/domain admins get no content bypass. Full model, enforcement points, caching, search/tag filtering, chat's separate model, and the hard rules live in **`.agents/rules/permissions.md`** (the single source of truth - do not duplicate it here).
 
@@ -121,9 +125,6 @@ An externally callable mutation owns its authoritative transaction. Domain rows 
 facts commit together through focused `stage_*` collaborators; search, cache, realtime, mail, and
 queue effects run after commit or through an owner-defined durable recovery path. Detailed backend
 rules and executable boundaries live in `backend.md` and root `pyproject.toml`.
-
-A notification stream serves only its request organization. `publish_notification` stamps `organization_id` on
-every `notifications:{user_id}` payload, and `NotificationOrganizationFilter` drops those of another organization.
 
 ---
 

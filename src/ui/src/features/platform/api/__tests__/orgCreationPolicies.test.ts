@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OrgCreationPolicy } from "@uniffy/proto/superadmin/v1/system_config_pb";
-import { ORG_CREATION_POLICY_OPTIONS } from "@/features/admin/components/organization/orgCreationPolicies";
+import { ORG_CREATION_POLICY_OPTIONS } from "@/features/platform/api/orgCreationPolicies";
 import { systemConfigApi } from "@/features/platform/api/systemConfigApi";
 
 const shared = vi.hoisted(() => ({ setPolicy: vi.fn() }));

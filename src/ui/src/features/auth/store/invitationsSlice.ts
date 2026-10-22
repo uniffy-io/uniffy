@@ -16,9 +16,11 @@ export interface PendingInvitation {
   createdAt: string;
 }
 
+export type InvitationsStatus = "idle" | "loading" | "ready" | "error";
+
 export interface InvitationsState {
   items: PendingInvitation[];
-  status: "idle" | "loading" | "ready" | "error";
+  status: InvitationsStatus;
   /** The invitation an accept or decline is running for. */
   actingId: string | null;
 }
@@ -57,6 +59,10 @@ export const invitationsSlice = createSlice({
     invitationsFailed: (state) => {
       state.status = "error";
     },
+    // A background reload that failed puts back the status it found, so it shows no error.
+    invitationsReloadFailed: (state, action: PayloadAction<InvitationsStatus>) => {
+      state.status = action.payload;
+    },
     invitationActionStarted: (state, action: PayloadAction<string>) => {
       state.actingId = action.payload;
     },
@@ -84,6 +90,7 @@ export const {
   invitationsLoading,
   invitationsLoaded,
   invitationsFailed,
+  invitationsReloadFailed,
   invitationActionStarted,
   invitationActionFinished,
   invitationRemoved,
@@ -95,5 +102,6 @@ type InvitationsRootState = Pick<RootState, "invitations">;
 export const selectPendingInvitations = (state: InvitationsRootState) => state.invitations.items;
 export const selectPendingInvitationsStatus = (state: InvitationsRootState) =>
   state.invitations.status;
+export const selectInvitationActingId = (state: InvitationsRootState) => state.invitations.actingId;
 export const selectPendingInvitationCount = (state: InvitationsRootState): number =>
   state.invitations.items.length;

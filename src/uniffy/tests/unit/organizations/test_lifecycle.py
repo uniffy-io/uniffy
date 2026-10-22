@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 from uuid import UUID
 
 import pytest
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
 from uniffy.core.audit.actions import Action
@@ -420,16 +421,12 @@ class TestOwnerDelete:
 
 
 class TestPlatformDelete:
-    async def test_platform_delete_keeps_its_audit_action_and_fanout(self) -> None:
-        org = _org()
-        member_ids = [generate_id()]
-        order: list[str] = []
-        session = _deletion_session(org, member_ids, order)
+    async def _delete(
+        self, session: MagicMock, org: Organization, order: list[str], operator_id: UUID
+    ) -> tuple[str, AsyncMock, AsyncMock, AsyncMock, MagicMock]:
         call_lifecycle = MagicMock(end_for_organization=AsyncMock())
-        operator_id = generate_id()
         ops = PlatformDirectoryOperations(session, call_lifecycle)
         ops._user_ops.require_system_admin = AsyncMock()
-        ops._require_org = AsyncMock(return_value=org)
         ops.get_organization = AsyncMock(return_value="detail")
         audit = AsyncMock()
         publish = AsyncMock(side_effect=lambda *_: order.append("publish"))
@@ -447,6 +444,18 @@ class TestPlatformDelete:
                 confirm_slug=_SLUG,
                 reason=" Abuse report ",
             )
+        return result, audit, publish, mails, call_lifecycle
+
+    async def test_platform_delete_keeps_its_audit_action_and_fanout(self) -> None:
+        org = _org()
+        member_ids = [generate_id()]
+        order: list[str] = []
+        session = _deletion_session(org, member_ids, order)
+        operator_id = generate_id()
+
+        result, audit, _, mails, call_lifecycle = await self._delete(
+            session, org, order, operator_id
+        )
 
         assert result == "detail"
         assert org.deleted_by_user_id == operator_id
@@ -463,6 +472,33 @@ class TestPlatformDelete:
             session, org.id, CallEndReason.ORG_DELETED
         )
         mails.assert_awaited_once_with(session, org, "Abuse report", deleted_by_owner=False)
+
+    async def test_loads_the_organization_under_a_row_lock(self) -> None:
+        org = _org()
+        session = _deletion_session(org, [], [])
+
+        await self._delete(session, org, [], generate_id())
+
+        statement = session.execute.await_args_list[0].args[0]
+        assert "FOR UPDATE" in str(statement.compile(dialect=postgresql.dialect()))
+        assert statement.get_execution_options()["populate_existing"] is True
+
+    async def test_a_delete_that_won_the_lock_first_is_left_untouched(self) -> None:
+        deleted_at = datetime.now(UTC) - timedelta(minutes=1)
+        org = _org(deleted_at=deleted_at)
+        org.deleted_by_user_id = generate_id()
+        owner_id = org.deleted_by_user_id
+        order: list[str] = []
+        session = _deletion_session(org, [generate_id()], order)
+
+        result, audit, publish, mails, _ = await self._delete(session, org, order, generate_id())
+
+        assert result == "detail"
+        assert (org.deleted_at, org.deleted_by_user_id) == (deleted_at, owner_id)
+        assert order == []
+        audit.assert_not_awaited()
+        publish.assert_not_awaited()
+        mails.assert_not_awaited()
 
 
 class TestDeletionMails:
@@ -507,7 +543,12 @@ class TestDeletionMails:
         }
         # Strict undefined fails the render on any key the template reads but the context lacks.
         rendered = await render_template(args[2], context)
-        assert opening in rendered.text
+        for body in (rendered.text, rendered.html):
+            assert opening in body
+            assert "Access to the workspace ends now." in body
+            assert "A platform operator can restore it before then." in body
+            assert "Sign-in" not in body
+            assert "support" not in body
 
     async def test_a_live_organization_sends_nothing(self) -> None:
         session = MagicMock(execute=AsyncMock())
@@ -581,7 +622,22 @@ class TestRename:
 
     async def test_a_slug_claimed_at_commit_reads_as_taken(self) -> None:
         org = _org()
-        commit = AsyncMock(side_effect=IntegrityError("UPDATE", {}, Exception("duplicate key")))
+        commit = AsyncMock(
+            side_effect=IntegrityError(
+                "UPDATE",
+                {},
+                Exception(
+                    'duplicate key value violates unique constraint "ix_login_organizations_slug"'
+                ),
+            )
+        )
 
         with pytest.raises(ValidationError, match="Slug is already in use"):
+            await self._update(org, slug="taken", commit=commit)
+
+    async def test_another_constraint_at_commit_is_not_reported_as_a_slug_conflict(self) -> None:
+        org = _org()
+        commit = AsyncMock(side_effect=IntegrityError("UPDATE", {}, Exception("check violation")))
+
+        with pytest.raises(IntegrityError):
             await self._update(org, slug="taken", commit=commit)

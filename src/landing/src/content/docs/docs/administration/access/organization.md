@@ -6,7 +6,7 @@ sidebar:
   order: 0
 ---
 
-This page holds the decisions that belong to the organization as a whole. What it is called, who owns it, and whether it keeps existing.
+Rename the organization, change its slug, hand it to a new owner, or delete it. These are the decisions that belong to the organization as a whole.
 
 ## Who can do what
 

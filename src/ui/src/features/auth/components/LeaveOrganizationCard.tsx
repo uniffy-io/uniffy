@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { friendlyErrorMessage } from "@/config";
+import { expectOrganizationLoss } from "@/config/api";
 import { organizationsApi } from "@/features/auth/api/organizationsApi";
 import { leaveCurrentOrganizationScope } from "@/features/auth/components/leaveOrganizationScope";
 
@@ -29,15 +30,23 @@ export function LeaveOrganizationCard({
   const leave = async () => {
     if (leaving || !userId) return;
     setLeaving(true);
+    // The server publishes the revoke before it answers, so the loss is expected from here on.
+    const releaseExpectedLoss = expectOrganizationLoss(organizationId);
     try {
       await organizationsApi.leaveOrganization({ organizationId });
     } catch (err) {
+      releaseExpectedLoss();
       const message = friendlyErrorMessage(err instanceof Error ? err.message : String(err));
       if (message) toast.error(message);
       setLeaving(false);
       return;
     }
-    await leaveCurrentOrganizationScope(dispatch, { organizationId, userId, navigate });
+    await leaveCurrentOrganizationScope(dispatch, {
+      organizationId,
+      userId,
+      navigate,
+      releaseExpectedLoss,
+    });
     toast.success(`You left ${organizationName}.`);
   };
 

@@ -52,6 +52,26 @@ class TestNormalizeSlug:
         with pytest.raises(ValidationError):
             normalize_slug("a" * 256)
 
+    @pytest.mark.parametrize(
+        "slug",
+        ["acme_inc", "café", "Acme_Inc", "acme--inc", "-acme", "acme-"],
+        ids=["underscore", "accent", "uppercase-underscore", "double-hyphen", "leading", "trailing"],
+    )
+    def test_anything_beyond_ascii_letters_digits_and_single_hyphens_raises(self, slug: str):
+        with pytest.raises(ValidationError) as exc_info:
+            normalize_slug(slug)
+
+        assert exc_info.value.field == "slug"
+        assert "lowercase letters, digits and hyphens" in str(exc_info.value)
+
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [("Café Society", "cafe-society"), ("snake_case_name", "snake-case-name")],
+        ids=["accent", "underscore"],
+    )
+    def test_fallback_name_derives_a_valid_slug(self, name: str, expected: str):
+        assert normalize_slug("", fallback_name=name) == expected
+
 
 class TestNormalizePlan:
     def test_empty_defaults_to_free(self):

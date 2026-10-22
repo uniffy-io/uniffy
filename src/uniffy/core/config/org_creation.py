@@ -5,16 +5,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from enum import StrEnum
-from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.membership import has_active_membership
 from uniffy.core.config.settings import DeploymentSettingsOperations
 from uniffy.core.config.source import SettingSource
-from uniffy.core.models.login.organization import Organization
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 
 logger = logger.bind(component="core.config.org_creation")
@@ -22,6 +19,9 @@ logger = logger.bind(component="core.config.org_creation")
 ORG_CREATION_NAMESPACE = "system"
 ORG_CREATION_KEY = "org_creation"
 _ORG_CREATION_ENV = "ALLOW_ORG_CREATION"
+
+# Every ListMyOrganizations resolves the policy, so a bad value warns once per process.
+_warned_values: set[tuple[SettingSource, str]] = set()
 
 
 class OrgCreationPolicy(StrEnum):
@@ -49,11 +49,14 @@ def _parse_policy(raw: object, *, source: SettingSource) -> OrgCreationPolicy | 
             return OrgCreationPolicy(raw.strip().lower())
         except ValueError:
             pass
-    logger.warning(
-        "Ignoring an unknown organization creation policy",
-        value=repr(raw),
-        source=source.value,
-    )
+    seen = (source, repr(raw))
+    if seen not in _warned_values:
+        _warned_values.add(seen)
+        logger.warning(
+            "Ignoring an unknown organization creation policy",
+            value=repr(raw),
+            source=source.value,
+        )
     return None
 
 
@@ -87,28 +90,9 @@ async def user_can_create_organization(session: AsyncSession, user: User) -> boo
         return True
     if policy is OrgCreationPolicy.OPERATORS_ONLY:
         return False
-    return await _holds_active_membership(
+    # A suspended organization counts as no membership, as it does in every access gate.
+    return await has_active_membership(
         session,
         user.id,
         owner_only=policy is OrgCreationPolicy.OPERATORS_AND_OWNERS,
     )
-
-
-async def _holds_active_membership(
-    session: AsyncSession, user_id: UUID, *, owner_only: bool
-) -> bool:
-    """Suspended organizations count as no membership, as they do in every access gate."""
-    query = (
-        select(OrganizationMember.id)
-        .join(Organization, Organization.id == OrganizationMember.organization_id)
-        .where(
-            OrganizationMember.user_id == user_id,
-            OrganizationMember.is_active.is_(True),
-            Organization.deleted_at.is_(None),
-            Organization.is_suspended.is_(False),
-        )
-        .limit(1)
-    )
-    if owner_only:
-        query = query.where(OrganizationMember.role == OrganizationRole.OWNER)
-    return (await session.execute(query)).scalar_one_or_none() is not None

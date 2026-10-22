@@ -2,7 +2,11 @@ import { createElement, useCallback, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { selectCurrentOrganization } from "@/features/auth/store/organizationsSlice";
+import {
+  isCurrentOrganizationSlug,
+  selectCurrentOrganization,
+  selectOrganizations,
+} from "@/features/auth/store/organizationsSlice";
 import { switchOrganization } from "@/features/auth/store/organizationsThunks";
 import { uploadService } from "@/features/files/upload";
 import { hasUnsyncedEdits } from "@/features/realtime";
@@ -67,6 +71,7 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
   const userId = useAppSelector((state) => state.auth.user?.id ?? null);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const currentSlug = useAppSelector((state) => state.auth.currentOrganizationSlug);
+  const organizations = useAppSelector(selectOrganizations);
   const currentOrganization = useAppSelector(selectCurrentOrganization);
   const isSwitching = useAppSelector((state) => state.organizations.switchingSlug !== null);
   const [pending, setPending] = useState<PendingSwitch | null>(null);
@@ -109,13 +114,22 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
   const requestSwitch = useCallback(
     async (slug: string, target?: string) => {
       if (isSwitching) return;
-      if (slug === currentSlug) {
+      const current = { id: currentOrganizationId, slug: currentSlug };
+      if (isCurrentOrganizationSlug(slug, organizations, current)) {
         navigate(target ?? "/");
         return;
       }
       await guardSwitch(() => performSwitch(slug, target));
     },
-    [currentSlug, guardSwitch, isSwitching, navigate, performSwitch],
+    [
+      currentOrganizationId,
+      currentSlug,
+      guardSwitch,
+      isSwitching,
+      navigate,
+      organizations,
+      performSwitch,
+    ],
   );
 
   const confirmSwitch = async () => {

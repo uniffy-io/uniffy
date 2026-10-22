@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { combineReducers, configureStore, isAction, type Middleware } from "@reduxjs/toolkit";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { BinaryWriter, WireType } from "@bufbuild/protobuf/wire";
 import type { AppDispatch } from "@/app/store";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { getAccessToken, setMemoryAccessToken } from "@/config/api";
@@ -43,6 +44,20 @@ const form: DeploymentSetupForm = {
   organizationName: " Acme Inc ",
   organizationSlug: "acme-inc-",
 };
+
+function refusal(message: string, code: Code, reason?: string): ConnectError {
+  const error = new ConnectError(message, code);
+  if (reason) {
+    const value = new BinaryWriter()
+      .tag(1, WireType.LengthDelimited)
+      .string(reason)
+      .tag(2, WireType.LengthDelimited)
+      .string("uniffy")
+      .finish();
+    error.details.push({ type: "google.rpc.ErrorInfo", value });
+  }
+  return error;
+}
 
 let actions: string[] = [];
 let store = createStore();
@@ -147,7 +162,7 @@ it("signs the operator into the first organization on the session setup returns"
 
 it("reports a deployment someone else already set up without signing in", async () => {
   shared.setup.mockRejectedValue(
-    new ConnectError("Setup is already complete", Code.FailedPrecondition),
+    refusal("Setup is already complete", Code.FailedPrecondition, "setup_completed"),
   );
 
   await expect(runSetup()).resolves.toEqual({
@@ -156,6 +171,21 @@ it("reports a deployment someone else already set up without signing in", async 
   });
   expect(actions).not.toContain("auth/completeSignIn/pending");
   expect(store.getState().auth.isAuthenticated).toBe(false);
+});
+
+it("keeps the form on any other failed precondition", async () => {
+  shared.setup.mockRejectedValue(
+    refusal("The deployment is not ready for setup", Code.FailedPrecondition),
+  );
+
+  await expect(runSetup()).resolves.toEqual({
+    status: "failed",
+    message: "The deployment is not ready for setup",
+  });
+  shared.setup.mockRejectedValue(
+    refusal("Encryption is not configured", Code.FailedPrecondition, "encryption_unavailable"),
+  );
+  await expect(runSetup()).resolves.toMatchObject({ status: "failed" });
 });
 
 it("keeps the form on a refused field with the server's message", async () => {

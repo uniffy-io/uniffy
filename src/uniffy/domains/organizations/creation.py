@@ -22,6 +22,7 @@ from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.domains.organizations.naming import (
     ensure_slug_available,
+    is_slug_conflict,
     normalize_org_name,
     normalize_slug,
 )
@@ -32,8 +33,6 @@ logger = logger.bind(component="organizations.creation")
 ORG_CREATE_LIMIT_PER_USER = 5
 ORG_CREATE_LIMIT_PER_IP = 20
 ORG_CREATE_WINDOW_SECONDS = 3600
-
-_SLUG_UNIQUE_INDEX = "ix_login_organizations_slug"
 
 
 async def create_organization_for_user(
@@ -70,8 +69,7 @@ async def create_organization_for_user(
         )
     except IntegrityError as exc:
         await session.rollback()
-        # A concurrent create can claim the slug between the availability check and the insert.
-        if _SLUG_UNIQUE_INDEX in str(exc.orig):
+        if is_slug_conflict(exc):
             raise ValidationError("slug", "Slug is already in use") from exc
         raise
 

@@ -32,6 +32,7 @@ import {
   acceptInvitation,
   declineInvitation,
   fetchMyInvitations,
+  refreshMyInvitationsQuietly,
 } from "@/features/auth/store/invitationsThunks";
 import {
   organizationsLoaded,
@@ -215,6 +216,23 @@ it("keeps the last list when a reload fails", async () => {
   expect(invitations().items.map((item) => item.id)).toEqual(["invite-globex"]);
 });
 
+it("reloads quietly and keeps the list and its status when the reload fails", async () => {
+  shared.listInvitations.mockResolvedValueOnce({ invitations: [globexInvitation] });
+  await dispatch()(fetchMyInvitations()).unwrap();
+
+  shared.listInvitations.mockRejectedValueOnce(new Error("network unavailable"));
+  await expect(dispatch()(refreshMyInvitationsQuietly()).unwrap()).resolves.toBeNull();
+
+  // No rejected action, so errorToastMiddleware has nothing to toast.
+  expect(actions.some((type) => type.endsWith("/rejected"))).toBe(false);
+  expect(invitations().status).toBe("ready");
+  expect(invitations().items.map((item) => item.id)).toEqual(["invite-globex"]);
+
+  shared.listInvitations.mockResolvedValueOnce({ invitations: [initechInvitation] });
+  await dispatch()(refreshMyInvitationsQuietly()).unwrap();
+  expect(invitations().items.map((item) => item.id)).toEqual(["invite-initech"]);
+});
+
 it("skips a load while one is running", async () => {
   let reply!: (response: unknown) => void;
   shared.listInvitations.mockImplementationOnce(
@@ -226,6 +244,7 @@ it("skips a load while one is running", async () => {
 
   const first = dispatch()(fetchMyInvitations());
   void dispatch()(fetchMyInvitations());
+  void dispatch()(refreshMyInvitationsQuietly());
   reply({ invitations: [globexInvitation] });
   await first;
 

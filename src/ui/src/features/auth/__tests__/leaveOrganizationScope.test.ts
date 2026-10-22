@@ -11,6 +11,7 @@ import type { AppDispatch, RootState } from "@/app/store";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { setStoreRef } from "@/app/storeRef";
 import {
+  expectOrganizationLoss,
   ORGANIZATION_LOST_EVENT,
   refreshAccessToken,
   setMemoryAccessToken,
@@ -69,6 +70,17 @@ function dispatch() {
   return store.dispatch as AppDispatch;
 }
 
+/** Leaves the way the leave and delete flows do: the loss is armed before their RPC. */
+function leave(navigate = vi.fn()) {
+  const releaseExpectedLoss = expectOrganizationLoss("org-acme");
+  return leaveCurrentOrganizationScope(dispatch(), {
+    organizationId: "org-acme",
+    userId: "user",
+    navigate,
+    releaseExpectedLoss,
+  });
+}
+
 beforeEach(() => {
   shared.refresh.mockReset();
   vi.mocked(clearSessionCaches).mockReset().mockResolvedValue(undefined);
@@ -111,11 +123,7 @@ it("drops the organization's caches, lands org-less credentials and opens the we
   shared.refresh.mockResolvedValue(orgLessMint);
   const navigate = vi.fn();
 
-  await leaveCurrentOrganizationScope(dispatch(), {
-    organizationId: "org-acme",
-    userId: "user",
-    navigate,
-  });
+  await leave(navigate);
 
   expect(clearSessionCaches).toHaveBeenCalledWith(expect.any(Function), {
     reason: "lost-grant",
@@ -142,11 +150,7 @@ it("takes the loss the refresh announces so no later mount replays it as a warni
   const announced = vi.fn();
   window.addEventListener(ORGANIZATION_LOST_EVENT, announced);
 
-  await leaveCurrentOrganizationScope(dispatch(), {
-    organizationId: "org-acme",
-    userId: "user",
-    navigate: vi.fn(),
-  });
+  await leave();
 
   expect(announced).toHaveBeenCalledOnce();
   expect(takePendingOrganizationLost("user")).toBeNull();
@@ -164,22 +168,14 @@ it("marks the loss expected for a lost-grant listener that is already mounted", 
   shared.refresh.mockResolvedValue(orgLessMint);
   const losses = recordLosses();
 
-  await leaveCurrentOrganizationScope(dispatch(), {
-    organizationId: "org-acme",
-    userId: "user",
-    navigate: vi.fn(),
-  });
+  await leave();
 
   expect(losses).toEqual([{ organizationId: "org-acme", expected: true }]);
 });
 
 it("announces a later loss of the same organization as unexpected", async () => {
   shared.refresh.mockResolvedValue(orgLessMint);
-  await leaveCurrentOrganizationScope(dispatch(), {
-    organizationId: "org-acme",
-    userId: "user",
-    navigate: vi.fn(),
-  });
+  await leave();
   store.dispatch(
     setCredentials({
       user: { id: "user" } as Parameters<typeof setCredentials>[0]["user"],
@@ -204,12 +200,39 @@ it("still leaves for the welcome page when the refresh fails", async () => {
   shared.refresh.mockRejectedValue(new ConnectError("offline", Code.Unavailable));
   const navigate = vi.fn();
 
-  await leaveCurrentOrganizationScope(dispatch(), {
-    organizationId: "org-acme",
-    userId: "user",
-    navigate,
-  });
+  await leave(navigate);
 
   expect(actions).toContain("auth/resetOrganizationScope");
   expect(navigate).toHaveBeenCalledWith(WELCOME_PATH, { replace: true });
+});
+
+it("marks a loss that another refresh announces while the leave call is still out", async () => {
+  shared.refresh.mockResolvedValue(orgLessMint);
+  const losses = recordLosses();
+  const releaseExpectedLoss = expectOrganizationLoss("org-acme");
+
+  // The server published the revoke before it answered, and another path refreshed meanwhile.
+  await refreshAccessToken();
+  await leaveCurrentOrganizationScope(dispatch(), {
+    organizationId: "org-acme",
+    userId: "user",
+    navigate: vi.fn(),
+    releaseExpectedLoss,
+  });
+
+  expect(losses).toEqual([{ organizationId: "org-acme", expected: true }]);
+});
+
+it("releases the caller's mark once the tab has left", async () => {
+  shared.refresh.mockResolvedValue(orgLessMint);
+  const releaseExpectedLoss = vi.fn();
+
+  await leaveCurrentOrganizationScope(dispatch(), {
+    organizationId: "org-acme",
+    userId: "user",
+    navigate: vi.fn(),
+    releaseExpectedLoss,
+  });
+
+  expect(releaseExpectedLoss).toHaveBeenCalledOnce();
 });

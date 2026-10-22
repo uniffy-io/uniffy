@@ -9,8 +9,6 @@ from uniffy.domains.organizations.invitations.errors import (
 from uniffy.domains.organizations.invitations.operations import (
     AcceptVia,
     InvitationOperations,
-    InviteOutcome,
-    InviteResult,
 )
 from uniffy.domains.organizations.invitations.reader import (
     InvitationPreview,
@@ -27,7 +25,5 @@ __all__ = [
     "InvitationPreview",
     "InvitationReader",
     "InvitationRevokedError",
-    "InviteOutcome",
-    "InviteResult",
     "MyInvitationRow",
 ]

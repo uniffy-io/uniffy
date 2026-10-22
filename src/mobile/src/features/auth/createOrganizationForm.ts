@@ -13,8 +13,13 @@ export const CREATION_NOT_ALLOWED_MESSAGE =
 const CREATE_FAILED_MESSAGE = "Could not create the organization. Try again.";
 const FIELD_REFUSAL = /^Validation error on '(name|slug)': (.+)$/;
 
+/** NFKD splits an accent off its base letter, so dropping the marks turns "Café" into "cafe". */
+function foldAccents(value: string): string {
+  return value.normalize("NFKD").replace(/\p{M}+/gu, "");
+}
+
 export function slugFromName(name: string): string {
-  return name
+  return foldAccents(name)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
@@ -22,7 +27,7 @@ export function slugFromName(name: string): string {
 
 /** Keeps a trailing hyphen so the next word can still be typed; `slugFromName` trims it on submit. */
 export function slugFromInput(value: string): string {
-  return value
+  return foldAccents(value)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+/, "");

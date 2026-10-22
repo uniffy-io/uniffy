@@ -1,6 +1,7 @@
 import type { ThunkAction, UnknownAction } from "@reduxjs/toolkit";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { AppDispatch, RootState } from "@/app/store";
+import { decodeErrorReason } from "@/config/api";
 import { friendlyErrorMessage } from "@/config/errorMessages";
 import { authApi } from "@/features/auth/api/authApi";
 import { completeSignIn, signInResultFrom } from "@/features/auth/store/signInThunks";
@@ -20,6 +21,16 @@ export type DeploymentSetupOutcome =
   | { status: "failed"; message: string };
 
 const SETUP_FAILED = "Setup failed. Try again.";
+const SETUP_COMPLETED_REASON = "setup_completed";
+
+/** Another visitor finished setup first; any other failed precondition keeps the form. */
+function isSetupCompleted(error: unknown): boolean {
+  return (
+    error instanceof ConnectError &&
+    error.code === Code.FailedPrecondition &&
+    decodeErrorReason(error) === SETUP_COMPLETED_REASON
+  );
+}
 
 /** Null when the config call fails, so the page stays where it is instead of guessing. */
 export async function readSetupRequired(): Promise<boolean | null> {
@@ -55,9 +66,7 @@ export function setUpDeployment(
     } catch (error) {
       const raw = error instanceof Error ? error.message : typeof error === "string" ? error : "";
       const message = friendlyErrorMessage(raw) ?? SETUP_FAILED;
-      if (error instanceof ConnectError && error.code === Code.FailedPrecondition) {
-        return { status: "already-set-up", message };
-      }
+      if (isSetupCompleted(error)) return { status: "already-set-up", message };
       return { status: "failed", message };
     }
   };

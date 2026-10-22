@@ -4,22 +4,21 @@ from __future__ import annotations
 
 from loguru import logger
 from sqlalchemy import BigInteger, func, literal, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import client_ip_for_rate_limit, email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.emails import normalize_email
 from uniffy.core.auth.passwords.crypto import hash_password
 from uniffy.core.auth.passwords.policy import validate_password
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.errors import SetupAlreadyCompletedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMemberSource
 from uniffy.core.models.login.user import User
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search import SearchIndexer
-from uniffy.domains.auth.operations import AuthOperations
+from uniffy.domains.auth.contracts import stage_bootstrap_authentication
 from uniffy.domains.auth.types import AuthResult
-from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.organizations.naming import (
     ensure_slug_available,
     normalize_org_name,
@@ -39,10 +38,6 @@ MAX_EMAIL_LENGTH = 255
 MAX_FULL_NAME_LENGTH = 255
 
 
-async def setup_required(session: AsyncSession) -> bool:
-    return (await session.execute(select(User.id).limit(1))).scalar_one_or_none() is None
-
-
 async def setup_deployment(
     *,
     email: str,
@@ -52,7 +47,6 @@ async def setup_deployment(
     organization_slug: str | None,
     user_agent: str | None,
     search_indexer: SearchIndexer,
-    call_lifecycle: CallRevocationLifecycle,
 ) -> AuthResult:
     """Closes for good once any user exists, so it can stay a public RPC."""
     ip = client_ip_for_rate_limit()
@@ -77,6 +71,9 @@ async def setup_deployment(
     slug = normalize_slug(organization_slug or "", fallback_name=name)
 
     async with open_session() as session:
+        # Every call after first run stops here instead of queueing on the deployment wide lock.
+        if not await setup_required(session):
+            raise SetupAlreadyCompletedError("Setup is already complete")
         org_ops = OrganizationOperations(session)
         try:
             # The transaction-scoped lock on the bootstrap key serializes setup against
@@ -111,8 +108,8 @@ async def setup_deployment(
             organization = staged.organization
             # The first session skips two-factor enrollment because the account was created in
             # this request. The platform MFA policy applies from the operator's next sign-in.
-            result = await AuthOperations(session, call_lifecycle).stage_organization_session(
-                user, organization, user_agent=user_agent or ""
+            result = await stage_bootstrap_authentication(
+                session, user, organization, user_agent=user_agent or ""
             )
             await write_audit_event(
                 session,

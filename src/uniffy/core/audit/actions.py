@@ -229,7 +229,7 @@ class Action:
     MAIL_SYSTEM_CONFIG_UPDATED = "mail.system_config_updated"
     MAIL_SYSTEM_CONFIG_CLEARED = "mail.system_config_cleared"
 
-    # Deployment encryption
+    # Deployment
     DEPLOYMENT_ENCRYPTION_ROTATED = "deployment.encryption_rotated"
     DEPLOYMENT_SETUP_COMPLETED = "deployment.setup_completed"
 

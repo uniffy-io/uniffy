@@ -21,8 +21,8 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { invitationsApi } from "@/features/admin/api/invitationsApi";
+import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
 import { InvitationStatus, type Invitation } from "@uniffy/proto/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
 
@@ -39,19 +39,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: String(InvitationStatus.REVOKED), label: "Revoked" },
   { value: String(InvitationStatus.EXPIRED), label: "Expired" },
 ];
-
-function roleLabel(role: OrganizationRole): string {
-  switch (role) {
-    case OrganizationRole.OWNER:
-      return "Owner";
-    case OrganizationRole.ADMIN:
-      return "Admin";
-    case OrganizationRole.MEMBER:
-      return "Member";
-    default:
-      return "Member";
-  }
-}
 
 function StatusBadge({ status }: { status: InvitationStatus }) {
   if (status === InvitationStatus.ACCEPTED) {
@@ -120,7 +107,7 @@ function InvitationRow({ invitation, onRevoke, onResend, busyId }: InvitationRow
           </div>
         </TableCell>
         <TableCell align="center" className="hidden md:table-cell text-sm">
-          {roleLabel(invitation.role)}
+          {getRoleLabel(invitation.role)}
         </TableCell>
         <TableCell align="center" className="hidden lg:table-cell text-xs text-muted-foreground">
           {formatProtoDateTime(invitation.expiresAt)}

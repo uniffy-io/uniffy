@@ -1,7 +1,6 @@
 import type { NavigateFunction } from "react-router-dom";
 import type { AppDispatch } from "@/app/store";
 import {
-  expectOrganizationLoss,
   ORGANIZATION_LOST_EVENT,
   refreshAccessToken,
   takePendingOrganizationLost,
@@ -16,17 +15,23 @@ interface LeftOrganization {
   organizationId: string;
   userId: string;
   navigate: NavigateFunction;
+  /**
+   * The release `expectOrganizationLoss(organizationId)` returned. The caller arms it before the
+   * leave or delete RPC, since the server publishes the revoke before it answers and any refresh in
+   * that window would otherwise announce the loss as unexpected.
+   */
+  releaseExpectedLoss: () => void;
 }
 
 /**
  * Moves this tab out of an organization the user just left or deleted, running the cleanup the
  * lost-grant listeners would run. The caller confirms with its own toast, so the loss the refresh
- * announces is marked expected for a ProtectedRoute already mounted, and taken the moment it fires
- * so a redirect cannot mount one that replays it as "Your access to that organization ended."
+ * announces stays marked expected for a ProtectedRoute already mounted, and is taken the moment it
+ * fires so a redirect cannot mount one that replays it as "Your access to that organization ended."
  */
 export async function leaveCurrentOrganizationScope(
   dispatch: AppDispatch,
-  { organizationId, userId, navigate }: LeftOrganization,
+  { organizationId, userId, navigate, releaseExpectedLoss }: LeftOrganization,
 ): Promise<void> {
   void clearSessionCaches(dispatch, {
     reason: "lost-grant",
@@ -42,7 +47,6 @@ export async function leaveCurrentOrganizationScope(
   const takeAnnouncedLoss = () => {
     takePendingOrganizationLost(userId);
   };
-  const releaseExpectedLoss = expectOrganizationLoss(organizationId);
   window.addEventListener(ORGANIZATION_LOST_EVENT, takeAnnouncedLoss);
   try {
     // The server dropped the grant, so this comes back org-less and the tab leaves the org.

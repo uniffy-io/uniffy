@@ -39,7 +39,9 @@ from uniffy.core.search import SearchIndexer
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
 from uniffy.domains.organizations.lifecycle import (
+    active_member_ids,
     finish_organization_deletion_after_commit,
+    lock_organization,
     purge_at_from,
     stage_organization_deletion,
 )
@@ -502,7 +504,7 @@ class PlatformDirectoryOperations:
         org.suspension_reason = reason
         self._session.add(org)
 
-        member_ids = await self._active_member_ids(org.id)
+        member_ids = await active_member_ids(self._session, org.id)
 
         await write_audit_event(
             self._session,
@@ -578,12 +580,13 @@ class PlatformDirectoryOperations:
         if not reason:
             raise ValidationError("reason", "reason is required")
 
-        org = await self._require_org(organization_id)
+        org = await lock_organization(self._session, organization_id)
         if confirm_slug.strip() != org.slug:
             raise ValidationError(
                 "confirm_slug",
                 "Confirmation slug does not match",
             )
+        # A concurrent delete won the row lock.
         if org.deleted_at is not None:
             return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
@@ -1353,13 +1356,3 @@ class PlatformDirectoryOperations:
             )
             for oid, role, joined_at, is_active, name, slug, is_suspended, deleted_at in rows
         ]
-
-    async def _active_member_ids(self, org_id: UUID) -> list[UUID]:
-        rows = (
-            await self._session.execute(
-                select(OrganizationMember.user_id)
-                .where(OrganizationMember.organization_id == org_id)
-                .where(OrganizationMember.is_active.is_(True))
-            )
-        ).all()
-        return [row[0] for row in rows]

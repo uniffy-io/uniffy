@@ -3,7 +3,7 @@ import { timestampDate } from "@bufbuild/protobuf/wkt";
 import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
 import type { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import type { RootState } from "@/app/store";
-import { AUTH_ACTION_TYPES } from "@/features/auth/store/authActions";
+import { AUTH_ACTION_TYPES, resetOrganizationScope } from "@/features/auth/store/authActions";
 
 export interface OrganizationSummary {
   id: string;
@@ -14,9 +14,13 @@ export interface OrganizationSummary {
   joinedAt: string;
 }
 
+export type OrganizationsStatus = "idle" | "loading" | "ready" | "error";
+
 export interface OrganizationsState {
   items: OrganizationSummary[];
-  status: "idle" | "loading" | "ready" | "error";
+  status: OrganizationsStatus;
+  /** How the last settled load ended; a reload keeps it, so pages keep what they show. */
+  settled: "ready" | "error" | null;
   switchingSlug: string | null;
   /** The deployment's creation policy as the server applied it to this user at the last load. */
   canCreateOrganization: boolean;
@@ -25,6 +29,7 @@ export interface OrganizationsState {
 const initialState: OrganizationsState = {
   items: [],
   status: "idle",
+  settled: null,
   switchingSlug: null,
   canCreateOrganization: false,
 };
@@ -55,6 +60,7 @@ export const organizationsSlice = createSlice({
         state.items = action.payload.items;
         state.canCreateOrganization = action.payload.canCreateOrganization;
         state.status = "ready";
+        state.settled = "ready";
       },
       prepare: (items: OrganizationSummary[], canCreateOrganization = false) => ({
         payload: { items, canCreateOrganization },
@@ -70,6 +76,11 @@ export const organizationsSlice = createSlice({
     // A failed reload keeps the last good list so the switcher stays usable.
     organizationsFailed: (state) => {
       state.status = "error";
+      state.settled = "error";
+    },
+    // A background reload that failed puts back the status it found, so it shows no error.
+    organizationsReloadFailed: (state, action: PayloadAction<OrganizationsStatus>) => {
+      state.status = action.payload;
     },
     switchStarted: (state, action: PayloadAction<string>) => {
       state.switchingSlug = action.payload;
@@ -82,6 +93,11 @@ export const organizationsSlice = createSlice({
     // The list is the signed-in user's memberships; the next account starts from nothing.
     builder.addCase(AUTH_ACTION_TYPES.LOGOUT, () => initialState);
     builder.addCase(AUTH_ACTION_TYPES.REHYDRATE_FAILED, () => initialState);
+    // A switch keeps the list but aborts a load in flight and drops its later dispatches, so the
+    // load it interrupted would otherwise never settle.
+    builder.addCase(resetOrganizationScope, (state) => {
+      if (state.status === "loading") state.status = "idle";
+    });
   },
 });
 
@@ -90,6 +106,7 @@ export const {
   organizationsLoaded,
   organizationAdded,
   organizationsFailed,
+  organizationsReloadFailed,
   switchStarted,
   switchFinished,
 } = organizationsSlice.actions;
@@ -100,8 +117,24 @@ type OrganizationsRootState = Pick<RootState, "auth" | "organizations">;
 export const selectOrganizations = (state: OrganizationsRootState) => state.organizations.items;
 export const selectOrganizationsStatus = (state: OrganizationsRootState) =>
   state.organizations.status;
+export const selectOrganizationsSettled = (state: OrganizationsRootState) =>
+  state.organizations.settled;
 export const selectCanCreateOrganization = (state: OrganizationsRootState) =>
   state.organizations.canCreateOrganization;
+
+/**
+ * Whether `slug` names the tab's organization. The listed id decides, since the slug may have been
+ * renamed since the list or the credentials loaded; the slug serves only for an unlisted one.
+ */
+export function isCurrentOrganizationSlug(
+  slug: string,
+  organizations: OrganizationSummary[],
+  current: { id: string | null; slug: string | null },
+): boolean {
+  const listed = organizations.find((organization) => organization.slug === slug);
+  return listed ? listed.id === current.id : slug === current.slug;
+}
+
 export const selectCurrentOrganization = (
   state: OrganizationsRootState,
 ): OrganizationSummary | null => {

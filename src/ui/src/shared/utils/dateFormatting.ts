@@ -128,7 +128,7 @@ export function formatRelativeTime(dateStr: string | undefined): string {
   const now = Date.now();
   const diffMs = now - date.getTime();
   // Clock skew can put a fresh server timestamp just ahead of this clock; that still reads as now.
-  if (diffMs <= -60000) return formatTimeUntil(date, -diffMs);
+  if (diffMs <= -60000) return formatTimeUntil(date, new Date(now));
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
@@ -147,15 +147,25 @@ export function formatRelativeTime(dateStr: string | undefined): string {
   });
 }
 
-function formatTimeUntil(date: Date, aheadMs: number): string {
-  const aheadMin = Math.floor(aheadMs / 60000);
+/** Whole days between the calendar days of two instants in the effective zone. */
+function calendarDaysBetween(from: Date, to: Date): number {
+  return Math.round(
+    (parseCalendarDate(effectiveDayKey(to)).getTime() -
+      parseCalendarDate(effectiveDayKey(from)).getTime()) /
+      86400000,
+  );
+}
+
+function formatTimeUntil(date: Date, now: Date): string {
+  const aheadMin = Math.floor((date.getTime() - now.getTime()) / 60000);
   const aheadHr = Math.floor(aheadMin / 60);
-  const aheadDay = Math.floor(aheadHr / 24);
 
   if (aheadMin < 60) return `in ${aheadMin}m`;
-  if (aheadHr < 24) return `in ${aheadHr}h`;
-  if (aheadDay === 1) return "Tomorrow";
-  if (aheadDay < 30) return `in ${aheadDay}d`;
+  // Past a day ahead, the count is calendar days in the viewer's zone, not 24-hour spans.
+  const aheadDays = calendarDaysBetween(now, date);
+  if (aheadHr < 24 || aheadDays < 1) return `in ${aheadHr}h`;
+  if (aheadDays === 1) return "Tomorrow";
+  if (aheadDays < 30) return `in ${aheadDays}d`;
 
   return date.toLocaleDateString(undefined, {
     month: "short",
@@ -172,11 +182,7 @@ export function formatSmartDateTime(dateStr: string | undefined): string {
   const now = new Date();
 
   // Day boundaries live on the DISPLAY zone's calendar.
-  const dayDiff = Math.round(
-    (parseCalendarDate(effectiveDayKey(now)).getTime() -
-      parseCalendarDate(effectiveDayKey(date)).getTime()) /
-      86400000,
-  );
+  const dayDiff = calendarDaysBetween(date, now);
 
   const time = date.toLocaleTimeString(undefined, {
     hour: "numeric",

@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { friendlyErrorMessage } from "@/config";
 import {
   changedOrganizationFields,
-  organizationFieldError,
-  saveOrganizationChanges,
   type OrganizationField,
-  type OrganizationFields,
 } from "@/features/admin/components/organization/organizationChanges";
+import {
+  saveOrganizationChanges,
+  type OrganizationFields,
+} from "@/features/admin/store/organizationThunks";
+import { fieldErrorFor, MAX_ORGANIZATION_NAME_LENGTH } from "@/features/auth/utils/fieldErrors";
 import { MAX_SLUG_LENGTH, toSlugDraft } from "@/shared/utils/slug";
 
-const MAX_NAME_LENGTH = 255;
+const ORGANIZATION_FIELDS: readonly OrganizationField[] = ["name", "slug"];
 
 function Field({
   label,
@@ -76,7 +78,7 @@ export function OrganizationGeneralForm({
     setSaving(true);
     setErrors({});
     try {
-      const result = (await saveOrganizationChanges(dispatch, organizationId, changes)) ?? {
+      const result = (await dispatch(saveOrganizationChanges(organizationId, changes))) ?? {
         ...saved,
         ...changes,
       };
@@ -84,7 +86,7 @@ export function OrganizationGeneralForm({
       onSaved(result);
       toast.success("Organization updated");
     } catch (err) {
-      const fieldError = organizationFieldError(err);
+      const fieldError = fieldErrorFor(err, ORGANIZATION_FIELDS);
       if (fieldError) {
         setErrors({ [fieldError.field]: fieldError.message });
       } else {
@@ -113,7 +115,7 @@ export function OrganizationGeneralForm({
                 id="organization-name"
                 value={draft.name}
                 onChange={(e) => edit("name", e.target.value)}
-                maxLength={MAX_NAME_LENGTH}
+                maxLength={MAX_ORGANIZATION_NAME_LENGTH}
                 disabled={saving}
                 aria-invalid={errors.name ? true : undefined}
                 aria-describedby={errors.name ? "organization-name-error" : undefined}

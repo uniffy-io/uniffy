@@ -13,6 +13,7 @@ import {
   toOrganizationSummaries,
   type OrganizationSummary,
 } from "@features/auth/organizationSerializer";
+import { claimOrganizationSwitch } from "@features/auth/organizationSwitchGuard";
 
 export const MY_ORGANIZATIONS_QUERY_KEY = ["organizations", "mine"];
 
@@ -51,11 +52,10 @@ export function useSelectOrganization(onSelected?: () => void) {
   const { refetch } = useMyOrganizations();
   const [selectingOrganizationId, setSelectingOrganizationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef(false);
 
   const select = async ({ id, slug }: Pick<OrganizationSummary, "id" | "slug">) => {
-    if (inFlight.current) return;
-    inFlight.current = true;
+    const release = claimOrganizationSwitch();
+    if (!release) return;
     setSelectingOrganizationId(id);
     setError(null);
     try {
@@ -71,7 +71,7 @@ export function useSelectOrganization(onSelected?: () => void) {
       setSelectingOrganizationId(null);
       return;
     } finally {
-      inFlight.current = false;
+      release();
     }
     onSelected?.();
   };

@@ -49,7 +49,9 @@ _TOKEN = "raw-token"
 _PASSWORD = "Fresh invitation password"
 
 
-def _user(*, email: str = "member@acme.io", is_active: bool = True) -> User:
+def _user(
+    *, email: str = "member@acme.io", is_active: bool = True, email_verified: bool = False
+) -> User:
     return User(
         id=generate_id(),
         email=email,
@@ -57,7 +59,7 @@ def _user(*, email: str = "member@acme.io", is_active: bool = True) -> User:
         full_name="Kept Name",
         hashed_password="old-hash",
         is_active=is_active,
-        email_verified=False,
+        email_verified=email_verified,
         token_version=3,
     )
 
@@ -98,8 +100,13 @@ def _session(*values: object) -> MagicMock:
     return session
 
 
-def _org_ops(membership: OrganizationMember | None = None) -> MagicMock:
+def _org_ops(
+    membership: OrganizationMember | None = None,
+    *,
+    existing: OrganizationMember | None = None,
+) -> MagicMock:
     org_ops = MagicMock()
+    org_ops.get_membership = AsyncMock(return_value=existing)
     org_ops.stage_member = AsyncMock(
         return_value=SimpleNamespace(
             membership=membership or SimpleNamespace(id=generate_id()),
@@ -163,8 +170,27 @@ class TestAcceptAsMember:
         org_ops.finish_member_add_after_commit.assert_awaited_once()
         assert org_ops.finish_member_add_after_commit.await_args.args[0].membership is membership
 
-    async def test_id_path_joins_without_verifying_the_email(self) -> None:
+    async def test_id_path_refuses_an_unverified_email(self) -> None:
         user = _user()
+        org_ops = _org_ops()
+        session = _session(user)
+
+        with (
+            patch(f"{_MODULE}.OrganizationOperations", return_value=org_ops),
+            patch(f"{_MODULE}.write_audit_event", new=AsyncMock()) as audit,
+            pytest.raises(PermissionDeniedError, match="invitation link from your email"),
+        ):
+            await _accept_as_member(session, user, invitation_id=generate_id())
+
+        # Refused before the lookup, so an unverified caller learns nothing about the id.
+        assert session.execute.await_count == 1
+        assert user.email_verified is False
+        org_ops.stage_member.assert_not_awaited()
+        audit.assert_not_awaited()
+        session.commit.assert_not_awaited()
+
+    async def test_id_path_joins_a_verified_email(self) -> None:
+        user = _user(email_verified=True)
         org = _org()
         invitation = _invitation(org)
         org_ops = _org_ops()
@@ -176,14 +202,68 @@ class TestAcceptAsMember:
         ):
             await _accept_as_member(session, user, invitation_id=invitation.id)
 
-        assert user.email_verified is False
+        org_ops.stage_member.assert_awaited_once()
         assert invitation.accepted_by_user_id == user.id
         (accepted,) = _audit_calls(audit, Action.AUTH_INVITATION_ACCEPTED)
         assert accepted["details"]["via"] == AcceptVia.ID
+        assert "already_member" not in accepted["details"]
+        session.commit.assert_awaited_once()
+        org_ops.finish_member_add_after_commit.assert_awaited_once()
+
+    @pytest.mark.parametrize("lookup", ["token", "invitation_id"])
+    async def test_an_active_member_spends_the_invitation_and_keeps_their_role(
+        self, lookup: str
+    ) -> None:
+        user = _user(email_verified=True)
+        org = _org()
+        invitation = _invitation(org, role=OrganizationRole.MEMBER)
+        existing = OrganizationMember(
+            user_id=user.id, organization_id=org.id, role=OrganizationRole.ADMIN, is_active=True
+        )
+        org_ops = _org_ops(existing=existing)
+        session = _session(user, invitation, org)
+        value = _TOKEN if lookup == "token" else invitation.id
+
+        with (
+            patch(f"{_MODULE}.OrganizationOperations", return_value=org_ops),
+            patch(f"{_MODULE}.write_audit_event", new=AsyncMock()) as audit,
+        ):
+            joined, member = await _accept_as_member(session, user, **{lookup: value})
+
+        assert joined is org
+        assert member is existing
+        assert existing.role is OrganizationRole.ADMIN
+        org_ops.get_membership.assert_awaited_once_with(user.id, org.id)
+        org_ops.stage_member.assert_not_awaited()
+        org_ops.finish_member_add_after_commit.assert_not_awaited()
+        assert invitation.accepted_at is not None
+        assert invitation.accepted_by_user_id == user.id
+        (accepted,) = _audit_calls(audit, Action.AUTH_INVITATION_ACCEPTED)
+        assert accepted["details"]["already_member"] is True
         session.commit.assert_awaited_once()
 
+    async def test_a_removed_member_rejoins_with_the_invited_role(self) -> None:
+        user = _user(email_verified=True)
+        org = _org()
+        invitation = _invitation(org, role=OrganizationRole.MEMBER)
+        removed = OrganizationMember(
+            user_id=user.id, organization_id=org.id, role=OrganizationRole.ADMIN, is_active=False
+        )
+        org_ops = _org_ops(existing=removed)
+        session = _session(user, invitation, org)
+
+        with (
+            patch(f"{_MODULE}.OrganizationOperations", return_value=org_ops),
+            patch(f"{_MODULE}.write_audit_event", new=AsyncMock()),
+        ):
+            await _accept_as_member(session, user, invitation_id=invitation.id)
+
+        org_ops.stage_member.assert_awaited_once()
+        assert org_ops.stage_member.await_args.kwargs["role"] is OrganizationRole.MEMBER
+        org_ops.finish_member_add_after_commit.assert_awaited_once()
+
     async def test_id_lookup_is_scoped_to_the_callers_email(self) -> None:
-        user = _user(email="Member@Acme.io")
+        user = _user(email="Member@Acme.io", email_verified=True)
         org = _org()
         invitation = _invitation(org)
         org_ops = _org_ops()
@@ -215,7 +295,7 @@ class TestAcceptAsMember:
         session.rollback.assert_awaited()
 
     async def test_id_for_another_address_reads_as_missing(self) -> None:
-        user = _user(email="someone-else@acme.io")
+        user = _user(email="someone-else@acme.io", email_verified=True)
         org_ops = _org_ops()
         session = _session(user, None)
 
@@ -241,7 +321,8 @@ class TestAcceptAsMember:
     async def test_an_unusable_invitation_is_refused(
         self, fields: dict[str, Any], error: type[Exception], lookup: str
     ) -> None:
-        user = _user()
+        verified = lookup == "invitation_id"
+        user = _user(email_verified=verified)
         org = _org()
         invitation = _invitation(org, **fields)
         org_ops = _org_ops()
@@ -256,7 +337,7 @@ class TestAcceptAsMember:
 
         org_ops.stage_member.assert_not_awaited()
         session.commit.assert_not_awaited()
-        assert user.email_verified is False
+        assert user.email_verified is verified
 
     async def test_suspended_organization_is_refused(self) -> None:
         user = _user()
@@ -318,26 +399,44 @@ class TestAcceptAsMember:
 
 
 class TestDecline:
-    async def test_marks_the_invitation_declined_and_audits(self) -> None:
-        user = _user()
+    async def test_marks_the_invitation_declined_and_audits_without_the_decliner(self) -> None:
+        user = _user(email_verified=True)
         org = _org()
         invitation = _invitation(org)
         session = _session(user, invitation)
+        event = SimpleNamespace(ip_address="203.0.113.7", user_agent="Mozilla/5.0")
 
-        with patch(f"{_MODULE}.write_audit_event", new=AsyncMock()) as audit:
+        with patch(f"{_MODULE}.write_audit_event", new=AsyncMock(return_value=event)) as audit:
             await InvitationOperations(session).decline(user_id=user.id, invitation_id=invitation.id)
 
         assert invitation.revoked_at is not None
         assert invitation.revoked_by_user_id == user.id
         (declined,) = _audit_calls(audit, Action.ORGANIZATION_INVITATION_DECLINED)
         assert declined["organization_id"] == org.id
-        assert declined["actor_user_id"] == user.id
+        assert declined["actor_user_id"] is None
+        assert declined["details"] == {"email": invitation.email, "declined_by_invitee": True}
         assert declined["resource_type"] is AuditResourceType.INVITATION
         assert declined["resource_id"] == invitation.id
+        assert event.ip_address is None
+        assert event.user_agent is None
         session.commit.assert_awaited_once()
 
-    async def test_declining_twice_changes_nothing(self) -> None:
+    async def test_an_unverified_email_cannot_decline(self) -> None:
         user = _user()
+        session = _session(user)
+
+        with (
+            patch(f"{_MODULE}.write_audit_event", new=AsyncMock()) as audit,
+            pytest.raises(PermissionDeniedError, match="invitation link from your email"),
+        ):
+            await InvitationOperations(session).decline(user_id=user.id, invitation_id=generate_id())
+
+        assert session.execute.await_count == 1
+        audit.assert_not_awaited()
+        session.commit.assert_not_awaited()
+
+    async def test_declining_twice_changes_nothing(self) -> None:
+        user = _user(email_verified=True)
         revoked_at = datetime.now(UTC) - timedelta(hours=1)
         revoker = generate_id()
         invitation = _invitation(_org(), revoked_at=revoked_at, revoked_by_user_id=revoker)
@@ -352,7 +451,7 @@ class TestDecline:
         session.commit.assert_not_awaited()
 
     async def test_a_stranger_gets_not_found(self) -> None:
-        session = _session(_user(email="stranger@acme.io"), None)
+        session = _session(_user(email="stranger@acme.io", email_verified=True), None)
 
         with (
             patch(f"{_MODULE}.write_audit_event", new=AsyncMock()) as audit,
@@ -366,7 +465,7 @@ class TestDecline:
         session.commit.assert_not_awaited()
 
     async def test_an_accepted_invitation_cannot_be_declined(self) -> None:
-        user = _user()
+        user = _user(email_verified=True)
         invitation = _invitation(_org(), accepted_at=datetime.now(UTC))
         session = _session(user, invitation)
 

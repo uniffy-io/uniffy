@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "@core/auth/authApi";
 import { useAuth } from "@core/providers/AuthContext";
@@ -8,6 +8,7 @@ import {
   toInvitationSummaries,
   type InvitationSummary,
 } from "@features/auth/organizationSerializer";
+import { claimOrganizationSwitch } from "@features/auth/organizationSwitchGuard";
 import { MY_ORGANIZATIONS_QUERY_KEY } from "@features/auth/useMyOrganizations";
 
 export const MY_INVITATIONS_QUERY_KEY = ["invitations", "mine"];
@@ -30,21 +31,20 @@ export function useInvitationActions() {
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<PendingInvitationAction | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const inFlight = useRef(false);
 
   const run = async (
     invitation: InvitationSummary,
     action: InvitationAction,
     work: () => Promise<void>,
   ) => {
-    if (inFlight.current) return;
-    inFlight.current = true;
+    const release = claimOrganizationSwitch();
+    if (!release) return;
     setPending({ invitationId: invitation.id, action });
     setError(null);
     try {
       await work();
     } finally {
-      inFlight.current = false;
+      release();
       setPending(null);
     }
   };

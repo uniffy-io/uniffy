@@ -2970,7 +2970,7 @@ func (x *InviteMemberRequest) GetRole() v1.OrganizationRole {
 // Every email gets a pending invitation; an existing account accepts it signed in.
 type InviteMemberResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Invitation    *Invitation            `protobuf:"bytes,1,opt,name=invitation,proto3" json:"invitation,omitempty"`
+	Invitation    *Invitation            `protobuf:"bytes,3,opt,name=invitation,proto3" json:"invitation,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3622,7 +3622,7 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x17GetOrganizationResponse\x12H\n" +
 	"\forganization\x18\x01 \x01(\v2$.organizations.v1.OrganizationDetailR\forganization\"]\n" +
 	"\x1aUpdateOrganizationResponse\x12?\n" +
-	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\"\xb5\x01\n" +
+	"\forganization\x18\x01 \x01(\v2\x1b.common.v1.OrganizationInfoR\forganization\"\xc6\x01\n" +
 	"\x19UpdateOrganizationRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n" +
@@ -3630,7 +3630,7 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\blogo_url\x18\x04 \x01(\tH\x02R\alogoUrl\x88\x01\x01B\a\n" +
 	"\x05_nameB\a\n" +
 	"\x05_slugB\v\n" +
-	"\t_logo_url\"I\n" +
+	"\t_logo_urlJ\x04\b\x05\x10\x06R\tis_active\"I\n" +
 	"\x1eGetOrganizationOverviewRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"e\n" +
 	"\x1fGetOrganizationOverviewResponse\x12B\n" +
@@ -3764,11 +3764,11 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x13InviteMemberRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12/\n" +
-	"\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\"T\n" +
+	"\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\"n\n" +
 	"\x14InviteMemberResponse\x12<\n" +
 	"\n" +
-	"invitation\x18\x01 \x01(\v2\x1c.organizations.v1.InvitationR\n" +
-	"invitation\"\x8d\x01\n" +
+	"invitation\x18\x03 \x01(\v2\x1c.organizations.v1.InvitationR\n" +
+	"invitationJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\fadded_member\"\x8d\x01\n" +
 	"\x16ListInvitationsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12?\n" +
 	"\x06status\x18\x02 \x01(\x0e2\".organizations.v1.InvitationStatusH\x00R\x06status\x88\x01\x01B\t\n" +

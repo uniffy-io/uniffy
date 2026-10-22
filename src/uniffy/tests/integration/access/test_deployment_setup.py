@@ -3,19 +3,21 @@
 import asyncio
 import threading
 from collections.abc import AsyncIterator
-from unittest.mock import MagicMock
+from contextlib import asynccontextmanager
+from unittest.mock import MagicMock, patch
 
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.errors import SetupAlreadyCompletedError
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.domains.platform.bootstrap import BOOTSTRAP_LOCK_ID
-from uniffy.domains.platform.setup import setup_deployment, setup_required
+from uniffy.domains.platform.setup import setup_deployment
 from uniffy.infrastructure.database.session import startup_advisory_lock
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -57,7 +59,6 @@ def _attempt(email: str) -> asyncio.Task:
             organization_slug=None,
             user_agent="pytest",
             search_indexer=MagicMock(),
-            call_lifecycle=MagicMock(),
         )
     )
 
@@ -79,8 +80,8 @@ async def test_setup_refuses_once_a_user_exists_and_writes_nothing(
     assert leaked is None
 
 
-async def test_setup_waits_while_bootstrap_holds_its_lock(existing_user: User) -> None:
-    del existing_user
+@asynccontextmanager
+async def _bootstrap_lock_held() -> AsyncIterator[None]:
     held = threading.Event()
     release = threading.Event()
 
@@ -93,12 +94,39 @@ async def test_setup_waits_while_bootstrap_holds_its_lock(existing_user: User) -
     holder.start()
     try:
         assert await asyncio.to_thread(held.wait, _THREAD_TIMEOUT_SECONDS)
-        attempt = _attempt(f"operator-{generate_id().hex[:12]}@example.com")
-        await asyncio.sleep(_LOCK_WAIT_SECONDS)
-        assert not attempt.done()
+        yield
     finally:
         release.set()
         await asyncio.to_thread(holder.join, _THREAD_TIMEOUT_SECONDS)
 
-    with pytest.raises(SetupAlreadyCompletedError):
-        await asyncio.wait_for(attempt, _THREAD_TIMEOUT_SECONDS)
+
+async def test_a_completed_setup_refuses_without_waiting_for_the_bootstrap_lock(
+    existing_user: User,
+) -> None:
+    del existing_user
+    async with _bootstrap_lock_held():
+        with pytest.raises(SetupAlreadyCompletedError):
+            await asyncio.wait_for(
+                _attempt(f"operator-{generate_id().hex[:12]}@example.com"), _LOCK_WAIT_SECONDS
+            )
+
+
+async def test_setup_waits_while_bootstrap_holds_its_lock(existing_user: User) -> None:
+    del existing_user
+    checks = 0
+
+    async def empty_before_the_lock(session: AsyncSession) -> bool:
+        # The unlocked check sees an empty deployment, the locked one the user created meanwhile.
+        nonlocal checks
+        checks += 1
+        return checks == 1 or await setup_required(session)
+
+    with patch("uniffy.domains.platform.setup.setup_required", empty_before_the_lock):
+        async with _bootstrap_lock_held():
+            attempt = _attempt(f"operator-{generate_id().hex[:12]}@example.com")
+            await asyncio.sleep(_LOCK_WAIT_SECONDS)
+            assert not attempt.done()
+
+        with pytest.raises(SetupAlreadyCompletedError):
+            await asyncio.wait_for(attempt, _THREAD_TIMEOUT_SECONDS)
+    assert checks == 2

@@ -14,7 +14,8 @@ import type { AppDispatch, RootState } from "@/app/store";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { setStoreRef } from "@/app/storeRef";
 import { getAccessToken, setMemoryAccessToken } from "@/config/api";
-import { authReducer, setCredentials } from "@/features/auth/store/authSlice";
+import { resetOrganizationScope } from "@/features/auth/store/authActions";
+import { authReducer, logout, setCredentials } from "@/features/auth/store/authSlice";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { readStoredAuth, writeStoredAuth } from "@/features/auth/store/credentialStorage";
 import { readLastOrganizationSlug } from "@/features/auth/store/lastOrganizationStorage";
@@ -214,4 +215,38 @@ it("keeps the created organization listed when the switch into it is refused", a
     "acme",
     "initech",
   ]);
+});
+
+it("lists the organization and switches into it when a scope ends while the create is out", async () => {
+  shared.create.mockImplementation(async () => {
+    // Another path, such as a lost grant elsewhere, ends the scope the create was dispatched in.
+    store.dispatch(resetOrganizationScope());
+    return { organization: createdMembership("initech") };
+  });
+  shared.refresh.mockResolvedValue(mint("initech"));
+
+  await expect(
+    dispatch()(createOrganization({ name: "Initech", slug: "initech" })),
+  ).resolves.toEqual({ organizationId: "org-initech", slug: "initech", name: "Initech" });
+
+  expect(actions).toContain("organizations/organizationAdded");
+  expect(store.getState().organizations.items.map((item) => item.slug)).toEqual([
+    "acme",
+    "initech",
+  ]);
+  expect(store.getState().auth.currentOrganizationId).toBe("org-initech");
+});
+
+it("adds nothing to the next account's list when the session ends while the create is out", async () => {
+  shared.create.mockImplementation(async () => {
+    store.dispatch(logout());
+    return { organization: createdMembership("initech") };
+  });
+
+  await expect(
+    dispatch()(createOrganization({ name: "Initech", slug: "initech" })),
+  ).rejects.toMatchObject({ code: Code.Unauthenticated });
+
+  expect(shared.refresh).not.toHaveBeenCalled();
+  expect(store.getState().organizations.items).toEqual([]);
 });

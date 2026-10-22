@@ -33,6 +33,24 @@ export function resolveAcceptState({
   return invitation.accountExists || signInRequired ? "sign-in" : "form";
 }
 
+export interface StoredSession {
+  isAuthenticated: boolean;
+  isRehydrating: boolean;
+  refreshToken: string | null | undefined;
+}
+
+/**
+ * A stored refresh token has not produced a session yet, so whether someone is signed in is still
+ * unknown. ProtectedRoute waits on the same condition before it redirects.
+ */
+export function isSessionPending({
+  isAuthenticated,
+  isRehydrating,
+  refreshToken,
+}: StoredSession): boolean {
+  return isRehydrating || (!isAuthenticated && Boolean(refreshToken));
+}
+
 const SIGN_IN_REQUIRED_REASON = "sign_in_required";
 
 /** The anonymous accept refused an email that already has an active account. */
@@ -73,9 +91,20 @@ export function invitationHeading(
 const INVITATION_NOT_FOUND =
   "No invitation matches this link. Check that the whole link was copied, or ask for a new invitation.";
 
-/** A missing invitation gets its own copy; the generic not-found message reads like a missing page. */
+// Refusals that name the state blocking the join, which the generic permission message would hide.
+const NAMED_PERMISSION_REFUSAL = /\bsuspended\b|\bnot active\b/i;
+
+/**
+ * A missing invitation gets its own copy; the generic not-found message reads like a missing page.
+ * A refusal for a suspended organization or an inactive account keeps the server's reason.
+ */
 export function invitationErrorMessage(err: unknown): string | null {
-  if (err instanceof ConnectError && err.code === Code.NotFound) return INVITATION_NOT_FOUND;
+  if (err instanceof ConnectError) {
+    if (err.code === Code.NotFound) return INVITATION_NOT_FOUND;
+    if (err.code === Code.PermissionDenied && NAMED_PERMISSION_REFUSAL.test(err.rawMessage)) {
+      return err.rawMessage;
+    }
+  }
   return friendlyErrorMessage(err instanceof Error ? err.message : "");
 }
 

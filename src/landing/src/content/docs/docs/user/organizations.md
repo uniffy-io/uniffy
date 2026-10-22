@@ -20,7 +20,7 @@ Signed in with the invited address? The link shows the organization and the role
 
 Signed in with another address? The link says so and offers to sign you out. An invitation only works for the address it was sent to.
 
-You do not need the mail at all. Your welcome page lists every pending invitation sent to your address, each with Accept and Decline, and your user menu shows how many are waiting. Decline takes it off your list, and the admin sees it as revoked.
+Your welcome page lists every pending invitation sent to your address, each with Accept and Decline, and your user menu shows how many are waiting. Invitations appear there once your address is confirmed through an invitation link, so until then use the link in the mail. Decline takes it off your list, and the admin sees it as revoked.
 
 An invitation lasts 30 days. If yours ran out, ask the admin to send it again.
 

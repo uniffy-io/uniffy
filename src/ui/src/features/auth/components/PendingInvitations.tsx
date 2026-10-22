@@ -9,6 +9,7 @@ import { friendlyErrorMessage } from "@/config/errorMessages";
 import { OrganizationAvatar } from "@/features/auth/components/OrganizationList";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import {
+  selectInvitationActingId,
   selectPendingInvitations,
   selectPendingInvitationsStatus,
   type PendingInvitation,
@@ -17,6 +18,7 @@ import {
   acceptInvitation,
   declineInvitation,
   fetchMyInvitations,
+  refreshMyInvitationsQuietly,
 } from "@/features/auth/store/invitationsThunks";
 import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
 import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
@@ -40,16 +42,19 @@ export function PendingInvitations({ className }: { className?: string }) {
   const navigate = useNavigate();
   const invitations = useAppSelector(selectPendingInvitations);
   const status = useAppSelector(selectPendingInvitationsStatus);
-  const actingId = useAppSelector((state) => state.invitations.actingId);
+  const actingId = useAppSelector(selectInvitationActingId);
   const { guardSwitch, isSwitching, confirmDialog } = useSwitchOrganization();
   const [decliningId, setDecliningId] = useState<string | null>(null);
 
-  // Invitations arrive while the app is open, so every mount and every return to the tab reloads;
-  // a load that a switch interrupted settles back to idle and runs again.
-  const reloadInvitations = useCallback(() => void dispatch(fetchMyInvitations()), [dispatch]);
+  // Invitations arrive while the app is open, so every mount reloads and every return to the tab
+  // reloads quietly; a load that a switch interrupted settles back to idle and runs again.
   useEffect(() => {
-    reloadInvitations();
-  }, [reloadInvitations]);
+    void dispatch(fetchMyInvitations());
+  }, [dispatch]);
+  const reloadInvitations = useCallback(
+    () => void dispatch(refreshMyInvitationsQuietly()),
+    [dispatch],
+  );
   useRefreshOnReturn(reloadInvitations);
   useEffect(() => {
     if (status === "idle") void dispatch(fetchMyInvitations());
@@ -89,7 +94,7 @@ export function PendingInvitations({ className }: { className?: string }) {
       {confirmDialog}
       <h2
         id="pending-invitations-title"
-        className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        className="px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
       >
         Invitations
       </h2>

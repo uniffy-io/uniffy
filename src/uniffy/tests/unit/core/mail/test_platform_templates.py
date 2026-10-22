@@ -15,13 +15,14 @@ CONTEXT: dict = {
 
 OWNER_BODY = (
     "The owner of Acme deleted the workspace on October 01, 2026 at 09:30 UTC. "
-    "Sign-in is blocked from now on. The data stays restorable for 30 days, until "
+    "Access to the workspace ends now. The data stays restorable for 30 days, until "
 )
 OPERATOR_BODY = "A platform operator marked your workspace for deletion on October 01, 2026"
 OWNER_CLOSING = "This action is recorded in your workspace audit log."
 OPERATOR_CLOSING = (
     "This action was performed by a platform operator and is recorded in your workspace audit log."
 )
+RESTORE_LINE = "A platform operator can restore it before then."
 
 
 class TestOrgDeleted:
@@ -39,7 +40,9 @@ class TestOrgDeleted:
         assert OWNER_BODY + "<strong>October 31, 2026 at 09:30 UTC</strong>; " in rendered.html
         for body in (rendered.text, rendered.html):
             assert OWNER_CLOSING in body
-            assert "platform operator" not in body
+            assert RESTORE_LINE in body
+            assert OPERATOR_BODY not in body
+            assert OPERATOR_CLOSING not in body
             assert "Reason recorded" not in body
             assert "Deleted by the organization owner" not in body
 
@@ -52,6 +55,7 @@ class TestOrgDeleted:
         for body in (rendered.text, rendered.html):
             assert OPERATOR_BODY in body
             assert OPERATOR_CLOSING in body
+            assert RESTORE_LINE in body
             assert "The owner of Acme" not in body
 
     async def test_operator_copy_without_a_reason_skips_the_reason_line(self) -> None:

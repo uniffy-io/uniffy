@@ -2,7 +2,7 @@ import { createAsyncThunk, type ThunkAction, type UnknownAction } from "@reduxjs
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { AppDispatch, RootState } from "@/app/store";
 import { getStoreRefOrThrow } from "@/app/storeRef";
-import { invitationsApi } from "@/features/auth/api/invitationsApi";
+import { organizationsApi } from "@/features/auth/api/organizationsApi";
 import {
   invitationActionFinished,
   invitationActionStarted,
@@ -10,6 +10,7 @@ import {
   invitationsFailed,
   invitationsLoaded,
   invitationsLoading,
+  invitationsReloadFailed,
   summarizeInvitation,
   type PendingInvitation,
 } from "@/features/auth/store/invitationsSlice";
@@ -33,21 +34,47 @@ const thunk = createAsyncThunk.withTypes<{
   rejectValue: string;
 }>();
 
+async function loadMyInvitations(dispatch: AppDispatch): Promise<PendingInvitation[]> {
+  const response = await organizationsApi.listMyInvitations();
+  const items = response.invitations.map(summarizeInvitation);
+  dispatch(invitationsLoaded(items));
+  return items;
+}
+
+const notLoading = (_: void, { getState }: { getState: () => RootState }) =>
+  getState().invitations.status !== "loading";
+
 export const fetchMyInvitations = thunk<PendingInvitation[], void>(
   "invitations/fetchMyInvitations",
   async (_, { dispatch, rejectWithValue }) => {
     dispatch(invitationsLoading());
     try {
-      const response = await invitationsApi.listMyInvitations();
-      const items = response.invitations.map(summarizeInvitation);
-      dispatch(invitationsLoaded(items));
-      return items;
+      return await loadMyInvitations(dispatch);
     } catch (error) {
       dispatch(invitationsFailed());
       return rejectWithValue(error instanceof Error ? error.message : "Failed to load invitations");
     }
   },
-  { condition: (_, { getState }) => getState().invitations.status !== "loading" },
+  { condition: notLoading },
+);
+
+/**
+ * Reloads the list for a background refresh (tab return, menu open): a failure keeps the list and
+ * its status and resolves with null instead of toasting through errorToastMiddleware.
+ */
+export const refreshMyInvitationsQuietly = thunk<PendingInvitation[] | null, void>(
+  "invitations/refreshMyInvitationsQuietly",
+  async (_, { dispatch, getState }) => {
+    const previous = getState().invitations.status;
+    dispatch(invitationsLoading());
+    try {
+      return await loadMyInvitations(dispatch);
+    } catch {
+      dispatch(invitationsReloadFailed(previous));
+      return null;
+    }
+  },
+  { condition: notLoading },
 );
 
 /**
@@ -71,7 +98,7 @@ export function acceptInvitation(lookup: InvitationLookup): InvitationAction<Acc
     if (invitationId) dispatch(invitationActionStarted(invitationId));
     let response;
     try {
-      response = await invitationsApi.acceptMyInvitation({
+      response = await organizationsApi.acceptMyInvitation({
         lookup:
           "invitationId" in lookup
             ? { case: "invitationId", value: lookup.invitationId }
@@ -115,7 +142,7 @@ export function declineInvitation({
     const dispatch = storeDispatch();
     dispatch(invitationActionStarted(invitationId));
     try {
-      await invitationsApi.declineMyInvitation({ invitationId });
+      await organizationsApi.declineMyInvitation({ invitationId });
       dispatch(invitationRemoved(invitationId));
     } finally {
       dispatch(invitationActionFinished());

@@ -19,6 +19,7 @@ import { completeSignIn } from "@/features/auth/store/signInThunks";
 import {
   invitationErrorMessage,
   invitationHeading,
+  isSessionPending,
   isSignInRequired,
   resolveAcceptState,
   type SignInInvitation,
@@ -93,6 +94,8 @@ export function AcceptInvitePage() {
   const location = useLocation();
   const dispatch = useAppDispatch();
   const isAuthenticated = useAppSelector((s) => s.auth?.isAuthenticated ?? false);
+  const isRehydrating = useAppSelector((s) => s.auth?.isRehydrating ?? false);
+  const refreshToken = useAppSelector((s) => s.auth?.refreshToken ?? null);
   const userEmail = useAppSelector((s) => s.auth?.user?.email ?? null);
   const signOut = useSignOut();
   const { guardSwitch, confirmDialog } = useSwitchOrganization();
@@ -137,9 +140,12 @@ export function AcceptInvitePage() {
     };
   }, [token]);
 
+  // A stored session that is still rehydrating reads as signed out, so no view resolves before it.
+  const sessionPending = isSessionPending({ isAuthenticated, isRehydrating, refreshToken });
+  const loading = previewLoading || sessionPending;
   // The form stays up while its own sign-in lands, so the signed-in states do not flash past.
   const view =
-    invitation && !previewError
+    invitation && !previewError && !sessionPending
       ? submitting
         ? "form"
         : resolveAcceptState({ isAuthenticated, userEmail, invitation, signInRequired })
@@ -265,7 +271,7 @@ export function AcceptInvitePage() {
         <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">
           Accept invitation
         </p>
-        {!previewLoading && heading && (
+        {!loading && heading && (
           <>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
               {heading.title}
@@ -275,7 +281,7 @@ export function AcceptInvitePage() {
             </p>
           </>
         )}
-        {previewLoading && (
+        {loading && (
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
             Loading invitation…
           </h1>
@@ -423,7 +429,7 @@ export function AcceptInvitePage() {
         </div>
       )}
 
-      {!isAuthenticated && (view === "form" || previewError) && (
+      {!isAuthenticated && !sessionPending && (view === "form" || previewError) && (
         <p
           className="mt-8 text-center text-xs text-subtle-foreground opacity-0"
           style={{ animation: "auth-slide-up 0.5s ease-out 0.5s forwards" }}

@@ -63,6 +63,7 @@ from uniffy.domains.files.cleanup import stage_member_upload_expiry
 from uniffy.domains.files.filters.presets import create_default_presets
 from uniffy.domains.organizations.naming import (
     ensure_slug_available,
+    is_slug_conflict,
     normalize_org_name,
     normalize_slug,
 )
@@ -89,7 +90,7 @@ class StagedOrganizationCreate:
 
 
 @dataclass(frozen=True)
-class MemberRemovalStaged:
+class StagedMemberRemoval:
     previous_role: OrganizationRole
     chat_cleanup: ChatMembershipCleanup
     target_user_id: UUID
@@ -323,8 +324,7 @@ class OrganizationOperations:
             await self._session.commit()
         except IntegrityError as exc:
             await self._session.rollback()
-            # The unique slug index catches a rename that raced the availability check.
-            if previous_slug is not None:
+            if is_slug_conflict(exc):
                 raise ValidationError("slug", "Slug is already in use") from exc
             raise
         await self._session.refresh(org)
@@ -699,7 +699,7 @@ class OrganizationOperations:
         *,
         actor_user_id: UUID,
         action: Action = Action.ORGANIZATION_MEMBER_REMOVED,
-    ) -> MemberRemovalStaged:
+    ) -> StagedMemberRemoval:
         """Expects the membership row already locked by the caller."""
         if membership.role == OrganizationRole.OWNER:
             raise PermissionDeniedError("Cannot remove organization owner")
@@ -742,11 +742,11 @@ class OrganizationOperations:
             resource_id=target_user_id,
             details={"previous_role": previous_role.value},
         )
-        return MemberRemovalStaged(previous_role, chat_cleanup, target_user_id, org_id)
+        return StagedMemberRemoval(previous_role, chat_cleanup, target_user_id, org_id)
 
     async def finish_member_removal_after_commit(
         self,
-        staged: MemberRemovalStaged,
+        staged: StagedMemberRemoval,
         *,
         actor_user_id: UUID,
         search_indexer: SearchIndexer,

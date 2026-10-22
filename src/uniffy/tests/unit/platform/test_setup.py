@@ -12,6 +12,7 @@ from connectrpc.errors import ConnectError
 from uniffy_proto.auth.v1.auth_pb import GetAuthConfigRequest, SetupDeploymentRequest
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.errors import RateLimitExceededError, SetupAlreadyCompletedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.organization_member import OrganizationMemberSource
@@ -56,8 +57,9 @@ def _result(value: object) -> MagicMock:
 
 
 def _session(existing_user_id: object | None = None) -> MagicMock:
+    """Answers the unlocked check, the lock, then the locked re-check, in that order."""
     session = MagicMock()
-    session.execute = AsyncMock(side_effect=[MagicMock(), _result(existing_user_id)])
+    session.execute = AsyncMock(side_effect=[_result(None), MagicMock(), _result(existing_user_id)])
     session.add = MagicMock()
     session.flush = AsyncMock()
     session.commit = AsyncMock()
@@ -70,7 +72,7 @@ class Collaborators:
     session: MagicMock
     opened: MagicMock
     organizations: MagicMock
-    auth: MagicMock
+    auth: AsyncMock
     audit: AsyncMock
     vapid: AsyncMock
     rate_limit: AsyncMock
@@ -107,8 +109,7 @@ def collaborators() -> Iterator[Collaborators]:
         session_id=generate_id(),
         domain_admin_domains=[],
     )
-    auth = MagicMock()
-    auth.stage_organization_session = AsyncMock(return_value=auth_result)
+    auth = AsyncMock(return_value=auth_result)
 
     found = Collaborators(
         session=session,
@@ -127,7 +128,7 @@ def collaborators() -> Iterator[Collaborators]:
     with (
         patch(f"{_MODULE}.open_session", open_session),
         patch(f"{_MODULE}.OrganizationOperations", MagicMock(return_value=organizations)),
-        patch(f"{_MODULE}.AuthOperations", MagicMock(return_value=auth)),
+        patch(f"{_MODULE}.stage_bootstrap_authentication", auth),
         patch(f"{_MODULE}.write_audit_event", found.audit),
         patch(f"{_MODULE}.seed_vapid_keys", found.vapid),
         patch(f"{_MODULE}.check_rate_limit", found.rate_limit),
@@ -140,11 +141,7 @@ def collaborators() -> Iterator[Collaborators]:
 
 async def _run(**overrides: str | None) -> AuthResult:
     arguments = {**_VALID, **overrides}
-    return await setup.setup_deployment(
-        **arguments,
-        search_indexer=MagicMock(),
-        call_lifecycle=MagicMock(),
-    )
+    return await setup.setup_deployment(**arguments, search_indexer=MagicMock())
 
 
 class TestSetupRequired:
@@ -152,20 +149,39 @@ class TestSetupRequired:
         session = MagicMock()
         session.execute = AsyncMock(return_value=_result(None))
 
-        assert await setup.setup_required(session) is True
+        assert await setup_required(session) is True
 
     async def test_false_once_any_user_exists(self) -> None:
         session = MagicMock()
         session.execute = AsyncMock(return_value=_result(generate_id()))
 
-        assert await setup.setup_required(session) is False
+        assert await setup_required(session) is False
 
 
 class TestSetupDeployment:
-    async def test_refuses_when_a_user_exists_and_writes_nothing(
+    async def test_a_completed_setup_refuses_without_taking_the_lock(
         self, collaborators: Collaborators
     ) -> None:
-        collaborators.session.execute.side_effect = [MagicMock(), _result(generate_id())]
+        collaborators.session.execute.side_effect = [_result(generate_id())]
+
+        with pytest.raises(SetupAlreadyCompletedError):
+            await _run()
+
+        collaborators.session.execute.assert_awaited_once()
+        statement = collaborators.session.execute.await_args.args[0]
+        assert _LOCK_FUNCTION not in str(statement.compile())
+        collaborators.session.add.assert_not_called()
+        collaborators.hash_password.assert_not_called()
+        collaborators.session.commit.assert_not_awaited()
+
+    async def test_a_user_created_while_waiting_for_the_lock_refuses_and_writes_nothing(
+        self, collaborators: Collaborators
+    ) -> None:
+        collaborators.session.execute.side_effect = [
+            _result(None),
+            MagicMock(),
+            _result(generate_id()),
+        ]
 
         with pytest.raises(SetupAlreadyCompletedError):
             await _run()
@@ -177,15 +193,16 @@ class TestSetupDeployment:
         collaborators.session.commit.assert_not_awaited()
         collaborators.session.rollback.assert_awaited_once()
 
-    async def test_takes_the_bootstrap_lock_before_checking_for_users(
+    async def test_takes_the_bootstrap_lock_before_the_locked_check_for_users(
         self, collaborators: Collaborators
     ) -> None:
         await _run()
 
-        lock_statement = collaborators.session.execute.await_args_list[0].args[0]
+        lock_statement = collaborators.session.execute.await_args_list[1].args[0]
         compiled = lock_statement.compile()
         assert _LOCK_FUNCTION in str(compiled)
         assert list(compiled.params.values()) == [BOOTSTRAP_LOCK_ID]
+        assert collaborators.session.execute.await_count == 3
 
     async def test_creates_the_operator_as_a_verified_system_admin(
         self, collaborators: Collaborators
@@ -261,8 +278,8 @@ class TestSetupDeployment:
         assert result is collaborators.auth_result
         assert result.organization_id == collaborators.organization.id
         user = collaborators.session.add.call_args_list[0].args[0]
-        collaborators.auth.stage_organization_session.assert_awaited_once_with(
-            user, collaborators.organization, user_agent=_USER_AGENT
+        collaborators.auth.assert_awaited_once_with(
+            collaborators.session, user, collaborators.organization, user_agent=_USER_AGENT
         )
 
     async def test_seeds_push_keys_inside_the_setup_transaction(
@@ -392,13 +409,12 @@ class TestSetupDeploymentHandler:
         )
         run = AsyncMock(return_value=result)
         search_indexer = MagicMock()
-        call_lifecycle = MagicMock()
 
         with (
             patch(f"{_HANDLERS}.setup_deployment", run),
             patch(f"{_HANDLERS}.attach_asset_cookie", MagicMock(return_value=_COOKIE)),
         ):
-            response = await AuthHandlers(search_indexer, call_lifecycle).setup_deployment(
+            response = await AuthHandlers(search_indexer, MagicMock()).setup_deployment(
                 _request(), _ctx()
             )
 
@@ -411,7 +427,6 @@ class TestSetupDeploymentHandler:
         assert kwargs["organization_slug"] is None
         assert kwargs["user_agent"] == _USER_AGENT
         assert kwargs["search_indexer"] is search_indexer
-        assert kwargs["call_lifecycle"] is call_lifecycle
 
     @pytest.mark.parametrize(
         ("error", "code"),

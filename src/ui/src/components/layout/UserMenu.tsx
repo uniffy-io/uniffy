@@ -26,7 +26,7 @@ import {
 } from "@/features/auth/hooks/useSignOut";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { selectPendingInvitationCount } from "@/features/auth/store/invitationsSlice";
-import { fetchMyInvitations } from "@/features/auth/store/invitationsThunks";
+import { refreshMyInvitationsQuietly } from "@/features/auth/store/invitationsThunks";
 import {
   selectCanCreateOrganization,
   selectOrganizations,
@@ -177,7 +177,7 @@ export function UserMenu() {
   const toggleMenu = () => {
     if (!isOpen) {
       void dispatch(reloadOrganizationsAndRole());
-      void dispatch(fetchMyInvitations());
+      void dispatch(refreshMyInvitationsQuietly());
     }
     setIsOpen(!isOpen);
   };

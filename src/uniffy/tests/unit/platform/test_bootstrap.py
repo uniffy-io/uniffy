@@ -1,4 +1,4 @@
-"""Deployment bootstrap seeds accounts only from a configured password and always seeds push keys."""
+"""Deployment bootstrap seeds accounts and push keys only from a configured password."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -96,7 +96,7 @@ async def test_configured_password_seeds_the_owner_and_the_default_organization(
 
 
 @pytest.mark.parametrize("password", [None, "", "   "], ids=["unset", "empty", "blank"])
-async def test_missing_password_leaves_the_deployment_to_setup_and_still_seeds_push_keys(
+async def test_missing_password_leaves_the_deployment_and_its_push_keys_to_setup(
     environment: pytest.MonkeyPatch,
     password: str | None,
 ) -> None:
@@ -112,11 +112,11 @@ async def test_missing_password_leaves_the_deployment_to_setup_and_still_seeds_p
     session.add.assert_not_called()
     constructor.assert_not_called()
     operations.create.assert_not_awaited()
-    seed_vapid.assert_awaited_once_with(session, "admin@example.com")
-    session.commit.assert_awaited_once()
+    seed_vapid.assert_not_awaited()
+    session.commit.assert_not_awaited()
 
 
-async def test_initialized_deployment_skips_seeding_but_still_seeds_push_keys(
+async def test_initialized_deployment_seeds_nothing(
     environment: pytest.MonkeyPatch,
 ) -> None:
     environment.setenv("INITIAL_ADMIN_PASSWORD", "password")
@@ -127,14 +127,14 @@ async def test_initialized_deployment_skips_seeding_but_still_seeds_push_keys(
 
     session.add.assert_not_called()
     constructor.assert_not_called()
-    seed_vapid.assert_awaited_once_with(session, "admin@example.com")
-    session.commit.assert_awaited_once()
+    seed_vapid.assert_not_awaited()
+    session.commit.assert_not_awaited()
 
 
 async def test_failed_push_seeding_rolls_back_and_raises(
     environment: pytest.MonkeyPatch,
 ) -> None:
-    environment.delenv("INITIAL_ADMIN_PASSWORD", raising=False)
+    environment.setenv("INITIAL_ADMIN_PASSWORD", "password")
     session = _session()
     _constructor, _operations, seed_vapid = _install(environment, session)
     seed_vapid.side_effect = RuntimeError("cipher unavailable")

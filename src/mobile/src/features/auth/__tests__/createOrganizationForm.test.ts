@@ -14,8 +14,13 @@ describe("slugFromName", () => {
     expect(slugFromName("R&D_Team 42")).toBe("r-d-team-42");
   });
 
-  it("treats letters outside a to z as separators", () => {
-    expect(slugFromName("Café Zürich")).toBe("caf-z-rich");
+  it("folds accented letters onto their base letter", () => {
+    expect(slugFromName("Café Zürich")).toBe("cafe-zurich");
+    expect(slugFromName("Ångström Señor")).toBe("angstrom-senor");
+  });
+
+  it("treats letters without a Latin base as separators", () => {
+    expect(slugFromName("Acme 東京 Labs")).toBe("acme-labs");
   });
 
   it("returns an empty slug when nothing usable is left", () => {
@@ -36,6 +41,7 @@ describe("slugFromInput", () => {
 
   it("drops leading hyphens and folds other characters", () => {
     expect(slugFromInput("-Acme__Co")).toBe("acme-co");
+    expect(slugFromInput("Crème ")).toBe("creme-");
   });
 });
 

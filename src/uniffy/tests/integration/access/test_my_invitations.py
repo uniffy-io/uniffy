@@ -11,8 +11,9 @@ import pytest
 import pytest_asyncio
 from sqlalchemy import select
 
+from uniffy.core.audit import audit_ip_var, audit_user_agent_var
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import NotFoundError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
@@ -67,6 +68,7 @@ async def inbox(session) -> AsyncIterator[NS]:
             username=f"inv-{handle}-{suffix}",
             full_name=f"{handle.title()} Tester",
             hashed_password="x",
+            email_verified=True,
         )
 
     inviter, recipient, other = _user("inviter"), _user("recipient"), _user("other")
@@ -161,7 +163,19 @@ async def test_only_live_invitations_to_the_callers_address_are_listed(session, 
     assert await _pending_ids(session, inbox.inviter_id) == []
 
 
-async def test_accepting_by_id_joins_without_verifying_the_address(session, inbox) -> None:
+async def _set_email_verified(session, user_id: UUID, verified: bool) -> None:
+    user = await session.get(User, user_id)
+    user.email_verified = verified
+    await session.commit()
+
+
+async def test_an_unverified_account_sees_no_invitations(session, inbox) -> None:
+    await _set_email_verified(session, inbox.recipient_id, False)
+
+    assert await _pending_ids(session, inbox.recipient_id) == []
+
+
+async def test_a_verified_account_accepts_by_id(session, inbox) -> None:
     organization, membership = await InvitationOperations(session).accept_as_member(
         user_id=inbox.recipient_id,
         invitation_id=inbox.first_id,
@@ -177,9 +191,6 @@ async def test_accepting_by_id_joins_without_verifying_the_address(session, inbo
     invitation = await session.get(Invitation, inbox.first_id)
     await session.refresh(invitation)
     assert invitation.accepted_by_user_id == inbox.recipient_id
-    recipient = await session.get(User, inbox.recipient_id)
-    await session.refresh(recipient)
-    assert recipient.email_verified is False
     added = (
         await session.execute(
             select(AuditEvent).where(
@@ -193,8 +204,24 @@ async def test_accepting_by_id_joins_without_verifying_the_address(session, inbo
     assert await _pending_ids(session, inbox.recipient_id) == [inbox.second_id]
 
 
-async def test_accepting_by_token_verifies_the_address(session, inbox) -> None:
-    await InvitationOperations(session).accept_as_member(
+async def test_an_unverified_account_joins_only_through_the_mail_link(session, inbox) -> None:
+    await _set_email_verified(session, inbox.recipient_id, False)
+    operations = InvitationOperations(session)
+
+    with pytest.raises(PermissionDeniedError, match="invitation link from your email"):
+        await operations.accept_as_member(
+            user_id=inbox.recipient_id,
+            invitation_id=inbox.first_id,
+            search_indexer=recording_indexer(),
+        )
+    with pytest.raises(PermissionDeniedError, match="invitation link from your email"):
+        await operations.decline(user_id=inbox.recipient_id, invitation_id=inbox.first_id)
+    first = await session.get(Invitation, inbox.first_id)
+    await session.refresh(first)
+    assert first.accepted_at is None
+    assert first.revoked_at is None
+
+    await operations.accept_as_member(
         user_id=inbox.recipient_id,
         token=inbox.token,
         search_indexer=recording_indexer(),
@@ -204,6 +231,7 @@ async def test_accepting_by_token_verifies_the_address(session, inbox) -> None:
     recipient = await session.get(User, inbox.recipient_id)
     await session.refresh(recipient)
     assert recipient.email_verified is True
+    assert await _pending_ids(session, inbox.recipient_id) == [inbox.first_id]
     audit = (
         await session.execute(
             select(AuditEvent).where(
@@ -233,9 +261,14 @@ async def test_another_account_cannot_accept_or_decline(session, inbox) -> None:
 
 async def test_declining_removes_the_invitation_once(session, inbox) -> None:
     operations = InvitationOperations(session)
-
-    await operations.decline(user_id=inbox.recipient_id, invitation_id=inbox.first_id)
-    await operations.decline(user_id=inbox.recipient_id, invitation_id=inbox.first_id)
+    ip = audit_ip_var.set("203.0.113.7")
+    user_agent = audit_user_agent_var.set("Mozilla/5.0 (decliner)")
+    try:
+        await operations.decline(user_id=inbox.recipient_id, invitation_id=inbox.first_id)
+        await operations.decline(user_id=inbox.recipient_id, invitation_id=inbox.first_id)
+    finally:
+        audit_user_agent_var.reset(user_agent)
+        audit_ip_var.reset(ip)
 
     invitation = await session.get(Invitation, inbox.first_id)
     await session.refresh(invitation)
@@ -253,7 +286,66 @@ async def test_declining_removes_the_invitation_once(session, inbox) -> None:
         .all()
     )
     assert len(declined) == 1
+    # The organization learns of the refusal, not who refused from where.
+    assert declined[0].actor_user_id is None
+    assert declined[0].actor_org_role is None
+    assert declined[0].ip_address is None
+    assert declined[0].user_agent is None
+    assert declined[0].details == {"email": invitation.email, "declined_by_invitee": True}
     assert await _pending_ids(session, inbox.recipient_id) == [inbox.second_id]
+
+
+async def test_a_current_member_is_not_offered_the_invitation_and_keeps_their_role(
+    session, inbox
+) -> None:
+    session.add(
+        OrganizationMember(
+            user_id=inbox.recipient_id,
+            organization_id=inbox.first_org_id,
+            role=OrganizationRole.ADMIN,
+        )
+    )
+    await session.commit()
+
+    assert await _pending_ids(session, inbox.recipient_id) == [inbox.second_id]
+
+    _organization, membership = await InvitationOperations(session).accept_as_member(
+        user_id=inbox.recipient_id,
+        invitation_id=inbox.first_id,
+        search_indexer=recording_indexer(),
+    )
+
+    assert membership.role is OrganizationRole.ADMIN
+    await session.rollback()
+    stored = (
+        await session.execute(
+            select(OrganizationMember).where(
+                OrganizationMember.organization_id == inbox.first_org_id,
+                OrganizationMember.user_id == inbox.recipient_id,
+            )
+        )
+    ).scalar_one()
+    await session.refresh(stored)
+    invitation = await session.get(Invitation, inbox.first_id)
+    await session.refresh(invitation)
+    assert stored.role is OrganizationRole.ADMIN
+    assert stored.source is OrganizationMemberSource.ADDED
+    assert invitation.accepted_by_user_id == inbox.recipient_id
+    events = (
+        (
+            await session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.organization_id == inbox.first_org_id,
+                    AuditEvent.resource_id.in_([inbox.recipient_id, inbox.first_id]),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [(event.action, event.details.get("already_member")) for event in events] == [
+        (Action.AUTH_INVITATION_ACCEPTED, True)
+    ]
 
 
 async def test_an_invitation_into_a_deleted_organization_is_unreachable(

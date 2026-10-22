@@ -125,6 +125,13 @@ describe("OrganizationList", () => {
     expect(buttonFor("Acme", { switchingSlug: "globex" }).props.disabled).toBe(true);
   });
 
+  it("holds every active row while other work is about to switch the tab", () => {
+    expect(buttonFor("Acme", { disabled: true }).props.disabled).toBe(true);
+    expect(buttonFor("Globex", { disabled: true }).props.disabled).toBe(true);
+    expect(rowMarkup(render({ disabled: true }), "Globex")).not.toContain("animate-spin");
+    expect(buttonFor("Globex").props.disabled).toBe(false);
+  });
+
   it("types every row as a plain button", () => {
     const html = render();
 

@@ -80,6 +80,7 @@ from uniffy.core.errors import (
     ConflictError,
     NotFoundError,
     PermissionDeniedError,
+    RateLimitExceededError,
     ValidationError,
 )
 from uniffy.core.models.login.organization_member import OrganizationRole
@@ -344,6 +345,8 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers):
                 role = org_role_from_proto(request.role)
                 if role is None:
                     role = OrganizationRole.MEMBER
+                if role == OrganizationRole.OWNER:
+                    raise PermissionDeniedError("Ownership moves only through a transfer")
 
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
@@ -716,7 +719,7 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers):
         try:
             async with open_session() as session:
                 ops = InvitationOperations(session)
-                result = await ops.invite(
+                invitation = await ops.invite(
                     org_id=org_id,
                     email=request.email,
                     role=role,
@@ -725,15 +728,15 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers):
                 inviter_row = (
                     await session.execute(select(User).where(User.id == user_id))
                 ).scalar_one_or_none()
-                return InviteMemberResponse(
-                    invitation=invitation_to_proto(result.invitation, inviter_row)
-                )
+                return InviteMemberResponse(invitation=invitation_to_proto(invitation, inviter_row))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
         except ConflictError as e:
             raise ConnectError(Code.ALREADY_EXISTS, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
@@ -824,6 +827,8 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers):
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except Exception as e:
             logger.exception(f"Error resending invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
