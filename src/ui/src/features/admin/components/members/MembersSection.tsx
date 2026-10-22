@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import {
   Users,
   MagnifyingGlass,
@@ -32,6 +32,7 @@ import { MemberProfileDialog } from "@/features/admin/components/members/MemberP
 import { SubjectAvatarById } from "@/components/subject";
 import { InviteMemberDialog } from "@/features/admin/components/members/InviteMemberDialog";
 import { InvitationsTable } from "@/features/admin/components/members/InvitationsTable";
+import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
 import {
   Table,
   TableHeader,
@@ -327,7 +328,8 @@ export function MembersSection() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const currentRole = useAppSelector((state) => state.auth.currentOrganizationRole);
   const isOrgAdmin = currentRole === "OWNER" || currentRole === "ADMIN";
-  const { members, loading, totalCount, error, refresh, updateRole, remove } = useOrgMembers();
+  const { members, loading, totalCount, error, refresh, refreshQuietly, updateRole, remove } =
+    useOrgMembers();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<number | undefined>(undefined);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -359,6 +361,13 @@ export function MembersSection() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh is stable (useCallback with [dispatch])
   }, [search, roleFilter]);
+
+  // Invitees accept and decline from their own sessions, so both tables reload in place together.
+  const reloadInPlace = useCallback(() => {
+    refreshQuietly({ search: search || undefined, roleFilter });
+    setInvitationsRefreshKey((n) => n + 1);
+  }, [refreshQuietly, search, roleFilter]);
+  useRefreshOnReturn(reloadInPlace);
 
   const handleInvalidateCaches = async (userId: string, displayName: string) => {
     const client = createClient(AuthService, unaryTransport);
@@ -484,10 +493,7 @@ export function MembersSection() {
         <InviteMemberDialog
           organizationId={organizationId}
           onClose={() => setInviteOpen(false)}
-          onInvited={() => {
-            setInvitationsRefreshKey((n) => n + 1);
-            refresh({ search: search || undefined, roleFilter });
-          }}
+          onInvited={reloadInPlace}
         />
       )}
     </div>

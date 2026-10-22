@@ -32,7 +32,8 @@ export const DRAIN_BACKOFF_MS = 60_000;
 export const DRAIN_BACKOFF_MAX_MS = 15 * 60_000;
 
 const active = new Set<string>();
-const cancellations = new Map<string, () => void>();
+// Each running or lock-waiting drain by doc name, with the organization of its entry.
+const cancellations = new Map<string, { organizationId: string; cancel: () => void }>();
 const backoff = new Map<
   string,
   { attempts: number; waiting: ReturnType<typeof setTimeout> | null }
@@ -60,7 +61,14 @@ function delayNextAttempt(docName: string): void {
 /** An editor opening the doc takes over; the drain its close hands off to starts at once. */
 export function abortDrain(docName: string): void {
   forgetBackoff(docName);
-  cancellations.get(docName)?.();
+  cancellations.get(docName)?.cancel();
+}
+
+/** The tab leaves an organization: drains of any other end as retry, keeping rows and entry,
+ * so none rides the next organization's socket. `null` ends every drain. */
+export function abortDrainsOutside(organizationId: string | null): void {
+  for (const drain of [...cancellations.values()])
+    if (drain.organizationId !== organizationId) drain.cancel();
 }
 
 /** Connectivity came back, which may be what held the checkpoints: every drain may run now. */
@@ -71,9 +79,9 @@ export function resumeDrains(): void {
 
 // "drained": a checkpoint covers every own edit. "retained": the server refused the doc or
 // generation; the rows stay a recoverable draft and the entry is dropped. "retry": the
-// connection failed or the checkpoint did not arrive in time; rows and entry wait for the next
-// trigger. "held": an editor or a drain in another tab holds the doc, so nothing ran. Acceptance
-// alone never drains.
+// connection failed, the tab's socket serves another organization, or the checkpoint did not
+// arrive in time; rows and entry wait for the next trigger. "held": an editor or a drain in
+// another tab holds the doc, so nothing ran. Acceptance alone never drains.
 export type DrainOutcome = "drained" | "retained" | "retry" | "held";
 
 export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
@@ -143,6 +151,7 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
       realtimeMultiplexer.attach({
         contentType,
         contentId,
+        organizationId: entry.organizationId,
         ydoc,
         awareness,
         heldGeneration: held,
@@ -185,6 +194,8 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
           // Otherwise a read-only doc still syncs, and local recovery reads the device first.
         },
         onGenerationMismatch: () => finish("retained"),
+        // No server of this organization answered, so nothing proves access lost or edits saved.
+        onOrganizationMismatch: () => finish("retry"),
         onCloseCode: (code) => {
           if (
             code === WS_CLOSE_UNAUTHENTICATED ||
@@ -194,7 +205,10 @@ export function drainDoc(entry: PendingDoc): Promise<DrainOutcome> {
             finish("retry");
         },
       });
-    cancellations.set(docName, () => finish("retry"));
+    cancellations.set(docName, {
+      organizationId: entry.organizationId,
+      cancel: () => finish("retry"),
+    });
     // Hydrating first makes the attaching SyncStep1 carry what this device holds, so the server
     // answers with what changed since instead of the whole document.
     void persistence.hydrate().then(
@@ -236,7 +250,7 @@ export function runRealtimeDrain(scope: {
     const cancel = () => {
       cancelled = true;
     };
-    cancellations.set(docName, cancel);
+    cancellations.set(docName, { organizationId: entry.organizationId, cancel });
     started.set(
       docName,
       whenDocumentFree(docName, () =>
@@ -245,7 +259,7 @@ export function runRealtimeDrain(scope: {
         .then((outcome) => outcome ?? "held")
         .finally(() => {
           active.delete(docName);
-          if (cancellations.get(docName) === cancel) cancellations.delete(docName);
+          if (cancellations.get(docName)?.cancel === cancel) cancellations.delete(docName);
         }),
     );
   }

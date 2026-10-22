@@ -32,6 +32,7 @@ function model(overrides: Partial<SerializedModelInfo> = {}): SerializedModelInf
     parameterSchemaJson: "",
     imageParameterSchemaJson: "",
     imagePriceEstimatesJson: "",
+    providerDefault: false,
     ...overrides,
   };
 }

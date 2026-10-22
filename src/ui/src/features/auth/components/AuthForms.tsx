@@ -1,25 +1,21 @@
 import { useState, useEffect } from "react";
-import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { Link, useNavigate } from "react-router-dom";
-import { AuthService } from "@uniffy/proto/auth/v1/auth_pb";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { setCredentials } from "@/features/auth/store/authSlice";
-import { setAccentColor, setFontFamily } from "@/config/theme/themeSlice";
+import { authApi } from "@/features/auth/api/authApi";
 import {
-  friendlyErrorMessage,
-  initStorageEncryptionFromApi,
-  publicUnaryTransport,
-  setEnrollmentToken,
-  setMemoryAccessToken,
-  unaryTransport,
-} from "@/config";
+  completeSignIn,
+  signInResultFrom,
+  type SignInResult,
+} from "@/features/auth/store/signInThunks";
+import { signInInvitationFrom } from "@/features/auth/utils/acceptInviteState";
+import { returnPathFrom } from "@/features/auth/utils/returnPath";
+import { friendlyErrorMessage, setEnrollmentToken } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Envelope, IdentificationCard, Lock, User } from "@phosphor-icons/react";
 import { AuthInput } from "@/features/auth/components/AuthInput";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { LoginMfaStep } from "@/features/mfa";
-
-const authClient = createClient(AuthService, publicUnaryTransport);
 
 export function AuthForms() {
   useDocumentTitle("Login");
@@ -28,13 +24,25 @@ export function AuthForms() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publicRegistrationEnabled, setPublicRegistrationEnabled] = useState<boolean | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
+  const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
+  const returnPath = returnPathFrom(location.state);
+  // An invitation sent the visitor here, so the form names it and starts from the invited email.
+  const invitation = signInInvitationFrom(location.state);
 
   useEffect(() => {
     let cancelled = false;
-    authClient
-      .getAuthConfig({})
+    authApi
+      .getAuthConfig()
       .then((response) => {
         if (cancelled) return;
+        if (response.setupRequired) {
+          navigate("/setup", { replace: true });
+          return;
+        }
         setPublicRegistrationEnabled(response.publicRegistrationEnabled);
         if (!response.publicRegistrationEnabled) setMode("login");
       })
@@ -44,82 +52,23 @@ export function AuthForms() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [navigate]);
 
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const isAuthenticated = useAppSelector((state) => state.auth?.isAuthenticated ?? false);
-  const currentOrganizationId = useAppSelector((state) => state.auth?.currentOrganizationId);
-
+  // A page that sent the visitor here to sign in gets them back; ProtectedRoute still routes an
+  // org-less session from there to the welcome page.
   useEffect(() => {
-    if (isAuthenticated) {
-      if (currentOrganizationId) {
-        navigate("/", { replace: true });
-      } else {
-        navigate("/select-org", { replace: true });
-      }
-    }
-  }, [isAuthenticated, currentOrganizationId, navigate]);
+    if (!isAuthenticated) return;
+    navigate(returnPath ?? (currentOrganizationId ? "/" : "/welcome"), { replace: true });
+  }, [isAuthenticated, currentOrganizationId, navigate, returnPath]);
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => invitation?.email ?? "");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [mfaChallengeToken, setMfaChallengeToken] = useState<string | null>(null);
 
-  const fetchUserAndDispatch = async (
-    accessToken: string,
-    refreshToken: string,
-    organizationId?: string,
-    organizationSlug?: string,
-    organizationRole?: string,
-    sessionId?: string,
-    domainAdminDomains?: number[],
-  ) => {
-    try {
-      setMemoryAccessToken(accessToken);
-      const authenticatedClient = createClient(AuthService, unaryTransport);
-      const userResponse = await authenticatedClient.getCurrentUser(
-        {},
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-      );
-
-      const plainUser = {
-        id: userResponse.id,
-        email: userResponse.email,
-        username: userResponse.username,
-        fullName: userResponse.fullName,
-        isActive: userResponse.isActive,
-        isSystemAdmin: userResponse.isSystemAdmin,
-        emailVerified: userResponse.emailVerified,
-        accentColor: userResponse.accentColor,
-        fontFamily: userResponse.fontFamily,
-        avatarUrl: userResponse.avatarUrl,
-        hasAvatar: userResponse.hasAvatar,
-      };
-
-      if (userResponse.accentColor) dispatch(setAccentColor(userResponse.accentColor));
-      if (userResponse.fontFamily) dispatch(setFontFamily(userResponse.fontFamily));
-
-      dispatch(
-        setCredentials({
-          user: plainUser,
-          accessToken,
-          refreshToken,
-          organizationId,
-          organizationSlug,
-          organizationRole,
-          sessionId,
-          domainAdminDomains,
-        }),
-      );
-
-      initStorageEncryptionFromApi(plainUser.id).catch((err) => {
-        console.warn("Storage encryption init failed:", err);
-      });
-    } catch {
-      throw new Error("Failed to fetch user details");
-    }
+  const finishSignIn = async (result: SignInResult) => {
+    await dispatch(completeSignIn(result)).unwrap();
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -127,21 +76,13 @@ export function AuthForms() {
     setLoading(true);
     setError(null);
     try {
-      const response = await authClient.register({
+      const response = await authApi.register({
         email,
         username,
         password,
         fullName: fullName || undefined,
       });
-      await fetchUserAndDispatch(
-        response.accessToken,
-        response.refreshToken,
-        response.organizationId,
-        response.organizationSlug,
-        response.organizationRole,
-        response.sessionId,
-        Array.from(response.domainAdminDomains),
-      );
+      await finishSignIn(signInResultFrom(response));
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : "Registration failed";
       setError(friendlyErrorMessage(raw) || "Registration failed");
@@ -155,24 +96,15 @@ export function AuthForms() {
     setLoading(true);
     setError(null);
     try {
-      const response = await authClient.login({ email, password });
+      const response = await authApi.login({ email, password });
       const variant = response.result;
       if (variant.case === "authResult") {
-        const r = variant.value;
-        await fetchUserAndDispatch(
-          r.accessToken,
-          r.refreshToken,
-          r.organizationId,
-          r.organizationSlug,
-          r.organizationRole,
-          r.sessionId,
-          Array.from(r.domainAdminDomains),
-        );
+        await finishSignIn(signInResultFrom(variant.value));
       } else if (variant.case === "mfaChallenge") {
         setMfaChallengeToken(variant.value.challengeToken);
       } else if (variant.case === "enrollmentRequired") {
         setEnrollmentToken(variant.value.enrollmentToken);
-        navigate("/auth/enroll-mfa", { replace: true });
+        navigate("/auth/enroll-mfa", { replace: true, state: { from: returnPath } });
       } else {
         setError("Unexpected login response. Please try again.");
       }
@@ -188,24 +120,8 @@ export function AuthForms() {
     }
   };
 
-  const handleMfaVerified = async (params: {
-    accessToken: string;
-    refreshToken: string;
-    organizationId?: string;
-    organizationSlug?: string;
-    organizationRole?: string;
-    sessionId?: string;
-    domainAdminDomains?: number[];
-  }) => {
-    await fetchUserAndDispatch(
-      params.accessToken,
-      params.refreshToken,
-      params.organizationId,
-      params.organizationSlug,
-      params.organizationRole,
-      params.sessionId,
-      params.domainAdminDomains ?? [],
-    );
+  const handleMfaVerified = async (params: SignInResult) => {
+    await finishSignIn({ ...params, domainAdminDomains: params.domainAdminDomains ?? [] });
     setMfaChallengeToken(null);
   };
 
@@ -265,6 +181,17 @@ export function AuthForms() {
             </button>
           </div>
         </div>
+      )}
+
+      {invitation && mode === "login" && (
+        <p
+          className="mb-5 text-sm text-muted-foreground opacity-0"
+          style={{ animation: "auth-slide-up 0.5s ease-out 0.25s forwards" }}
+          data-testid="auth-invitation-context"
+        >
+          Sign in to accept the invitation to{" "}
+          <span className="font-medium text-foreground">{invitation.organizationName}</span>.
+        </p>
       )}
 
       {error && (
@@ -367,7 +294,7 @@ export function AuthForms() {
               onChange={setEmail}
               required
               icon={Envelope}
-              autoFocus
+              autoFocus={!invitation}
             />
             <AuthInput
               id="login-password"
@@ -377,6 +304,7 @@ export function AuthForms() {
               onChange={setPassword}
               required
               icon={Lock}
+              autoFocus={!!invitation}
             />
 
             <button

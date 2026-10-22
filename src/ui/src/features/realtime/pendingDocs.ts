@@ -18,7 +18,7 @@ const listeners = new Set<() => void>();
 let cache: PendingDoc[] | null = null;
 let storageListenerAttached = false;
 
-function isPendingDoc(value: unknown): value is PendingDoc {
+export function isPendingDoc(value: unknown): value is PendingDoc {
   if (!value || typeof value !== "object") return false;
   const entry = value as Record<string, unknown>;
   return (
@@ -69,8 +69,13 @@ export function hasPendingDoc(contentType: string, contentId: string): boolean {
   );
 }
 
-export function hasPendingDocs(userId: string): boolean {
-  return listPendingDocs().some((entry) => entry.userId === userId);
+/** Entries of this user, only those of `organizationId` when it is given. */
+export function hasPendingDocs(userId: string, organizationId?: string): boolean {
+  return listPendingDocs().some(
+    (entry) =>
+      entry.userId === userId &&
+      (organizationId === undefined || entry.organizationId === organizationId),
+  );
 }
 
 // Every stored write re-records its doc; an unchanged entry must not wake the drain again.

@@ -28,12 +28,13 @@ from uniffy.core.converters.common_proto import (
     content_role_from_proto,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.models.files.multipart_upload import UploadStatus
+from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.domains.files.converters import (
     file_to_proto,
     upload_to_proto_status,
 )
 from uniffy.domains.files.operations import FileOperations
+from uniffy.domains.files.uploads import effective_upload_status
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="files.rpc.uploads")
@@ -44,6 +45,24 @@ from uniffy.domains.files.rpc.support import (
     _parse_tag_id_list,
     _resolve_file_effective_policy,
 )
+
+
+async def _writable_upload(ops: FileOperations, upload_id: UUID, user_id: UUID) -> MultipartUpload:
+    upload = await ops.get_upload_status(upload_id)
+    if not upload:
+        raise ConnectError(Code.NOT_FOUND, "Upload not found")
+    if upload.user_id != user_id:
+        raise ConnectError(Code.PERMISSION_DENIED, "Not your upload")
+    # The answer a missing upload gets: a removed member learns nothing more about it.
+    if not await ops.uploads.uploader_is_active_member(upload):
+        raise ConnectError(Code.NOT_FOUND, "Upload not found")
+    status = effective_upload_status(upload)
+    if status != UploadStatus.ACTIVE:
+        raise ConnectError(
+            Code.FAILED_PRECONDITION,
+            f"Upload is {status.value}; cannot accept chunks.",
+        )
+    return upload
 
 
 class UploadHandlers:
@@ -126,16 +145,7 @@ class UploadHandlers:
             async with open_session() as session:
                 ops = FileOperations(session, storage, self.search_indexer)
 
-                upload = await ops.get_upload_status(upload_id)
-                if not upload:
-                    raise ConnectError(Code.NOT_FOUND, "Upload not found")
-                if upload.user_id != user_id:
-                    raise ConnectError(Code.PERMISSION_DENIED, "Not your upload")
-                if upload.status != UploadStatus.ACTIVE:
-                    raise ConnectError(
-                        Code.FAILED_PRECONDITION,
-                        f"Upload is {upload.status.value}; cannot accept chunks.",
-                    )
+                upload = await _writable_upload(ops, upload_id, user_id)
 
                 etag = await storage.upload_part(
                     key=upload.storage_key,
@@ -250,13 +260,7 @@ class UploadHandlers:
                         except ValueError:
                             raise ConnectError(Code.INVALID_ARGUMENT, "Invalid upload_id")
 
-                        upload = await ops.get_upload_status(upload_id)
-                        if not upload:
-                            raise ConnectError(Code.NOT_FOUND, "Upload not found")
-
-                        if upload.user_id != user_id:
-                            raise ConnectError(Code.PERMISSION_DENIED, "Not your upload")
-
+                        upload = await _writable_upload(ops, upload_id, user_id)
                         storage_key = upload.storage_key
                         s3_upload_id = upload.s3_upload_id
 
@@ -296,6 +300,12 @@ class UploadHandlers:
 
                 raise ConnectError(Code.INVALID_ARGUMENT, "Upload stream ended without is_last")
 
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except NotFoundError:
+            raise ConnectError(Code.NOT_FOUND, "Upload not found")
+        except PermissionDeniedError:
+            raise ConnectError(Code.PERMISSION_DENIED, "Not your upload")
         except ConnectError:
             raise
         except Exception as e:
@@ -319,9 +329,14 @@ class UploadHandlers:
                 ops = FileOperations(session, self.storage, self.search_indexer)
                 upload = await ops.get_upload_status(upload_id)
 
-                # Same not-found shape for a foreign upload as for a missing one,
-                # so the id space is not probeable.
-                if not upload or upload.user_id != user_id:
+                # Same not-found shape for a foreign upload, and for one whose
+                # uploader left the organization, as for a missing one, so the
+                # id space is not probeable.
+                if (
+                    not upload
+                    or upload.user_id != user_id
+                    or not await ops.uploads.uploader_is_active_member(upload)
+                ):
                     raise ConnectError(Code.NOT_FOUND, "Upload not found")
 
                 completed_chunks = await ops.list_completed_part_numbers(upload_id)

@@ -57,6 +57,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isRehydrating, organizationId, holdNavigation } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  // The organization the mounted screens were opened in; undefined until the first decision.
+  const routedOrganizationId = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (isRehydrating || holdNavigation) return;
@@ -64,18 +66,30 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const currentSegment = segments[0] as string;
     const inAuth = currentSegment === "auth";
     const inSelectOrg = currentSegment === "select-org";
+    // Creating an organization is the other way out of having none.
+    const inCreateOrg = currentSegment === "create-organization";
+    const organizationChanged =
+      routedOrganizationId.current !== undefined && routedOrganizationId.current !== organizationId;
+    routedOrganizationId.current = organizationId;
+
+    // A replace swaps only the top screen. Screens below it were opened in the previous session
+    // or organization and must not stay reachable with back, nor reattach their content.
+    const resetTo = (href: string) => {
+      if (router.canDismiss()) router.dismissAll();
+      router.replace(href as any);
+    };
 
     if (!isAuthenticated) {
       if (!inAuth) {
-        router.replace("/auth" as any);
+        resetTo("/auth");
       }
     } else if (!organizationId) {
-      if (!inSelectOrg) {
-        router.replace("/select-org" as any);
+      if (!inSelectOrg && !inCreateOrg) {
+        resetTo("/select-org");
       }
     } else {
-      if (inAuth || inSelectOrg) {
-        router.replace("/");
+      if (inAuth || inSelectOrg || organizationChanged) {
+        resetTo("/");
       }
     }
   }, [isAuthenticated, isRehydrating, organizationId, holdNavigation, segments, router]);
@@ -275,6 +289,8 @@ function RootLayoutNav() {
             <Stack.Screen name="you/appearance" />
             <Stack.Screen name="you/notifications" />
             <Stack.Screen name="you/security" />
+            <Stack.Screen name="you/organization" />
+            <Stack.Screen name="create-organization" />
           </Stack>
         </View>
         {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely

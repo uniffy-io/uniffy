@@ -6,7 +6,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.errors import MembershipRequiredError
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel, ChatChannelStats
 from uniffy.core.models.chat.channel_member import ChannelRole, ChatChannelMember
 from uniffy.core.types import SubjectType
@@ -18,7 +18,7 @@ async def stage_default_channel_memberships(
     organization_id: UUID,
 ) -> list[UUID]:
     if not await get_active_membership(session, user_id, organization_id):
-        raise PermissionDeniedError("Requires organization membership")
+        raise MembershipRequiredError("Requires organization membership")
 
     default_channel_ids = list(
         (

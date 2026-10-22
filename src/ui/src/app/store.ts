@@ -15,8 +15,9 @@ import type { PersistedState, MigrationManifest } from "redux-persist";
 import { credentialSafeStorage } from "@/features/auth/store/credentialStorage";
 import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware";
 import { authReducer } from "@/features/auth/store/authSlice";
-import { instantDayKey } from "@/features/calendar/utils";
-import { QUICK_ACCESS_FILTERS } from "@/features/calendar/types/calendar";
+import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
+import { invitationsReducer } from "@/features/auth/store/invitationsSlice";
+import { onboardingReducer } from "@/features/onboarding/store/onboardingSlice";
 import { setPreferredTimeZone } from "@/shared/utils/timezone";
 import { setPreferredWeekStart } from "@/shared/utils/weekStart";
 import type { AuthState } from "@/features/auth/store/authSlice";
@@ -33,7 +34,7 @@ import { adminReducer } from "@/features/admin/store/adminSlice";
 import { agentsGovernanceReducer } from "@/features/admin/store/agentsGovernanceSlice";
 import { agentRuntimeSettingsReducer } from "@/features/admin/store/agentRuntimeSettingsSlice";
 import { setStoreRef } from "@/app/storeRef";
-import { withSessionScope } from "@/app/sessionScope";
+import { retainedCalendarUi, retainedChatUi, withSessionScope } from "@/app/sessionScope";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
 import { zenModeReducer } from "@/app/zenModeSlice";
@@ -98,22 +99,18 @@ const authSecurityTransform = createTransform(
   { whitelist: ["auth"] },
 );
 
-/** Calendar opens to today, not the last viewed date; other UI prefs survive. */
-const calendarUiTransform = createTransform(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (inboundState: any) => inboundState,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (outboundState: any) => ({
-    ...outboundState,
-    currentDate: instantDayKey(new Date()),
-    // A filter persisted under an older vocabulary matches every event and
-    // highlights no pill, which reads as a broken calendar rather than a reset.
-    quickAccessFilter: QUICK_ACCESS_FILTERS.includes(outboundState?.quickAccessFilter)
-      ? outboundState.quickAccessFilter
-      : null,
-  }),
-  { whitelist: ["calendarUi"] },
-);
+/*
+ * persist:root is one blob every tab reloads from, whatever organization the tab lands in, so
+ * chat and calendar keep layout only. Reply and edit text, event prefills and open dialogs stay
+ * in the tab that made them.
+ */
+const chatUiTransform = createTransform(retainedChatUi, retainedChatUi, {
+  whitelist: ["chatUi"],
+});
+
+const calendarUiTransform = createTransform(retainedCalendarUi, retainedCalendarUi, {
+  whitelist: ["calendarUi"],
+});
 
 /** Keys older clients wrote beside the redux store; the version 5 migration deletes them. */
 const LEGACY_PROJECTS_STORAGE_KEYS = [
@@ -176,6 +173,9 @@ const agentsUiTransform = createTransform(
 
 const rootReducer = combineReducers({
   auth: authReducer,
+  organizations: organizationsReducer,
+  invitations: invitationsReducer,
+  onboarding: onboardingReducer,
   bookmarks: bookmarksReducer,
   libraryGraph: libraryGraphReducer,
   theme: themeReducer,
@@ -294,13 +294,24 @@ const migrations: MigrationManifest = {
     removeLegacyProjectsStorage();
     return state;
   },
+  6: (state: PersistedState) => {
+    // Recording recents named files from whichever organization recorded them; no UI read them.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s = state as any;
+    if (s?.recording && "recents" in s.recording) {
+      const recording = { ...s.recording };
+      delete recording.recents;
+      return { ...s, recording };
+    }
+    return state;
+  },
 };
 
 type RootReducerState = ReturnType<typeof rootReducer>;
 
 const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   key: "root",
-  version: 5,
+  version: 6,
   storage: credentialSafeStorage,
   whitelist: [
     "auth",
@@ -316,6 +327,7 @@ const persistConfig: Parameters<typeof persistReducer<RootReducerState>>[0] = {
   transforms: [
     authSecurityTransform,
     calendarUiTransform,
+    chatUiTransform,
     projectsUiTransform,
     agentsUiTransform,
     recordingTransform,

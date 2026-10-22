@@ -13,9 +13,12 @@ import {
   type SerializedFileVersion,
 } from "@/features/files/store/filesThunks";
 import type { SerializedFilterCriteria } from "@/features/files/store/savedFiltersSlice";
+import { rehydrateComplete, setCredentials } from "@/features/auth/store/authSlice";
+import { filesFilterStorageKey } from "@/features/files/store/filesFilterStorage";
 
 export type DetailsPanelTab = "info" | "metadata" | "permissions" | "versions";
 
+/** Device-wide view prefs; nothing in it names an organization's content. */
 const FILES_VIEW_STORAGE_KEY = "uniffy-files-view";
 
 interface FilesViewSettings {
@@ -23,29 +26,33 @@ interface FilesViewSettings {
   iconSize: number;
   sortBy: "filename" | "updated_at" | "created_at" | "size_bytes";
   sortOrder: "asc" | "desc";
-  activeFilterId: string | null;
-  activeFilterName: string | null;
-  activeFilterCriteria: SerializedFilterCriteria | null;
 }
+
+type ActiveFilter = FilesState["activeFilter"];
+type FilesFilterScope = NonNullable<FilesState["filterScope"]>;
 
 const VALID_SORT_BY = ["filename", "updated_at", "created_at", "size_bytes"];
 const VALID_SORT_ORDER = ["asc", "desc"];
+
+function noActiveFilter(): ActiveFilter {
+  return { id: null, name: null, criteria: null };
+}
 
 function loadFilesViewSettings(): FilesViewSettings {
   try {
     const stored = localStorage.getItem(FILES_VIEW_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return {
+      const settings: FilesViewSettings = {
         viewMode: parsed.viewMode === "list" ? "list" : "grid",
         iconSize:
           typeof parsed.iconSize === "number" ? Math.max(0, Math.min(3, parsed.iconSize)) : 1,
         sortBy: VALID_SORT_BY.includes(parsed.sortBy) ? parsed.sortBy : "updated_at",
         sortOrder: VALID_SORT_ORDER.includes(parsed.sortOrder) ? parsed.sortOrder : "desc",
-        activeFilterId: parsed.activeFilterId ?? null,
-        activeFilterName: parsed.activeFilterName ?? null,
-        activeFilterCriteria: parsed.activeFilterCriteria ?? null,
       };
+      // The device key must not hold one organization's filter for every org to read back.
+      if (Object.keys(parsed).some((key) => !(key in settings))) saveFilesViewSettings(settings);
+      return settings;
     }
   } catch {
     // ignore
@@ -55,9 +62,6 @@ function loadFilesViewSettings(): FilesViewSettings {
     iconSize: 1,
     sortBy: "updated_at",
     sortOrder: "desc",
-    activeFilterId: null,
-    activeFilterName: null,
-    activeFilterCriteria: null,
   };
 }
 
@@ -75,10 +79,38 @@ function persistViewState(state: FilesState): void {
     iconSize: state.iconSize,
     sortBy: state.filters.sortBy,
     sortOrder: state.filters.sortOrder,
-    activeFilterId: state.activeFilter.id,
-    activeFilterName: state.activeFilter.name,
-    activeFilterCriteria: state.activeFilter.criteria,
   });
+}
+
+function filterStorageKey(scope: FilesFilterScope): string {
+  return filesFilterStorageKey(scope.organizationId, scope.userId);
+}
+
+function loadActiveFilter(scope: FilesFilterScope): ActiveFilter {
+  try {
+    const stored = localStorage.getItem(filterStorageKey(scope));
+    if (!stored) return noActiveFilter();
+    const parsed = JSON.parse(stored) as Partial<ActiveFilter>;
+    if (!parsed?.criteria || typeof parsed.criteria !== "object") return noActiveFilter();
+    return {
+      id: typeof parsed.id === "string" ? parsed.id : null,
+      name: typeof parsed.name === "string" ? parsed.name : null,
+      criteria: parsed.criteria,
+    };
+  } catch {
+    return noActiveFilter();
+  }
+}
+
+function persistActiveFilter(state: FilesState): void {
+  if (!state.filterScope) return;
+  try {
+    const key = filterStorageKey(state.filterScope);
+    if (state.activeFilter.criteria) localStorage.setItem(key, JSON.stringify(state.activeFilter));
+    else localStorage.removeItem(key);
+  } catch {
+    // ignore
+  }
 }
 
 export interface FilesState {
@@ -114,6 +146,8 @@ export interface FilesState {
     name: string | null;
     criteria: SerializedFilterCriteria | null;
   };
+  /** The organization and user the active filter is stored under; null until credentials name an org. */
+  filterScope: { organizationId: string; userId: string } | null;
 
   pagination: {
     page: number;
@@ -167,11 +201,8 @@ const initialState: FilesState = {
     folderId: null,
     viewScope: "all",
   },
-  activeFilter: {
-    id: persistedViewSettings.activeFilterId,
-    name: persistedViewSettings.activeFilterName,
-    criteria: persistedViewSettings.activeFilterCriteria,
-  },
+  activeFilter: noActiveFilter(),
+  filterScope: null,
   pagination: {
     page: 1,
     pageSize: 50,
@@ -194,10 +225,10 @@ const initialState: FilesState = {
   },
 };
 
+/** State only: the stored filter belongs to the organization left behind and waits for a return. */
 export function resetFilesScope(state: FilesState): FilesState {
-  const reset: FilesState = {
+  return {
     ...initialState,
-    activeFilter: { id: null, name: null, criteria: null },
     viewMode: state.viewMode,
     iconSize: state.iconSize,
     sidebarOpen: state.sidebarOpen,
@@ -207,8 +238,22 @@ export function resetFilesScope(state: FilesState): FilesState {
       sortOrder: state.filters.sortOrder,
     },
   };
-  persistViewState(reset);
-  return reset;
+}
+
+function enterFilterScope(
+  state: FilesState,
+  payload: { user: { id: string }; organizationId?: string },
+): void {
+  const organizationId = payload.organizationId || null;
+  const userId = payload.user.id;
+  if (
+    state.filterScope?.organizationId === organizationId &&
+    state.filterScope?.userId === userId
+  ) {
+    return;
+  }
+  state.filterScope = organizationId ? { organizationId, userId } : null;
+  state.activeFilter = state.filterScope ? loadActiveFilter(state.filterScope) : noActiveFilter();
 }
 
 export const filesSlice = createSlice({
@@ -402,16 +447,12 @@ export const filesSlice = createSlice({
         name: action.payload.name,
         criteria: action.payload.criteria,
       };
-      persistViewState(state);
+      persistActiveFilter(state);
     },
 
     clearActiveFilter: (state) => {
-      state.activeFilter = {
-        id: null,
-        name: null,
-        criteria: null,
-      };
-      persistViewState(state);
+      state.activeFilter = noActiveFilter();
+      persistActiveFilter(state);
     },
 
     setPagination: (state, action: PayloadAction<Partial<FilesState["pagination"]>>) => {
@@ -474,6 +515,13 @@ export const filesSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // Credentials name the tab's organization; the filter saved there loads when it changes.
+    builder
+      .addCase(setCredentials, (state, action) => enterFilterScope(state, action.payload))
+      .addCase(rehydrateComplete, (state, action) => {
+        if (action.payload.organizationId) enterFilterScope(state, action.payload);
+      });
+
     builder
       .addCase(fetchFiles.pending, (state) => {
         state.loading = true;

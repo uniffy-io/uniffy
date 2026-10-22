@@ -67,7 +67,6 @@ class InAppAdapter(DeliveryAdapter):
         """Publish to Valkey Pub/Sub - call after commit so ``notification.id`` is set."""
         payload = {
             "id": str(notification.id),
-            "organization_id": str(notification.organization_id),
             "user_id": str(notification.user_id),
             "notification_type": notification_type_to_proto(notification.notification_type),
             "title": notification.title,
@@ -83,4 +82,6 @@ class InAppAdapter(DeliveryAdapter):
                 if v is not None
             },
         }
-        await publish_notification(notification.user_id, payload)
+        await publish_notification(
+            notification.user_id, payload, organization_id=notification.organization_id
+        )

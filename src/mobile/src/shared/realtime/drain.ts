@@ -106,11 +106,11 @@ export function handOffSavedDrafts(
 }
 
 /**
- * Gives attached documents up to one checkpoint window to save every own edit, then reports
- * whether this user still has edits that only this device holds. Sign-out asks before deleting
- * them.
+ * Gives attached documents up to one checkpoint window to save every own edit, then names the
+ * organizations where this user still has edits that only this device holds, each once.
+ * Sign-out asks before deleting them.
  */
-export async function settleUnsyncedEdits(userId: string): Promise<boolean> {
+export async function settleUnsyncedEdits(userId: string): Promise<string[]> {
   const waiting = realtimeMultiplexer.flushPending();
   if (waiting.length) {
     await new Promise<void>((resolve) => {
@@ -129,8 +129,10 @@ export async function settleUnsyncedEdits(userId: string): Promise<boolean> {
     });
   }
   await settleDraftWrites();
+  const organizations = new Set<string>();
   for (const key of await listDraftKeys(userId)) {
-    const [, , , contentType, contentId] = key.split(".");
+    const [, , organizationId, contentType, contentId] = key.split(".");
+    if (organizations.has(organizationId)) continue;
     const name = `${contentType}:${contentId}`;
     const { checkpointPending, generation } = realtimeMultiplexer.getDocState(name);
     // An open document whose every edit is checkpointed keeps only a cache of its own generation.
@@ -139,9 +141,9 @@ export async function settleUnsyncedEdits(userId: string): Promise<boolean> {
       !checkpointPending &&
       generation !== null &&
       (await readStoredDrafts(key)).every((draft) => draft.generation === generation);
-    if (!cached) return true;
+    if (!cached) organizations.add(organizationId);
   }
-  return false;
+  return [...organizations];
 }
 
 /** Stops drains and deletes this user's drafts and their key. */
@@ -225,8 +227,15 @@ async function drainDraft(
           if (!realtimeMultiplexer.getDocState(name).checkpointPending) finish("drained");
         })
         .catch(() => finish("retry")),
-    onWriteDenied: (_reason, noView) => (noView ? settleLost() : finish("retry")),
+    // A view denial settles only when a socket of the draft's own organization said it.
+    onWriteDenied: (_reason, noView) =>
+      noView && realtimeMultiplexer.servesOrganization(organizationId)
+        ? settleLost()
+        : finish("retry"),
     onGenerationMismatch: () => finish("retry"),
+    // No server of this organization answered, so nothing is known about access: rows and entry
+    // stay for a socket of the right organization.
+    onOrganizationMismatch: () => finish("retry"),
   });
   // Only a checkpoint ends the drain; a receipt leaves the device copy dirty.
   const stopWatching = realtimeMultiplexer.subscribeDocState(name, (state) => {

@@ -20,11 +20,10 @@ TEMPLATES: dict[str, MailTemplate] = {
     ),
     "auth/invitation": MailTemplate(
         name="auth/invitation",
-        description="Org invitation to a brand-new email; carries the accept-link token.",
-    ),
-    "auth/added_to_org": MailTemplate(
-        name="auth/added_to_org",
-        description="Courtesy notice when an invited email matched an existing user.",
+        description=(
+            "Org invitation carrying the accept-link token; an existing account "
+            "signs in to accept, a new address creates its account."
+        ),
     ),
     "auth/password_reset": MailTemplate(
         name="auth/password_reset",
@@ -72,8 +71,8 @@ TEMPLATES: dict[str, MailTemplate] = {
     "platform/org_deleted": MailTemplate(
         name="platform/org_deleted",
         description=(
-            "Sent to org owners when a platform operator soft-deletes "
-            "the workspace. Surfaces the grace window and purge date."
+            "Sent to org owners when a platform operator or the owner "
+            "soft-deletes the workspace. Surfaces the grace window and purge date."
         ),
     ),
     "platform/org_purge_warning": MailTemplate(

@@ -8,6 +8,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
@@ -15,14 +16,24 @@ from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.permissions.defaults import ORG_PERMISSION_DEFAULTS
 from uniffy.core.crypto import OrgCipher
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    MembershipRequiredError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models import Group, Organization, OrganizationPermissionDefaults, User
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.chat.channel import ChannelType
-from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
+from uniffy.core.models.login.organization_member import (
+    OrganizationMember,
+    OrganizationMemberSource,
+    OrganizationRole,
+)
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.permissions.domain_admin import DomainAdmin
+from uniffy.core.realtime.publisher import publish_membership_revoke_safe
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import AccessMode, ContentRole, ContentType, DomainType
 from uniffy.domains.agents.bootstrap import (
@@ -38,14 +49,25 @@ from uniffy.domains.chat.cache import (
 from uniffy.domains.chat.channels import stage_default_channel_memberships
 from uniffy.domains.chat.channels.operations import ChatChannelOperations
 from uniffy.domains.chat.channels.state import StagedChatChannelCreate
-from uniffy.domains.chat.cleanup import cleanup_chat_membership_for_organization
+from uniffy.domains.chat.cleanup import (
+    ChatMembershipCleanup,
+    cleanup_chat_membership_for_organization,
+)
 from uniffy.domains.chat.search import (
     enqueue_chat_search_acl_refresh,
     remove_channel_message_documents,
 )
 from uniffy.domains.directory.projection import UserDirectoryProjection
 from uniffy.domains.files.attachments import stage_personal_attachments_folder
+from uniffy.domains.files.cleanup import stage_member_upload_expiry
 from uniffy.domains.files.filters.presets import create_default_presets
+from uniffy.domains.organizations.naming import (
+    ensure_slug_available,
+    is_slug_conflict,
+    normalize_org_name,
+    normalize_slug,
+)
+from uniffy.domains.organizations.onboarding import stage_onboarding
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
 
@@ -66,6 +88,14 @@ class StagedOrganizationCreate:
     owner: User
     default_channel: StagedChatChannelCreate
     default_agent: StagedDefaultAgent
+
+
+@dataclass(frozen=True)
+class StagedMemberRemoval:
+    previous_role: OrganizationRole
+    chat_cleanup: ChatMembershipCleanup
+    target_user_id: UUID
+    org_id: UUID
 
 
 class OrganizationOperations:
@@ -89,6 +119,8 @@ class OrganizationOperations:
         actor_user_id: UUID | None = None,
         *,
         search_indexer: SearchIndexer,
+        owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
+        begin_onboarding: bool = False,
     ) -> Organization:
         try:
             staged = await self.stage_organization(
@@ -98,6 +130,8 @@ class OrganizationOperations:
                 domain=domain,
                 plan=plan,
                 actor_user_id=actor_user_id,
+                owner_source=owner_source,
+                begin_onboarding=begin_onboarding,
             )
             await self._session.commit()
         except Exception:
@@ -120,12 +154,17 @@ class OrganizationOperations:
         domain: str | None = None,
         plan: str = "free",
         actor_user_id: UUID | None = None,
+        *,
+        owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
+        begin_onboarding: bool = False,
     ) -> StagedOrganizationCreate:
+        """``begin_onboarding`` gives the owner the entry flow; seeded and scripted orgs skip it."""
         org = Organization(
             name=name,
             slug=slug,
             domain=domain,
             plan=plan,
+            created_by_user_id=actor_user_id,
         )
         self._session.add(org)
         await self._session.flush()
@@ -140,6 +179,7 @@ class OrganizationOperations:
                 user_id=owner_user_id,
                 organization_id=org.id,
                 role=OrganizationRole.OWNER,
+                source=owner_source,
             ),
             IdentitySource(
                 organization_id=org.id,
@@ -182,6 +222,8 @@ class OrganizationOperations:
             resource_id=org.id,
             details={"name": name, "slug": slug, "plan": plan},
         )
+        if begin_onboarding:
+            await stage_onboarding(self._session, organization_id=org.id, user_id=owner_user_id)
         await self._session.flush()
         return StagedOrganizationCreate(org, owner, default_channel, default_agent)
 
@@ -246,29 +288,35 @@ class OrganizationOperations:
         slug: str | None = None,
         domain: str | None = None,
         plan: str | None = None,
-        is_active: bool | None = None,
         actor_user_id: UUID | None = None,
     ) -> Organization:
         org = await self.get_by_id(org_id)
 
         changed_keys: list[str] = []
-        if name is not None and org.name != name:
-            org.name = name
-            changed_keys.append("name")
-        if slug is not None and org.slug != slug:
-            org.slug = slug
-            changed_keys.append("slug")
+        previous_slug: str | None = None
+        if name is not None:
+            name = normalize_org_name(name)
+            if org.name != name:
+                org.name = name
+                changed_keys.append("name")
+        if slug is not None:
+            slug = normalize_slug(slug)
+            if org.slug != slug:
+                await ensure_slug_available(self._session, slug, exclude_org_id=org_id)
+                previous_slug = org.slug
+                org.slug = slug
+                changed_keys.append("slug")
         if domain is not None and org.domain != domain:
             org.domain = domain
             changed_keys.append("domain")
         if plan is not None and org.plan != plan:
             org.plan = plan
             changed_keys.append("plan")
-        if is_active is not None and org.is_active != is_active:
-            org.is_active = is_active
-            changed_keys.append("is_active")
 
         if changed_keys:
+            details: dict[str, object] = {"changed_keys": changed_keys}
+            if previous_slug is not None:
+                details["previous_slug"] = previous_slug
             await write_audit_event(
                 self._session,
                 organization_id=org_id,
@@ -276,10 +324,16 @@ class OrganizationOperations:
                 action=Action.ORGANIZATION_SETTINGS_CHANGED,
                 resource_type=AuditResourceType.ORGANIZATION,
                 resource_id=org_id,
-                details={"changed_keys": changed_keys},
+                details=details,
             )
 
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError as exc:
+            await self._session.rollback()
+            if is_slug_conflict(exc):
+                raise ValidationError("slug", "Slug is already in use") from exc
+            raise
         await self._session.refresh(org)
         return org
 
@@ -292,6 +346,7 @@ class OrganizationOperations:
             .join(OrganizationMember, Organization.id == OrganizationMember.organization_id)
             .where(OrganizationMember.user_id == user_id)
             .where(OrganizationMember.is_active.is_(True))
+            .where(Organization.deleted_at.is_(None))
             .order_by(Organization.name)
         )
         return [(row[0], row[1]) for row in result.all()]
@@ -345,8 +400,9 @@ class OrganizationOperations:
         org_id: UUID,
     ) -> OrganizationMember:
         membership = await get_active_membership(self._session, user_id, org_id)
-        admin_roles = (OrganizationRole.OWNER, OrganizationRole.ADMIN)
-        if not membership or membership.role not in admin_roles:
+        if not membership:
+            raise MembershipRequiredError("Requires organization admin privileges")
+        if membership.role not in (OrganizationRole.OWNER, OrganizationRole.ADMIN):
             raise PermissionDeniedError("Requires organization admin privileges")
         return membership
 
@@ -359,7 +415,9 @@ class OrganizationOperations:
         single accountable person.
         """
         membership = await get_active_membership(self._session, user_id, org_id)
-        if not membership or membership.role != OrganizationRole.OWNER:
+        if not membership:
+            raise MembershipRequiredError("Requires organization owner privileges")
+        if membership.role != OrganizationRole.OWNER:
             raise PermissionDeniedError("Requires organization owner privileges")
         return membership
 
@@ -370,7 +428,7 @@ class OrganizationOperations:
     ) -> OrganizationMember:
         membership = await get_active_membership(self._session, user_id, org_id)
         if not membership:
-            raise PermissionDeniedError("Requires organization membership")
+            raise MembershipRequiredError("Requires organization membership")
         return membership
 
     async def list_members(
@@ -439,6 +497,9 @@ class OrganizationOperations:
         org_id: UUID,
         role: OrganizationRole = OrganizationRole.MEMBER,
         actor_user_id: UUID | None = None,
+        *,
+        source: OrganizationMemberSource = OrganizationMemberSource.ADDED,
+        invited_by_user_id: UUID | None = None,
     ) -> StagedOrganizationMembership:
         org = (
             await self._session.execute(
@@ -457,12 +518,18 @@ class OrganizationOperations:
                     user_id=user_id,
                     organization_id=org_id,
                     role=role,
+                    source=source,
+                    invited_by_user_id=invited_by_user_id,
                 )
                 self._session.add(membership)
             else:
                 membership = existing
                 membership.is_active = True
                 membership.role = role
+                membership.source = source
+                membership.invited_by_user_id = invited_by_user_id
+                membership.removed_at = None
+                membership.removed_by_user_id = None
                 membership.updated_at = datetime.now(UTC)
 
             await write_audit_event(
@@ -472,7 +539,11 @@ class OrganizationOperations:
                 action=Action.ORGANIZATION_MEMBER_ADDED,
                 resource_type=AuditResourceType.USER,
                 resource_id=user_id,
-                details={"role": role.value},
+                details={
+                    "role": role.value,
+                    "source": source.value,
+                    "reactivated": existing is not None,
+                },
             )
             await self._session.flush()
         else:
@@ -616,6 +687,31 @@ class OrganizationOperations:
 
         if membership.role == OrganizationRole.OWNER:
             raise PermissionDeniedError("Cannot remove organization owner")
+        if not membership.is_active:
+            return False
+
+        staged = await self.stage_member_removal(membership, actor_user_id=admin_user_id)
+        await self._session.commit()
+        await self.finish_member_removal_after_commit(
+            staged,
+            actor_user_id=admin_user_id,
+            search_indexer=search_indexer,
+            call_lifecycle=call_lifecycle,
+        )
+        return True
+
+    async def stage_member_removal(
+        self,
+        membership: OrganizationMember,
+        *,
+        actor_user_id: UUID,
+        action: Action = Action.ORGANIZATION_MEMBER_REMOVED,
+    ) -> StagedMemberRemoval:
+        """Expects the membership row already locked by the caller."""
+        if membership.role == OrganizationRole.OWNER:
+            raise PermissionDeniedError("Cannot remove organization owner")
+        target_user_id = membership.user_id
+        org_id = membership.organization_id
 
         await self._session.execute(
             sql_delete(DomainAdmin).where(
@@ -630,26 +726,48 @@ class OrganizationOperations:
             organization_id=org_id,
             user_id=target_user_id,
         )
-        await self._session.delete(membership)
+        # The row stays as history; re-adding through stage_member reactivates it.
+        removed_at = datetime.now(UTC)
+        # Re-adding does not revive these; a reactivated member starts the upload again.
+        await stage_member_upload_expiry(
+            self._session,
+            organization_id=org_id,
+            user_id=target_user_id,
+            expired_at=removed_at,
+        )
+        membership.is_active = False
+        membership.removed_at = removed_at
+        membership.removed_by_user_id = actor_user_id
+        membership.updated_at = removed_at
 
         await write_audit_event(
             self._session,
             organization_id=org_id,
-            actor_user_id=admin_user_id,
-            action=Action.ORGANIZATION_MEMBER_REMOVED,
+            actor_user_id=actor_user_id,
+            action=action,
             resource_type=AuditResourceType.USER,
             resource_id=target_user_id,
             details={"previous_role": previous_role.value},
         )
+        return StagedMemberRemoval(previous_role, chat_cleanup, target_user_id, org_id)
 
-        await self._session.commit()
-
+    async def finish_member_removal_after_commit(
+        self,
+        staged: StagedMemberRemoval,
+        *,
+        actor_user_id: UUID,
+        search_indexer: SearchIndexer,
+        call_lifecycle: CallRevocationLifecycle,
+    ) -> None:
+        target_user_id = staged.target_user_id
+        org_id = staged.org_id
+        await publish_membership_revoke_safe(target_user_id, org_id)
         await call_lifecycle.evict_user(
             self._session,
             target_user_id,
             reason=CallEvictionReason.MEMBERSHIP_REVOKED,
             organization_id=org_id,
-            actor_user_id=admin_user_id,
+            actor_user_id=actor_user_id,
         )
         try:
             await UserDirectoryProjection(
@@ -663,6 +781,7 @@ class OrganizationOperations:
                 user_id=str(target_user_id),
             )
 
+        chat_cleanup = staged.chat_cleanup
         for channel_id in chat_cleanup.deleted_self_dm_ids:
             try:
                 await remove_channel_message_documents(search_indexer, channel_id)
@@ -685,7 +804,6 @@ class OrganizationOperations:
                         if channel_id in private_channel_ids
                     ),
                 )
-        return True
 
     async def get_permission_defaults(
         self,
@@ -854,6 +972,7 @@ class OrganizationOperations:
         await publish_notification(
             target_user_id,
             {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+            organization_id=org_id,
         )
 
         user_result = await self._session.execute(select(User).where(User.id == target_user_id))
@@ -904,6 +1023,7 @@ class OrganizationOperations:
         await publish_notification(
             target_user_id,
             {"_type": NotificationPayloadType.PERMISSIONS_CHANGED},
+            organization_id=org_id,
         )
 
         return True

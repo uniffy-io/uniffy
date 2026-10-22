@@ -1,5 +1,14 @@
 import React from "react";
-import { PaintBrush, Key, Bell, UserCircle, Gear, ShieldCheck, Robot } from "@phosphor-icons/react";
+import {
+  PaintBrush,
+  Key,
+  Bell,
+  UserCircle,
+  Gear,
+  ShieldCheck,
+  Robot,
+  Buildings,
+} from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 
 export type SettingsSection =
@@ -9,7 +18,8 @@ export type SettingsSection =
   | "profile"
   | "security"
   | "agents"
-  | "general";
+  | "general"
+  | "organization";
 
 interface SettingsLayoutProps {
   activeSection: SettingsSection;
@@ -25,6 +35,7 @@ const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[
   { id: "security", label: "Security", icon: ShieldCheck },
   { id: "agents", label: "Agents", icon: Robot },
   { id: "general", label: "General", icon: Gear },
+  { id: "organization", label: "Organization", icon: Buildings },
 ];
 
 export function SettingsLayout({ activeSection, onSectionChange, children }: SettingsLayoutProps) {

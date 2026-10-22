@@ -22,6 +22,7 @@ logger = logger.bind(component="permissions.requests.dismissal")
 @dataclass(frozen=True, slots=True)
 class DismissedAccessRequest:
     id: UUID
+    organization_id: UUID
     requester_id: UUID
     requested_urn: str
 
@@ -50,6 +51,7 @@ async def stage_dismiss_pending_requests(
         )
         .returning(
             ContentAccessRequest.id,
+            ContentAccessRequest.organization_id,
             ContentAccessRequest.requester_id,
             ContentAccessRequest.requested_urn,
         )
@@ -64,6 +66,7 @@ async def publish_dismissed_requests(requests: list[DismissedAccessRequest]) -> 
         try:
             await publish_access_request_changed(
                 user_id=request.requester_id,
+                organization_id=request.organization_id,
                 request_id=request.id,
                 requested_urn=request.requested_urn,
                 state=_ProtoAccessRequestState.CANCELED,

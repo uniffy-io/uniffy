@@ -1,4 +1,4 @@
-"""Outbound fanout for realtime Yjs updates, permission changes, and token
+"""Outbound fanout for realtime Yjs updates, permission changes, and access
 revokes over Valkey pubsub.
 
 Accepted-update payloads carry ``origin_replica`` so subscribers can drop echoes of their own
@@ -10,9 +10,13 @@ import time
 from enum import StrEnum
 from uuid import UUID
 
+from loguru import logger
+
 from uniffy.core.realtime.identity import replica_id
 from uniffy.core.types import ContentType
 from uniffy.infrastructure.valkey.pubsub import publish_to_channel
+
+logger = logger.bind(component="core.realtime.publisher")
 
 
 class RealtimeChannelNamespace(StrEnum):
@@ -26,6 +30,7 @@ class RealtimeChannelKind(StrEnum):
     DEFAULTS = "defaults"
     REVOKE = "revoke"
     REVOKE_SESSION = "revoke_sid"
+    REVOKE_MEMBERSHIP = "revoke_org"
 
 
 class RealtimePayloadKind(StrEnum):
@@ -67,6 +72,11 @@ def session_revoke_channel(user_id: UUID) -> str:
     a second index.
     """
     return f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:{user_id}"
+
+
+def membership_revoke_channel(user_id: UUID) -> str:
+    """Keyed by user like ``session_revoke_channel``; the payload names the organization."""
+    return f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_MEMBERSHIP}:{user_id}"
 
 
 async def publish_doc_update(
@@ -204,3 +214,27 @@ async def publish_session_revoke(user_id: UUID, session_id: UUID) -> None:
             "published_at": time.time(),
         },
     )
+
+
+async def publish_membership_revoke(user_id: UUID, organization_id: UUID) -> None:
+    """Fan out a lost membership; replicas detach only that organization's documents."""
+    await publish_to_channel(
+        membership_revoke_channel(user_id),
+        {
+            "origin_replica": replica_id(),
+            "organization_id": str(organization_id),
+            "published_at": time.time(),
+        },
+    )
+
+
+async def publish_membership_revoke_safe(user_id: UUID, organization_id: UUID) -> None:
+    """Run after the membership commit; a lost publish leaves the socket watchdog to close it."""
+    try:
+        await publish_membership_revoke(user_id, organization_id)
+    except Exception:
+        logger.opt(exception=True).warning(
+            "membership revoke publish failed",
+            user_id=str(user_id),
+            organization_id=str(organization_id),
+        )

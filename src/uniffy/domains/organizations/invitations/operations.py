@@ -1,24 +1,27 @@
-"""Invitation operations: invite, accept, revoke, resend."""
+"""Invitation mutations: invite, accept, decline, revoke, resend."""
 
 from __future__ import annotations
 
-import hashlib
 import os
 import secrets
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import client_ip_for_rate_limit, write_audit_event
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import NotFoundError
+from uniffy.core.auth.emails import normalize_email
+from uniffy.core.errors import (
+    ConflictError,
+    InvitationSignInRequiredError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
@@ -26,25 +29,30 @@ from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import (
     OrganizationMember,
+    OrganizationMemberSource,
     OrganizationRole,
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search import SearchIndexer
-from uniffy.domains.auth.contracts import (
-    stage_invitation_authentication,
-    stage_invited_user,
-)
+from uniffy.domains.auth.contracts import stage_invitation_authentication, stage_invited_user
 from uniffy.domains.auth.types import AuthResult, MfaEnrollmentRequired
 from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
 from uniffy.domains.organizations.invitations.errors import (
     InvitationAlreadyUsedError,
-    InvitationEmailConflictError,
-    InvitationExpiredError,
-    InvitationNotFoundError,
     InvitationRevokedError,
 )
-from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.organizations.invitations.reader import (
+    InvitationReader,
+    hash_token,
+    inviter_label,
+    require_pending,
+    require_verified_email,
+)
+from uniffy.domains.organizations.operations import (
+    OrganizationOperations,
+    StagedOrganizationMembership,
+)
 
 logger = logger.bind(component="organizations.invitations.operations")
 
@@ -55,50 +63,22 @@ INVITE_ACCEPT_LIMIT_IP = 30
 INVITE_ACCEPT_LIMIT_TOKEN = 5
 INVITE_ACCEPT_WINDOW_SECONDS = 15 * 60
 
-# Preview is unauthenticated and just confirms a token resolves to an
-# email + org. The per-token-hash bucket is the load-bearing one: it
-# bounds how many times one specific token can be confirmed, which
-# matters when an attacker has somehow seen the token (mail log,
-# referrer) but is not sure it is still valid. Per-IP is best-effort
-# and skipped when IP is not trustable (proxy without TRUSTED_PROXY_HOPS).
-INVITE_PREVIEW_LIMIT_IP = 60
-INVITE_PREVIEW_LIMIT_TOKEN = 10
-INVITE_PREVIEW_WINDOW_SECONDS = 15 * 60
+# Every invite and resend sends a mail through the deployment's relay. The organization bucket
+# bounds a tenant's admins together; the per-user bucket keeps one admin from using all of it.
+INVITE_SEND_LIMIT_USER = 50
+INVITE_SEND_LIMIT_ORG = 200
+INVITE_SEND_WINDOW_SECONDS = 60 * 60
 
 
 _INVITATION_TTL = timedelta(days=30)
 _TEMPLATE_INVITATION = "auth/invitation"
-_TEMPLATE_ADDED = "auth/added_to_org"
 
 
-class InviteOutcome(str, Enum):
-    """Discriminator for the union returned by ``InvitationOperations.invite``."""
+class AcceptVia(StrEnum):
+    """How a signed-in member proved the invitation is theirs."""
 
-    ADDED = "added"
-    INVITED = "invited"
-
-
-@dataclass(frozen=True)
-class InviteResult:
-    """Result of ``invite``. Exactly one of ``member`` / ``invitation`` is set."""
-
-    outcome: InviteOutcome
-    member: OrganizationMember | None = None
-    member_user: User | None = None
-    invitation: Invitation | None = None
-
-
-@dataclass(frozen=True)
-class InvitationPreview:
-    """Public shape of an invitation before the user clicks Accept."""
-
-    invitation: Invitation
-    organization: Organization
-    inviter_display_name: str | None
-
-
-def _hash_token(raw: str) -> str:
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    TOKEN = "token"
+    ID = "id"
 
 
 def _frontend_base_url() -> str:
@@ -109,80 +89,36 @@ def _accept_url(raw_token: str) -> str:
     return f"{_frontend_base_url()}/auth/accept-invite?token={raw_token}"
 
 
-def _inviter_label(inviter: User | None) -> str:
-    if inviter is None:
-        return "A teammate"
-    return inviter.full_name or inviter.username or inviter.email
-
-
-class InvitationOperations:
-    """CRUD + accept flow for ``login_invitations`` rows."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self._session = session
-
+class InvitationOperations(InvitationReader):
     async def invite(
         self,
         org_id: UUID,
         email: str,
         role: OrganizationRole,
         inviter_id: UUID,
-        *,
-        search_indexer: SearchIndexer,
-    ) -> InviteResult:
-        """Invite ``email``; auto-promote if user exists, else create a pending row."""
-        normalized = email.strip().lower()
+    ) -> Invitation:
+        """Invite any address except an active member's; account holders accept signed in."""
+        normalized = normalize_email(email)
         if not normalized or "@" not in normalized:  # noqa: PLR2004
             raise ValueError("Invalid email address")
 
         org_ops = OrganizationOperations(self._session)
         await org_ops.require_org_admin(inviter_id, org_id)
+        if role == OrganizationRole.OWNER:
+            raise PermissionDeniedError("Ownership moves only through a transfer")
+        await _enforce_invite_send_rate_limit(inviter_id, org_id)
         org = await org_ops.get_by_id(org_id)
         inviter = (
             await self._session.execute(select(User).where(User.id == inviter_id))
         ).scalar_one_or_none()
-
-        existing = (
-            await self._session.execute(select(User).where(User.email == normalized))
-        ).scalar_one_or_none()
-        if existing and existing.is_active:
-            try:
-                staged_membership = await org_ops.stage_member(
-                    user_id=existing.id,
-                    org_id=org_id,
-                    role=role,
-                    actor_user_id=inviter_id,
+        account_id = await self._account_id_for(normalized)
+        if account_id is not None:
+            # Checked before the revoke below, so a refused invite leaves earlier invitations alone.
+            membership = await org_ops.get_membership(account_id, org_id)
+            if membership is not None and membership.is_active:
+                raise ConflictError(
+                    "Organization member", "This person is already a member of the organization"
                 )
-                await write_audit_event(
-                    self._session,
-                    organization_id=org_id,
-                    actor_user_id=inviter_id,
-                    action=Action.ORGANIZATION_MEMBER_ADDED_VIA_INVITE,
-                    resource_type=AuditResourceType.USER,
-                    resource_id=existing.id,
-                    details={"email": normalized, "role": role.value},
-                )
-                await self._session.commit()
-            except Exception:
-                await self._session.rollback()
-                raise
-            await self._session.refresh(staged_membership.membership)
-            await org_ops.finish_member_add_after_commit(
-                staged_membership,
-                search_indexer=search_indexer,
-            )
-            await self._enqueue_added_email(
-                recipient=existing.email,
-                user=existing,
-                org=org,
-                inviter=inviter,
-                role=role,
-            )
-            return InviteResult(
-                outcome=InviteOutcome.ADDED,
-                member=staged_membership.membership,
-                member_user=existing,
-            )
 
         await self._revoke_pending_for_email(org_id, normalized, inviter_id)
         await self._session.flush()
@@ -193,7 +129,7 @@ class InvitationOperations:
             email=normalized,
             role=role,
             invited_by_user_id=inviter_id,
-            token_hash=_hash_token(raw_token),
+            token_hash=hash_token(raw_token),
             expires_at=datetime.now(UTC) + _INVITATION_TTL,
         )
         self._session.add(invitation)
@@ -229,23 +165,7 @@ class InvitationOperations:
             role=role,
         )
 
-        return InviteResult(outcome=InviteOutcome.INVITED, invitation=invitation)
-
-    async def list_for_org(
-        self,
-        org_id: UUID,
-        actor_id: UUID,
-    ) -> list[tuple[Invitation, User | None]]:
-        # Outer-joins inviter so rows survive when the inviting user is deleted.
-        org_ops = OrganizationOperations(self._session)
-        await org_ops.require_org_admin(actor_id, org_id)
-        result = await self._session.execute(
-            select(Invitation, User)
-            .outerjoin(User, User.id == Invitation.invited_by_user_id)
-            .where(Invitation.organization_id == org_id)
-            .order_by(Invitation.created_at.desc())
-        )
-        return [(row[0], row[1]) for row in result.all()]
+        return invitation
 
     async def revoke(self, invitation_id: UUID, actor_id: UUID) -> Invitation:
         """Mark an invitation revoked. Idempotent for already-revoked rows."""
@@ -280,9 +200,10 @@ class InvitationOperations:
             raise InvitationAlreadyUsedError("Invitation has already been accepted")
         if invitation.revoked_at is not None:
             raise InvitationRevokedError("Invitation has been revoked")
+        await _enforce_invite_send_rate_limit(actor_id, invitation.organization_id)
 
         raw_token = secrets.token_urlsafe(32)
-        invitation.token_hash = _hash_token(raw_token)
+        invitation.token_hash = hash_token(raw_token)
         invitation.expires_at = datetime.now(UTC) + _INVITATION_TTL
         invitation.updated_at = datetime.now(UTC)
 
@@ -315,46 +236,6 @@ class InvitationOperations:
         )
         return invitation
 
-    async def get_for_token(self, raw_token: str) -> InvitationPreview:
-        """Return invitation + org for the accept-page preview.
-
-        Rate-limited per-token-hash (load-bearing) + per-IP (best-effort,
-        skipped on misconfigured proxies). The token bucket prevents an
-        attacker who has seen the raw token from confirming its validity
-        repeatedly; the IP bucket bounds spray attacks from a single
-        trusted client.
-        """
-        token_hash_for_bucket = _hash_token(raw_token)
-        await check_rate_limit(
-            key=f"rl:invite:preview:token:{token_hash_for_bucket}",
-            limit=INVITE_PREVIEW_LIMIT_TOKEN,
-            window_seconds=INVITE_PREVIEW_WINDOW_SECONDS,
-            resource="invitation preview attempts (per token)",
-        )
-        rate_limit_ip = client_ip_for_rate_limit()
-        if rate_limit_ip:
-            await check_rate_limit(
-                key=f"rl:invite:preview:ip:{rate_limit_ip}",
-                limit=INVITE_PREVIEW_LIMIT_IP,
-                window_seconds=INVITE_PREVIEW_WINDOW_SECONDS,
-                resource="invitation preview attempts (per ip)",
-            )
-        invitation = await self._load_by_token(raw_token)
-        org_result = await self._session.execute(
-            select(Organization).where(Organization.id == invitation.organization_id)
-        )
-        org = org_result.scalar_one_or_none()
-        if not org:
-            raise InvitationNotFoundError("Invitation organization is missing")
-        inviter = (
-            await self._session.execute(select(User).where(User.id == invitation.invited_by_user_id))
-        ).scalar_one_or_none()
-        return InvitationPreview(
-            invitation=invitation,
-            organization=org,
-            inviter_display_name=_inviter_label(inviter),
-        )
-
     async def accept(
         self,
         raw_token: str,
@@ -365,14 +246,10 @@ class InvitationOperations:
         *,
         search_indexer: SearchIndexer,
     ) -> AuthResult | MfaEnrollmentRequired:
-        """Consume ``raw_token``, create user + membership, return tokens.
+        """Create the invited account from ``raw_token`` and sign it in.
 
-        Email is always taken from the invitation row, never the client.
-        When the target org or platform enforces MFA, the response is the
-        ``MfaEnrollmentRequired`` shape instead of a full ``AuthResult``
-        so the client can drive enrollment before the account is usable.
-        Rate limited per-IP and per-token to bound brute-force on the
-        password field once a token is in hand.
+        Email always comes from the invitation row, never the client. An address that
+        already has an account accepts signed in through ``accept_as_member``.
         """
         rate_limit_ip = client_ip_for_rate_limit()
         if rate_limit_ip:
@@ -382,7 +259,7 @@ class InvitationOperations:
                 window_seconds=INVITE_ACCEPT_WINDOW_SECONDS,
                 resource="invitation accept attempts (per ip)",
             )
-        token_hash_for_bucket = _hash_token(raw_token)
+        token_hash_for_bucket = hash_token(raw_token)
         await check_rate_limit(
             key=f"rl:invite:accept:token:{token_hash_for_bucket}",
             limit=INVITE_ACCEPT_LIMIT_TOKEN,
@@ -391,34 +268,21 @@ class InvitationOperations:
         )
         try:
             invitation = await self._load_by_token(raw_token, for_update=True)
-            normalized_username = username.strip()
-            if not normalized_username:
-                raise ValueError("Username is required")
+            await self._require_joinable_organization(invitation.organization_id, for_update=True)
+            # Inactive accounts too: only a platform operator reopens a deactivated account,
+            # and that person then meets the ordinary sign-in refusal.
+            if await self._account_id_for(invitation.email) is not None:
+                raise InvitationSignInRequiredError("Sign in to accept this invitation")
 
-            existing_email = (
-                await self._session.execute(select(User).where(User.email == invitation.email))
-            ).scalar_one_or_none()
-            if existing_email is not None:
-                raise InvitationEmailConflictError("An account with this email already exists")
-            existing_username = (
-                await self._session.execute(select(User).where(User.username == normalized_username))
-            ).scalar_one_or_none()
-            if existing_username is not None:
-                raise ValueError("Username already taken")
-
-            user = await stage_invited_user(
-                self._session,
-                email=invitation.email,
-                username=normalized_username,
-                password=password,
-                full_name=full_name,
-            )
+            user = await self._stage_account(username, password, full_name, invitation)
             org_ops = OrganizationOperations(self._session)
             staged_membership = await org_ops.stage_member(
                 user_id=user.id,
                 org_id=invitation.organization_id,
                 role=invitation.role,
-                actor_user_id=invitation.invited_by_user_id,
+                actor_user_id=user.id,
+                source=OrganizationMemberSource.INVITE,
+                invited_by_user_id=invitation.invited_by_user_id,
             )
 
             invitation.accepted_at = datetime.now(UTC)
@@ -461,51 +325,168 @@ class InvitationOperations:
         )
         return staged_auth.outcome
 
+    async def accept_as_member(
+        self,
+        *,
+        user_id: UUID,
+        token: str | None = None,
+        invitation_id: UUID | None = None,
+        search_indexer: SearchIndexer,
+    ) -> tuple[Organization, OrganizationMember]:
+        """Join while signed in; only the token proves control of the mailbox."""
+        if (token is None) == (invitation_id is None):
+            raise ValidationError("lookup", "Provide an invitation id or a token")
+        via = AcceptVia.TOKEN if token is not None else AcceptVia.ID
+        org_ops = OrganizationOperations(self._session)
+        try:
+            user = await self._require_active_user(user_id)
+            if token is not None:
+                invitation = await self._find_by_token(token, for_update=True)
+                if invitation.email != normalize_email(user.email):
+                    raise PermissionDeniedError(
+                        "This invitation was sent to a different email address"
+                    )
+            else:
+                assert invitation_id is not None
+                require_verified_email(user)
+                invitation = await self._load_addressed_to(user, invitation_id, for_update=True)
+            require_pending(invitation)
+            organization = await self._require_joinable_organization(
+                invitation.organization_id, for_update=True
+            )
+
+            staged: StagedOrganizationMembership | None = None
+            membership = await org_ops.get_membership(user.id, invitation.organization_id)
+            # Someone who joined through another path spends the invitation and keeps their role.
+            if membership is None or not membership.is_active:
+                staged = await org_ops.stage_member(
+                    user_id=user.id,
+                    org_id=invitation.organization_id,
+                    role=invitation.role,
+                    actor_user_id=user.id,
+                    source=OrganizationMemberSource.INVITE,
+                    invited_by_user_id=invitation.invited_by_user_id,
+                )
+                membership = staged.membership
+            accepted_at = datetime.now(UTC)
+            invitation.accepted_at = accepted_at
+            invitation.accepted_by_user_id = user.id
+            invitation.updated_at = accepted_at
+            if via is AcceptVia.TOKEN:
+                user.email_verified = True
+
+            audit_details: dict[str, Any] = {
+                "email": invitation.email,
+                "role": invitation.role.value,
+                "signed_in": True,
+                "via": via.value,
+            }
+            if staged is None:
+                audit_details["already_member"] = True
+            await write_audit_event(
+                self._session,
+                organization_id=invitation.organization_id,
+                actor_user_id=user.id,
+                action=Action.AUTH_INVITATION_ACCEPTED,
+                resource_type=AuditResourceType.INVITATION,
+                resource_id=invitation.id,
+                details=audit_details,
+            )
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+
+        if staged is not None:
+            await org_ops.finish_member_add_after_commit(staged, search_indexer=search_indexer)
+        return organization, membership
+
+    async def decline(self, *, user_id: UUID, invitation_id: UUID) -> None:
+        """Idempotent; an invitation addressed to someone else reads as missing."""
+        try:
+            user = await self._require_active_user(user_id)
+            require_verified_email(user)
+            invitation = await self._load_addressed_to(user, invitation_id, for_update=True)
+            if invitation.accepted_at is not None:
+                raise InvitationAlreadyUsedError("Invitation has already been accepted")
+            if invitation.revoked_at is not None:
+                await self._session.rollback()
+                return
+            declined_at = datetime.now(UTC)
+            invitation.revoked_at = declined_at
+            invitation.revoked_by_user_id = user.id
+            invitation.updated_at = declined_at
+            # The decliner is not a member: the organization learns that its invitation was
+            # refused, not the account, IP address or client behind the refusal.
+            declined = await write_audit_event(
+                self._session,
+                organization_id=invitation.organization_id,
+                actor_user_id=None,
+                action=Action.ORGANIZATION_INVITATION_DECLINED,
+                resource_type=AuditResourceType.INVITATION,
+                resource_id=invitation.id,
+                details={"email": invitation.email, "declined_by_invitee": True},
+            )
+            if declined is not None:
+                declined.ip_address = None
+                declined.user_agent = None
+            await self._session.commit()
+        except Exception:
+            await self._session.rollback()
+            raise
+
+    async def _stage_account(
+        self,
+        username: str,
+        password: str,
+        full_name: str | None,
+        invitation: Invitation,
+    ) -> User:
+        normalized_username = username.strip()
+        if not normalized_username:
+            raise ValueError("Username is required")
+        existing_username = (
+            await self._session.execute(select(User).where(User.username == normalized_username))
+        ).scalar_one_or_none()
+        if existing_username is not None:
+            raise ValueError("Username already taken")
+        user = await stage_invited_user(
+            self._session,
+            email=invitation.email,
+            username=normalized_username,
+            password=password,
+            full_name=full_name,
+        )
+        # The token arrived in this mailbox, which proves the address.
+        user.email_verified = True
+        return user
+
     async def _revoke_pending_for_email(
         self,
         org_id: UUID,
         email: str,
         actor_id: UUID,
     ) -> None:
-        # Required so the partial unique index does not block a fresh invite.
+        # Required so the partial unique index does not block a fresh invite. Locked so an accept
+        # in flight finishes first instead of ending up both accepted and revoked.
         result = await self._session.execute(
-            select(Invitation).where(
+            select(Invitation)
+            .where(
                 Invitation.organization_id == org_id,
                 Invitation.email == email,
                 Invitation.accepted_at.is_(None),
                 Invitation.revoked_at.is_(None),
             )
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
+        revoked_at = datetime.now(UTC)
         for row in result.scalars():
-            row.revoked_at = datetime.now(UTC)
+            if row.accepted_at is not None:
+                continue
+            row.revoked_at = revoked_at
             row.revoked_by_user_id = actor_id
-            row.updated_at = datetime.now(UTC)
-
-    async def _load(self, invitation_id: UUID) -> Invitation:
-        result = await self._session.execute(
-            select(Invitation).where(Invitation.id == invitation_id)
-        )
-        invitation = result.scalar_one_or_none()
-        if not invitation:
-            raise NotFoundError("Invitation", str(invitation_id))
-        return invitation
-
-    async def _load_by_token(self, raw_token: str, *, for_update: bool = False) -> Invitation:
-        token_hash = _hash_token(raw_token)
-        statement = select(Invitation).where(Invitation.token_hash == token_hash)
-        if for_update:
-            statement = statement.with_for_update()
-        result = await self._session.execute(statement)
-        invitation = result.scalar_one_or_none()
-        if not invitation:
-            raise InvitationNotFoundError("Invitation not found")
-        if invitation.revoked_at is not None:
-            raise InvitationRevokedError("Invitation has been revoked")
-        if invitation.accepted_at is not None:
-            raise InvitationAlreadyUsedError("Invitation has already been accepted")
-        if invitation.expires_at < datetime.now(UTC):
-            raise InvitationExpiredError("Invitation has expired")
-        return invitation
+            row.updated_at = revoked_at
 
     async def _enqueue_invitation_email(
         self,
@@ -517,69 +498,40 @@ class InvitationOperations:
         role: OrganizationRole,
     ) -> None:
         context: dict[str, Any] = {
-            "inviter_name": _inviter_label(inviter),
+            "inviter_name": inviter_label(inviter),
             "org_name": org.name,
             "accept_url": _accept_url(raw_token),
             "role": role.value,
             "expires_in_days": _INVITATION_TTL.days,
         }
         idempotency = f"invite/{org.id}/{recipient}/{raw_token[:8]}"
-        await self._enqueue(
-            recipient,
-            _TEMPLATE_INVITATION,
-            context,
-            org.id,
-            idempotency,
-        )
-
-    async def _enqueue_added_email(
-        self,
-        *,
-        recipient: str,
-        user: User,
-        org: Organization,
-        inviter: User | None,
-        role: OrganizationRole,
-    ) -> None:
-        context: dict[str, Any] = {
-            "user_name": user.full_name or user.username,
-            "org_name": org.name,
-            "inviter_name": _inviter_label(inviter),
-            "role": role.value,
-            "app_url": _frontend_base_url(),
-        }
-        idempotency = f"added/{org.id}/{user.id}"
-        await self._enqueue(
-            recipient,
-            _TEMPLATE_ADDED,
-            context,
-            org.id,
-            idempotency,
-            user_id=user.id,
-        )
-
-    async def _enqueue(
-        self,
-        recipient: str,
-        template: str,
-        context: dict[str, Any],
-        org_id: UUID,
-        idempotency_key: str,
-        *,
-        user_id: UUID | None = None,
-    ) -> None:
         try:
             await enqueue_job(
                 SEND_EMAIL,
                 recipient,
-                template,
+                _TEMPLATE_INVITATION,
                 dumps_str(context),
-                organization_id=str(org_id),
-                idempotency_key=idempotency_key,
-                user_id=str(user_id) if user_id else None,
+                organization_id=str(org.id),
+                idempotency_key=idempotency,
+                user_id=None,
             )
         except RuntimeError:
             logger.warning(
                 "invitation email enqueue skipped: core queue not initialised",
-                org_id=str(org_id),
+                org_id=str(org.id),
             )
+
+
+async def _enforce_invite_send_rate_limit(actor_id: UUID, org_id: UUID) -> None:
+    await check_rate_limit(
+        key=f"rl:org:invite:user:{actor_id}",
+        limit=INVITE_SEND_LIMIT_USER,
+        window_seconds=INVITE_SEND_WINDOW_SECONDS,
+        resource="invitation emails (per user)",
+    )
+    await check_rate_limit(
+        key=f"rl:org:invite:org:{org_id}",
+        limit=INVITE_SEND_LIMIT_ORG,
+        window_seconds=INVITE_SEND_WINDOW_SECONDS,
+        resource="invitation emails (per organization)",
+    )

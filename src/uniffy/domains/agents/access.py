@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.domain_admin import is_domain_admin
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.errors import PermissionDeniedError
+from uniffy.core.errors import MembershipRequiredError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import DomainType
 
@@ -37,4 +37,6 @@ async def require_agents_builder(
     organization_id: UUID,
 ) -> None:
     if not await is_agents_builder(session, user_id, organization_id):
+        if await get_active_membership(session, user_id, organization_id) is None:
+            raise MembershipRequiredError("Requires agents builder privileges")
         raise PermissionDeniedError("Requires agents builder privileges")

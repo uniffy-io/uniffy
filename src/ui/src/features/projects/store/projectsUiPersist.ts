@@ -13,19 +13,13 @@ const PERSISTED_KEYS = [
   "projectScope",
 ] as const satisfies readonly (keyof ProjectsUiState)[];
 
-/** Per-device layout that outlives a sign-out or an organization switch; views and drafts name one org's projects. */
-const LAYOUT_KEYS = [
-  "isSidebarOpen",
-  "sidebarWidth",
-  "detailViewMode",
-  "projectScope",
-] as const satisfies readonly (typeof PERSISTED_KEYS)[number][];
-
-export function projectsUiLayout(state: ProjectsUiState): ProjectsUiState {
-  return {
-    ...initialProjectsUiState,
-    ...Object.fromEntries(LAYOUT_KEYS.map((key) => [key, state[key]])),
-  };
+/**
+ * What an organization switch keeps: layout plus open views, tab order, drafts and outlines. They are
+ * keyed by globally unique project ids, so another organization never resolves them, and switching
+ * back finds them again. Logout clears the per-person part in the slice itself.
+ */
+export function retainProjectsUi(state: ProjectsUiState): ProjectsUiState {
+  return rehydrateProjectsUi(state);
 }
 
 export function persistedProjectsUi(state: unknown): Partial<ProjectsUiState> {

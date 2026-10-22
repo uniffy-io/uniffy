@@ -167,13 +167,13 @@ Y.Doc and local recovery. They never enter an automatic retry loop.
 - Receipts restored from device storage count as accepted only within the current epoch and at or
   below its head.
 
-On open, every attached document sends SyncStep1 first, which attaches it; seed capability and,
-for documents with presence, awareness and an awareness query follow. When type 5 arrives on a new
-socket, ids still local are resent. Accepted ids wait for type 13 to prove or refute their
-presence. A type 13 that changes the epoch on a live socket resends in-flight local ids. A server
-SyncStep1 is answered with full state, as one type 6 update under a new id, only when the client's
-coverage epoch changed under it; a Yjs reply always repeats the whole delete set. Otherwise the
-client only flushes its unsent batch. Read-only documents never answer.
+On open, every attached document of the socket's organization sends SyncStep1 first, which attaches
+it; seed capability and, for documents with presence, awareness and an awareness query follow. When
+type 5 arrives on a new socket, ids still local are resent. Accepted ids wait for type 13 to prove
+or refute their presence. A type 13 that changes the epoch on a live socket resends in-flight local
+ids. A server SyncStep1 is answered with full state, as one type 6 update under a new id, only when
+the client's coverage epoch changed under it; a Yjs reply always repeats the whole delete set.
+Otherwise the client only flushes its unsent batch. Read-only documents never answer.
 
 `unavailable` keeps every local id local and shows Saving unavailable. The ids resend after 5 s,
 growing by 1.5 up to 15 s, and again on reconnect. Any receipt or type 7 ends the state and resends
@@ -206,8 +206,21 @@ Refresh and organization switch share a cross-tab lock: Web Locks on secure orig
 transaction otherwise. Read the refresh token after acquiring the lock, persist rotated credentials
 before releasing it, and ignore responses superseded by another login. Dedicated `uniffy:auth`
 storage excludes access tokens and cannot be overwritten by unrelated redux-persist writes.
-Same-session storage events update refresh credentials. Other-session or organization changes retire
-the old tab's auth and sockets. Reconnect reads the current Redux organization, including idle sockets.
+Same-session storage events update refresh credentials; another user or session retires the old
+tab's auth and sockets. The organization is per tab: one user-level session serves tabs in different
+organizations, and a switch in one tab never moves another.
+
+A socket serves the one organization it was opened for, the tab's Redux organization at connect;
+it never falls back to shared storage and never opens without one. Reconnect reads it, including
+for idle sockets. Every attached document carries the organization of the session that holds it
+(`organizationId` on attach). On open, and on attach to a live socket, only documents of the
+socket's organization send SyncStep1. Any other document sends and receives nothing on it, not
+even resync or awareness frames, and hears `onOrganizationMismatch` once per socket: a drain
+finishes `retry` with rows and entry kept, and an editor shows Access lost without settling lost
+access or clearing its entry, since no server of its organization answered. A 4403 close with
+reason `not a member` makes one refresh (single-flight), so the lost-grant path resets the tab
+without waiting for the access token to expire. A second such close before any frame does not
+refresh again.
 
 ## Server sessions and admission
 
@@ -603,13 +616,19 @@ read-only until their binding is initialized. Never seed from a placeholder befo
 Encrypted IDB uses database `uniffy-realtime-yjs`, version 4, with one `updates` store keyed
 `[contentType, contentId, generation, seq]`. Each row is AES-GCM over a small JSON header followed
 by the raw update bytes, so no base64 or JSON encoding touches the update; opening version 4 drops
-rows of the earlier layout. Rows carry encrypted user, organization and document scope and come in
-two kinds. A snapshot row holds a full encoded document and `dirty`, keyed by a
-random per-attach epoch and counter. A pending row (`pending:<updateId>`) holds one own update's raw
-bytes, edit time and receipt identity until a checkpoint covers it. Rows of no known kind and keys
-without a generation predate coverage identity: they are ignored, never replayed, listed as drafts
-or drained. Recovery requires initialized Web Crypto; plain HTTP on host.docker.internal cannot
-validate encrypted recovery. A failed database open is not cached, so a later read retries.
+rows of the earlier layout. The device key is per user, shared by every organization's tab;
+organizations stay apart by server authorization and by binding, not by key. A row of format 2 is
+stored as `{ version: 2, organizationId, data }` whose ciphertext binds AES-GCM additional data
+`uniffy-rt-v1|userId|orgId|contentType|contentId|generation|seq`, so a row copied under another
+organization, account or key fails to decrypt. A row of format 1 is bare ciphertext without
+additional data; it is read without, and rewritten bound when a compaction covers it. Rows carry
+encrypted user, organization and document scope and come in two kinds. A snapshot row holds a full
+encoded document and `dirty`, keyed by a random per-attach epoch and counter. A pending row
+(`pending:<updateId>`) holds one own update's raw bytes, edit time and receipt identity until a
+checkpoint covers it. Rows of no known kind and keys without a generation predate coverage identity:
+they are ignored, never replayed, listed as drafts or drained. Recovery requires initialized Web
+Crypto; plain HTTP on host.docker.internal cannot validate encrypted recovery. A failed database
+open is not cached, so a later read retries.
 
 `linkRecovery` joins local recovery to the transport on attach. Every coverage transition writes or
 deletes a pending row; only a checkpointed transition deletes one. After hydration, `restorePending`
@@ -624,6 +643,10 @@ writes or adopts, until its close has written them; a session never replays rows
 another tab still claims. When a tab closes with pending rows, an open editor in another tab adopts
 them under their original ids and shows their original edit times, so Saving delayed can appear for
 edits that tab never typed.
+
+A session binds the scope it was opened with: hydration, recovered drafts and Discard skip rows
+bound to, or whose header names, another user or organization, and never write them again under
+the session's scope. A format 1 row without a scope is replayed into the session of its document.
 
 Online hydration replays only the generation the server confirmed. Offline hydration replays a
 single known lineage; ambiguous lineages wait for server identity. Other generations and
@@ -646,19 +669,21 @@ checkpointed close compacts rows into a cache, or deletes them for sessions that
 `discardLocalOnCleanClose`, and clears the drain entry. Any other close keeps uncheckpointed rows
 and hands the document to the drain. A session that made no local update and hydrated no row writes
 nothing on close. Compaction, unload and disposal await pending writes. A fresh attachment waits for
-the preceding disposal. Registered databases close and await pending writes before deletion.
+the preceding disposal. Registered databases close and await pending writes before deletion; a
+deletion another tab blocks, or one that fails, keeps the key that wrote the surviving rows.
 
-`quarantine()` copies the whole document into a fresh `recovery:` lineage and moves its pending rows
-out of the live generation. It runs on `seed_conflict`, which then starts a fresh authoritative
-session; on a write denial while own edits are unaccepted or oversized (`denialRetainsDraft`); and
-when a read-only reopen hydrates unsent edits (`hydrationRetainsDraft`). Edits the server accepted
-before a denial are no draft: they still checkpoint. A `no view access` or `access revoked` denial
-runs `settleLostAccess` instead, in a live session and in a drain alike. With an edit the server
-never accepted, or one the transport still holds, the whole document first moves to a `recovery:`
-draft; otherwise this session's accepted pending rows and the snapshots it wrote or hydrated of the
-live lineage are deleted, because the server keeps what it accepted. After it nothing more is written
-for the document and nothing is handed to the drain. Failed encrypted storage keeps a user-scoped
-in-memory copy for the current tab. Restore keeps the source until explicit Discard.
+`quarantine()` copies the whole document into a fresh `recovery:` lineage, with the session scope in
+its header, and moves its pending rows out of the live generation. It runs on `seed_conflict`, which
+then starts a fresh authoritative session; on a write denial while own edits are unaccepted or
+oversized (`denialRetainsDraft`); and when a read-only reopen hydrates unsent edits
+(`hydrationRetainsDraft`). Edits the server accepted before a denial are no draft: they still
+checkpoint. A `no view access` or `access revoked` denial runs `settleLostAccess` instead, in a live
+session and in a drain alike. With an edit the server never accepted, or one the transport still
+holds, the whole document first moves to a `recovery:` draft; otherwise this session's accepted
+pending rows and the snapshots it wrote or hydrated of the live lineage are deleted, because the
+server keeps what it accepted. After it nothing more is written for the document and nothing is
+handed to the drain. Failed encrypted storage keeps a user-scoped in-memory copy for the current
+tab. Restore keeps the source until explicit Discard.
 
 Unload rule: each persistence session registers one `beforeunload` handler. It flushes and warns
 only while some own edit is neither stored on this device nor covered by a checkpoint. Accepted
@@ -679,30 +704,44 @@ updates back to the transport. A drain finishes as:
 - retained on a write denial or generation mismatch: unaccepted edits move to a recovery lineage,
   accepted rows stay because they still checkpoint, and the entry is dropped. A view denial
   settles lost access as above;
-- retry on close 4401, 4403 or 4410, or when an editor takes over: rows and entry wait for the next
-  trigger;
+- retry on close 4401, 4403 or 4410, when an editor takes over, or when the tab's socket serves
+  another organization: rows and entry wait for the next trigger;
 - retry with backoff when 60 s pass without a checkpoint or hydration fails: the document's next
   attach waits 1 minute, doubling up to 15 minutes. Opening its editor or the `online` event clears
   the wait; a drained or retained finish forgets it.
 
 Acceptance alone never drains. `useRealtimeDrain`, mounted in `ProtectedRoute`, rebuilds the
 registry from stored rows on mount and when encryption becomes ready; that discovery skips
-`recovery:` lineages, which wait for the user. It kicks drains on mount, `online`, auth refresh,
-registry changes and every 30 seconds. A kick skips documents an editor holds and documents still
-waiting out their backoff. Across tabs of one origin, `documentLocks.ts` uses Web Locks: an open
-editor holds `uniffy:realtime:<docName>` shared from attach until its close has written its rows,
-and a drain runs only when it takes that lock exclusively at once, finishing `held` otherwise. So no
-tab replays the rows of an editor or a drain in another tab, and the per-writer row claims above
-keep a reconnecting editor from replaying another tab's live rows. Plain HTTP origins have no Web Locks;
-there a tab skips only its own editors and the server's deduplication keeps the data right. Opening
-an editor cancels its drain before attaching, including one still waiting for its lock, and waits
-for prior persistence disposal.
+`recovery:` lineages, which wait for the user. Discovery attributes a bound row to the user it
+authenticates under and a format 1 row to the user its header names; a format 1 row without a scope
+belongs to nobody and counts toward no sign-out. It kicks drains on mount, `online`, auth refresh,
+registry changes and every 30 seconds, only for the tab's organization. Drains of an organization
+the tab left, or all of them once it has no user, end as `retry` (`abortDrainsOutside`), so none
+rides the next organization's socket; a remount keeps the current organization's drains, and a
+switch flow may call it before the credentials change. A kick skips documents an editor holds and
+documents still waiting out their backoff. Across tabs of one origin, `documentLocks.ts` uses Web
+Locks: an open editor holds `uniffy:realtime:<docName>` shared from attach until its close has
+written its rows, and a drain runs only when it takes that lock exclusively at once, finishing
+`held` otherwise. So no tab replays the rows of an editor or a drain in another tab, and the
+per-writer row claims above keep a reconnecting editor from replaying another tab's live rows. Plain
+HTTP origins have no Web Locks; there a tab skips only its own editors and the server's
+deduplication keeps the data right. Opening an editor cancels its drain before attaching, including
+one still waiting for its lock, and waits for prior persistence disposal.
+
+Lost organization: `ORGANIZATION_LOST_EVENT` carries `{ organizationId }` (the tab's last
+organization when absent). `useRealtimeDrain` then deletes only clean snapshots of that
+organization's documents that hold no pending or dirty row and no recovered draft
+(`purgeCleanSnapshots`). Pending and dirty rows, recovered drafts and registry entries stay:
+reactivation restores access and only the user discards a draft. Until a session of that
+organization opens again, a closing session of it compacts nothing into a cache.
 
 Sign-out: `useSignOut` returns false without signing out while any editable attached document is
 checkpoint pending, the registry holds an entry for the user, or stored pending or dirty rows exist
-for the user; it scans storage and then rechecks live state. Callers confirm with "Discard and sign
-out" and call again with `discardUnsynced`, which clears the user's registry entries before
-`teardownStorageEncryption`.
+for the user; it scans storage and then rechecks live state.
+`hasUnsyncedEdits(userId, organizationId?)` narrows the live and registry check to one organization,
+such as before a switch, and `listPendingOrganizations(userId)` names every organization holding
+such work, recovered drafts included. Callers confirm with "Discard and sign out" and call again
+with `discardUnsynced`, which clears the user's registry entries before `teardownStorageEncryption`.
 
 ## Persistence chip
 
@@ -835,6 +874,17 @@ Generic transport and lifecycle live in `src/mobile/src/shared/realtime/`; note 
 uses its Metro shim. Keep wire behavior, generation checks, coverage handling and document denial
 aligned with web.
 
+The app socket serves the organization it was opened for. An attach for another organization, or
+an auth boundary (`emitAuthBoundary` on sign-in, switch, lost grant and sign-out), closes it, idle
+or live, and reconnects for the organization named. Documents of another organization send and hear
+nothing on it and get `onOrganizationMismatch` once per socket: a drain ends `retry` with its draft
+kept, an editor shows Access lost. A view denial settles lost access only when it comes from a socket
+of the document's own organization. A 4403 close with reason `not a member`, and an RPC refused with
+the `membership_required` ErrorInfo, make one refresh per refused access token; after any 4403 the
+transport reconnects once the access token differs from the refused one. Screens reset on every
+organization change, and a session never reopens content under an organization other than the one
+it was loaded in.
+
 Coverage is known once this socket's type 13 arrived for the current generation; socket cleanup
 clears it, and the chip shows Connecting until then. `PersistenceChip` runs on the note screen.
 `persistenceState` takes the first match: Access lost, Session ended, Update to keep saving,
@@ -887,8 +937,9 @@ ends and backs off the document: 1 minute, doubling up to 15 minutes, cleared by
 or by regained connectivity. A view denial settles lost access as above.
 
 Sign-out goes through `useSignOut`. `settleUnsyncedEdits` flushes batches and waits up to 15 seconds
-for attached documents to checkpoint, then reports whether any stored draft is more than a cache of
-an open, fully checkpointed document. If so the user confirms ("Unsaved edits") before
+for attached documents to checkpoint, then names the organizations whose stored drafts are more
+than a cache of an open, fully checkpointed document. If any, the "Unsaved edits" prompt names them
+and offers a switch to one of them or "Discard and sign out", which calls
 `logout({ discardUnsynced: true })`. Sign-out stops drains and deletes the user's drafts, SQLite
 database and key.
 

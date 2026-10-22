@@ -15,6 +15,7 @@ from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource
+from uniffy.core.realtime.publisher import publish_membership_revoke_safe
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import SubjectType
 from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
@@ -35,6 +36,7 @@ from uniffy.domains.directory.sync.records import (
     upsert_user,
 )
 from uniffy.domains.directory.sync.types import DirectoryGroup, DirectoryUser, ReconcileReport
+from uniffy.domains.files.cleanup import stage_member_upload_expiry
 from uniffy.domains.organizations.operations import (
     OrganizationOperations,
     StagedOrganizationMembership,
@@ -62,10 +64,20 @@ async def deprovision_user(
         logger.warning(f"directory sync: refusing to deprovision last owner {user_id}")
         return False
 
+    removed_at = datetime.now(UTC)
+    # Open uploads take no more parts; a reactivated member starts them again.
+    await stage_member_upload_expiry(
+        session,
+        organization_id=org_id,
+        user_id=user_id,
+        expired_at=removed_at,
+    )
     membership.is_active = False
-    membership.updated_at = datetime.now(UTC)
+    membership.removed_at = removed_at
+    membership.updated_at = removed_at
     await session.commit()
 
+    await publish_membership_revoke_safe(user_id, org_id)
     await call_lifecycle.evict_user(
         session,
         user_id,

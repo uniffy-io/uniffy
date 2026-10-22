@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { UploadStatus } from "@uniffy/proto/files/v1/files_pb";
-import type { UploadInput, UploadRecord } from "@/features/files/upload/uploadTypes";
+import type { UploadInput, UploadRecord, UploadScope } from "@/features/files/upload/uploadTypes";
+import { installWebLocks } from "@/features/realtime/__tests__/webLocks";
 
 const mocks = vi.hoisted(() => ({
   uploadChunks: vi.fn(),
@@ -12,9 +13,11 @@ const mocks = vi.hoisted(() => ({
   putRecord: vi.fn(),
   putBlob: vi.fn(),
   getBlob: vi.fn(),
-  deleteRecord: vi.fn(),
-  listIncomplete: vi.fn(),
-  clearUploadRecords: vi.fn(),
+  getRecord: vi.fn(),
+  deleteRecords: vi.fn(),
+  deleteRowsMatching: vi.fn(),
+  listIncompleteFor: vi.fn(),
+  encryptionReady: true,
 }));
 
 vi.mock("@/features/files/workers", () => ({
@@ -39,9 +42,14 @@ vi.mock("@/features/files/upload/uploadStore", () => ({
   putRecord: mocks.putRecord,
   putBlob: mocks.putBlob,
   getBlob: mocks.getBlob,
-  deleteRecord: mocks.deleteRecord,
-  listIncomplete: mocks.listIncomplete,
-  clearUploadRecords: mocks.clearUploadRecords,
+  getRecord: mocks.getRecord,
+  deleteRecords: mocks.deleteRecords,
+  deleteRowsMatching: mocks.deleteRowsMatching,
+  listIncompleteFor: mocks.listIncompleteFor,
+}));
+
+vi.mock("@/shared/crypto/storageEncryption", () => ({
+  isStorageEncryptionReady: () => mocks.encryptionReady,
 }));
 
 vi.mock("@/config/api", () => ({
@@ -51,11 +59,36 @@ vi.mock("@/config/api", () => ({
 
 vi.mock("@/config/env", () => ({ env: { apiBaseUrl: "http://test" } }));
 
-type Service = typeof import("@/features/files/upload/uploadService");
+type Service = typeof import("@/features/files/upload/uploadService") &
+  typeof import("@/features/files/upload/uploadScope");
+
+const SCOPE: UploadScope = { userId: "user-1", organizationId: "org-1" };
 
 async function loadService(): Promise<Service> {
   vi.resetModules();
-  return import("@/features/files/upload/uploadService");
+  const service = await import("@/features/files/upload/uploadService");
+  const scope = await import("@/features/files/upload/uploadScope");
+  return { ...service, ...scope };
+}
+
+/** What the stored records hold: the scoped listing and the re-read under the lock. */
+function storeRecords(...records: UploadRecord[]): void {
+  mocks.listIncompleteFor.mockResolvedValue(records);
+  mocks.getRecord.mockImplementation(async (id: string) => records.find((r) => r.id === id));
+}
+
+/** Another tab running the upload: it holds the lock until the returned release runs. */
+function holdInAnotherTab(id: string): () => void {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  void navigator.locks.request(`uniffy:upload:${id}`, {}, () => held);
+  return release;
+}
+
+async function lockIsFree(id: string): Promise<boolean> {
+  return navigator.locks.request(`uniffy:upload:${id}`, { ifAvailable: true }, (lock) => !!lock);
 }
 
 function input(size: number, overrides: Partial<UploadInput> = {}): UploadInput {
@@ -73,7 +106,11 @@ function never(): Promise<void> {
   return new Promise<void>(() => undefined);
 }
 
+let uninstallWebLocks: () => void = () => undefined;
+
 beforeEach(() => {
+  uninstallWebLocks = installWebLocks();
+  mocks.encryptionReady = true;
   let counter = 0;
   mocks.uploadChunks.mockReset().mockReturnValue(never());
   mocks.abort.mockReset();
@@ -88,9 +125,10 @@ beforeEach(() => {
   mocks.putRecord.mockReset().mockResolvedValue(undefined);
   mocks.putBlob.mockReset().mockResolvedValue(true);
   mocks.getBlob.mockReset().mockResolvedValue(undefined);
-  mocks.deleteRecord.mockReset().mockResolvedValue(undefined);
-  mocks.listIncomplete.mockReset().mockResolvedValue([]);
-  mocks.clearUploadRecords.mockReset().mockResolvedValue(undefined);
+  mocks.getRecord.mockReset().mockResolvedValue(undefined);
+  mocks.deleteRecords.mockReset().mockResolvedValue(undefined);
+  mocks.deleteRowsMatching.mockReset().mockResolvedValue(undefined);
+  mocks.listIncompleteFor.mockReset().mockResolvedValue([]);
 });
 
 function deferred<T>() {
@@ -108,6 +146,8 @@ function storedRecord(overrides: Partial<UploadRecord> = {}): UploadRecord {
     mimeType: "application/octet-stream",
     context: "files",
     organizationId: "org-1",
+    userId: "user-1",
+    ownerTabId: "tab-closed",
     totalSize: 15,
     uploadedBytes: 5,
     progress: 33,
@@ -122,6 +162,7 @@ function storedRecord(overrides: Partial<UploadRecord> = {}): UploadRecord {
 
 afterEach(() => {
   vi.useRealTimers();
+  uninstallWebLocks();
 });
 
 describe("uploadService concurrency", () => {
@@ -255,7 +296,7 @@ describe("uploadService recover", () => {
   it("resumes a persisted upload from the first missing part, skipping initiate", async () => {
     const { uploadService } = await loadService();
 
-    mocks.listIncomplete.mockResolvedValueOnce([storedRecord()]);
+    storeRecords(storedRecord());
     mocks.getBlob.mockResolvedValueOnce(new Blob([new Uint8Array(15)]));
     mocks.getUploadStatus.mockResolvedValueOnce({
       status: UploadStatus.ACTIVE,
@@ -265,7 +306,7 @@ describe("uploadService recover", () => {
     mocks.uploadChunks.mockResolvedValueOnce(undefined);
     mocks.complete.mockResolvedValueOnce({ file: { id: "file-resumed" } });
 
-    await uploadService.recover();
+    await uploadService.recover(SCOPE);
 
     await vi.waitFor(() => {
       expect(uploadService.getRecords().find((r) => r.id === "r1")?.status).toBe("completed");
@@ -281,22 +322,22 @@ describe("uploadService recover", () => {
   it("fails a persisted upload whose bytes did not survive the reload", async () => {
     const { uploadService } = await loadService();
 
-    mocks.listIncomplete.mockResolvedValueOnce([storedRecord({ id: "r2" })]);
+    storeRecords(storedRecord({ id: "r2" }));
     mocks.getBlob.mockResolvedValueOnce(undefined);
 
-    await uploadService.recover();
+    await uploadService.recover(SCOPE);
 
     const record = uploadService.getRecords().find((r) => r.id === "r2");
     expect(record?.status).toBe("failed");
     expect(record?.error).toMatch(/re-select/i);
-    expect(mocks.deleteRecord).toHaveBeenCalledWith("r2");
+    expect(mocks.deleteRecords).toHaveBeenCalledWith(["r2"]);
     expect(mocks.uploadChunks).not.toHaveBeenCalled();
   });
 
   it("fails a resumed upload whose server session expired", async () => {
     const { uploadService } = await loadService();
 
-    mocks.listIncomplete.mockResolvedValueOnce([storedRecord({ id: "r3" })]);
+    storeRecords(storedRecord({ id: "r3" }));
     mocks.getBlob.mockResolvedValueOnce(new Blob([new Uint8Array(15)]));
     mocks.getUploadStatus.mockResolvedValueOnce({
       status: UploadStatus.COMPLETED,
@@ -304,7 +345,7 @@ describe("uploadService recover", () => {
       totalChunks: 3,
     });
 
-    await uploadService.recover();
+    await uploadService.recover(SCOPE);
 
     await vi.waitFor(() => {
       expect(uploadService.getRecords().find((r) => r.id === "r3")?.status).toBe("failed");
@@ -313,7 +354,237 @@ describe("uploadService recover", () => {
   });
 });
 
-describe("uploadService session reset", () => {
+describe("uploadService recover scope", () => {
+  it("lists only the tab's account and organization", async () => {
+    const { uploadService } = await loadService();
+    await uploadService.recover({ userId: "user-2", organizationId: "org-9" });
+    expect(mocks.listIncompleteFor).toHaveBeenCalledWith({
+      userId: "user-2",
+      organizationId: "org-9",
+    });
+  });
+
+  it("leaves a record another tab is still uploading", async () => {
+    const { uploadService } = await loadService();
+    storeRecords(storedRecord({ id: "busy" }), storedRecord({ id: "free", uploadId: "srv-free" }));
+    mocks.getBlob.mockResolvedValue(new Blob([new Uint8Array(15)]));
+    mocks.getUploadStatus.mockResolvedValue({
+      status: UploadStatus.ACTIVE,
+      completedChunks: [],
+      totalChunks: 3,
+    });
+    const release = holdInAnotherTab("busy");
+
+    await uploadService.recover(SCOPE);
+
+    expect(uploadService.getRecords().map((r) => r.id)).toEqual(["free"]);
+    await vi.waitFor(() => expect(mocks.getUploadStatus).toHaveBeenCalledOnce());
+    expect(mocks.getUploadStatus).toHaveBeenCalledWith({ uploadId: "srv-free" });
+    expect(mocks.getBlob).toHaveBeenCalledTimes(1);
+    release();
+  });
+
+  it("skips a record whose stored row belongs to another organization or account", async () => {
+    const { uploadService } = await loadService();
+    const listed = [storedRecord({ id: "moved" }), storedRecord({ id: "foreign" })];
+    mocks.listIncompleteFor.mockResolvedValue(listed);
+    mocks.getRecord.mockImplementation(async (id: string) =>
+      id === "moved"
+        ? storedRecord({ id, organizationId: "org-2" })
+        : storedRecord({ id, userId: "user-2" }),
+    );
+
+    await uploadService.recover(SCOPE);
+
+    expect(uploadService.getRecords()).toEqual([]);
+    expect(mocks.getBlob).not.toHaveBeenCalled();
+    expect(await lockIsFree("moved")).toBe(true);
+    expect(await lockIsFree("foreign")).toBe(true);
+  });
+
+  it("holds the lock of a resumed upload and stamps this tab as its owner", async () => {
+    const { uploadService, uploadTabId } = await loadService();
+    storeRecords(storedRecord());
+    mocks.getBlob.mockResolvedValueOnce(new Blob([new Uint8Array(15)]));
+    mocks.getUploadStatus.mockResolvedValueOnce({
+      status: UploadStatus.ACTIVE,
+      completedChunks: [],
+      totalChunks: 3,
+    });
+
+    await uploadService.recover(SCOPE);
+
+    expect(uploadService.getRecords()[0].ownerTabId).toBe(uploadTabId());
+    expect(mocks.putRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "r1", ownerTabId: uploadTabId() }),
+    );
+    expect(await lockIsFree("r1")).toBe(false);
+  });
+
+  it("without Web Locks resumes only the records this tab owns", async () => {
+    uninstallWebLocks();
+    const { uploadService, uploadTabId } = await loadService();
+    storeRecords(
+      storedRecord({ id: "elsewhere", ownerTabId: "tab-live" }),
+      storedRecord({ id: "own", ownerTabId: uploadTabId() }),
+    );
+    mocks.getBlob.mockResolvedValue(new Blob([new Uint8Array(15)]));
+    mocks.getUploadStatus.mockResolvedValue({
+      status: UploadStatus.ACTIVE,
+      completedChunks: [],
+      totalChunks: 3,
+    });
+
+    await uploadService.recover(SCOPE);
+
+    expect(uploadService.getRecords().map((r) => r.id)).toEqual(["own"]);
+  });
+
+  it("stops a recovery that a newer scope replaced", async () => {
+    const { uploadService } = await loadService();
+    const pending = deferred<UploadRecord[]>();
+    mocks.listIncompleteFor.mockReturnValueOnce(pending.promise);
+    const stale = uploadService.recover(SCOPE);
+    await uploadService.recover({ userId: "user-1", organizationId: "org-2" });
+    pending.resolve([storedRecord()]);
+    await stale;
+    expect(mocks.getRecord).not.toHaveBeenCalled();
+    expect(uploadService.getRecords()).toEqual([]);
+  });
+});
+
+describe("uploadService enqueue ownership", () => {
+  it("stamps the account and tab and holds the upload lock until the row is gone", async () => {
+    const { uploadService, uploadTabId } = await loadService();
+    await uploadService.recover(SCOPE);
+    const finish = deferred<void>();
+    mocks.uploadChunks.mockReturnValueOnce(finish.promise);
+
+    const [handle] = uploadService.enqueue([input(100)]);
+
+    const record = uploadService.getRecords()[0];
+    expect(record.userId).toBe("user-1");
+    expect(record.ownerTabId).toBe(uploadTabId());
+    await vi.waitFor(() => expect(mocks.uploadChunks).toHaveBeenCalledOnce());
+    expect(await lockIsFree(handle.id)).toBe(false);
+
+    finish.resolve();
+    await handle.done;
+    await vi.waitFor(async () => expect(await lockIsFree(handle.id)).toBe(true));
+    expect(mocks.deleteRecords).toHaveBeenCalledWith([handle.id]);
+  });
+
+  it("stores the bytes only while storage encryption is ready", async () => {
+    const { uploadService } = await loadService();
+    await uploadService.recover(SCOPE);
+
+    mocks.encryptionReady = false;
+    uploadService.enqueue([input(100)]);
+    expect(mocks.putRecord).toHaveBeenCalledTimes(1);
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+
+    mocks.encryptionReady = true;
+    const [handle] = uploadService.enqueue([input(100)]);
+    expect(mocks.putBlob).toHaveBeenCalledWith(
+      expect.objectContaining({ id: handle.id, userId: "user-1", organizationId: "org-1" }),
+      expect.any(Blob),
+    );
+  });
+
+  it("persists nothing for a tab that has no account yet", async () => {
+    const { uploadService } = await loadService();
+    uploadService.enqueue([input(100)]);
+    await vi.waitFor(() => expect(mocks.uploadChunks).toHaveBeenCalledOnce());
+    expect(uploadService.getRecords()[0].userId).toBe("");
+    expect(mocks.putRecord).not.toHaveBeenCalled();
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+  });
+
+  it("reports active uploads until they settle", async () => {
+    const { uploadService } = await loadService();
+    expect(uploadService.hasActiveUploads()).toBe(false);
+    const finish = deferred<void>();
+    mocks.uploadChunks.mockReturnValueOnce(finish.promise);
+    const [handle] = uploadService.enqueue([input(100)]);
+    expect(uploadService.hasActiveUploads()).toBe(true);
+    finish.resolve();
+    await handle.done;
+    expect(uploadService.hasActiveUploads()).toBe(false);
+  });
+});
+
+describe("uploadService purge", () => {
+  it("purgeUser drops this tab's uploads and the account's stored rows", async () => {
+    const { uploadService } = await loadService();
+    await uploadService.recover(SCOPE);
+    const [handle] = uploadService.enqueue([input(100)]);
+
+    await uploadService.purgeUser("user-1");
+
+    await expect(handle.done).rejects.toThrow("Upload cancelled");
+    expect(uploadService.getRecords()).toEqual([]);
+    const match = mocks.deleteRowsMatching.mock.calls[0][0] as (owner: object) => boolean;
+    expect(match({ userId: "user-1", organizationId: "org-2" })).toBe(true);
+    expect(match({})).toBe(true);
+    expect(match({ userId: "user-2", organizationId: "org-1" })).toBe(false);
+  });
+
+  it("purgeOrganization drops only that organization's uploads and rows", async () => {
+    const { uploadService, getUploadScope } = await loadService();
+    await uploadService.recover(SCOPE);
+    const [lost] = uploadService.enqueue([input(100)]);
+    const [kept] = uploadService.enqueue([input(100, { organizationId: "org-2" })]);
+
+    await uploadService.purgeOrganization("org-1", "user-1");
+
+    await expect(lost.done).rejects.toThrow("Upload cancelled");
+    expect(uploadService.getRecords().map((r) => r.id)).toEqual([kept.id]);
+    expect(getUploadScope()).toBeNull();
+    const match = mocks.deleteRowsMatching.mock.calls[0][0] as (owner: object) => boolean;
+    expect(match({ userId: "user-1", organizationId: "org-1" })).toBe(true);
+    expect(match({ userId: "user-1", organizationId: "org-2" })).toBe(false);
+    expect(match({ userId: "user-2", organizationId: "org-1" })).toBe(false);
+    expect(match({})).toBe(false);
+  });
+
+  it("purgeOrganization without an account drops every account's rows of that organization", async () => {
+    const { uploadService } = await loadService();
+    await uploadService.purgeOrganization("org-1");
+    const match = mocks.deleteRowsMatching.mock.calls[0][0] as (owner: object) => boolean;
+    expect(match({ userId: "user-2", organizationId: "org-1" })).toBe(true);
+    expect(match({ userId: "user-1", organizationId: "org-2" })).toBe(false);
+  });
+});
+
+describe("uploadService scope reset", () => {
+  it("cancels and forgets only this tab's records, never the shared stores", async () => {
+    const { uploadService, getUploadScope } = await loadService();
+    await uploadService.recover(SCOPE);
+    const release = holdInAnotherTab("other-tab");
+    const [handle] = uploadService.enqueue([input(100)]);
+    await vi.waitFor(() => expect(mocks.uploadChunks).toHaveBeenCalledOnce());
+
+    uploadService.resetForScope();
+
+    await expect(handle.done).rejects.toThrow("Upload cancelled");
+    expect(mocks.abortUpload).toHaveBeenCalledWith({ uploadId: "upload-0" });
+    const deleted = mocks.deleteRecords.mock.calls.flatMap(([ids]) => ids as string[]);
+    expect(new Set(deleted)).toEqual(new Set([handle.id]));
+    expect(mocks.deleteRowsMatching).not.toHaveBeenCalled();
+    expect(await lockIsFree("other-tab")).toBe(false);
+    await vi.waitFor(async () => expect(await lockIsFree(handle.id)).toBe(true));
+    expect(getUploadScope()).toBeNull();
+    release();
+  });
+
+  it("keeps reset as an alias of resetForScope", async () => {
+    const { uploadService } = await loadService();
+    const [handle] = uploadService.enqueue([input(100)]);
+    uploadService.reset();
+    await expect(handle.done).rejects.toThrow("Upload cancelled");
+    expect(uploadService.getRecords()).toEqual([]);
+  });
+
   it("clears terminal history and keeps it out of subsequent mirror updates", async () => {
     const { uploadService } = await loadService();
     const { subscribeUploadMirror } = await import("@/features/files/upload/reduxMirror");
@@ -334,9 +605,9 @@ describe("uploadService session reset", () => {
       "cancelled",
     ]);
 
-    uploadService.reset();
+    uploadService.resetForScope();
     expect(uploadService.getRecords()).toEqual([]);
-    expect(mocks.clearUploadRecords).toHaveBeenCalledOnce();
+    expect(mocks.deleteRowsMatching).not.toHaveBeenCalled();
     expect(dispatch.mock.calls.at(-1)?.[0].payload).toEqual([]);
     const [current] = uploadService.enqueue([input(100, { organizationId: "org-2" })]);
     expect(
@@ -354,7 +625,7 @@ describe("uploadService session reset", () => {
       mocks[stage].mockReturnValueOnce(pending.promise);
       const [handle] = uploadService.enqueue([input(100)]);
       await vi.waitFor(() => expect(mocks[stage]).toHaveBeenCalledOnce());
-      uploadService.reset();
+      uploadService.resetForScope();
       await expect(handle.done).rejects.toThrow("Upload cancelled");
       pending.resolve(
         stage === "initiate"
@@ -374,20 +645,28 @@ describe("uploadService session reset", () => {
     },
   );
 
-  it.each(["listIncomplete", "getBlob"] as const)(
+  it.each(["listIncompleteFor", "getRecord", "getBlob"] as const)(
     "ignores recovery awaiting %s when reset happens",
     async (stage) => {
       const { uploadService } = await loadService();
       const pending = deferred<unknown>();
-      mocks.listIncomplete.mockResolvedValue([storedRecord()]);
+      storeRecords(storedRecord());
+      mocks.getBlob.mockResolvedValue(new Blob(["old bytes"]));
       mocks[stage].mockReturnValueOnce(pending.promise);
-      const recovery = uploadService.recover();
+      const recovery = uploadService.recover(SCOPE);
       await vi.waitFor(() => expect(mocks[stage]).toHaveBeenCalledOnce());
-      uploadService.reset();
-      pending.resolve(stage === "listIncomplete" ? [storedRecord()] : new Blob(["old bytes"]));
+      uploadService.resetForScope();
+      pending.resolve(
+        stage === "listIncompleteFor"
+          ? [storedRecord()]
+          : stage === "getRecord"
+            ? storedRecord()
+            : new Blob(["old bytes"]),
+      );
       await recovery;
       expect(uploadService.getRecords()).toEqual([]);
       expect(mocks.uploadChunks).not.toHaveBeenCalled();
+      expect(await lockIsFree("r1")).toBe(true);
     },
   );
 
@@ -401,7 +680,7 @@ describe("uploadService session reset", () => {
       Array.from({ length: UPLOAD_MAX_CONCURRENT }, () => input(100)),
     );
     await vi.waitFor(() => expect(mocks.uploadChunks).toHaveBeenCalledTimes(UPLOAD_MAX_CONCURRENT));
-    uploadService.reset();
+    uploadService.resetForScope();
     await Promise.all(old.map((handle) => expect(handle.done).rejects.toThrow("Upload cancelled")));
     uploadService.enqueue(Array.from({ length: UPLOAD_MAX_CONCURRENT + 1 }, () => input(100)));
     await vi.waitFor(() =>

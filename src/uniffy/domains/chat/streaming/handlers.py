@@ -62,7 +62,7 @@ from uniffy_proto.chat.v1.chat_stream_pb import (
     UserChatEventType,
 )
 
-from uniffy.core.auth.principal import current_user_id
+from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.message import ChatMessageMetadataKey
@@ -72,6 +72,7 @@ from uniffy.domains.chat.messages.converters import (
     thread_reply_context_to_proto,
 )
 from uniffy.domains.chat.streaming import events as evt
+from uniffy.domains.chat.streaming.scope import ChannelOrganizationFilter
 from uniffy.infrastructure.valkey.pubsub import subscribe_channels
 
 LOGGER_COMPONENT = "chat.stream"
@@ -745,8 +746,9 @@ class ChatStreamHandlers:
         request: StreamUserChatEventsRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamUserChatEventsResponse]:
-        """Subscribe to chat:user:{user_id}; channel events arrive via publisher fan-out."""
+        """Subscribe to chat:user:{user_id} and pass on the events of the request organization."""
         user_id = current_user_id()
+        channel_scope = ChannelOrganizationFilter(resolve_organization_id(request.organization_id))
 
         logger.info(
             f"starting unified chat stream for {user_id}",
@@ -771,6 +773,9 @@ class ChatStreamHandlers:
                                 timestamp=_now_ts(),
                             )
                             last_send = now
+                        continue
+
+                    if not await channel_scope.admits(payload):
                         continue
 
                     event_type = payload.get("_type")

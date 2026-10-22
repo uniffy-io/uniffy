@@ -256,7 +256,13 @@ def to_model_info(provider: str, model: Model) -> ModelInfo:
         output_per_1m=output_rate,
         cache_read_per_1m=read_rate,
         cache_write_per_1m=write_rate,
+        provider_default=_is_provider_default(provider, model.id),
     )
+
+
+def _is_provider_default(provider: str, model_id: str) -> bool:
+    pc = get_catalog().providers.get(provider)
+    return pc is not None and pc.default_large_model_id == model_id
 
 
 def model_infos_for_provider(provider: str) -> list[ModelInfo]:

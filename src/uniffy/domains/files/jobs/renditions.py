@@ -92,8 +92,8 @@ async def generate_playback_rendition(
                     {
                         "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": file_id,
-                        "organization_id": organization_id,
                     },
+                    organization_id=org_uuid,
                 )
             except Exception:
                 logger.opt(exception=True).warning("Playback update notification failed")

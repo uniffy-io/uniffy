@@ -42,8 +42,15 @@ class FakeSocket {
   onopen?: () => void;
   onclose?: (event: { code: number }) => void;
   onmessage?: (event: { data: ArrayBuffer }) => void;
-  constructor() {
+  constructor(public url: string) {
     FakeSocket.sockets.push(this);
+  }
+  get organizationId(): string | null {
+    return new URL(this.url).searchParams.get("org_id");
+  }
+  /** Names of the documents this socket carried any frame for. */
+  docNames(): string[] {
+    return [...new Set(this.sent.map((frame) => peekVarString(frame).docName))];
   }
   send(frame: Uint8Array) {
     this.sent.push(frame);
@@ -56,8 +63,8 @@ class FakeSocket {
     this.readyState = 3;
     this.onclose?.({ code });
   }
-  deliver(payload: Uint8Array) {
-    this.onmessage?.({ data: encodeDocFrame(NAME, payload).slice().buffer });
+  deliver(payload: Uint8Array, name = NAME) {
+    this.onmessage?.({ data: encodeDocFrame(name, payload).slice().buffer });
   }
   types(): number[] {
     return this.sent.map((frame) => frame[peekVarString(frame).payloadOffset]);
@@ -126,9 +133,16 @@ function holdsStructsMissingFrom(server: Y.Doc, clientState: Uint8Array): boolea
 
 /** Answers the client's SyncStep1 the way the server does: generation, buffer state, its own
  * SyncStep1 when the client holds structs it lacks, then what the client lacks. */
-function serve(socket: FakeSocket, server: Y.Doc, epoch?: string, head = 0, checkpoint = 0): void {
+function serve(
+  socket: FakeSocket,
+  server: Y.Doc,
+  epoch?: string,
+  head = 0,
+  checkpoint = 0,
+  name = NAME,
+): void {
   if (socket.readyState !== FakeSocket.OPEN) socket.open();
-  socket.deliver(encodeGeneration("G"));
+  socket.deliver(encodeGeneration("G"), name);
   if (epoch)
     socket.deliver(
       encodeSessionState({
@@ -138,13 +152,14 @@ function serve(socket: FakeSocket, server: Y.Doc, epoch?: string, head = 0, chec
         checkpointSequence: checkpoint,
         checkpointRevision: 1,
       }),
+      name,
     );
   const clientState = socket.stateVector();
   if (!clientState || holdsStructsMissingFrom(server, clientState)) {
     const ask = encoding.createEncoder();
     encoding.writeVarUint(ask, 0);
     syncProtocol.writeSyncStep1(ask, server);
-    socket.deliver(encoding.toUint8Array(ask));
+    socket.deliver(encoding.toUint8Array(ask), name);
   }
   const update = Y.encodeStateAsUpdate(server, clientState);
   downloads.push(update);
@@ -152,7 +167,7 @@ function serve(socket: FakeSocket, server: Y.Doc, epoch?: string, head = 0, chec
   encoding.writeVarUint(encoder, 0);
   encoding.writeVarUint(encoder, syncProtocol.messageYjsSyncStep2);
   encoding.writeVarUint8Array(encoder, update);
-  socket.deliver(encoding.toUint8Array(encoder));
+  socket.deliver(encoding.toUint8Array(encoder), name);
 }
 
 function viewDenial(): Uint8Array {
@@ -421,7 +436,8 @@ it("flushes edits and their device copy when the app leaves the foreground, and 
 
 it("waits for the checkpoint before sign-out, then deletes only that user's drafts", async () => {
   const { settleUnsyncedEdits, signOutDrafts } = await import("@shared/realtime/drain");
-  const { hasUnsyncedEdits, onUnsyncedEditsCheck } = await import("@core/auth/sessionEvents");
+  const { listUnsyncedOrganizations, onUnsyncedEditsCheck } =
+    await import("@core/auth/sessionEvents");
   const { isDraftStorageActive, listDraftKeys, saveDraft } =
     await import("@shared/realtime/draftStorage");
   const stop = onUnsyncedEditsCheck(settleUnsyncedEdits);
@@ -429,15 +445,15 @@ it("waits for the checkpoint before sign-out, then deletes only that user's draf
   await saveDraft("realtime.bob.org.NOTE.note", bystander);
   const editor = await openEditor(serverDoc("base"), "E1");
   editor.text.insert(4, " typed before sign-out");
-  let unsynced: boolean | undefined;
-  const checking = hasUnsyncedEdits("user").then((value) => (unsynced = value));
+  let unsynced: string[] | undefined;
+  const checking = listUnsyncedOrganizations("user").then((value) => (unsynced = value));
   const [write] = editor.socket.writes();
   editor.socket.deliver(receipt(write.id, "E1", 1));
   await editor.stored();
   expect(unsynced).toBeUndefined();
   editor.socket.deliver(progress("E1", 1));
   await checking;
-  expect(unsynced).toBe(false);
+  expect(unsynced).toEqual([]);
 
   await signOutDrafts("user");
   expect(isDraftStorageActive("user")).toBe(false);
@@ -449,13 +465,14 @@ it("waits for the checkpoint before sign-out, then deletes only that user's draf
 
 it("reports accepted edits still unsaved after one checkpoint window and keeps them", async () => {
   const { SIGN_OUT_SETTLE_MS, settleUnsyncedEdits } = await import("@shared/realtime/drain");
-  const { hasUnsyncedEdits, onUnsyncedEditsCheck } = await import("@core/auth/sessionEvents");
+  const { listUnsyncedOrganizations, onUnsyncedEditsCheck } =
+    await import("@core/auth/sessionEvents");
   const { readRetainedUpdates } = await import("@shared/realtime/draftStorage");
   const stop = onUnsyncedEditsCheck(settleUnsyncedEdits);
   const editor = await openEditor(serverDoc("base"), "E1");
   editor.text.insert(4, " accepted, never saved");
-  let unsynced: boolean | undefined;
-  const checking = hasUnsyncedEdits("user").then((value) => (unsynced = value));
+  let unsynced: string[] | undefined;
+  const checking = listUnsyncedOrganizations("user").then((value) => (unsynced = value));
   const [write] = editor.socket.writes();
   editor.socket.deliver(receipt(write.id, "E1", 1));
   await editor.stored();
@@ -464,7 +481,7 @@ it("reports accepted edits still unsaved after one checkpoint window and keeps t
   expect(unsynced).toBeUndefined();
   vi.advanceTimersByTime(1);
   await checking;
-  expect(unsynced).toBe(true);
+  expect(unsynced).toEqual(["org"]);
   expect((await readRetainedUpdates(KEY, "G")).map((update) => update.updateId)).toEqual([
     write.id,
   ]);
@@ -619,4 +636,82 @@ it("stops at a replaced generation when its device copy names no generation, sen
   expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false);
   expect((await app.readRetainedUpdates(KEY, "G")).length).toBe(1);
   replacement.destroy();
+});
+
+it("drains another organization's parked draft on that organization's socket after a switch", async () => {
+  const { realtimeMultiplexer } = await import("@shared/realtime/multiplexer");
+  const { listDraftKeys, readStoredDrafts, saveDraft } =
+    await import("@shared/realtime/draftStorage");
+  const { runMobileDrain } = await import("@shared/realtime/drain");
+  (await import("@core/auth/auth")).setAccessToken("token");
+  const parkedName = "NOTE:parked";
+  const parkedKey = "realtime.user.org-b.NOTE.parked";
+  const server = serverDoc("base");
+  const offline = new Y.Doc();
+  Y.applyUpdate(offline, Y.encodeStateAsUpdate(server));
+  offline.getText("markdown").insert(4, " parked");
+  await saveDraft(parkedKey, offline);
+
+  // A note of the first organization was open and closed; its socket stays open while idle.
+  const closed = new Y.Doc();
+  const awareness = new Awareness(closed);
+  const subscription = realtimeMultiplexer.attach({
+    contentType: "NOTE",
+    contentId: "note",
+    organizationId: "org",
+    ydoc: closed,
+    awareness,
+  });
+  const first = FakeSocket.sockets[0];
+  first.open();
+  subscription.destroy();
+
+  await runMobileDrain("user", "org-b", () => true);
+  expect(realtimeMultiplexer.isAttached(parkedName)).toBe(true);
+  expect(first.readyState).toBe(3);
+  expect(first.docNames()).toEqual([NAME]);
+  // The first organization's server would refuse the document; its socket is gone already.
+  first.deliver(viewDenial(), parkedName);
+  const socket = FakeSocket.sockets.at(-1)!;
+  expect(socket.organizationId).toBe("org-b");
+  serve(socket, server, "E1", 0, 0, parkedName);
+  await vi.waitFor(() => expect(socket.writes()).toHaveLength(1));
+  const [replay] = socket.writes();
+  Y.applyUpdate(server, replay.update);
+  expect(server.getText("markdown").toString()).toBe("base parked");
+  socket.deliver(receipt(replay.id, "E1", 1), parkedName);
+  socket.deliver(progress("E1", 1), parkedName);
+  await vi.waitFor(async () => expect(await listDraftKeys("user")).toEqual([]));
+  expect(await readStoredDrafts(parkedKey)).toEqual([]);
+  awareness.destroy();
+  closed.destroy();
+  offline.destroy();
+});
+
+it("ends a drain of the previous organization as retry with its draft intact when the socket moves", async () => {
+  const server = serverDoc("base");
+  const editor = await openEditor(server);
+  editor.send(() => editor.text.insert(4, " parked"));
+  await editor.stored();
+  kill();
+
+  const app = await restart();
+  const { emitAuthBoundary } = await import("@core/auth/sessionEvents");
+  await app.runMobileDrain("user", "org", () => true);
+  expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(true);
+  const socket = FakeSocket.sockets.at(-1)!;
+  socket.open();
+  emitAuthBoundary("org-b");
+  const next = FakeSocket.sockets.at(-1)!;
+  expect(next).not.toBe(socket);
+  expect(next.organizationId).toBe("org-b");
+  next.open();
+  await vi.waitFor(() => expect(app.realtimeMultiplexer.isAttached(NAME)).toBe(false));
+  // A late answer of the previous organization's server changes nothing.
+  socket.deliver(viewDenial());
+  expect(next.sent).toEqual([]);
+  expect((await app.readStoredDrafts(KEY)).map((draft) => [draft.generation, draft.text])).toEqual([
+    ["G", "base parked"],
+  ]);
+  expect((await app.readRetainedUpdates(KEY, "G")).length).toBe(1);
 });

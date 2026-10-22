@@ -5,12 +5,12 @@ from psycopg2 import errorcodes, errors
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _execute,
+    _insert_organization,
     _migrate_to,
     _provision_to,
     _query,
@@ -23,13 +23,13 @@ CheckViolation = errors.lookup(errorcodes.CHECK_VIOLATION)
 async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(scratch_database):
     await _provision_to(scratch_database, "097")
     engine = create_async_engine(get_database_url())
-    organization_id, owner_id = generate_id(), generate_id()
+    owner_id = generate_id()
     try:
         async with AsyncSession(engine) as session:
-            session.add_all([
-                Organization(id=organization_id, name="Evaluations", slug="evaluations"),
-                User(id=owner_id, username="builder", email="builder@example.test"),
-            ])
+            organization_id = await _insert_organization(
+                session, name="Evaluations", slug="evaluations"
+            )
+            session.add(User(id=owner_id, username="builder", email="builder@example.test"))
             await session.flush()
             skill_id, version_id = generate_id(), generate_id()
             await session.execute(

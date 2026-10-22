@@ -22,7 +22,7 @@ Background model reference: `.agents/rules/permissions.md` is the source of trut
 
 ## Fixtures (demo company seed)
 
-Source of truth: `src/uniffy/scripts/demo_company/content/people.json` and `manifest.json`. Org is **"Uniffy"** (the card on `/select-org`). Every roster user's password is `admin` (`DEFAULT_PERSON_PASSWORD` in `src/uniffy/scripts/demo_company/loader.py`), except the demo persona `maria@uniffy.io` whose password is `demo`. `admin@uniffy.io` (password `admin`, or `$INITIAL_ADMIN_PASSWORD`) is org OWNER and system admin. Every roster user is an ordinary org MEMBER.
+Source of truth: `src/uniffy/scripts/demo_company/content/people.json` and `manifest.json`. Org is **"Uniffy"** (the card on `/welcome`). Every roster user's password is `admin` (`DEFAULT_PERSON_PASSWORD` in `src/uniffy/scripts/demo_company/loader.py`), except the demo persona `maria@uniffy.io` whose password is `demo`. `admin@uniffy.io` (password `admin`, or `$INITIAL_ADMIN_PASSWORD`) is org OWNER and system admin. Every roster user is an ordinary org MEMBER.
 
 Grantable subjects come in three kinds, all selectable in the share dialog's subject picker (kind-badged): users, **access groups**, and **teams**.
 

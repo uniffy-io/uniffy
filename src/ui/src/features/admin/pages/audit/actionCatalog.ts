@@ -71,9 +71,11 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "organization.member_role_changed", label: "Member role changed" },
       { value: "organization.deleted", label: "Deleted" },
       { value: "organization.member_invited", label: "Member invited" },
-      { value: "organization.member_added_via_invite", label: "Member added via invite" },
       { value: "organization.invitation_revoked", label: "Invitation revoked" },
       { value: "organization.invitation_resent", label: "Invitation resent" },
+      { value: "organization.invitation_declined", label: "Invitation declined" },
+      { value: "organization.member_left", label: "Member left" },
+      { value: "organization.ownership_transferred", label: "Ownership transferred" },
       { value: "organization.security_settings_changed", label: "Security settings changed" },
       { value: "organization.encryption_key_rotated", label: "Encryption key rotated" },
       {
@@ -264,7 +266,10 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     domain: "deployment",
     label: "Deployment",
     badgeClass: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-    actions: [{ value: "deployment.encryption_rotated", label: "Encryption rotated" }],
+    actions: [
+      { value: "deployment.encryption_rotated", label: "Encryption rotated" },
+      { value: "deployment.setup_completed", label: "Setup completed" },
+    ],
   },
   {
     domain: "system",
@@ -272,6 +277,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     badgeClass: "bg-slate-200 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300",
     actions: [
       { value: "system.public_registration_changed", label: "Public registration changed" },
+      { value: "system.org_creation_changed", label: "Organization creation changed" },
     ],
   },
   {

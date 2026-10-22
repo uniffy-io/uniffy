@@ -17,6 +17,9 @@ export const WS_CLOSE_NORMAL = 1000;
 export const WS_CLOSE_MESSAGE_TOO_BIG = 1009;
 export const WS_CLOSE_UNAUTHENTICATED = 4401;
 export const WS_CLOSE_FORBIDDEN = 4403;
+// The 4403 close reason when the account is no longer an active member of the socket's
+// organization.
+export const NOT_A_MEMBER_CLOSE_REASON = "not a member";
 // The server bounds a socket by the lifetime of the token that opened it.
 // Refresh, then reconnect - this is not a revocation.
 export const WS_CLOSE_REAUTH_REQUIRED = 4409;

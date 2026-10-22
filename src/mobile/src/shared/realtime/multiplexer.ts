@@ -14,8 +14,8 @@ import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 import { getAccessToken } from "@core/auth/auth";
-import { refreshSession } from "@core/auth/refresh";
-import { onSessionExpired } from "@core/auth/sessionEvents";
+import { refreshAfterMembershipDenial, refreshSession } from "@core/auth/refresh";
+import { onAuthBoundary, onSessionExpired } from "@core/auth/sessionEvents";
 import { addOnlineListener } from "@core/api/connectivity";
 import { getServerUrl } from "@core/config/serverUrl";
 import { encodeDocFrame, peekVarString } from "@shared/realtime/multiplex";
@@ -47,6 +47,9 @@ import { UpdateCoverage, type CoverageTransition } from "@shared/realtime/update
 // Marks transactions applied from the wire so the update handler does not echo
 // them back to the server.
 export const REMOTE_ORIGIN = Symbol("realtime-remote");
+
+// The close reason the server gives when the caller lost its organization membership.
+const NOT_A_MEMBER_CLOSE_REASON = "not a member";
 
 // y-protocols message-type constants - upstream exposes them only as numeric literals.
 const MESSAGE_SYNC = 0;
@@ -146,6 +149,9 @@ export interface MultiplexerAttachOptions {
   onStatus?: (status: RealtimeStatus) => void;
   onSync?: () => void;
   onGenerationMismatch?: () => void;
+  /** The socket serves another organization, so the doc sends and hears nothing on it. Fires
+   * once per socket. */
+  onOrganizationMismatch?: () => void;
   onCloseCode?: (code: number) => void;
   onWriteDenied?: (reason: string, noView?: boolean) => void;
   /** Fires with every batch of coverage transitions, before the doc state changes. */
@@ -173,6 +179,8 @@ interface DocEntry {
   resolvedSyncOnce: boolean;
   // Read-only documents retain local drafts but suppress write frames.
   readOnly: boolean;
+  // The socket last told this doc it serves another organization.
+  mismatchSocket: WebSocket | null;
   requestedReadOnly: boolean;
   denied: boolean;
   generation: string | null;
@@ -212,7 +220,10 @@ class RealtimeMultiplexer {
   private wsConnected = false;
   private wsConnecting = false;
   private docs = new Map<string, DocEntry>();
+  // The organization the next socket opens for: the latest attach or auth boundary names it.
   private organizationId: string | null = null;
+  // The organization the current socket was opened for; null without a socket.
+  private socketOrgId: string | null = null;
   private reconnectDelayMs = RECONNECT_INITIAL_MS;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private resyncTimer: ReturnType<typeof setInterval> | null = null;
@@ -227,6 +238,8 @@ class RealtimeMultiplexer {
   // The access token close 4403 refused. The server refuses it the same way on every reconnect,
   // so the transport waits for a refresh, a sign-in or a workspace switch to replace it.
   private forbiddenToken: string | null = null;
+  // A membership close asked for one refresh; a frame on a later socket allows the next.
+  private membershipRefreshed = false;
   private listenersAttached = false;
   private backgrounded = isLeaving(AppState.currentState);
 
@@ -285,6 +298,7 @@ class RealtimeMultiplexer {
       awareness: opts.awareness,
       resolvedSyncOnce: false,
       readOnly: false,
+      mismatchSocket: null,
       requestedReadOnly: false,
       denied: false,
       generation: null,
@@ -332,6 +346,12 @@ class RealtimeMultiplexer {
     opts.awareness.on("change", entry.awarenessHandler);
     this.docs.set(docName, entry);
     this.cancelIdleClose();
+    // A socket serves the organization it was opened for, idle or live. A doc of another one
+    // moves it there, and the docs left behind go quiet on the replacement.
+    if (this.ws && this.socketOrgId !== opts.organizationId) {
+      this.dropSocket("organization changed");
+      this.reconnectDelayMs = RECONNECT_INITIAL_MS;
+    }
     this.openIfNeeded();
 
     if (this.wsConnected) {
@@ -383,7 +403,11 @@ class RealtimeMultiplexer {
 
   private openIfNeeded(): void {
     if (this.ws || this.wsConnecting) return;
-    if (this.destroyed || this.upgradeRequired || this.connectionForbidden()) return;
+    if (this.destroyed || this.upgradeRequired) return;
+    if (this.connectionForbidden()) {
+      this.scheduleReconnect();
+      return;
+    }
     this.wsConnecting = true;
     this.connectNow();
   }
@@ -393,17 +417,22 @@ class RealtimeMultiplexer {
   }
 
   private connectNow(): void {
-    if (
-      this.destroyed ||
-      this.ws ||
-      this.refreshing ||
-      this.upgradeRequired ||
-      this.connectionForbidden()
-    )
+    if (this.destroyed || this.ws || this.refreshing || this.upgradeRequired) return;
+    if (this.connectionForbidden()) {
+      // Only another access token can be accepted. Checking costs no request, so the wait backs
+      // off like any reconnect and ends once a refresh, sign-in or switch replaced the token.
+      this.scheduleReconnect();
       return;
+    }
     const orgId = this.organizationId;
     const token = getAccessToken();
-    if (!orgId || !token) {
+    if (!orgId) {
+      // A lost grant names no organization; the next attach or auth boundary names one.
+      this.wsConnecting = false;
+      this.emitStatusAll("access_lost");
+      return;
+    }
+    if (!token) {
       // No auth context yet (rehydration in flight); retry shortly.
       this.scheduleReconnect();
       return;
@@ -426,7 +455,9 @@ class RealtimeMultiplexer {
     }
     ws.binaryType = "arraybuffer";
     this.ws = ws;
+    this.socketOrgId = orgId;
     this.emitStatusAll("connecting");
+    for (const entry of this.docs.values()) if (!this.servesDoc(entry)) this.reportMismatch(entry);
 
     ws.onopen = () => {
       if (this.ws !== ws) return;
@@ -436,7 +467,7 @@ class RealtimeMultiplexer {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
         entry.readOnly = entry.requestedReadOnly;
-        this.bootstrapDoc(entry);
+        if (this.servesDoc(entry)) this.bootstrapDoc(entry);
       }
       this.emitStatusAll("connected");
       this.startResyncTimer();
@@ -477,6 +508,10 @@ class RealtimeMultiplexer {
       if (event.code === WS_CLOSE_FORBIDDEN) {
         this.forbiddenToken = token;
         this.emitStatusAll("access_lost");
+        // Removal from the organization: a refresh tells whether the app still holds it. One that
+        // keeps it brings a new token, which reconnects; a lost grant resets the app.
+        if (event.reason === NOT_A_MEMBER_CLOSE_REASON) this.refreshMembership(token);
+        this.scheduleReconnect();
         return;
       }
       if (event.code === WS_CLOSE_REAUTH_REQUIRED || event.code === WS_CLOSE_UNAUTHENTICATED) {
@@ -504,10 +539,54 @@ class RealtimeMultiplexer {
       this.publishState(entry);
     }
     this.ws = null;
+    this.socketOrgId = null;
     this.wsConnected = false;
     this.wsConnecting = false;
     this.stopResyncTimer();
     this.stopAwarenessKeepaliveTimer();
+  }
+
+  // Detached before it closes, so its close event finds a replacement and changes nothing.
+  private dropSocket(reason?: string): void {
+    const ws = this.ws;
+    if (!ws) return;
+    this.cleanupSocket();
+    try {
+      if (reason) ws.close(WS_CLOSE_NORMAL, reason);
+      else ws.close();
+    } catch {
+      // ignored
+    }
+  }
+
+  // One refresh per removal: a refresh that keeps the organization reconnects, and a second
+  // refusal before any frame proves that refresh changed nothing.
+  private refreshMembership(deniedToken: string): void {
+    if (this.membershipRefreshed) return;
+    this.membershipRefreshed = true;
+    void refreshAfterMembershipDenial(deniedToken)
+      .catch(() => null)
+      .then(() => {
+        if (this.destroyed || this.ws || this.docs.size === 0 || this.connectionForbidden()) return;
+        this.forceReconnect();
+      });
+  }
+
+  // The socket serves one organization; a doc of another sends and receives nothing on it.
+  private servesDoc(entry: DocEntry): boolean {
+    return this.socketOrgId !== null && entry.options.organizationId === this.socketOrgId;
+  }
+
+  // Deferred, so an owner that detaches in response does so outside this call and after attach
+  // returned its subscription.
+  private reportMismatch(entry: DocEntry): void {
+    const ws = this.ws;
+    if (!ws || entry.mismatchSocket === ws) return;
+    entry.mismatchSocket = ws;
+    queueMicrotask(() => {
+      if (this.ws === ws && this.docs.get(entry.docName) === entry)
+        entry.options.onOrganizationMismatch?.();
+    });
   }
 
   private reconnectAfterRefresh(): void {
@@ -550,21 +629,14 @@ class RealtimeMultiplexer {
     }, delay);
   }
 
-  private forceReconnect(): void {
+  private forceReconnect(reason?: string): void {
     // Drop the current socket and reopen immediately, bypassing backoff.
     // Used by connectivity-regained / app-foreground triggers.
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    if (this.ws) {
-      try {
-        this.ws.close();
-      } catch {
-        // ignored
-      }
-      this.cleanupSocket();
-    }
+    this.dropSocket(reason);
     this.reconnectDelayMs = RECONNECT_INITIAL_MS;
     if (this.docs.size > 0) this.connectNow();
   }
@@ -648,9 +720,10 @@ class RealtimeMultiplexer {
       return;
     }
     const entry = this.docs.get(docName);
-    if (!entry || entry.denied) return;
+    if (!entry || entry.denied || !this.servesDoc(entry)) return;
     // A refused upgrade also opens, then closes before any frame; only a frame proves a session.
     this.authAttempts = 0;
+    this.membershipRefreshed = false;
     this.reconnectDelayMs = RECONNECT_INITIAL_MS;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
@@ -816,6 +889,12 @@ class RealtimeMultiplexer {
     return this.docs.has(docName);
   }
 
+  /** True while the current socket was opened for this organization. A denial heard on a
+   * socket of another one says nothing about access in this one. */
+  servesOrganization(organizationId: string): boolean {
+    return this.ws !== null && this.socketOrgId === organizationId;
+  }
+
   /** Sends every buffered edit now. Returns the editable docs with an own edit no checkpoint
    * covers yet. */
   flushPending(): string[] {
@@ -952,7 +1031,8 @@ class RealtimeMultiplexer {
 
   /** True once the frame is handed to an open socket. */
   private sendForDoc(docName: string, payload: Uint8Array): boolean {
-    if (this.docs.get(docName)?.denied) return false;
+    const target = this.docs.get(docName);
+    if (target?.denied || (target && !this.servesDoc(target))) return false;
     const frame = encodeDocFrame(docName, payload);
     if (frame.length > 1024 * 1024) {
       const entry = this.docs.get(docName);
@@ -985,7 +1065,7 @@ class RealtimeMultiplexer {
   }
 
   private sendInitialSync(entry: DocEntry): void {
-    if (entry.rejected || entry.denied) return;
+    if (entry.rejected || entry.denied || !this.servesDoc(entry)) return;
     if (!entry.syncDeadline)
       entry.syncDeadline = setTimeout(() => {
         entry.syncDeadline = null;
@@ -999,10 +1079,12 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
+      // A doc the socket does not serve shows access lost until a socket of its own org opens.
+      const foreign = this.socketOrgId !== null && !this.servesDoc(entry);
       entry.options.onStatus?.(
         entry.rejected || entry.conflicted.size > 0
           ? "update_rejected"
-          : entry.denied || this.connectionForbidden()
+          : entry.denied || foreign || this.connectionForbidden()
             ? "access_lost"
             : this.upgradeRequired
               ? "upgrade_required"
@@ -1059,6 +1141,15 @@ class RealtimeMultiplexer {
         }
         this.cleanupSocket();
       }
+    });
+    onAuthBoundary((organizationId) => {
+      this.destroyed = false;
+      this.forbiddenToken = null;
+      this.membershipRefreshed = false;
+      this.authAttempts = 0;
+      this.organizationId = organizationId;
+      // Idle sockets close too, so a later attach cannot reuse a socket of another organization.
+      this.forceReconnect("credentials changed");
     });
     onSessionExpired(() => {
       this.destroyed = true;

@@ -2,12 +2,12 @@ from alembic import command
 from alembic.config import Config
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _execute,
+    _insert_organization,
     _migrate_to,
     _provision_to,
     _query,
@@ -18,14 +18,12 @@ async def test_generation_upgrade_preserves_drafts_and_downgrade_settles_open_at
     scratch_database,
 ):
     await _provision_to(scratch_database, "097")
-    org_id, user_id, draft_id = generate_id(), generate_id(), generate_id()
+    user_id, draft_id = generate_id(), generate_id()
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine) as session:
-            session.add_all([
-                Organization(id=org_id, name="Drafts", slug="drafts"),
-                User(id=user_id, username="builder", email="builder@example.test"),
-            ])
+            org_id = await _insert_organization(session, name="Drafts", slug="drafts")
+            session.add(User(id=user_id, username="builder", email="builder@example.test"))
             await session.commit()
     finally:
         await engine.dispose()

@@ -14,6 +14,7 @@ import {
   updatePermissionDefaults,
   fetchOrganizationOverview,
   fetchMembers,
+  refreshMembersQuietly,
   updateMemberRole,
   removeMember,
   fetchGroups,
@@ -230,6 +231,8 @@ export interface AdminState {
   membersLoading: boolean;
   membersFetched: boolean;
   membersTotalCount: number;
+  /** The member page request started last; a quiet refresh that an explicit load overtook is dropped. */
+  membersRequestId: string | null;
 
   groups: SerializedGroupInfo[];
   groupsLoading: boolean;
@@ -266,6 +269,7 @@ const initialState: AdminState = {
   membersLoading: false,
   membersFetched: false,
   membersTotalCount: 0,
+  membersRequestId: null,
   groups: [],
   groupsLoading: false,
   groupsFetched: false,
@@ -333,8 +337,9 @@ const adminSlice = createSlice({
       state.overviewLoading = false;
     });
 
-    builder.addCase(fetchMembers.pending, (state) => {
+    builder.addCase(fetchMembers.pending, (state, action) => {
       state.membersLoading = true;
+      state.membersRequestId = action.meta.requestId;
     });
     builder.addCase(fetchMembers.fulfilled, (state, action) => {
       state.membersLoading = false;
@@ -346,6 +351,15 @@ const adminSlice = createSlice({
       state.membersLoading = false;
       state.membersFetched = true;
       state.error = action.error.message || "Failed to fetch members";
+    });
+    builder.addCase(refreshMembersQuietly.pending, (state, action) => {
+      state.membersRequestId = action.meta.requestId;
+    });
+    builder.addCase(refreshMembersQuietly.fulfilled, (state, action) => {
+      if (!action.payload || state.membersRequestId !== action.meta.requestId) return;
+      state.membersFetched = true;
+      state.members = action.payload.members;
+      state.membersTotalCount = action.payload.totalCount;
     });
 
     builder.addCase(updateMemberRole.fulfilled, (state, action) => {

@@ -9,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.emails import normalize_email
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember, GroupRole
+from uniffy.core.models.login.organization_member import OrganizationMemberSource
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.directory.groups.naming import dedupe_name, resolve_slug
+from uniffy.domains.directory.sync.registry import capabilities_for
 from uniffy.domains.directory.sync.types import (
     DirectoryGroup,
     DirectoryUser,
@@ -52,6 +54,13 @@ def record_profile_fields(record: DirectoryUser) -> dict[str, str]:
         if value is not None:
             fields[name] = value
     return fields
+
+
+def membership_source(source: IdentitySource) -> OrganizationMemberSource:
+    """JIT kinds provision one record at login; every other kind is a directory push or pull."""
+    if capabilities_for(source.kind).supports_jit_login:
+        return OrganizationMemberSource.JIT
+    return OrganizationMemberSource.SCIM
 
 
 async def dedupe_username(session: AsyncSession, base: str) -> str:
@@ -209,7 +218,13 @@ async def upsert_user(
         organization = OrganizationOperations(session)
         membership = await organization.get_membership(user.id, org_id)
         if membership is None or not membership.is_active:
-            staged_memberships.append(await organization.stage_member(user.id, org_id))
+            staged_memberships.append(
+                await organization.stage_member(
+                    user.id,
+                    org_id,
+                    source=membership_source(source),
+                )
+            )
 
     await _write_profile(session, org_id, user.id, record)
     return user.id

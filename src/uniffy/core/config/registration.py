@@ -4,27 +4,21 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.config.settings import DeploymentSettingsOperations
+from uniffy.core.config.source import SettingSource
 
 PUBLIC_REGISTRATION_NAMESPACE = "system"
 PUBLIC_REGISTRATION_KEY = "public_registration"
 _PUBLIC_REGISTRATION_ENV = "ALLOW_PUBLIC_REGISTRATION"
 
 
-class RegistrationSource(StrEnum):
-    DEPLOYMENT = "deployment"
-    ENV = "env"
-    DEFAULT = "default"
-
-
 @dataclass(frozen=True, slots=True)
 class PublicRegistrationState:
     enabled: bool
-    source: RegistrationSource
+    source: SettingSource
 
 
 def _parse_bool(value: object, *, default: bool) -> bool:
@@ -51,13 +45,13 @@ async def resolve_public_registration(session: AsyncSession) -> PublicRegistrati
     if row is not None and not row.is_secret:
         return PublicRegistrationState(
             enabled=_parse_bool(row.value, default=False),
-            source=RegistrationSource.DEPLOYMENT,
+            source=SettingSource.DEPLOYMENT,
         )
 
     env_value = _env_public_registration()
     if env_value is not None:
-        return PublicRegistrationState(enabled=env_value, source=RegistrationSource.ENV)
-    return PublicRegistrationState(enabled=False, source=RegistrationSource.DEFAULT)
+        return PublicRegistrationState(enabled=env_value, source=SettingSource.ENV)
+    return PublicRegistrationState(enabled=False, source=SettingSource.DEFAULT)
 
 
 async def public_registration_enabled(session: AsyncSession) -> bool:

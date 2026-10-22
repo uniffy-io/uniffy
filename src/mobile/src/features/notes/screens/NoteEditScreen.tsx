@@ -43,6 +43,7 @@ import { FONT } from "@theme/typography";
 import { useNote } from "@features/notes/useNotes";
 import { NodeType } from "@uniffy/proto/notes/v1/notes_pb";
 import { useCreateNote, useUpdateNote } from "@features/notes/useNoteMutations";
+import { useAuth } from "@core/providers/AuthContext";
 import { useUniffy } from "@core/providers/UniffyContext";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useMentionInput, toCanonical, parseMentions } from "@shared/mentions/useMentionInput";
@@ -216,6 +217,7 @@ export function NoteEditorScreen() {
     initialContent?: string;
   }>();
   const { openAt } = useUniffy();
+  const { organizationId } = useAuth();
   const { attach: attachFile, uploading: attachUploading } = useInsertFileReference();
   const isEditMode = !!noteId;
 
@@ -236,7 +238,10 @@ export function NoteEditorScreen() {
 
   const [title, setTitle] = useState("");
   const [previewMode, setPreviewMode] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  // The fields belong to the organization they were loaded in. A switch or a lost grant can
+  // leave this screen mounted for a moment, and it must neither show nor save them in another.
+  const [initializedIn, setInitializedIn] = useState<string | null>(null);
+  const initialized = initializedIn !== null && initializedIn === organizationId;
 
   // Scroll sync between the raw editor and the rendered preview. Their heights
   // differ (markdown source vs rendered layout), so we carry the position as a
@@ -283,7 +288,7 @@ export function NoteEditorScreen() {
   const loadedRef = useRef<{ title: string; content: string } | null>(null);
   const lastSavedTitleRef = useRef<string | null>(null);
   useEffect(() => {
-    if (initialized || isCanvas || isFolder) return;
+    if (initialized || isCanvas || isFolder || !organizationId) return;
     if (isEditMode) {
       if (!noteQuery.data) return;
       // The note arrives from the server after mount, so there is no render-time
@@ -294,16 +299,18 @@ export function NoteEditorScreen() {
       initFromCanonical(noteQuery.data.content);
       loadedRef.current = { title: noteQuery.data.title, content: noteQuery.data.content };
       lastSavedTitleRef.current = noteQuery.data.title;
-      setInitialized(true);
+      // The query is keyed by organization, so its data is the current organization's.
+      setInitializedIn(organizationId);
       return;
     }
     if (initialTitle) setTitle(initialTitle);
     if (initialContent) initFromCanonical(initialContent);
-    setInitialized(true);
+    setInitializedIn(organizationId);
   }, [
     isEditMode,
     noteQuery.data,
     initialized,
+    organizationId,
     initFromCanonical,
     initialTitle,
     initialContent,
@@ -364,6 +371,7 @@ export function NoteEditorScreen() {
     noteId: isEditMode && !isCanvas && !isFolder ? noteId : undefined,
     enabled: isEditMode && initialized && !isCanvas && !isFolder && isFocused,
     readOnly: !canEditNote,
+    organizationId: initializedIn,
     getLocalCanonical: () => toCanonical(bodyStateRef.current, mentionsRef.current),
     getLoadedCanonical: () => loadedRef.current?.content ?? null,
     applyRemote,
@@ -427,6 +435,16 @@ export function NoteEditorScreen() {
       updateNote.mutate({ noteId, title: next });
     }
   }, [noteId, updateNote]);
+
+  // Leaving the note's organization drops what was loaded from it, and a pending title save
+  // that would otherwise go out under the new organization.
+  useEffect(() => {
+    if (initializedIn === null || initializedIn === organizationId) return;
+    loadedRef.current = null;
+    lastSavedTitleRef.current = null;
+    if (titleTimerRef.current) clearTimeout(titleTimerRef.current);
+    titleTimerRef.current = null;
+  }, [initializedIn, organizationId]);
 
   // Dismissing the keyboard with the back gesture leaves the input focused, so
   // the tap that brings it back fires no focus event - but the reveal comes

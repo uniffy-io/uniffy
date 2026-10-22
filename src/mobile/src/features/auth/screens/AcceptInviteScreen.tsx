@@ -17,11 +17,13 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/AuthContext";
 import { authApi } from "@core/auth/authApi";
+import { isSignInRequired, resolveAcceptState } from "@features/auth/acceptInviteState";
 
 interface InvitePreview {
   email: string;
   organizationName: string;
   inviterDisplayName?: string;
+  accountExists: boolean;
 }
 
 export function AcceptInviteScreen() {
@@ -40,6 +42,7 @@ export function AcceptInviteScreen() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [signInRequired, setSignInRequired] = useState(false);
 
   useEffect(() => {
     setHoldNavigation(true);
@@ -49,12 +52,14 @@ export function AcceptInviteScreen() {
   const loadPreview = useCallback(async (t: string) => {
     setLoadingPreview(true);
     setError(null);
+    setSignInRequired(false);
     try {
       const res = await authApi.getInvitation(t);
       setPreview({
         email: res.email,
         organizationName: res.organizationName,
         inviterDisplayName: res.inviterDisplayName,
+        accountExists: res.accountExists,
       });
       setToken(t);
     } catch (err: any) {
@@ -94,11 +99,17 @@ export function AcceptInviteScreen() {
         router.replace("/" as any);
       }
     } catch (err: any) {
-      setError(friendly(err));
+      if (isSignInRequired(err)) setSignInRequired(true);
+      else setError(friendly(err));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const view =
+    preview && !loadingPreview
+      ? resolveAcceptState({ accountExists: preview.accountExists, signInRequired })
+      : null;
 
   const back = () => {
     setHoldNavigation(false);
@@ -119,7 +130,7 @@ export function AcceptInviteScreen() {
               <Text style={[styles.sub, { color: T.textDim }]}>
                 Paste the invitation code from your email to continue.
               </Text>
-              {error ? <Text style={[styles.err, { color: "#FA5252" }]}>{error}</Text> : null}
+              {error ? <Text style={[styles.err, { color: T.red }]}>{error}</Text> : null}
               <TextInput
                 value={tokenInput}
                 onChangeText={setTokenInput}
@@ -170,73 +181,94 @@ export function AcceptInviteScreen() {
                 </View>
               </View>
 
-              <Text style={[styles.sub, { color: T.textDim }]}>Set up your account to join.</Text>
-              {error ? <Text style={[styles.err, { color: "#FA5252" }]}>{error}</Text> : null}
-
-              <TextInput
-                value={username}
-                onChangeText={setUsername}
-                placeholder="Username"
-                placeholderTextColor={T.textDim}
-                autoCapitalize="none"
-                style={[
-                  styles.input,
-                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
-                ]}
-              />
-              <TextInput
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Full name (optional)"
-                placeholderTextColor={T.textDim}
-                autoCapitalize="words"
-                style={[
-                  styles.input,
-                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
-                ]}
-              />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password (min 8 characters)"
-                placeholderTextColor={T.textDim}
-                secureTextEntry
-                style={[
-                  styles.input,
-                  { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
-                ]}
-              />
-
-              <TouchableOpacity
-                style={[
-                  styles.btn,
-                  {
-                    backgroundColor:
-                      username.trim() && password.length >= 8 ? T.accent : T.surfaceHover,
-                  },
-                ]}
-                onPress={accept}
-                disabled={!username.trim() || password.length < 8 || submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text
-                    style={[
-                      styles.btnText,
-                      { color: username.trim() && password.length >= 8 ? "#fff" : T.textDim },
-                    ]}
-                  >
-                    Join {preview.organizationName}
+              {view === "sign-in" ? (
+                <>
+                  <Text style={[styles.sub, { color: T.textDim }]}>
+                    You already have an account for {preview.email}. Sign in, then accept the
+                    invitation from your organizations list.
                   </Text>
-                )}
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.btn, { backgroundColor: T.accent }]}
+                    onPress={back}
+                  >
+                    <Text style={[styles.btnText, { color: "#fff" }]}>Go to sign in</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.sub, { color: T.textDim }]}>
+                    Set up your account to join.
+                  </Text>
+                  {error ? <Text style={[styles.err, { color: T.red }]}>{error}</Text> : null}
+
+                  <TextInput
+                    value={username}
+                    onChangeText={setUsername}
+                    placeholder="Username"
+                    placeholderTextColor={T.textDim}
+                    autoCapitalize="none"
+                    style={[
+                      styles.input,
+                      { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                    ]}
+                  />
+                  <TextInput
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Full name (optional)"
+                    placeholderTextColor={T.textDim}
+                    autoCapitalize="words"
+                    style={[
+                      styles.input,
+                      { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                    ]}
+                  />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Password (min 8 characters)"
+                    placeholderTextColor={T.textDim}
+                    secureTextEntry
+                    style={[
+                      styles.input,
+                      { color: T.textBright, backgroundColor: T.surface, borderColor: T.border },
+                    ]}
+                  />
+
+                  <TouchableOpacity
+                    style={[
+                      styles.btn,
+                      {
+                        backgroundColor:
+                          username.trim() && password.length >= 8 ? T.accent : T.surfaceHover,
+                      },
+                    ]}
+                    onPress={accept}
+                    disabled={!username.trim() || password.length < 8 || submitting}
+                  >
+                    {submitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.btnText,
+                          { color: username.trim() && password.length >= 8 ? "#fff" : T.textDim },
+                        ]}
+                      >
+                        Join {preview.organizationName}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </>
+              )}
             </>
           ) : null}
 
-          <TouchableOpacity style={styles.backBtn} onPress={back} activeOpacity={0.7}>
-            <Text style={[styles.backText, { color: T.textDim }]}>Back to sign in</Text>
-          </TouchableOpacity>
+          {view !== "sign-in" ? (
+            <TouchableOpacity style={styles.backBtn} onPress={back} activeOpacity={0.7}>
+              <Text style={[styles.backText, { color: T.textDim }]}>Back to sign in</Text>
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

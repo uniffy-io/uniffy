@@ -7,20 +7,24 @@ from typing import Any
 
 from connectrpc.code import Code
 from connectrpc.codec import Codec, proto_binary_codec, proto_json_codec
-from connectrpc.errors import ConnectError
+from connectrpc.errors import ConnectError, ErrorDetail
 from connectrpc.request import RequestContext
 from loguru import logger
 from prometheus_client import Counter, Histogram
+from protobuf.wkt import Any as AnyMessage
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import (
     AuthenticationError,
     BudgetExceededError,
     ConflictError,
+    InvitationSignInRequiredError,
+    MembershipRequiredError,
     NotFoundError,
     PermissionDeniedError,
     RateLimitExceededError,
     RuntimeDeadlineExceededError,
+    SetupAlreadyCompletedError,
     UnavailableError,
     UNIFFYError,
     ValidationError,
@@ -54,7 +58,30 @@ DOMAIN_ERROR_CODES: dict[type[UNIFFYError], Code] = {
     BudgetExceededError: Code.RESOURCE_EXHAUSTED,
     RuntimeDeadlineExceededError: Code.DEADLINE_EXCEEDED,
     UnavailableError: Code.UNAVAILABLE,
+    InvitationSignInRequiredError: Code.FAILED_PRECONDITION,
+    SetupAlreadyCompletedError: Code.FAILED_PRECONDITION,
 }
+
+
+ERROR_INFO_DOMAIN = "uniffy"
+MEMBERSHIP_REQUIRED_REASON = "membership_required"
+SIGN_IN_REQUIRED_REASON = "sign_in_required"
+SETUP_COMPLETED_REASON = "setup_completed"
+
+# A typed reason lets a client act on a refusal without parsing its message. Each
+# one rides as a google.rpc.ErrorInfo detail with ERROR_INFO_DOMAIN as its domain.
+DOMAIN_ERROR_REASONS: dict[type[UNIFFYError], str] = {
+    MembershipRequiredError: MEMBERSHIP_REQUIRED_REASON,
+    InvitationSignInRequiredError: SIGN_IN_REQUIRED_REASON,
+    SetupAlreadyCompletedError: SETUP_COMPLETED_REASON,
+}
+
+_ERROR_INFO_TYPE_URL = "type.googleapis.com/google.rpc.ErrorInfo"
+_ERROR_INFO_REASON_FIELD = 1
+_ERROR_INFO_DOMAIN_FIELD = 2
+_LENGTH_DELIMITED_WIRE_TYPE = 2
+_VARINT_PAYLOAD_MASK = 0x7F
+_VARINT_CONTINUATION = 0x80
 
 
 def code_for_domain_error(error: UNIFFYError) -> Code | None:
@@ -62,6 +89,69 @@ def code_for_domain_error(error: UNIFFYError) -> Code | None:
         if isinstance(error, error_type):
             return code
     return None
+
+
+def _string_field(number: int, text: str) -> bytes:
+    data = text.encode()
+    encoded = bytearray([number << 3 | _LENGTH_DELIMITED_WIRE_TYPE])
+    size = len(data)
+    while size > _VARINT_PAYLOAD_MASK:
+        encoded.append(size & _VARINT_PAYLOAD_MASK | _VARINT_CONTINUATION)
+        size >>= 7
+    encoded.append(size)
+    return bytes(encoded) + data
+
+
+def error_info_detail(reason: str) -> ErrorDetail:
+    """Encode by hand because the protobuf runtime ships no generated google.rpc.ErrorInfo."""
+    value = _string_field(_ERROR_INFO_REASON_FIELD, reason) + _string_field(
+        _ERROR_INFO_DOMAIN_FIELD, ERROR_INFO_DOMAIN
+    )
+    return ErrorDetail(AnyMessage(type_url=_ERROR_INFO_TYPE_URL, value=value))
+
+
+def details_for_domain_error(error: UNIFFYError) -> tuple[ErrorDetail, ...]:
+    for error_type, reason in DOMAIN_ERROR_REASONS.items():
+        if isinstance(error, error_type):
+            return (error_info_detail(reason),)
+    return ()
+
+
+def domain_connect_error(error: UNIFFYError, code: Code) -> ConnectError:
+    return ConnectError(code=code, message=str(error), details=details_for_domain_error(error))
+
+
+def _domain_cause(error: BaseException) -> UNIFFYError | None:
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if current.__cause__ is not None:
+            current = current.__cause__
+        elif current.__suppress_context__:
+            return None
+        else:
+            current = current.__context__
+        if isinstance(current, UNIFFYError):
+            return current
+    return None
+
+
+def with_domain_details(error: ConnectError) -> ConnectError:
+    """Most handlers map domain errors themselves; the chained cause still supplies the reason.
+
+    A handler that changed the code, for example to hide a resource behind NOT_FOUND, or that
+    attached its own details keeps its answer untouched.
+    """
+    if error.details:
+        return error
+    cause = _domain_cause(error)
+    if cause is None or code_for_domain_error(cause) != error.code:
+        return error
+    details = details_for_domain_error(cause)
+    if not details:
+        return error
+    return ConnectError(code=error.code, message=error.message, details=details)
 
 
 class StrictDecodeCodec:
@@ -140,7 +230,7 @@ def _sanitized_connect_error(
                 error_code=code.name,
                 error_message=str(e),
             )
-            return ConnectError(code=code, message=str(e))
+            return domain_connect_error(e, code)
     logger.exception(f"Unhandled exception {e} in RPC call {service_name}/{method_name}")
     return ConnectError(code=Code.INTERNAL, message="Internal server error")
 
@@ -212,6 +302,9 @@ class LoggingInterceptor:
                     error_code=e.code.name,
                     error_message=e.message,
                 )
+            enriched = with_domain_details(e)
+            if enriched is not e:
+                raise enriched from e
             raise
 
         except UNIFFYError as e:
@@ -233,7 +326,7 @@ class LoggingInterceptor:
                     error_code=code.name,
                     error_message=str(e),
                 )
-                raise ConnectError(code=code, message=str(e)) from e
+                raise domain_connect_error(e, code) from e
 
             RPC_REQUESTS_TOTAL.labels(
                 service=service_name, method=method_name, code="INTERNAL"
@@ -278,6 +371,9 @@ class LoggingInterceptor:
                 yield response
         except ConnectError as e:
             code = e.code.name
+            enriched = with_domain_details(e)
+            if enriched is not e:
+                raise enriched from e
             raise
         except Exception as e:
             error = _sanitized_connect_error(e, service_name, method_name, user_id)
@@ -305,7 +401,10 @@ class LoggingInterceptor:
         try:
             async for response in call_next(request, ctx):
                 yield response
-        except ConnectError:
+        except ConnectError as e:
+            enriched = with_domain_details(e)
+            if enriched is not e:
+                raise enriched from e
             raise
         except Exception as e:
             raise _sanitized_connect_error(e, service_name, method_name, user_id) from e
@@ -320,7 +419,10 @@ class LoggingInterceptor:
         user_id = _rpc_user_id()
         try:
             return await call_next(request, ctx)
-        except ConnectError:
+        except ConnectError as e:
+            enriched = with_domain_details(e)
+            if enriched is not e:
+                raise enriched from e
             raise
         except Exception as e:
             raise _sanitized_connect_error(e, service_name, method_name, user_id) from e

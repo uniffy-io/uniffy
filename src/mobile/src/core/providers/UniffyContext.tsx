@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import type { Domain } from "@core/types";
+import { useAuth } from "@core/providers/AuthContext";
 
 type ActiveTab = "home" | "you";
 
@@ -41,6 +42,19 @@ export function UniffyProvider({ children }: { children: React.ReactNode }) {
   const [returnToAt, setReturnToAt] = useState(false);
   const [savedAtState, setSavedAtState] = useState<AtState | null>(null);
   const [pendingReference, setPendingReference] = useState<ReferenceItem | null>(null);
+
+  // The @ search, its saved query and a picked reference name the previous organization's
+  // content, so none of them carries into another organization or past sign-out.
+  const { organizationId } = useAuth();
+  const [stateOrganizationId, setStateOrganizationId] = useState(organizationId);
+  if (stateOrganizationId !== organizationId) {
+    setStateOrganizationId(organizationId);
+    setAtOpen(false);
+    setAtFromEditor(false);
+    setReturnToAt(false);
+    setSavedAtState(null);
+    setPendingReference(null);
+  }
 
   const openAt = useCallback((fromEditor = false) => {
     setAtFromEditor(fromEditor);

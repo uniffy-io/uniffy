@@ -357,7 +357,7 @@ class TestRevocationPathsEvict:
         assert await _left_at(session, here.id) is None
         assert await _left_at(session, there.id) is not None
 
-    async def test_switching_organization_evicts_the_old_sessions_device(
+    async def test_refreshing_into_another_organization_keeps_the_sessions_device(
         self, session, access
     ) -> None:
         session.add(
@@ -369,23 +369,32 @@ class TestRevocationPathsEvict:
         )
         await session.commit()
         call = await _call(session, access)
-        old = await _auth_session(session, access.member_id, access.org_id)
-        row = await _participant(session, call, access.member_id, auth_session_id=old.id)
+        auth = await _auth_session(session, access.member_id, access.org_id)
+        row = await _participant(session, call, access.member_id, auth_session_id=auth.id)
         user = await session.get(User, access.member_id)
         refresh = create_refresh_token(
-            access.member_id, token_version=user.token_version, session_id=old.id
+            access.member_id, token_version=user.token_version, session_id=auth.id
         )
+        await session.execute(
+            update(UserSession)
+            .where(UserSession.id == auth.id)
+            .values(refresh_token_hash=hash_refresh_token(refresh))
+        )
+        await session.commit()
         other_slug = (
             await session.execute(
                 select(Organization.slug).where(Organization.id == access.other_org_id)
             )
         ).scalar_one()
 
-        await AuthOperations(session, CallsLifecycle(open_session)).switch_organization(
-            refresh, other_slug
+        await AuthOperations(session, CallsLifecycle(open_session)).refresh_token(
+            refresh, organization_slug=other_slug
         )
 
-        assert await _left_at(session, row.id) is not None
+        assert await _left_at(session, row.id) is None
+        kept = await session.get(UserSession, auth.id, populate_existing=True)
+        assert kept.is_revoked is False
+        assert kept.organization_id == access.other_org_id
 
     async def test_refresh_reuse_evicts_every_device(self, session, access) -> None:
         call = await _call(session, access)

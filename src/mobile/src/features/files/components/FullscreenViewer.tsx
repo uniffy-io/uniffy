@@ -37,9 +37,12 @@ export function FullscreenViewer({
         {kind === "image" ? (
           <ZoomableImage uri={uri} headers={headers} />
         ) : (
+          // Authenticated bytes stay out of the WebView's disk cache.
           <WebView
             source={{ uri, headers }}
             style={styles.web}
+            cacheEnabled={false}
+            cacheMode="LOAD_NO_CACHE"
             originWhitelist={["*"]}
             startInLoadingState
             renderLoading={() => (

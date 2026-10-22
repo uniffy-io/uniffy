@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Books,
+  Buildings,
+  PlusCircle,
   SignOut,
   Moon,
   ShieldCheck,
@@ -12,7 +14,24 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { useSignOut } from "@/features/auth/hooks/useSignOut";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CreateOrganizationDialog } from "@/features/auth/components/CreateOrganizationDialog";
+import { OrganizationList } from "@/features/auth/components/OrganizationList";
+import {
+  pendingOrganizationNames,
+  usePendingOrganizations,
+  useSignOut,
+  type PendingOrganization,
+} from "@/features/auth/hooks/useSignOut";
+import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
+import { selectPendingInvitationCount } from "@/features/auth/store/invitationsSlice";
+import { refreshMyInvitationsQuietly } from "@/features/auth/store/invitationsThunks";
+import {
+  selectCanCreateOrganization,
+  selectOrganizations,
+} from "@/features/auth/store/organizationsSlice";
+import { reloadOrganizationsAndRole } from "@/features/auth/store/organizationsThunks";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
@@ -25,22 +44,74 @@ import { getInitials } from "@/components/subject/utils";
 import { useNavigate } from "react-router-dom";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
+interface UnsyncedEditsMessageProps {
+  pending: PendingOrganization[];
+  currentOrganizationId: string | null;
+  onSwitch: (slug: string) => void;
+}
+
+/** Names where the unsynced edits sit and offers to go to each organization that can still save them. */
+function UnsyncedEditsMessage({
+  pending,
+  currentOrganizationId,
+  onSwitch,
+}: UnsyncedEditsMessageProps) {
+  if (pending.length === 0) {
+    return <>Some edits have not reached the server yet. Signing out now discards them.</>;
+  }
+  const reachable = pending.flatMap(({ id, organization }) =>
+    organization && id !== currentOrganizationId && !organization.suspended ? [organization] : [],
+  );
+  return (
+    <div className="space-y-3">
+      <p>
+        Edits in {pendingOrganizationNames(pending)} have not reached the server yet. Signing out
+        now discards them.
+      </p>
+      {reachable.length > 0 && (
+        <div className="flex flex-col items-start gap-2">
+          {reachable.map((organization) => (
+            <Button
+              key={organization.id}
+              type="button"
+              variant="secondary"
+              className="max-w-full"
+              onClick={() => onSwitch(organization.slug)}
+            >
+              <span className="truncate">Switch to {organization.name} to finish saving</span>
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UserMenu() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
   const signOut = useSignOut();
+  const listPendingOrganizations = usePendingOrganizations();
   const recordingState = useAppSelector((state) => state.recording.state);
-  const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
+  const { canAccessAdmin, isOrgAdmin, isSystemAdmin } = useAdminAccess();
   const { themeMode, setTheme, availableModes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
+  const [creatingOrganization, setCreatingOrganization] = useState(false);
+  // The organizations holding unsynced edits while the sign-out waits for a decision.
+  const [unsynced, setUnsynced] = useState<PendingOrganization[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const currentCustomStatus = useCustomStatus(user?.id ?? "");
   const orgChartEnabled = useAppSelector((state) => state.people.policy.orgChartEnabled);
   const peoplePolicyStatus = useAppSelector((state) => state.people.policy.status);
+  const organizations = useAppSelector(selectOrganizations);
+  const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
+  const canCreateOrganization = useAppSelector(selectCanCreateOrganization);
+  const pendingInvitationCount = useAppSelector(selectPendingInvitationCount);
+  const { requestSwitch, confirmDialog: switchConfirmDialog } = useSwitchOrganization();
 
   useEffect(() => {
     if (isOpen && peoplePolicyStatus === "idle") {
@@ -96,9 +167,24 @@ export function UserMenu() {
   const performLogout = async () => {
     setConfirmingLogout(false);
     if (!(await signOut())) {
-      setConfirmingUnsynced(true);
       setIsOpen(false);
+      setUnsynced(await listPendingOrganizations());
     }
+  };
+
+  // Other sessions and other people change memberships, roles and invitations with no push to this
+  // tab, so opening the menu reloads them.
+  const toggleMenu = () => {
+    if (!isOpen) {
+      void dispatch(reloadOrganizationsAndRole());
+      void dispatch(refreshMyInvitationsQuietly());
+    }
+    setIsOpen(!isOpen);
+  };
+
+  const selectOrganization = (slug: string) => {
+    setIsOpen(false);
+    void requestSwitch(slug);
   };
 
   const displayName = user.fullName || user.username || "User";
@@ -117,7 +203,7 @@ export function UserMenu() {
         aria-label="User menu"
         aria-haspopup="true"
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={toggleMenu}
         className={cn(
           "flex items-center justify-center w-8 h-8 rounded-full overflow-hidden",
           "border border-border-nav transition-all duration-150",
@@ -170,6 +256,74 @@ export function UserMenu() {
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
             </div>
+          </div>
+
+          <div className="border-b border-border py-1.5 px-1.5">
+            <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+              Organizations
+            </div>
+            {organizations.length > 0 && (
+              <div className="max-h-[min(15rem,40dvh)] overflow-y-auto">
+                <OrganizationList
+                  compact
+                  organizations={organizations}
+                  currentOrganizationId={currentOrganizationId}
+                  switchingSlug={switchingSlug}
+                  onSelect={selectOrganization}
+                />
+              </div>
+            )}
+            {canCreateOrganization && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  setCreatingOrganization(true);
+                }}
+                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+              >
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                <PlusCircle
+                  size={16}
+                  weight="duotone"
+                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
+                />
+                <span>Create organization</span>
+              </button>
+            )}
+            {isOrgAdmin && (
+              <button
+                onClick={() => {
+                  navigate("/admin/organization");
+                  setIsOpen(false);
+                }}
+                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
+              >
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
+                <Buildings
+                  size={16}
+                  weight="duotone"
+                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
+                />
+                <span>Organization settings</span>
+              </button>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full min-h-11 justify-start"
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/welcome");
+              }}
+            >
+              All organizations
+              {pendingInvitationCount > 0 && (
+                <Badge className="ml-auto px-1.5 py-0 text-[10px] leading-4">
+                  {pendingInvitationCount}
+                  <span className="sr-only"> pending invitations</span>
+                </Badge>
+              )}
+            </Button>
           </div>
 
           <div className="border-b border-border py-1.5 px-1.5">
@@ -355,18 +509,31 @@ export function UserMenu() {
         variant="warning"
       />
       <ConfirmDialog
-        isOpen={confirmingUnsynced}
-        onClose={() => setConfirmingUnsynced(false)}
+        isOpen={unsynced !== null}
+        onClose={() => setUnsynced(null)}
         onConfirm={() => {
-          setConfirmingUnsynced(false);
-          signOut({ discardUnsynced: true });
+          setUnsynced(null);
+          void signOut({ discardUnsynced: true });
         }}
         title="Discard unsynced edits?"
-        message="Some edits have not reached the server yet. Signing out now discards them."
+        message={
+          <UnsyncedEditsMessage
+            pending={unsynced ?? []}
+            currentOrganizationId={currentOrganizationId}
+            onSwitch={(slug) => {
+              setUnsynced(null);
+              void requestSwitch(slug);
+            }}
+          />
+        }
         confirmLabel="Discard and sign out"
         cancelLabel="Stay"
         variant="warning"
       />
+      {switchConfirmDialog}
+      {creatingOrganization && (
+        <CreateOrganizationDialog onClose={() => setCreatingOrganization(false)} />
+      )}
     </div>
   );
 }

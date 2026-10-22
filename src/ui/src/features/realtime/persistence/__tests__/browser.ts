@@ -104,6 +104,11 @@ export function switchAccount(userId: string, organizationId = "org-1"): void {
   currentOrganization = organizationId;
 }
 
+/** The workspace this tab is signed into. */
+export function signedInOrganization(): string {
+  return currentOrganization;
+}
+
 /** Browser globals the realtime client needs, backed by in-memory storage. */
 export function installBrowser(): void {
   vi.stubGlobal("WebSocket", FakeWebSocket);
@@ -118,6 +123,10 @@ export function installBrowser(): void {
   });
   const local = new Map<string, string>();
   vi.stubGlobal("localStorage", {
+    get length() {
+      return local.size;
+    },
+    key: (index: number) => [...local.keys()][index] ?? null,
     getItem: (key: string) => local.get(key) ?? null,
     setItem: (key: string, value: string) => void local.set(key, String(value)),
     removeItem: (key: string) => void local.delete(key),
@@ -469,6 +478,7 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
   const subscription = realtimeMultiplexer.attach({
     contentType,
     contentId,
+    organizationId: currentOrganization,
     ydoc,
     awareness,
     onSync: () => {

@@ -8,7 +8,7 @@ from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, write_audit_event
+from uniffy.core.audit import audit_ip_var, client_ip_for_rate_limit, email_hash, write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.devices import parse_device_label
 from uniffy.core.auth.emails import normalize_email
@@ -20,6 +20,7 @@ from uniffy.core.auth.revocation import (
     mark_token_version_revoked,
 )
 from uniffy.core.auth.sessions import stage_revoke_user_sessions
+from uniffy.core.auth.setup_state import setup_required
 from uniffy.core.auth.tokens import (
     create_access_token,
     create_refresh_token,
@@ -58,6 +59,10 @@ logger = logger.bind(component="auth.operations")
 LOGIN_RATE_LIMIT_EMAIL = 10
 LOGIN_RATE_LIMIT_IP = 30
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
+
+REGISTER_RATE_LIMIT_EMAIL = 5
+REGISTER_RATE_LIMIT_IP = 20
+REGISTER_RATE_LIMIT_WINDOW_SECONDS = 15 * 60
 
 # Grace window in which a previously-issued refresh token still resolves to the
 # current pair without tripping the reuse alarm. Covers the brief race when two
@@ -280,14 +285,21 @@ class AuthOperations:
     ) -> AuthResult:
         """Register a new user; refused when public registration is disabled.
 
-        Every reject path - public-registration disabled, collision,
-        password-policy failure - writes ``AUTH_REGISTER_REJECTED`` with a
+        Every reject path - rate limit, pending setup, public-registration disabled,
+        collision, password-policy failure - writes ``AUTH_REGISTER_REJECTED`` with a
         ``reason`` tag so an attacker trying to enumerate accounts shows
         up as a burst of rejects in the audit log instead of disappearing
         into application logs.
         """
         email = normalize_email(email)
         try:
+            await self._enforce_register_rate_limit(email)
+
+            # The first user closes setup for good, so it must come from the setup page.
+            if await setup_required(self._session):
+                await self._audit_register_rejected(email=email, reason="setup_required")
+                raise RegistrationError("Complete the deployment setup first")
+
             if not await public_registration_enabled(self._session):
                 await self._audit_register_rejected(
                     email=email, reason="public_registration_disabled"
@@ -371,6 +383,10 @@ class AuthOperations:
                 user_id=user.id,
                 session_id=session_record.id,
             )
+        except RateLimitExceededError:
+            AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="rate_limited").inc()
+            await self._audit_register_rejected(email=email, reason="rate_limited")
+            raise
         except RegistrationError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="register", outcome="failure").inc()
             raise
@@ -379,14 +395,10 @@ class AuthOperations:
         self,
         refresh_token: str,
         organization_slug: str | None = None,
+        organization_id: UUID | None = None,
     ) -> AuthResult:
-        """Refresh an access token; rotates the refresh token + detects reuse.
-
-        The session row owns the tenant binding: a refresh stays in whichever
-        org the session was created for. Passing ``organization_slug`` is
-        only accepted when it matches the session's bound org (idempotent
-        no-op) - any cross-org switch must go through ``switch_organization``
-        instead, so a leaked refresh token cannot pivot tenants.
+        """The id, else the slug, picks the organization; a switch or a lost grant never revokes
+        the session. The id wins because a slug can be renamed under a client that still holds it.
         """
         try:
             try:
@@ -423,38 +435,43 @@ class AuthOperations:
                     incoming_refresh=refresh_token,
                 )
 
-            organization_id: UUID | None = None
+            minted_org_id: UUID | None = None
             organization_slug_resolved: str | None = None
             organization_role: str | None = None
             domain_admin_domains: list[str] | None = None
 
             session_org_id = session_record.organization_id if session_record else None
-
-            if session_org_id is not None:
+            target: tuple[UUID, str, str, list[str]] | None = None
+            dropped_reason: str | None = None
+            try:
+                if organization_id is not None:
+                    target = await self._verify_org_membership_by_id(user_id, organization_id)
+                elif organization_slug:
+                    target = await self._verify_org_membership(user_id, organization_slug)
+                elif session_org_id is not None:
+                    target = await self._verify_org_membership_by_id(user_id, session_org_id)
+            except AuthenticationError as exc:
+                # A lost grant demotes the session to no organization instead of ending it,
+                # so the client lands on the picker with its other memberships intact.
+                dropped_reason = str(exc)
+            if target is not None:
                 (
-                    organization_id,
+                    minted_org_id,
                     organization_slug_resolved,
                     organization_role,
                     domain_admin_domains,
-                ) = await self._verify_org_membership_by_id(user_id, session_org_id)
-                if organization_slug and organization_slug != organization_slug_resolved:
-                    raise TokenError(
-                        "Refresh is bound to a different organization; "
-                        "call SwitchOrganization to change tenant context"
-                    )
-            elif organization_slug:
-                (
-                    organization_id,
-                    organization_slug_resolved,
-                    organization_role,
-                    domain_admin_domains,
-                ) = await self._verify_org_membership(user_id, organization_slug)
-                if session_record is not None:
-                    session_record.organization_id = organization_id
+                ) = target
+            if session_record is not None:
+                session_record.organization_id = minted_org_id
+            switched = (
+                session_org_id is not None
+                and minted_org_id is not None
+                and minted_org_id != session_org_id
+            )
 
             access_token = create_access_token(
                 user_id,
-                organization_id,
+                minted_org_id,
                 token_version=user.token_version,
                 session_id=session_id,
                 full_name=user.full_name,
@@ -472,147 +489,61 @@ class AuthOperations:
                 session_record.previous_refresh_rotated_at = now
                 session_record.refresh_token_hash = hash_refresh_token(new_refresh_token)
 
-            AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="success").inc()
+            # A tenant change or a lost grant is never debounced; each leaves its own row.
+            if dropped_reason is not None:
+                details: dict[str, str | None] = {
+                    "event": "org_dropped",
+                    "previous_org_id": str(session_org_id) if session_org_id else None,
+                    "requested_org_id": str(organization_id) if organization_id else None,
+                    "requested_slug": organization_slug,
+                    "reason": dropped_reason,
+                    "session_id": str(session_id) if session_id else None,
+                }
+                dedupe_key: str | None = None
+            elif switched:
+                details = {
+                    "event": "org_switch",
+                    "previous_org_id": str(session_org_id),
+                    "target_org_id": str(minted_org_id),
+                    "session_id": str(session_id) if session_id else None,
+                }
+                dedupe_key = None
+            else:
+                details = {"session_id": str(session_id) if session_id else None}
+                dedupe_key = str(user_id)
 
             await write_audit_event(
                 self._session,
-                organization_id=organization_id,
+                organization_id=minted_org_id,
                 actor_user_id=user_id,
                 action=Action.AUTH_TOKEN_REFRESHED,
                 resource_type=AuditResourceType.USER,
                 resource_id=user_id,
-                details={"session_id": str(session_id) if session_id else None},
-                dedupe_key=str(user_id),
+                details=details,
+                dedupe_key=dedupe_key,
                 dedupe_ttl_seconds=3600,
             )
             await self._session.commit()
+            if dropped_reason is not None:
+                outcome = "dropped"
+            elif switched:
+                outcome = "switch"
+            else:
+                outcome = "success"
+            AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome=outcome).inc()
 
             return AuthResult(
                 access_token=access_token,
                 refresh_token=new_refresh_token,
                 user_id=user_id,
-                organization_id=organization_id,
+                organization_id=minted_org_id,
                 organization_slug=organization_slug_resolved,
                 organization_role=organization_role,
                 session_id=session_id,
                 domain_admin_domains=domain_admin_domains,
             )
-        except TokenError:
+        except AuthenticationError, TokenError:
             AUTH_ATTEMPTS_TOTAL.labels(operation="refresh", outcome="failure").inc()
-            raise
-
-    async def switch_organization(
-        self,
-        refresh_token: str,
-        organization_slug: str,
-        user_agent: str = "",
-    ) -> AuthResult:
-        """Move the user into ``organization_slug`` by minting a fresh session.
-
-        Validates the incoming refresh + rotation state the same way
-        ``refresh_token`` does, then revokes the current session and
-        creates a new one bound to the target org. The old refresh
-        token is single-use against this RPC.
-        """
-        try:
-            try:
-                payload = decode_refresh_token(refresh_token)
-            except Exception as e:
-                raise TokenError(f"Invalid refresh token: {e}")
-
-            user_id = UUID(payload["sub"])
-            token_version_in_jwt = payload.get("tkv")
-            session_id_str = payload.get("sid")
-
-            user = await self._get_user_by_id(user_id)
-            if not user:
-                raise TokenError("User not found")
-            if not user.is_active:
-                raise TokenError("User account is deactivated")
-            if token_version_in_jwt is not None and token_version_in_jwt != user.token_version:
-                raise TokenError("Token has been revoked")
-
-            if session_id_str:
-                old_session_id = UUID(session_id_str)
-                old_session = await self._validate_and_touch_session(old_session_id, user_id)
-                await self._enforce_refresh_rotation(
-                    user=user,
-                    session_record=old_session,
-                    incoming_refresh=refresh_token,
-                )
-            else:
-                old_session = None
-                old_session_id = None
-
-            (
-                organization_id,
-                organization_slug_resolved,
-                organization_role,
-                domain_admin_domains,
-            ) = await self._verify_org_membership(user_id, organization_slug)
-
-            if old_session is not None:
-                old_session.is_revoked = True
-                old_session.revoked_at = datetime.now(UTC)
-
-            new_session = await self._stage_session(
-                user_id, user_agent, organization_id=organization_id
-            )
-
-            access_token = create_access_token(
-                user_id,
-                organization_id,
-                token_version=user.token_version,
-                session_id=new_session.id,
-                full_name=user.full_name,
-                avatar_key=user.avatar_key,
-            )
-            new_refresh = create_refresh_token(
-                user_id,
-                token_version=user.token_version,
-                session_id=new_session.id,
-            )
-            new_session.refresh_token_hash = hash_refresh_token(new_refresh)
-
-            await write_audit_event(
-                self._session,
-                organization_id=organization_id,
-                actor_user_id=user_id,
-                action=Action.AUTH_TOKEN_REFRESHED,
-                resource_type=AuditResourceType.USER_SESSION,
-                resource_id=new_session.id,
-                details={
-                    "event": "org_switch",
-                    "previous_session_id": str(old_session_id) if old_session_id else None,
-                    "target_org_id": str(organization_id),
-                },
-            )
-            await self._session.commit()
-
-            if old_session_id is not None:
-                await mark_session_revoked(old_session_id)
-                await _publish_session_revoke_safe(user_id, old_session_id)
-                await self._call_lifecycle.evict_user(
-                    self._session,
-                    user_id,
-                    reason=CallEvictionReason.SESSION_REVOKED,
-                    session_ids=[old_session_id],
-                )
-
-            AUTH_ATTEMPTS_TOTAL.labels(operation="switch_org", outcome="success").inc()
-
-            return AuthResult(
-                access_token=access_token,
-                refresh_token=new_refresh,
-                user_id=user_id,
-                organization_id=organization_id,
-                organization_slug=organization_slug_resolved,
-                organization_role=organization_role,
-                session_id=new_session.id,
-                domain_admin_domains=domain_admin_domains,
-            )
-        except TokenError:
-            AUTH_ATTEMPTS_TOTAL.labels(operation="switch_org", outcome="failure").inc()
             raise
 
     async def _enforce_refresh_rotation(
@@ -629,7 +560,7 @@ class AuthOperations:
         rotated_at = session_record.previous_refresh_rotated_at
 
         if current is None:
-            # Legacy session from before rotation tracking existed.
+            # A row with no stored refresh hash has nothing to compare the token against.
             return
         if incoming_hash == current:
             return
@@ -919,14 +850,7 @@ class AuthOperations:
         user_agent: str,
         organization_id: UUID | None = None,
     ) -> UserSession:
-        """Stage a session in the caller's authoritative transaction.
-
-        ``organization_id`` pins the session to a tenant; later refreshes
-        re-mint access tokens against this org so a forgotten slug on the
-        client cannot silently drop the user out of their org. ``None`` is
-        used by register-without-org and the MFA-not-yet-bound flows; the
-        first explicit org context written to the session promotes it.
-        """
+        """Stage a session; a refresh without a slug re-mints for its ``organization_id``."""
         device_label = parse_device_label(user_agent)
         session_record = UserSession(
             user_id=user_id,
@@ -999,6 +923,24 @@ class AuthOperations:
                 resource="login attempts (per ip)",
             )
 
+    async def _enforce_register_rate_limit(self, email: str) -> None:
+        """Same two buckets as login; the email bucket is keyed by hash, the address stays out."""
+        if email:
+            await check_rate_limit(
+                key=f"rl:auth:register:email:{email_hash(email)}",
+                limit=REGISTER_RATE_LIMIT_EMAIL,
+                window_seconds=REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+                resource="registration attempts (per email)",
+            )
+        ip = client_ip_for_rate_limit()
+        if ip:
+            await check_rate_limit(
+                key=f"rl:auth:register:ip:{ip}",
+                limit=REGISTER_RATE_LIMIT_IP,
+                window_seconds=REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+                resource="registration attempts (per ip)",
+            )
+
     async def _get_user_by_id(self, user_id: UUID) -> User | None:
         """Get user by ID."""
         result = await self._session.execute(select(User).where(User.id == user_id))
@@ -1039,7 +981,7 @@ class AuthOperations:
         user_id: UUID,
         organization_id: UUID,
     ) -> tuple[UUID, str, str, list[str]]:
-        """Same as ``_verify_org_membership`` but keyed off the session's bound id."""
+        """Same as ``_verify_org_membership`` but keyed off the immutable id."""
         result = await self._session.execute(
             select(Organization).where(Organization.id == organization_id)
         )

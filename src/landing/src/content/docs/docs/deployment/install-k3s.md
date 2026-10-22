@@ -13,7 +13,7 @@ One virtual machine, one command, a running Uniffy. This page is for a team that
 - A fresh VM running Ubuntu 22.04 or newer. Start with 4 vCPU, 8 GB RAM and 60 GB of SSD storage. Use the [machine sizing guide](#choose-a-machine) below before buying capacity for your team.
 - A DNS A record pointing your hostname at the VM, for example `uniffy.example.com`.
 - Inbound ports open: 80 and 443 over TCP, 3478 over UDP and TCP.
-- Optional: SMTP credentials. Without them Uniffy runs, but invites and password resets stay off until you add a mail server in the admin pages.
+- Optional: SMTP credentials. Without them Uniffy runs, but invitation mail and password resets stay off until you add a mail server in the admin pages.
 - Optional: a TLS certificate you own. Without one the installer gets a free certificate from Let's Encrypt.
 
 Port 3478 carries calls media. Everything else works without it, and calls quietly do not, which is why the installer probes it and tells you.

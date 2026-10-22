@@ -1,0 +1,21 @@
+/* The typing caret in the mentions demo composer. */
+.onb-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: hsl(var(--primary));
+  animation: onb-blink 1s steps(2, start) infinite;
+}
+@keyframes onb-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onb-caret {
+    animation: none;
+  }
+}

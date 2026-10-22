@@ -7,11 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 import uniffy.core.models  # noqa: F401
 from uniffy.core.json_codec import dumps_str
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import ALEMBIC_INI_PATH, get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
+    _insert_organization,
     _migrate_to,
     _provision_to,
     _query,
@@ -45,9 +45,9 @@ async def _seed_legacy_projects() -> tuple[str, str, str]:
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            org = Organization(name="Views", slug="views")
+            org_id = await _insert_organization(session, name="Views", slug="views")
             user = User(username="planner", email="planner@example.test")
-            session.add_all([org, user])
+            session.add(user)
             await session.flush()
             with_views, without_views = generate_id(), generate_id()
             for project_id, slug, default_view in (
@@ -63,7 +63,7 @@ async def _seed_legacy_projects() -> tuple[str, str, str]:
                     ),
                     {
                         "id": project_id,
-                        "org": org.id,
+                        "org": org_id,
                         "owner": user.id,
                         "slug": slug,
                         "default": default_view,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Clock,
   CheckCircle,
@@ -21,14 +21,14 @@ import {
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Select } from "@/components/ui/select";
 import { invitationsApi } from "@/features/admin/api/invitationsApi";
+import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
 import { InvitationStatus, type Invitation } from "@uniffy/proto/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
 import { formatProtoDateTime } from "@/shared/utils/dateFormatting";
 import { friendlyErrorMessage } from "@/config";
 
 interface InvitationsTableProps {
   organizationId: string;
-  /** Bumps when the parent wants a forced refresh after sending a new invite. */
+  /** Bumps when the parent wants the rows reloaded in place, with no loading state. */
   refreshKey: number;
 }
 
@@ -39,19 +39,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: String(InvitationStatus.REVOKED), label: "Revoked" },
   { value: String(InvitationStatus.EXPIRED), label: "Expired" },
 ];
-
-function roleLabel(role: OrganizationRole): string {
-  switch (role) {
-    case OrganizationRole.OWNER:
-      return "Owner";
-    case OrganizationRole.ADMIN:
-      return "Admin";
-    case OrganizationRole.MEMBER:
-      return "Member";
-    default:
-      return "Member";
-  }
-}
 
 function StatusBadge({ status }: { status: InvitationStatus }) {
   if (status === InvitationStatus.ACCEPTED) {
@@ -120,7 +107,7 @@ function InvitationRow({ invitation, onRevoke, onResend, busyId }: InvitationRow
           </div>
         </TableCell>
         <TableCell align="center" className="hidden md:table-cell text-sm">
-          {roleLabel(invitation.role)}
+          {getRoleLabel(invitation.role)}
         </TableCell>
         <TableCell align="center" className="hidden lg:table-cell text-xs text-muted-foreground">
           {formatProtoDateTime(invitation.expiresAt)}
@@ -180,27 +167,43 @@ export function InvitationsTable({ organizationId, refreshKey }: InvitationsTabl
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await invitationsApi.list({ organizationId });
-      setInvitations(response.invitations ?? []);
-    } catch (err) {
-      const friendly =
-        friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-        "Could not load invitations";
-      setError(friendly);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
+  const load = useCallback(
+    async (quiet: boolean) => {
+      if (!organizationId) return;
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const response = await invitationsApi.list({ organizationId });
+        setInvitations(response.invitations ?? []);
+        setError(null);
+      } catch (err) {
+        // A background refresh keeps the rows on screen rather than replacing them with an error.
+        if (quiet) return;
+        const friendly =
+          friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
+          "Could not load invitations";
+        setError(friendly);
+      } finally {
+        if (!quiet) setLoading(false);
+      }
+    },
+    [organizationId],
+  );
+  const reload = useCallback(() => load(false), [load]);
 
   useEffect(() => {
-    // eslint-disable-next-line react/react-compiler -- fetch on mount and on every refreshKey bump; reload raises the loading flag before awaiting the API
+    // eslint-disable-next-line react/react-compiler -- fetch on mount; reload raises the loading flag before awaiting the API
     void reload();
-  }, [reload, refreshKey]);
+  }, [reload]);
+
+  const seenRefreshKey = useRef(refreshKey);
+  useEffect(() => {
+    if (seenRefreshKey.current === refreshKey) return;
+    seenRefreshKey.current = refreshKey;
+    void load(true);
+  }, [load, refreshKey]);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return invitations;

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { RootState } from "@/app/store";
 
 const ACTIVE_RUN_ID_STORAGE_KEY = "uniffy.agentRuntime.activeRunId";
 
@@ -57,12 +58,27 @@ describe("agentMessagesSlice activeRunId persistence", () => {
     vi.resetModules();
   });
 
-  it("initial state activeRunId reads from sessionStorage when set", async () => {
+  it("reads a stored run id on demand instead of into the initial state", async () => {
     storage.setItem(ACTIVE_RUN_ID_STORAGE_KEY, "run-123");
     const slice = await freshSlice();
     const state = slice.agentMessagesReducer(undefined, { type: "@@INIT" });
-    expect(state.activeRunId).toBe("run-123");
+    expect(state.activeRunId).toBeNull();
+    expect(slice.selectActiveRunId({ agentMessages: state } as unknown as RootState)).toBe(
+      "run-123",
+    );
   });
+
+  it.each(["auth/logout", "auth/resetOrganizationScope"])(
+    "%s removes the stored run id",
+    async (type) => {
+      storage.setItem(ACTIVE_RUN_ID_STORAGE_KEY, "run-123");
+      const slice = await freshSlice();
+      const state = slice.agentMessagesReducer(undefined, { type });
+      expect(state.activeRunId).toBeNull();
+      expect(storage.getItem(ACTIVE_RUN_ID_STORAGE_KEY)).toBeNull();
+      expect(slice.selectActiveRunId({ agentMessages: state } as unknown as RootState)).toBeNull();
+    },
+  );
 
   it("initial state activeRunId is null when sessionStorage is empty", async () => {
     const slice = await freshSlice();
@@ -78,9 +94,8 @@ describe("agentMessagesSlice activeRunId persistence", () => {
   });
 
   it("streamCompleted clears activeRunId in state and sessionStorage", async () => {
-    storage.setItem(ACTIVE_RUN_ID_STORAGE_KEY, "run-xyz");
     const slice = await freshSlice();
-    let state = slice.agentMessagesReducer(undefined, { type: "@@INIT" });
+    let state = slice.agentMessagesReducer(undefined, slice.runIdReceived("run-xyz"));
     expect(state.activeRunId).toBe("run-xyz");
     state = slice.agentMessagesReducer(state, slice.streamCompleted({ sessionId: "session-1" }));
     expect(state.activeRunId).toBeNull();

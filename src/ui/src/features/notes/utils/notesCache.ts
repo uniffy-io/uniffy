@@ -12,8 +12,6 @@ const DB_NAME = "uniffy-notes-cache";
 const DB_VERSION = 2;
 const STORE_NAME = "notes-data";
 
-registerEncryptedDatabase(DB_NAME);
-
 interface NotesCacheEntry {
   organizationId: string;
   notes: SerializedNote[];
@@ -23,11 +21,26 @@ interface NotesCacheEntry {
   userId: string;
 }
 
+const CACHE_AAD_PREFIX = "uniffy-notes-v1";
+
+// An entry moved under another organization's key or read by another account fails to decrypt.
+function cacheAad(userId: string, organizationId: string): Uint8Array {
+  return new TextEncoder().encode(`${CACHE_AAD_PREFIX}|${userId}|${organizationId}`);
+}
+
 const CACHE_FRESH_MS = 5 * 60 * 1000;
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 let dbInstance: IDBDatabase | null = null;
 let dbInitPromise: Promise<IDBDatabase> | null = null;
+
+// Closing first keeps this tab's own connection from blocking the wipe.
+registerEncryptedDatabase(DB_NAME, async () => {
+  const db = dbInstance ?? (await dbInitPromise?.catch(() => null)) ?? null;
+  dbInstance = null;
+  dbInitPromise = null;
+  db?.close();
+});
 
 /** If a stale v1 in-line keyPath survived an upgrade (blocked by another tab), delete and recreate. */
 function openOrRecreateDB(): Promise<IDBDatabase> {
@@ -49,6 +62,14 @@ function openOrRecreateDB(): Promise<IDBDatabase> {
       db.onclose = () => {
         dbInstance = null;
         dbInitPromise = null;
+      };
+      // Another tab deleting or upgrading the database waits on every open connection.
+      db.onversionchange = () => {
+        db.close();
+        if (dbInstance === db) {
+          dbInstance = null;
+          dbInitPromise = null;
+        }
       };
 
       // If v1 keyPath survived, force a clean v2 schema.
@@ -131,14 +152,16 @@ export async function getCachedNotes(
 
     let entry: NotesCacheEntry;
     try {
-      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+      entry = await decryptFromStorage<NotesCacheEntry>(
+        encrypted,
+        cacheAad(userId, organizationId),
+      );
     } catch {
-      // Skip corrupted entry; don't nuke entire cache.
-      console.warn("[NotesCache] Decryption failed for org", organizationId);
+      // Corrupt, written for another scope, or from before scope binding: a miss, refetched.
       return null;
     }
 
-    if (entry.userId !== userId) {
+    if (entry.userId !== userId || entry.organizationId !== organizationId) {
       return null;
     }
 
@@ -183,7 +206,7 @@ export async function setCachedNotes(
       updatedAt: Date.now(),
     };
 
-    const encrypted = await encryptForStorage(entry);
+    const encrypted = await encryptForStorage(entry, cacheAad(userId, organizationId));
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORE_NAME, "readwrite");
@@ -226,12 +249,15 @@ export async function updateCachedNote(
 
     let entry: NotesCacheEntry;
     try {
-      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+      entry = await decryptFromStorage<NotesCacheEntry>(
+        encrypted,
+        cacheAad(userId, organizationId),
+      );
     } catch {
       return;
     }
 
-    if (entry.userId !== userId) return;
+    if (entry.userId !== userId || entry.organizationId !== organizationId) return;
 
     const noteIndex = entry.notes.findIndex((n) => n.id === note.id);
     if (noteIndex >= 0) {
@@ -244,7 +270,7 @@ export async function updateCachedNote(
     entry.tree = tree;
     entry.updatedAt = Date.now();
 
-    const reEncrypted = await encryptForStorage(entry);
+    const reEncrypted = await encryptForStorage(entry, cacheAad(userId, organizationId));
 
     await new Promise<void>((resolve) => {
       const tx = db.transaction(STORE_NAME, "readwrite");
@@ -284,12 +310,15 @@ export async function removeCachedNote(
 
     let entry: NotesCacheEntry;
     try {
-      entry = await decryptFromStorage<NotesCacheEntry>(encrypted);
+      entry = await decryptFromStorage<NotesCacheEntry>(
+        encrypted,
+        cacheAad(userId, organizationId),
+      );
     } catch {
       return;
     }
 
-    if (entry.userId !== userId) return;
+    if (entry.userId !== userId || entry.organizationId !== organizationId) return;
 
     if (permanent) {
       entry.notes = entry.notes.filter((n) => n.id !== noteId);
@@ -304,7 +333,7 @@ export async function removeCachedNote(
     entry.tree = tree;
     entry.updatedAt = Date.now();
 
-    const reEncrypted = await encryptForStorage(entry);
+    const reEncrypted = await encryptForStorage(entry, cacheAad(userId, organizationId));
 
     await new Promise<void>((resolve) => {
       const tx = db.transaction(STORE_NAME, "readwrite");

@@ -7,11 +7,13 @@ from uniffy_proto.organizations.v1.organizations_pb import (
 )
 from uniffy_proto.organizations.v1.organizations_pb import (
     InvitationStatus,
+    MyInvitation,
 )
 
-from uniffy.core.converters import datetime_to_timestamp, org_role_to_proto
+from uniffy.core.converters import datetime_to_timestamp, org_info_to_proto, org_role_to_proto
 from uniffy.core.models.login.invitation import Invitation
 from uniffy.core.models.login.user import User
+from uniffy.domains.organizations.invitations.reader import MyInvitationRow
 
 
 def derive_status(invitation: Invitation) -> InvitationStatus:
@@ -53,4 +55,18 @@ def invitation_to_proto(
     label = _inviter_name(inviter)
     if label:
         proto.invited_by_display_name = label
+    return proto
+
+
+def my_invitation_to_proto(row: MyInvitationRow) -> MyInvitation:
+    proto = MyInvitation(
+        id=str(row.invitation.id),
+        organization=org_info_to_proto(row.organization),
+        role=org_role_to_proto(row.invitation.role),
+        expires_at=datetime_to_timestamp(row.invitation.expires_at),
+        created_at=datetime_to_timestamp(row.invitation.created_at),
+    )
+    label = _inviter_name(row.inviter)
+    if label:
+        proto.inviter_display_name = label
     return proto

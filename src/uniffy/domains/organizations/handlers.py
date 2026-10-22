@@ -4,7 +4,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from protobuf import Oneof
 from sqlalchemy import select
 from uniffy_proto.common.v1.common_pb import (
     PaginationResponse,
@@ -39,6 +38,8 @@ from uniffy_proto.organizations.v1.organizations_pb import (
     RemoveMemberResponse,
     ResendInvitationRequest,
     ResendInvitationResponse,
+    ResolveContentOrganizationRequest,
+    ResolveContentOrganizationResponse,
     RevokeDomainAdminRequest,
     RevokeDomainAdminResponse,
     RevokeInvitationRequest,
@@ -59,6 +60,7 @@ from uniffy_proto.organizations.v1.organizations_pb import (
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.config.org_creation import user_can_create_organization
 from uniffy.core.converters import (
     content_type_from_proto,
     datetime_to_timestamp,
@@ -68,12 +70,19 @@ from uniffy.core.converters import (
     member_info_to_proto,
     org_info_to_proto,
     org_role_from_proto,
+    org_role_to_proto,
 )
 from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    RateLimitExceededError,
+    ValidationError,
+)
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.domains.organizations.converters import (
@@ -86,17 +95,19 @@ from uniffy.domains.organizations.invitations import (
     InvitationAlreadyUsedError,
     InvitationOperations,
     InvitationRevokedError,
-    InviteOutcome,
 )
 from uniffy.domains.organizations.invitations.converters import invitation_to_proto
+from uniffy.domains.organizations.lifecycle_handlers import OrganizationLifecycleHandlers
+from uniffy.domains.organizations.onboarding.handlers import OrganizationOnboardingHandlers
 from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.organizations.resolve import resolve_content_organization
 from uniffy.domains.organizations.security import SecurityOperations
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="organizations.handlers")
 
 
-class OrganizationsHandlers:
+class OrganizationsHandlers(OrganizationLifecycleHandlers, OrganizationOnboardingHandlers):
     async def list_my_organizations(
         self,
         request: ListMyOrganizationsRequest,
@@ -108,16 +119,48 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
                 orgs_with_memberships = await ops.get_user_organizations(user_id)
+                user = (
+                    await session.execute(select(User).where(User.id == user_id))
+                ).scalar_one_or_none()
+                can_create = user is not None and await user_can_create_organization(session, user)
 
                 return ListMyOrganizationsResponse(
                     organizations=[
                         my_organization_to_proto(org, membership)
                         for org, membership in orgs_with_memberships
-                    ]
+                    ],
+                    can_create_organization=can_create,
                 )
         except Exception as e:
             logger.exception(f"Error listing user organizations: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
+
+    async def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        ctx: RequestContext,
+    ) -> ResolveContentOrganizationResponse:
+        user_id = current_user_id()
+
+        try:
+            async with open_session() as session:
+                resolved = await resolve_content_organization(session, user_id, request.urn)
+                response = (
+                    None
+                    if resolved is None
+                    else ResolveContentOrganizationResponse(
+                        organization=org_info_to_proto(resolved[0]),
+                        role=org_role_to_proto(resolved[1].role),
+                    )
+                )
+        except Exception as e:
+            logger.exception(f"Error resolving content organization: {e}")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
+
+        # Unknown, unviewable and foreign-tenant content share one answer so none can be told apart.
+        if response is None:
+            raise ConnectError(Code.NOT_FOUND, "Content not found")
+        return response
 
     async def get_organization(
         self,
@@ -175,11 +218,12 @@ class OrganizationsHandlers:
                     org_id=org_id,
                     name=request.name if request.has_field("name") else None,
                     slug=request.slug if request.has_field("slug") else None,
-                    is_active=request.is_active if request.has_field("is_active") else None,
                     actor_user_id=user_id,
                 )
 
                 return UpdateOrganizationResponse(organization=org_info_to_proto(org))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -302,6 +346,8 @@ class OrganizationsHandlers:
                 role = org_role_from_proto(request.role)
                 if role is None:
                     role = OrganizationRole.MEMBER
+                if role == OrganizationRole.OWNER:
+                    raise PermissionDeniedError("Ownership moves only through a transfer")
 
                 from uniffy.domains.users.operations import UserOperations as _UserOps
 
@@ -674,34 +720,24 @@ class OrganizationsHandlers:
         try:
             async with open_session() as session:
                 ops = InvitationOperations(session)
-                result = await ops.invite(
+                invitation = await ops.invite(
                     org_id=org_id,
                     email=request.email,
                     role=role,
                     inviter_id=user_id,
-                    search_indexer=self.search_indexer,
                 )
-                if result.outcome == InviteOutcome.ADDED:
-                    assert result.member is not None and result.member_user is not None
-                    return InviteMemberResponse(
-                        result=Oneof(
-                            field="added_member",
-                            value=member_info_to_proto(result.member_user, result.member),
-                        )
-                    )
-                assert result.invitation is not None
                 inviter_row = (
                     await session.execute(select(User).where(User.id == user_id))
                 ).scalar_one_or_none()
-                return InviteMemberResponse(
-                    result=Oneof(
-                        field="invitation", value=invitation_to_proto(result.invitation, inviter_row)
-                    )
-                )
+                return InviteMemberResponse(invitation=invitation_to_proto(invitation, inviter_row))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
+        except ConflictError as e:
+            raise ConnectError(Code.ALREADY_EXISTS, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:
@@ -792,6 +828,8 @@ class OrganizationsHandlers:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
         except Exception as e:
             logger.exception(f"Error resending invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")

@@ -56,6 +56,7 @@ from uniffy.core.auth.membership import is_active_member
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.config.push import get_vapid_config
 from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_datetime
+from uniffy.core.errors import MembershipRequiredError
 from uniffy.core.events.realtime import NotificationPayloadType
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.reauth import REAUTH_INTERVAL_SECONDS
@@ -70,6 +71,7 @@ from uniffy.domains.notifications.operations import (
     NotificationOperations,
     PushSubscriptionOperations,
 )
+from uniffy.domains.notifications.scope import NotificationOrganizationFilter
 from uniffy.domains.notifications.tags import TagEventRelay
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.pubsub import subscribe_channels
@@ -141,7 +143,7 @@ class NotificationsHandlers:
                     unread_count=unread_count,
                 )
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error listing notifications: {e}")
@@ -165,7 +167,7 @@ class NotificationsHandlers:
                 count = await ops.get_unread_count(user_id, organization_id)
                 return GetUnreadCountResponse(unread_count=count)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error getting unread count: {e}")
@@ -195,7 +197,7 @@ class NotificationsHandlers:
                     notification=notification_to_proto(notification),
                 )
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error marking notification as read: {e}")
@@ -219,7 +221,7 @@ class NotificationsHandlers:
                 count = await ops.mark_all_as_read(user_id, organization_id)
                 return MarkAllAsReadResponse(updated_count=count)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error marking all as read: {e}")
@@ -247,7 +249,7 @@ class NotificationsHandlers:
 
                 return DeleteNotificationResponse(success=True)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error deleting notification: {e}")
@@ -279,7 +281,7 @@ class NotificationsHandlers:
                 )
                 return RegisterPushSubscriptionResponse(id=str(subscription.id))
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error registering push subscription: {e}")
@@ -301,7 +303,7 @@ class NotificationsHandlers:
                 removed = await ops.unregister(user_id, request.endpoint)
                 return UnregisterPushSubscriptionResponse(success=removed)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error unregistering push subscription: {e}")
@@ -401,7 +403,7 @@ class NotificationsHandlers:
                     unread_count=unread_count,
                 )
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error searching notifications: {e}")
@@ -459,7 +461,7 @@ class NotificationsHandlers:
                     read_count=read_count,
                 )
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error getting notification stats: {e}")
@@ -488,7 +490,7 @@ class NotificationsHandlers:
                 count = await ops.bulk_mark_as_read(user_id, notification_ids)
                 return BulkMarkAsReadResponse(updated_count=count)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error bulk marking as read: {e}")
@@ -517,7 +519,7 @@ class NotificationsHandlers:
                 count = await ops.bulk_delete_notifications(user_id, notification_ids)
                 return BulkDeleteNotificationsResponse(deleted_count=count)
 
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             logger.exception(f"Error bulk deleting notifications: {e}")
@@ -528,7 +530,7 @@ class NotificationsHandlers:
         request: StreamNotificationsRequest,
         ctx: RequestContext,
     ) -> AsyncIterator[StreamNotificationsResponse]:
-        """Stream notification events plus periodic heartbeats for the user."""
+        """Stream the user's notification events of the request organization plus heartbeats."""
         user_id = current_user_id()
         organization_id = resolve_organization_id(request.organization_id)
 
@@ -546,6 +548,7 @@ class NotificationsHandlers:
         disconnect = get_disconnect_event()
 
         relay = TagEventRelay(user_id, organization_id, open_session)
+        organization_scope = NotificationOrganizationFilter(organization_id)
 
         try:
             async with aclosing(
@@ -591,6 +594,9 @@ class NotificationsHandlers:
                                 timestamp=ts,
                             )
                             last_send = now
+                        continue
+
+                    if not organization_scope.admits(payload):
                         continue
 
                     if payload.get("_type") == NotificationPayloadType.CONTENT_CHANGED:
@@ -745,7 +751,7 @@ class NotificationsHandlers:
             logger.info(
                 f"cancelled for user {user_id} (client disconnect)",
             )
-        except ConnectError:
+        except ConnectError, MembershipRequiredError:
             raise
         except Exception as e:
             if not isinstance(e, StopAsyncIteration):

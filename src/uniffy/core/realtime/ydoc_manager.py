@@ -91,6 +91,7 @@ class YDocManager:
                 reload_document=self._reload_document,
                 close_stale_user_sessions=self.access.close_stale_user_sessions,
                 close_user_session_by_sid=self.access.close_user_session_by_sid,
+                close_user_org_handles=self.access.close_user_org_handles,
                 recheck_access=self.access.recheck,
             )
         )

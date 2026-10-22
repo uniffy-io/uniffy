@@ -105,6 +105,9 @@ message ModelInfo {
   // "{aspect_ratio}|{resolution}|{quality}"; "" when the model has no
   // published image rates. Values are estimates for token-metered models.
   string image_price_estimates_json = 21;
+  // Whether the catalog names this the provider's default large model, the
+  // sensible org default when an owner connects their first key.
+  bool provider_default = 22;
 }
 
 // Request to add a new provider key

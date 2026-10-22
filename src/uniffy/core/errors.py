@@ -30,6 +30,13 @@ class PermissionDeniedError(UNIFFYError):
         super().__init__(msg)
 
 
+class MembershipRequiredError(PermissionDeniedError):
+    """The caller holds no active membership in the organization the request targets.
+
+    Clients read this as a lost organization grant and refresh their token.
+    """
+
+
 class ValidationError(UNIFFYError):
     """Input validation failed."""
 
@@ -62,6 +69,14 @@ class AuthenticationError(UNIFFYError):
     def __init__(self, reason: str) -> None:
         self.reason = reason
         super().__init__(f"Authentication failed: {reason}")
+
+
+class InvitationSignInRequiredError(UNIFFYError):
+    """An account already holds the invited email, so the holder accepts while signed in."""
+
+
+class SetupAlreadyCompletedError(UNIFFYError):
+    """The deployment already has a user, so first-run setup is closed."""
 
 
 class BudgetExceededError(UNIFFYError):

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -10,45 +9,37 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Buildings, SignOut } from "phosphor-react-native";
 import { useAuth } from "@core/providers/AuthContext";
-import { authApi } from "@core/auth/authApi";
+import { CreateOrganizationRow } from "@features/auth/components/CreateOrganizationRow";
+import { NoOrganizations } from "@features/auth/components/NoOrganizations";
+import { OrganizationList } from "@features/auth/components/OrganizationList";
+import { PendingInvitations } from "@features/auth/components/PendingInvitations";
+import { useInvitationActions, useMyInvitations } from "@features/auth/useMyInvitations";
+import {
+  useCanCreateOrganization,
+  useMyOrganizations,
+  useSelectOrganization,
+} from "@features/auth/useMyOrganizations";
 import { useSignOut } from "@features/auth/useSignOut";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-import type { MyOrganization } from "@uniffy/proto/organizations/v1/organizations_pb";
-import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
-
-const ROLE_LABELS: Record<number, string> = {
-  [OrganizationRole.OWNER]: "Owner",
-  [OrganizationRole.ADMIN]: "Admin",
-  [OrganizationRole.MEMBER]: "Member",
-};
-
-function getRoleLabel(role: number): string {
-  return ROLE_LABELS[role] ?? "Member";
-}
-
-function getOrgInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-}
 
 export function SelectOrgScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
-  const { user, selectOrganization } = useAuth();
+  const { user, organizationId } = useAuth();
   const { signOut, signingOut } = useSignOut();
-
-  const [orgs, setOrgs] = useState<Omit<MyOrganization, "$typeName">[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selecting, setSelecting] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const organizationsQuery = useMyOrganizations();
+  const invitationsQuery = useMyInvitations();
+  const canCreate = useCanCreateOrganization();
+  const { select, selectingOrganizationId, error: selectError } = useSelectOrganization();
+  const invitationActions = useInvitationActions();
+  const organizations = organizationsQuery.data ?? [];
+  const invitations = invitationsQuery.data ?? [];
+  const loadFailed = organizationsQuery.isError && !organizationsQuery.data;
+  // Each hook clears only its own error, so both show until their next attempt.
+  const error = [selectError, invitationActions.error].filter(Boolean).join("\n") || null;
 
   const [enterAnim] = useState(() => new Animated.Value(0));
 
@@ -59,38 +50,6 @@ export function SelectOrgScreen() {
       useNativeDriver: Platform.OS !== "web",
     }).start();
   }, [enterAnim]);
-
-  useEffect(() => {
-    let cancelled = false;
-    authApi
-      .listMyOrganizations()
-      .then((res) => {
-        if (!cancelled) {
-          setOrgs(res.organizations as unknown as Omit<MyOrganization, "$typeName">[]);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err?.message || "Failed to load organizations");
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const handleSelect = async (slug: string) => {
-    setSelecting(slug);
-    setError(null);
-    try {
-      await selectOrganization(slug);
-    } catch (err: any) {
-      setError(err?.message || "Failed to select organization");
-      setSelecting(null);
-    }
-  };
 
   return (
     <Animated.View
@@ -118,58 +77,49 @@ export function SelectOrgScreen() {
         </View>
       )}
 
-      {loading ? (
+      {organizationsQuery.isPending ? (
         <View style={styles.center}>
           <ActivityIndicator color={T.accent} size="large" />
         </View>
-      ) : orgs.length === 0 ? (
+      ) : loadFailed ? (
         <View style={styles.center}>
           <Buildings size={48} color={T.textDim} weight="duotone" />
           <Text style={[styles.emptyText, { color: T.textDim }]}>
-            No organizations found.{"\n"}Ask an admin to invite you.
+            Your organizations could not be loaded.
           </Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { borderColor: T.border }]}
+            onPress={() => {
+              void organizationsQuery.refetch();
+              void invitationsQuery.refetch();
+            }}
+            disabled={organizationsQuery.isFetching}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.retryText, { color: T.accent }]}>
+              {organizationsQuery.isFetching ? "Loading..." : "Try again"}
+            </Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={orgs}
-          keyExtractor={(item) => item.organization?.id ?? ""}
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
-          renderItem={({ item }) => {
-            const org = item.organization;
-            if (!org) return null;
-            const isSelecting = selecting === org.slug;
-
-            return (
-              <TouchableOpacity
-                style={[styles.orgRow, { backgroundColor: T.surface, borderColor: T.border }]}
-                onPress={() => handleSelect(org.slug)}
-                disabled={!!selecting}
-                activeOpacity={0.7}
-              >
-                <LinearGradient
-                  colors={[T.accent + "20", T.accent + "08"]}
-                  style={styles.orgAvatar}
-                >
-                  <Text style={[styles.orgInitials, { color: T.accent }]}>
-                    {getOrgInitials(org.name)}
-                  </Text>
-                </LinearGradient>
-
-                <View style={styles.orgInfo}>
-                  <Text style={[styles.orgName, { color: T.textBright }]}>{org.name}</Text>
-                  <View style={styles.orgMeta}>
-                    <View style={[styles.roleBadge, { backgroundColor: T.accentSoft }]}>
-                      <Text style={[styles.roleText, { color: T.accent }]}>
-                        {getRoleLabel(item.role)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {isSelecting && <ActivityIndicator color={T.accent} size="small" />}
-              </TouchableOpacity>
-            );
-          }}
+        <OrganizationList
+          organizations={organizations}
+          currentOrganizationId={organizationId}
+          selectingOrganizationId={selectingOrganizationId}
+          onSelect={(organization) => void select(organization)}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          header={
+            invitations.length > 0 ? (
+              <PendingInvitations
+                invitations={invitations}
+                pending={invitationActions.pending}
+                onAccept={(invitation) => void invitationActions.accept(invitation)}
+                onDecline={(invitation) => void invitationActions.decline(invitation)}
+              />
+            ) : null
+          }
+          footer={canCreate ? <CreateOrganizationRow /> : null}
+          empty={<NoOrganizations askAdmin={!canCreate && invitations.length === 0} />}
         />
       )}
 
@@ -232,49 +182,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  list: {
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  orgRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: 14,
-  },
-  orgAvatar: {
-    width: 44,
-    height: 44,
+  retryButton: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
     borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    borderWidth: 1,
   },
-  orgInitials: {
-    fontSize: 16,
-    fontFamily: FONT.bold,
-  },
-  orgInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  orgName: {
-    fontSize: 16,
-    fontFamily: FONT.semibold,
-  },
-  orgMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  roleText: {
-    fontSize: 11,
+  retryText: {
+    fontSize: 14,
     fontFamily: FONT.semibold,
   },
   logoutButton: {

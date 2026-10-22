@@ -1,6 +1,12 @@
 from __future__ import annotations
 
 from uniffy_proto.superadmin.v1.system_config_pb import (
+    OrgCreationPolicy as OrgCreationPolicyProto,
+)
+from uniffy_proto.superadmin.v1.system_config_pb import (
+    OrgCreationSetting as OrgCreationSettingProto,
+)
+from uniffy_proto.superadmin.v1.system_config_pb import (
     RealtimeBufferPreflight as RealtimeBufferPreflightProto,
 )
 from uniffy_proto.superadmin.v1.system_config_pb import (
@@ -19,8 +25,10 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
     SystemFlag as SystemFlagProto,
 )
 
+from uniffy.core.config.org_creation import OrgCreationPolicy, OrgCreationState
 from uniffy.core.config.registration import PublicRegistrationState
 from uniffy.core.realtime.preflight import PreflightResult, PreflightVerdict
+from uniffy.domains.platform.config.operations import SystemConfigState
 from uniffy.domains.platform.config.realtime import BufferTotals, RealtimeBufferStatus
 
 # Enough to tell instances apart across a restart without echoing the full identity.
@@ -32,17 +40,42 @@ _VERDICT_TO_PROTO = {
     PreflightVerdict.UNKNOWN: RealtimeBufferVerdict.UNKNOWN,
 }
 
+_ORG_CREATION_POLICY_TO_PROTO = {
+    OrgCreationPolicy.OPERATORS_ONLY: OrgCreationPolicyProto.OPERATORS_ONLY,
+    OrgCreationPolicy.OPERATORS_AND_OWNERS: OrgCreationPolicyProto.OPERATORS_AND_OWNERS,
+    OrgCreationPolicy.MEMBERS: OrgCreationPolicyProto.MEMBERS,
+    OrgCreationPolicy.ANYONE: OrgCreationPolicyProto.ANYONE,
+}
+_ORG_CREATION_POLICY_FROM_PROTO = {
+    proto: policy for policy, proto in _ORG_CREATION_POLICY_TO_PROTO.items()
+}
+
 
 def flag_to_proto(state: PublicRegistrationState) -> SystemFlagProto:
     return SystemFlagProto(enabled=state.enabled, source=state.source.value)
 
 
-def config_to_proto(states: dict[str, PublicRegistrationState]) -> SystemConfigProto:
-    msg = SystemConfigProto()
-    public = states.get("public_registration")
-    if public is not None:
-        msg.public_registration = flag_to_proto(public)
-    return msg
+def org_creation_policy_to_proto(policy: OrgCreationPolicy) -> OrgCreationPolicyProto:
+    return _ORG_CREATION_POLICY_TO_PROTO[policy]
+
+
+def org_creation_policy_from_proto(value: OrgCreationPolicyProto) -> OrgCreationPolicy | None:
+    """UNSPECIFIED and numbers this build does not know both come back as None."""
+    return _ORG_CREATION_POLICY_FROM_PROTO.get(value)
+
+
+def org_creation_to_proto(state: OrgCreationState) -> OrgCreationSettingProto:
+    return OrgCreationSettingProto(
+        policy=org_creation_policy_to_proto(state.policy),
+        source=state.source.value,
+    )
+
+
+def config_to_proto(state: SystemConfigState) -> SystemConfigProto:
+    return SystemConfigProto(
+        public_registration=flag_to_proto(state.public_registration),
+        org_creation=org_creation_to_proto(state.org_creation),
+    )
 
 
 def realtime_buffer_to_proto(status: RealtimeBufferStatus) -> RealtimeBufferStatusProto:

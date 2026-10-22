@@ -24,7 +24,7 @@ from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.converters.proto import timestamp_to_datetime
-from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.errors import MembershipRequiredError, ValidationError
 from uniffy.domains.scheduling.calendar.availability import (
     BusyInterval,
     get_busy_intervals,
@@ -91,7 +91,7 @@ class SchedulingHandlers:
         try:
             async with open_session() as session:
                 if not await get_active_membership(session, user_id, organization_id):
-                    raise PermissionDeniedError("Requires organization membership")
+                    raise MembershipRequiredError("Requires organization membership")
                 busy_by_user = await get_busy_intervals(
                     session, organization_id, user_ids, window_start, window_end
                 )
@@ -154,7 +154,7 @@ class SchedulingHandlers:
                 )
             async with open_session() as session:
                 if not await get_active_membership(session, user_id, organization_id):
-                    raise PermissionDeniedError("Requires organization membership")
+                    raise MembershipRequiredError("Requires organization membership")
                 all_ids = [*required_ids, *optional_ids]
                 busy_by_user = await get_busy_intervals(
                     session, organization_id, all_ids, window_start, window_end

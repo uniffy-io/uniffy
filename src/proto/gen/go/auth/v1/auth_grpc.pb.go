@@ -27,10 +27,10 @@ const (
 	AuthService_ListSessions_FullMethodName             = "/auth.v1.AuthService/ListSessions"
 	AuthService_RevokeSession_FullMethodName            = "/auth.v1.AuthService/RevokeSession"
 	AuthService_RevokeOtherSessions_FullMethodName      = "/auth.v1.AuthService/RevokeOtherSessions"
-	AuthService_SwitchOrganization_FullMethodName       = "/auth.v1.AuthService/SwitchOrganization"
 	AuthService_GetCacheKeySeed_FullMethodName          = "/auth.v1.AuthService/GetCacheKeySeed"
 	AuthService_RotateCacheKeySeed_FullMethodName       = "/auth.v1.AuthService/RotateCacheKeySeed"
 	AuthService_GetAuthConfig_FullMethodName            = "/auth.v1.AuthService/GetAuthConfig"
+	AuthService_SetupDeployment_FullMethodName          = "/auth.v1.AuthService/SetupDeployment"
 	AuthService_GetInvitation_FullMethodName            = "/auth.v1.AuthService/GetInvitation"
 	AuthService_AcceptInvitation_FullMethodName         = "/auth.v1.AuthService/AcceptInvitation"
 	AuthService_SendPasswordReset_FullMethodName        = "/auth.v1.AuthService/SendPasswordReset"
@@ -51,7 +51,8 @@ type AuthServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	// Login with email and password
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*RefreshTokenResponse, error)
 	// Get current authenticated user info
 	GetCurrentUser(ctx context.Context, in *GetCurrentUserRequest, opts ...grpc.CallOption) (*GetCurrentUserResponse, error)
@@ -63,16 +64,16 @@ type AuthServiceClient interface {
 	RevokeSession(ctx context.Context, in *RevokeSessionRequest, opts ...grpc.CallOption) (*RevokeSessionResponse, error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(ctx context.Context, in *RevokeOtherSessionsRequest, opts ...grpc.CallOption) (*RevokeOtherSessionsResponse, error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(ctx context.Context, in *SwitchOrganizationRequest, opts ...grpc.CallOption) (*SwitchOrganizationResponse, error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(ctx context.Context, in *GetCacheKeySeedRequest, opts ...grpc.CallOption) (*GetCacheKeySeedResponse, error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(ctx context.Context, in *RotateCacheKeySeedRequest, opts ...grpc.CallOption) (*RotateCacheKeySeedResponse, error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(ctx context.Context, in *SetupDeploymentRequest, opts ...grpc.CallOption) (*SetupDeploymentResponse, error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -173,16 +174,6 @@ func (c *authServiceClient) RevokeOtherSessions(ctx context.Context, in *RevokeO
 	return out, nil
 }
 
-func (c *authServiceClient) SwitchOrganization(ctx context.Context, in *SwitchOrganizationRequest, opts ...grpc.CallOption) (*SwitchOrganizationResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SwitchOrganizationResponse)
-	err := c.cc.Invoke(ctx, AuthService_SwitchOrganization_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *authServiceClient) GetCacheKeySeed(ctx context.Context, in *GetCacheKeySeedRequest, opts ...grpc.CallOption) (*GetCacheKeySeedResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCacheKeySeedResponse)
@@ -207,6 +198,16 @@ func (c *authServiceClient) GetAuthConfig(ctx context.Context, in *GetAuthConfig
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAuthConfigResponse)
 	err := c.cc.Invoke(ctx, AuthService_GetAuthConfig_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) SetupDeployment(ctx context.Context, in *SetupDeploymentRequest, opts ...grpc.CallOption) (*SetupDeploymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetupDeploymentResponse)
+	err := c.cc.Invoke(ctx, AuthService_SetupDeployment_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,8 @@ type AuthServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	// Login with email and password
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(context.Context, *RefreshTokenRequest) (*RefreshTokenResponse, error)
 	// Get current authenticated user info
 	GetCurrentUser(context.Context, *GetCurrentUserRequest) (*GetCurrentUserResponse, error)
@@ -288,16 +290,16 @@ type AuthServiceServer interface {
 	RevokeSession(context.Context, *RevokeSessionRequest) (*RevokeSessionResponse, error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *RevokeOtherSessionsRequest) (*RevokeOtherSessionsResponse, error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(context.Context, *SwitchOrganizationRequest) (*SwitchOrganizationResponse, error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(context.Context, *GetCacheKeySeedRequest) (*GetCacheKeySeedResponse, error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *SetupDeploymentRequest) (*SetupDeploymentResponse, error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -342,9 +344,6 @@ func (UnimplementedAuthServiceServer) RevokeSession(context.Context, *RevokeSess
 func (UnimplementedAuthServiceServer) RevokeOtherSessions(context.Context, *RevokeOtherSessionsRequest) (*RevokeOtherSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeOtherSessions not implemented")
 }
-func (UnimplementedAuthServiceServer) SwitchOrganization(context.Context, *SwitchOrganizationRequest) (*SwitchOrganizationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SwitchOrganization not implemented")
-}
 func (UnimplementedAuthServiceServer) GetCacheKeySeed(context.Context, *GetCacheKeySeedRequest) (*GetCacheKeySeedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCacheKeySeed not implemented")
 }
@@ -353,6 +352,9 @@ func (UnimplementedAuthServiceServer) RotateCacheKeySeed(context.Context, *Rotat
 }
 func (UnimplementedAuthServiceServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAuthConfig not implemented")
+}
+func (UnimplementedAuthServiceServer) SetupDeployment(context.Context, *SetupDeploymentRequest) (*SetupDeploymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetupDeployment not implemented")
 }
 func (UnimplementedAuthServiceServer) GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInvitation not implemented")
@@ -534,24 +536,6 @@ func _AuthService_RevokeOtherSessions_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_SwitchOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SwitchOrganizationRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).SwitchOrganization(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_SwitchOrganization_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).SwitchOrganization(ctx, req.(*SwitchOrganizationRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _AuthService_GetCacheKeySeed_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetCacheKeySeedRequest)
 	if err := dec(in); err != nil {
@@ -602,6 +586,24 @@ func _AuthService_GetAuthConfig_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).GetAuthConfig(ctx, req.(*GetAuthConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_SetupDeployment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetupDeploymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SetupDeployment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SetupDeployment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SetupDeployment(ctx, req.(*SetupDeploymentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -736,10 +738,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_RevokeOtherSessions_Handler,
 		},
 		{
-			MethodName: "SwitchOrganization",
-			Handler:    _AuthService_SwitchOrganization_Handler,
-		},
-		{
 			MethodName: "GetCacheKeySeed",
 			Handler:    _AuthService_GetCacheKeySeed_Handler,
 		},
@@ -750,6 +748,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAuthConfig",
 			Handler:    _AuthService_GetAuthConfig_Handler,
+		},
+		{
+			MethodName: "SetupDeployment",
+			Handler:    _AuthService_SetupDeployment_Handler,
 		},
 		{
 			MethodName: "GetInvitation",

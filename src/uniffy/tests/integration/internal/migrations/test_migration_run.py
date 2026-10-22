@@ -20,6 +20,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from uniffy.core.models.chat.channel import ChannelType
+from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.types import generate_id
 from uniffy.infrastructure.database.session import (
     ALEMBIC_INI_PATH,
@@ -91,6 +92,39 @@ async def _insert_chat_channel(
         },
     )
     return channel_id
+
+
+async def _insert_organization_member(
+    session: AsyncSession,
+    *,
+    organization_id: UUID,
+    user_id: UUID,
+    role: OrganizationRole = OrganizationRole.MEMBER,
+) -> UUID:
+    """Write the membership row an older revision has; the head model carries later columns."""
+    membership_id = generate_id()
+    await session.execute(
+        text(
+            "INSERT INTO login_organization_members (id, user_id, organization_id, role, "
+            "is_active, joined_at, updated_at) VALUES (:id, :user, :org, "
+            "CAST(:role AS organizationrole), true, now(), now())"
+        ),
+        {"id": membership_id, "user": user_id, "org": organization_id, "role": role.value},
+    )
+    return membership_id
+
+
+async def _insert_organization(session: AsyncSession, *, name: str, slug: str) -> UUID:
+    """Write the organization row an older revision has; the head model carries later columns."""
+    organization_id = generate_id()
+    await session.execute(
+        text(
+            "INSERT INTO login_organizations (id, name, slug, created_at) "
+            "VALUES (:id, :name, :slug, now())"
+        ),
+        {"id": organization_id, "name": name, "slug": slug},
+    )
+    return organization_id
 
 
 def _migrate_to(revision: str) -> None:

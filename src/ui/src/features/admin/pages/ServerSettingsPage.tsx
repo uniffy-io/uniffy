@@ -3,10 +3,14 @@ import { toast } from "sonner";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useTheme } from "@/config/theme/themeContext";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { friendlyErrorMessage } from "@/config";
+import { ORG_CREATION_POLICY_OPTIONS } from "@/features/platform/api/orgCreationPolicies";
 import { systemConfigApi } from "@/features/platform/api/systemConfigApi";
+import { OrgCreationPolicy } from "@uniffy/proto/superadmin/v1/system_config_pb";
 import {
+  Buildings,
   HardDrives,
   ShieldCheck,
   UsersThree,
@@ -20,29 +24,35 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 
-interface SettingItemProps {
+interface SettingShellProps {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description: string;
-  enabled: boolean;
-  onChange: (enabled: boolean) => void;
   badge?: string;
-  disabled?: boolean;
+  control: React.ReactNode;
+  /** Puts a wide control under the text on phones instead of squeezing it beside the text. */
+  stackOnMobile?: boolean;
 }
 
-function SettingItem({
+function SettingShell({
   icon: Icon,
   title,
   description,
-  enabled,
-  onChange,
   badge,
-  disabled,
-}: SettingItemProps) {
+  control,
+  stackOnMobile = false,
+}: SettingShellProps) {
   return (
     <div className="group relative overflow-hidden rounded-xl bg-card shadow-edge transition-shadow duration-150 hover:shadow-edge-strong">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      <div className="relative flex items-center justify-between p-3 md:p-5">
+      <div
+        className={cn(
+          "relative flex p-3 md:p-5",
+          stackOnMobile
+            ? "flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            : "items-center justify-between",
+        )}
+      >
         <div className="flex items-start gap-4 flex-1">
           <div className="rounded-lg bg-primary/10 p-2.5 group-hover:bg-primary/20 transition-colors duration-300">
             <Icon className="h-5 w-5 text-primary" />
@@ -59,9 +69,24 @@ function SettingItem({
             <div className="text-sm text-muted-foreground mt-1">{description}</div>
           </div>
         </div>
-        <ToggleSwitch enabled={enabled} onChange={onChange} disabled={disabled} />
+        {control}
       </div>
     </div>
+  );
+}
+
+interface SettingItemProps extends Omit<SettingShellProps, "control" | "stackOnMobile"> {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+  disabled?: boolean;
+}
+
+function SettingItem({ enabled, onChange, disabled, ...shell }: SettingItemProps) {
+  return (
+    <SettingShell
+      {...shell}
+      control={<ToggleSwitch enabled={enabled} onChange={onChange} disabled={disabled} />}
+    />
   );
 }
 
@@ -71,8 +96,14 @@ export function ServerSettingsPage() {
 
   const [publicRegistration, setPublicRegistrationState] = useState(false);
   const [publicRegistrationSource, setPublicRegistrationSource] = useState<string>("default");
-  const [publicRegistrationLoading, setPublicRegistrationLoading] = useState(true);
+  const [systemConfigLoading, setSystemConfigLoading] = useState(true);
   const [publicRegistrationSaving, setPublicRegistrationSaving] = useState(false);
+
+  const [orgCreationPolicy, setOrgCreationPolicyState] = useState<OrgCreationPolicy>(
+    OrgCreationPolicy.UNSPECIFIED,
+  );
+  const [orgCreationSource, setOrgCreationSource] = useState<string>("default");
+  const [orgCreationSaving, setOrgCreationSaving] = useState(false);
 
   // Visual-only placeholder toggles; not persisted.
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -87,7 +118,7 @@ export function ServerSettingsPage() {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      setPublicRegistrationLoading(true);
+      setSystemConfigLoading(true);
       setMfaPolicyLoading(true);
       try {
         const [systemResponse, mfaResponse] = await Promise.all([
@@ -99,6 +130,11 @@ export function ServerSettingsPage() {
           setPublicRegistrationState(flag.enabled);
           setPublicRegistrationSource(flag.source || "default");
         }
+        const orgCreation = systemResponse.config?.orgCreation;
+        if (!cancelled && orgCreation) {
+          setOrgCreationPolicyState(orgCreation.policy);
+          setOrgCreationSource(orgCreation.source || "default");
+        }
         const policy = mfaResponse.policy;
         if (!cancelled && policy) {
           setMfaRequiredForAdmins(policy.requiredForSystemAdmins);
@@ -108,7 +144,7 @@ export function ServerSettingsPage() {
         if (friendly) toast.error(friendly);
       } finally {
         if (!cancelled) {
-          setPublicRegistrationLoading(false);
+          setSystemConfigLoading(false);
           setMfaPolicyLoading(false);
         }
       }
@@ -164,6 +200,31 @@ export function ServerSettingsPage() {
       }
     },
     [publicRegistration],
+  );
+
+  const handleOrgCreationPolicyChange = useCallback(
+    async (policy: OrgCreationPolicy) => {
+      const previous = orgCreationPolicy;
+      if (policy === previous) return;
+      setOrgCreationPolicyState(policy);
+      setOrgCreationSaving(true);
+      try {
+        const response = await systemConfigApi.setOrgCreationPolicy(policy);
+        const orgCreation = response.config?.orgCreation;
+        if (orgCreation) {
+          setOrgCreationPolicyState(orgCreation.policy);
+          setOrgCreationSource(orgCreation.source || "default");
+        }
+        toast.success("Organization creation updated");
+      } catch (err) {
+        setOrgCreationPolicyState(previous);
+        const friendly = friendlyErrorMessage((err as Error).message);
+        if (friendly) toast.error(friendly);
+      } finally {
+        setOrgCreationSaving(false);
+      }
+    },
+    [orgCreationPolicy],
   );
 
   return (
@@ -246,8 +307,32 @@ export function ServerSettingsPage() {
             description="Allow new users to create accounts without an invite"
             enabled={publicRegistration}
             onChange={(value) => void handlePublicRegistrationChange(value)}
-            disabled={publicRegistrationLoading || publicRegistrationSaving}
-            badge={publicRegistrationLoading ? "Loading" : publicRegistrationSource}
+            disabled={systemConfigLoading || publicRegistrationSaving}
+            badge={systemConfigLoading ? "Loading" : publicRegistrationSource}
+          />
+          <SettingShell
+            icon={Buildings}
+            title="Organization creation"
+            description="Who may create organizations from the app."
+            badge={systemConfigLoading ? "Loading" : orgCreationSource}
+            stackOnMobile
+            control={
+              <Select
+                value={
+                  orgCreationPolicy === OrgCreationPolicy.UNSPECIFIED
+                    ? undefined
+                    : orgCreationPolicy
+                }
+                onChange={(value) => void handleOrgCreationPolicyChange(value)}
+                options={ORG_CREATION_POLICY_OPTIONS}
+                placeholder={systemConfigLoading ? "Loading..." : "Choose who may create"}
+                disabled={systemConfigLoading || orgCreationSaving}
+                className="w-full shrink-0 sm:w-auto"
+                triggerClassName="w-full sm:w-64"
+                menuMinWidth={256}
+                ariaLabel="Organization creation"
+              />
+            }
           />
           <SettingItem
             icon={Key}

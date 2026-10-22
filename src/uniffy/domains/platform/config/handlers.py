@@ -13,6 +13,8 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
     GetSystemConfigResponse,
     SetMfaPolicyRequest,
     SetMfaPolicyResponse,
+    SetOrgCreationPolicyRequest,
+    SetOrgCreationPolicyResponse,
     SetPublicRegistrationRequest,
     SetPublicRegistrationResponse,
 )
@@ -23,8 +25,12 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.realtime.buffer import UpdateBuffer
-from uniffy.domains.auth.mfa.policy import MfaPolicyOperations
-from uniffy.domains.platform.config.converters import config_to_proto, realtime_buffer_to_proto
+from uniffy.domains.auth.mfa.policy import MfaDeploymentPolicy, MfaPolicyOperations
+from uniffy.domains.platform.config.converters import (
+    config_to_proto,
+    org_creation_policy_from_proto,
+    realtime_buffer_to_proto,
+)
 from uniffy.domains.platform.config.operations import SystemConfigOperations
 from uniffy.domains.platform.config.realtime import RealtimeBufferOperations
 from uniffy.domains.users.operations import UserOperations
@@ -59,12 +65,12 @@ class SystemConfigHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                states = await SystemConfigOperations(session).get_state(user_id=user_id)
+                state = await SystemConfigOperations(session).get_state(user_id=user_id)
         except ConnectError:
             raise
         except Exception as exc:
             raise _map_domain_error(exc) from exc
-        return GetSystemConfigResponse(config=config_to_proto(states))
+        return GetSystemConfigResponse(config=config_to_proto(state))
 
     async def set_public_registration(
         self,
@@ -74,7 +80,7 @@ class SystemConfigHandlers:
         user_id = current_user_id()
         try:
             async with open_session() as session:
-                states = await SystemConfigOperations(session).set_public_registration(
+                state = await SystemConfigOperations(session).set_public_registration(
                     user_id=user_id,
                     enabled=request.enabled,
                 )
@@ -82,7 +88,28 @@ class SystemConfigHandlers:
             raise
         except Exception as exc:
             raise _map_domain_error(exc) from exc
-        return SetPublicRegistrationResponse(config=config_to_proto(states))
+        return SetPublicRegistrationResponse(config=config_to_proto(state))
+
+    async def set_org_creation_policy(
+        self,
+        request: SetOrgCreationPolicyRequest,
+        ctx: RequestContext,
+    ) -> SetOrgCreationPolicyResponse:
+        user_id = current_user_id()
+        policy = org_creation_policy_from_proto(request.policy)
+        if policy is None:
+            raise ConnectError(Code.INVALID_ARGUMENT, "policy is required")
+        try:
+            async with open_session() as session:
+                state = await SystemConfigOperations(session).set_org_creation_policy(
+                    user_id=user_id,
+                    policy=policy,
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise _map_domain_error(exc) from exc
+        return SetOrgCreationPolicyResponse(config=config_to_proto(state))
 
     async def get_mfa_policy(
         self,
@@ -140,7 +167,7 @@ class SystemConfigHandlers:
         return GetRealtimeBufferStatusResponse(status=realtime_buffer_to_proto(status))
 
 
-def _mfa_to_proto(policy) -> MfaPolicyProto:
+def _mfa_to_proto(policy: MfaDeploymentPolicy) -> MfaPolicyProto:
     return MfaPolicyProto(
         required_for_system_admins=policy.required_for_system_admins,
     )

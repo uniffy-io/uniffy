@@ -5,8 +5,8 @@ content stays unreachable here (no PermissionChecker bypass).
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime, timedelta
-from typing import Any, NamedTuple
+from datetime import UTC, datetime
+from typing import NamedTuple
 from uuid import UUID
 
 from loguru import logger
@@ -21,8 +21,6 @@ from uniffy.core.auth.passwords.policy import validate_password
 from uniffy.core.auth.revocation import mark_sessions_revoked, mark_token_version_revoked
 from uniffy.core.auth.sessions import stage_revoke_user_sessions
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.jobs import enqueue_job
-from uniffy.core.json_codec import dumps_str
 from uniffy.core.mail.config import MAIL_FROM_ADDRESS_KEY, MAIL_NAMESPACE, MailConfig
 from uniffy.core.models.audit.event import AuditEvent, AuditResourceType
 from uniffy.core.models.calls import CallEndReason
@@ -36,12 +34,22 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.deployment_setting import DeploymentSetting
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.rate_limit import check_rate_limit
-from uniffy.core.realtime.publisher import publish_token_revoke
+from uniffy.core.realtime.publisher import publish_membership_revoke_safe, publish_token_revoke
 from uniffy.core.search import SearchIndexer
-from uniffy.core.types import slugify
 from uniffy.core.users.cache import invalidate_user_profile
 from uniffy.domains.calls.lifecycle import CallEvictionReason, CallRevocationLifecycle
-from uniffy.domains.mail.jobs.contracts import SEND_EMAIL
+from uniffy.domains.organizations.lifecycle import (
+    active_member_ids,
+    finish_organization_deletion_after_commit,
+    lock_organization,
+    purge_at_from,
+    stage_organization_deletion,
+)
+from uniffy.domains.organizations.naming import (
+    ensure_slug_available,
+    normalize_org_name,
+    normalize_slug,
+)
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.users.operations import UserOperations
 
@@ -65,7 +73,6 @@ async def _safe_publish_token_revoke(user_id: UUID, version: int) -> None:
 
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
-PURGE_GRACE_DAYS = 30
 
 # Per-operator throughput caps; well above legitimate hand-driven use.
 _PLATFORM_MUTATION_LIMIT = 20
@@ -159,27 +166,6 @@ _PLAN_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,49}$")
 _DOMAIN_RE = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$")
 
 
-def normalize_org_name(name: str) -> str:
-    name = name.strip()
-    if not name:
-        raise ValidationError("name", "name is required")
-    if len(name) > 255:
-        raise ValidationError("name", "name must be 255 characters or fewer")
-    return name
-
-
-def normalize_slug(slug: str, *, fallback_name: str = "") -> str:
-    slug = slug.strip().lower()
-    if not slug and fallback_name:
-        slug = slugify(fallback_name, max_length=255)
-    if not slug or len(slug) < 2 or len(slug) > 255 or slug != slugify(slug):
-        raise ValidationError(
-            "slug",
-            "slug must be 2-255 characters of lowercase letters, digits and hyphens",
-        )
-    return slug
-
-
 def normalize_plan(plan: str) -> str:
     plan = plan.strip().lower()
     if not plan:
@@ -233,12 +219,6 @@ def _clamp_page_size(page_size: int) -> int:
 
 def _safe_page(page: int) -> int:
     return page if page > 0 else 0
-
-
-def _purge_at_from(deleted_at: datetime | None) -> datetime | None:
-    if deleted_at is None:
-        return None
-    return deleted_at + timedelta(days=PURGE_GRACE_DAYS)
 
 
 def _audit_user_ids(user_ids: list[UUID]) -> list[str]:
@@ -325,7 +305,7 @@ class PlatformDirectoryOperations:
                     last_login_at=last_login.get(org.id),
                     is_suspended=org.is_suspended,
                     deleted_at=org.deleted_at,
-                    purge_at=_purge_at_from(org.deleted_at),
+                    purge_at=purge_at_from(org.deleted_at),
                     created_at=org.created_at,
                 )
             )
@@ -363,7 +343,7 @@ class PlatformDirectoryOperations:
             last_login_at=last_login,
             is_suspended=org.is_suspended,
             deleted_at=org.deleted_at,
-            purge_at=_purge_at_from(org.deleted_at),
+            purge_at=purge_at_from(org.deleted_at),
             created_at=org.created_at,
         )
         return PlatformOrgDetail(
@@ -409,11 +389,7 @@ class PlatformDirectoryOperations:
         if owner is None or not owner.is_active:
             raise ValidationError("owner_email", "No active user account matches this email")
 
-        existing = (
-            await self._session.execute(select(Organization.id).where(Organization.slug == slug))
-        ).scalar_one_or_none()
-        if existing is not None:
-            raise ValidationError("slug", "Slug is already in use")
+        await ensure_slug_available(self._session, slug)
 
         org = await OrganizationOperations(self._session).create(
             name=name,
@@ -465,15 +441,7 @@ class PlatformDirectoryOperations:
         if slug is not None:
             value = normalize_slug(slug)
             if value != org.slug:
-                taken = (
-                    await self._session.execute(
-                        select(Organization.id)
-                        .where(Organization.slug == value)
-                        .where(Organization.id != org.id)
-                    )
-                ).scalar_one_or_none()
-                if taken is not None:
-                    raise ValidationError("slug", "Slug is already in use")
+                await ensure_slug_available(self._session, value, exclude_org_id=org.id)
                 org.slug = value
                 changed_keys.append("slug")
         if domain is not None:
@@ -512,7 +480,7 @@ class PlatformDirectoryOperations:
     async def suspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Block sign-in and revoke every member's existing JWTs."""
+        """Cut every member off from this org only; their sessions in other orgs stay valid."""
         await self._user_ops.require_system_admin(user_id)
         await check_rate_limit(
             key=_operator_mutation_key(user_id, "suspend"),
@@ -536,7 +504,7 @@ class PlatformDirectoryOperations:
         org.suspension_reason = reason
         self._session.add(org)
 
-        bumped_user_ids = await self._bump_member_token_versions(org.id)
+        member_ids = await active_member_ids(self._session, org.id)
 
         await write_audit_event(
             self._session,
@@ -547,25 +515,23 @@ class PlatformDirectoryOperations:
             resource_id=org.id,
             details={
                 "reason": reason,
-                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
+                "members_notified": _audit_user_ids(member_ids),
             },
         )
         await self._session.commit()
 
-        for member_id in bumped_user_ids:
-            await invalidate_user_profile(member_id)
-
         await self._call_lifecycle.end_for_organization(
             self._session, org.id, CallEndReason.ORG_SUSPENDED
         )
-        await self._publish_member_token_revokes(bumped_user_ids)
+        for member_id in member_ids:
+            await publish_membership_revoke_safe(member_id, org.id)
 
         return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
     async def unsuspend_organization(
         self, *, user_id: UUID, organization_id: UUID, reason: str
     ) -> PlatformOrgDetail:
-        """Clear the suspension flag; existing JWTs stay revoked."""
+        """Clear the suspension flag; members' existing sessions regain access."""
         await self._user_ops.require_system_admin(user_id)
         reason = reason.strip()
         if not reason:
@@ -614,46 +580,32 @@ class PlatformDirectoryOperations:
         if not reason:
             raise ValidationError("reason", "reason is required")
 
-        org = await self._require_org(organization_id)
+        org = await lock_organization(self._session, organization_id)
         if confirm_slug.strip() != org.slug:
             raise ValidationError(
                 "confirm_slug",
                 "Confirmation slug does not match",
             )
+        # A concurrent delete won the row lock.
         if org.deleted_at is not None:
             return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
-        org.deleted_at = datetime.now(UTC)
-        org.deleted_by_user_id = user_id
-        org.deletion_reason = reason
-        org.purge_warning_sent_at = None
-        self._session.add(org)
-
-        bumped_user_ids = await self._bump_member_token_versions(org.id)
-
-        await write_audit_event(
+        member_ids = await stage_organization_deletion(
             self._session,
-            organization_id=org.id,
+            org,
             actor_user_id=user_id,
+            reason=reason,
             action=Action.ORGANIZATION_DELETED_BY_PLATFORM,
-            resource_type=AuditResourceType.ORGANIZATION,
-            resource_id=org.id,
-            details={
-                "reason": reason,
-                "purge_at": _purge_at_from(org.deleted_at).isoformat() if org.deleted_at else None,
-                "member_token_versions_bumped": _audit_user_ids(bumped_user_ids),
-            },
         )
         await self._session.commit()
-
-        for member_id in bumped_user_ids:
-            await invalidate_user_profile(member_id)
-        await self._call_lifecycle.end_for_organization(
-            self._session, org.id, CallEndReason.ORG_DELETED
+        await finish_organization_deletion_after_commit(
+            self._session,
+            org,
+            member_ids,
+            call_lifecycle=self._call_lifecycle,
+            reason=reason,
+            deleted_by_owner=False,
         )
-        await self._publish_member_token_revokes(bumped_user_ids)
-
-        await self._enqueue_org_deleted_emails(org, reason)
 
         return await self.get_organization(user_id=user_id, organization_id=organization_id)
 
@@ -1404,80 +1356,3 @@ class PlatformDirectoryOperations:
             )
             for oid, role, joined_at, is_active, name, slug, is_suspended, deleted_at in rows
         ]
-
-    async def _bump_member_token_versions(self, org_id: UUID) -> list[UUID]:
-        """Bump ``token_version`` on every active member; return ids bumped."""
-        rows = (
-            await self._session.execute(
-                select(OrganizationMember.user_id)
-                .where(OrganizationMember.organization_id == org_id)
-                .where(OrganizationMember.is_active.is_(True))
-            )
-        ).all()
-        user_ids = [row[0] for row in rows]
-        if not user_ids:
-            return []
-        users = (
-            (await self._session.execute(select(User).where(User.id.in_(user_ids)))).scalars().all()
-        )
-        for u in users:
-            u.token_version += 1
-            self._session.add(u)
-        return [u.id for u in users]
-
-    async def _publish_member_token_revokes(self, user_ids: list[UUID]) -> None:
-        if not user_ids:
-            return
-        users = (
-            await self._session.execute(
-                select(User.id, User.token_version).where(User.id.in_(user_ids))
-            )
-        ).all()
-        for uid, version in users:
-            await mark_token_version_revoked(uid, int(version))
-            await _safe_publish_token_revoke(uid, int(version))
-
-    async def _enqueue_org_deleted_emails(self, org: Organization, reason: str) -> None:
-        if org.deleted_at is None:
-            return
-        purge_at = _purge_at_from(org.deleted_at)
-        owners = (
-            await self._session.execute(
-                select(User.id, User.email)
-                .join(
-                    OrganizationMember,
-                    OrganizationMember.user_id == User.id,
-                )
-                .where(OrganizationMember.organization_id == org.id)
-                .where(OrganizationMember.role == OrganizationRole.OWNER)
-                .where(OrganizationMember.is_active.is_(True))
-                .where(User.is_active.is_(True))
-            )
-        ).all()
-        if not owners:
-            return
-        context: dict[str, Any] = {
-            "org_name": org.name,
-            "deleted_at": org.deleted_at.strftime("%B %d, %Y at %H:%M UTC"),
-            "purge_at": (purge_at.strftime("%B %d, %Y at %H:%M UTC") if purge_at else ""),
-            "grace_days": PURGE_GRACE_DAYS,
-            "reason": reason,
-        }
-        for owner_id, email in owners:
-            idempotency_key = f"platform_org_deleted/{org.id}/{owner_id}"
-            try:
-                await enqueue_job(
-                    SEND_EMAIL,
-                    email,
-                    "platform/org_deleted",
-                    dumps_str(context),
-                    organization_id=str(org.id),
-                    idempotency_key=idempotency_key,
-                    user_id=str(owner_id),
-                )
-            except RuntimeError:
-                logger.warning(
-                    "platform org_deleted email enqueue skipped: core queue not initialised",
-                    org_id=str(org.id),
-                )
-                return
