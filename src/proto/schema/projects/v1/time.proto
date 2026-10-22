@@ -133,6 +133,10 @@ message Timer {
   int32 accumulated_seconds = 6;
   optional google.protobuf.Timestamp paused_at = 7;
   TimerPauseReason pause_reason = 8;
+  // Read-only labels so a header pill needs no task fetch.
+  string task_title = 9;
+  int32 task_number = 10;
+  string project_slug = 11;
 }
 
 message StartTimerRequest {

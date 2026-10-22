@@ -59,6 +59,37 @@ export interface UpdateWorklogInput {
   description?: string;
 }
 
+export interface Timer {
+  id: string;
+  taskId: string;
+  projectId: string;
+  description: string;
+  /** Start of the running segment; null while paused. */
+  startedAt: string | null;
+  /** Seconds from finished segments; elapsed is this plus the running segment. */
+  accumulatedSeconds: number;
+  pausedAt: string | null;
+  /** Set by the overrun job; stays on the timer once applied. */
+  pauseReason: "limit" | null;
+  taskTitle: string;
+  taskNumber: number;
+  projectSlug: string;
+}
+
+export interface StartTimerInput {
+  taskId: string;
+  description?: string;
+}
+
+export interface StopTimerInput {
+  /** The day to log on; ignored when discarding. */
+  workDate?: string;
+  description?: string;
+  /** Replaces the rounded elapsed value when the person corrects it. */
+  durationMinutes?: number;
+  discard?: boolean;
+}
+
 export interface AggregateRow {
   key: string;
   label: string;

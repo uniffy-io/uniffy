@@ -59,6 +59,7 @@ const TYPE_META: Record<number, TypeMeta> = {
   [NotificationType.TASK_ASSIGNED]: { kind: "task" },
   [NotificationType.TASK_DUE_SOON]: { kind: "task", tone: "warning" },
   [NotificationType.TASK_OVERDUE]: { kind: "task", tone: "danger" },
+  [NotificationType.TIMER_LIMIT_REACHED]: { kind: "task", tone: "warning" },
   [NotificationType.CHAT_MENTION]: { kind: "chat" },
   [NotificationType.CHAT_DM]: { kind: "chat" },
   [NotificationType.CHAT_CHANNEL_INVITE]: { kind: "chat" },

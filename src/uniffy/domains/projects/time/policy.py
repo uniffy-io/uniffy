@@ -118,6 +118,11 @@ def _to_blob(policy: ResolvedTimePolicy) -> dict[str, Any]:
     }
 
 
+def require_enabled(policy: ResolvedTimePolicy) -> None:
+    if not policy.enabled:
+        raise ValidationError("time_tracking", "time tracking is turned off for this organization")
+
+
 def _require_range(field: str, value: int, low: int, high: int) -> None:
     if not low <= value <= high:
         raise ValidationError(field, f"must be between {low} and {high}")

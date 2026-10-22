@@ -981,8 +981,12 @@ type Timer struct {
 	AccumulatedSeconds int32                  `protobuf:"varint,6,opt,name=accumulated_seconds,json=accumulatedSeconds,proto3" json:"accumulated_seconds,omitempty"`
 	PausedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=paused_at,json=pausedAt,proto3,oneof" json:"paused_at,omitempty"`
 	PauseReason        TimerPauseReason       `protobuf:"varint,8,opt,name=pause_reason,json=pauseReason,proto3,enum=projects.v1.TimerPauseReason" json:"pause_reason,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// Read-only labels so a header pill needs no task fetch.
+	TaskTitle     string `protobuf:"bytes,9,opt,name=task_title,json=taskTitle,proto3" json:"task_title,omitempty"`
+	TaskNumber    int32  `protobuf:"varint,10,opt,name=task_number,json=taskNumber,proto3" json:"task_number,omitempty"`
+	ProjectSlug   string `protobuf:"bytes,11,opt,name=project_slug,json=projectSlug,proto3" json:"project_slug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Timer) Reset() {
@@ -1069,6 +1073,27 @@ func (x *Timer) GetPauseReason() TimerPauseReason {
 		return x.PauseReason
 	}
 	return TimerPauseReason_TIMER_PAUSE_REASON_UNSPECIFIED
+}
+
+func (x *Timer) GetTaskTitle() string {
+	if x != nil {
+		return x.TaskTitle
+	}
+	return ""
+}
+
+func (x *Timer) GetTaskNumber() int32 {
+	if x != nil {
+		return x.TaskNumber
+	}
+	return 0
+}
+
+func (x *Timer) GetProjectSlug() string {
+	if x != nil {
+		return x.ProjectSlug
+	}
+	return ""
 }
 
 type StartTimerRequest struct {
@@ -2274,7 +2299,7 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\n" +
 	"\b_user_id\"L\n" +
 	"\x18ListUserWorklogsResponse\x120\n" +
-	"\bworklogs\x18\x01 \x03(\v2\x14.projects.v1.WorklogR\bworklogs\"\xff\x02\n" +
+	"\bworklogs\x18\x01 \x03(\v2\x14.projects.v1.WorklogR\bworklogs\"\xe2\x03\n" +
 	"\x05Timer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n" +
@@ -2285,7 +2310,13 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\tstartedAt\x88\x01\x01\x12/\n" +
 	"\x13accumulated_seconds\x18\x06 \x01(\x05R\x12accumulatedSeconds\x12<\n" +
 	"\tpaused_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\bpausedAt\x88\x01\x01\x12@\n" +
-	"\fpause_reason\x18\b \x01(\x0e2\x1d.projects.v1.TimerPauseReasonR\vpauseReasonB\r\n" +
+	"\fpause_reason\x18\b \x01(\x0e2\x1d.projects.v1.TimerPauseReasonR\vpauseReason\x12\x1d\n" +
+	"\n" +
+	"task_title\x18\t \x01(\tR\ttaskTitle\x12\x1f\n" +
+	"\vtask_number\x18\n" +
+	" \x01(\x05R\n" +
+	"taskNumber\x12!\n" +
+	"\fproject_slug\x18\v \x01(\tR\vprojectSlugB\r\n" +
 	"\v_started_atB\f\n" +
 	"\n" +
 	"_paused_at\"\x94\x01\n" +

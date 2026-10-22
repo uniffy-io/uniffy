@@ -1,11 +1,16 @@
 import { createSelector, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import type { TimePolicy, Worklog } from "../types/time";
+import type { TimePolicy, Timer, Worklog } from "../types/time";
 import {
   createWorklog,
   deleteWorklog,
+  fetchActiveTimer,
   fetchTaskWorklogs,
   fetchTimePolicy,
+  pauseTimer,
+  resumeTimer,
+  startTimer,
+  stopTimer,
   updateWorklog,
 } from "./timeThunks";
 
@@ -14,6 +19,10 @@ export interface TimeState {
   loadingByTask: Record<string, boolean>;
   policy: TimePolicy | null;
   saving: boolean;
+  /** The person's one timer in this organization; null once the first fetch found none. */
+  activeTimer: Timer | null;
+  timerLoaded: boolean;
+  timerBusy: boolean;
 }
 
 export const initialTimeState: TimeState = {
@@ -21,7 +30,15 @@ export const initialTimeState: TimeState = {
   loadingByTask: {},
   policy: null,
   saving: false,
+  activeTimer: null,
+  timerLoaded: false,
+  timerBusy: false,
 };
+
+function prependEntry(state: TimeState, worklog: Worklog): void {
+  const current = state.worklogsByTask[worklog.taskId];
+  if (current) state.worklogsByTask[worklog.taskId] = sortEntries([worklog, ...current]);
+}
 
 function sortEntries(entries: Worklog[]): Worklog[] {
   return [...entries].sort(
@@ -80,6 +97,53 @@ export const timeSlice = createSlice({
       })
       .addCase(fetchTimePolicy.fulfilled, (state, action) => {
         state.policy = action.payload;
+      })
+      .addCase(fetchActiveTimer.fulfilled, (state, action) => {
+        state.activeTimer = action.payload;
+        state.timerLoaded = true;
+      })
+      .addCase(startTimer.pending, (state) => {
+        state.timerBusy = true;
+      })
+      .addCase(startTimer.fulfilled, (state, action) => {
+        state.timerBusy = false;
+        state.activeTimer = action.payload.timer;
+        state.timerLoaded = true;
+        if (action.payload.stoppedWorklog) prependEntry(state, action.payload.stoppedWorklog);
+      })
+      .addCase(startTimer.rejected, (state) => {
+        state.timerBusy = false;
+      })
+      .addCase(pauseTimer.pending, (state) => {
+        state.timerBusy = true;
+      })
+      .addCase(pauseTimer.fulfilled, (state, action) => {
+        state.timerBusy = false;
+        state.activeTimer = action.payload;
+      })
+      .addCase(pauseTimer.rejected, (state) => {
+        state.timerBusy = false;
+      })
+      .addCase(resumeTimer.pending, (state) => {
+        state.timerBusy = true;
+      })
+      .addCase(resumeTimer.fulfilled, (state, action) => {
+        state.timerBusy = false;
+        state.activeTimer = action.payload;
+      })
+      .addCase(resumeTimer.rejected, (state) => {
+        state.timerBusy = false;
+      })
+      .addCase(stopTimer.pending, (state) => {
+        state.timerBusy = true;
+      })
+      .addCase(stopTimer.fulfilled, (state, action) => {
+        state.timerBusy = false;
+        state.activeTimer = null;
+        if (action.payload.worklog) prependEntry(state, action.payload.worklog);
+      })
+      .addCase(stopTimer.rejected, (state) => {
+        state.timerBusy = false;
       });
   },
 });
@@ -99,3 +163,7 @@ export const selectWorklogsLoading = (taskId: string) => (state: RootState) =>
 export const selectTimePolicy = (state: RootState) => state.time.policy;
 
 export const selectTimeSaving = (state: RootState) => state.time.saving;
+
+export const selectActiveTimer = (state: RootState) => state.time.activeTimer;
+
+export const selectTimerBusy = (state: RootState) => state.time.timerBusy;

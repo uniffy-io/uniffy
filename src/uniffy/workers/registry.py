@@ -222,6 +222,7 @@ from uniffy.domains.platform.support.jobs.jobs import (
 from uniffy.domains.projects.jobs.contracts import (
     CHECK_TASK_DUE_DATES_SCHEDULE,
     FLUSH_PROJECT_SEARCH_ACL_REFRESHES_SCHEDULE,
+    PAUSE_OVERRUN_TIMERS_SCHEDULE,
     PROJECT_JOB_REFS,
     PROJECT_SCHEDULED_JOB_REFS,
     REFRESH_PROJECT_SEARCH_ACL,
@@ -229,6 +230,7 @@ from uniffy.domains.projects.jobs.contracts import (
 from uniffy.domains.projects.jobs.jobs import (
     check_task_due_dates,
     flush_project_search_acl_refreshes,
+    pause_overrun_timers,
     refresh_project_search_acl,
 )
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
@@ -436,6 +438,11 @@ CORE_SCHEDULED_REGISTRATIONS = (
         FLUSH_PROJECT_SEARCH_ACL_REFRESHES_SCHEDULE,
         flush_project_search_acl_refreshes,
         second=(25,),
+    ),
+    _bind_schedule(
+        PAUSE_OVERRUN_TIMERS_SCHEDULE,
+        pause_overrun_timers,
+        minute=(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55),
     ),
     _bind_schedule(
         FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,

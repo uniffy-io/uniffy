@@ -27,6 +27,7 @@ from uniffy.domains.projects.time.policy import (
     MINUTES_PER_DAY,
     ResolvedTimePolicy,
     load_time_policy,
+    require_enabled,
 )
 from uniffy.domains.projects.time.timesheets import TimesheetOperations
 
@@ -61,11 +62,6 @@ class AggregateRow:
 class WorklogRow:
     worklog: Worklog
     project_id: UUID
-
-
-def _require_enabled(policy: ResolvedTimePolicy) -> None:
-    if not policy.enabled:
-        raise ValidationError("time_tracking", "time tracking is turned off for this organization")
 
 
 def _require_duration(duration_minutes: int) -> None:
@@ -220,8 +216,40 @@ class WorklogOperations:
         started_at: datetime | None = None,
         source: WorklogSource = WorklogSource.MANUAL,
     ) -> tuple[WorklogRow, int]:
-        policy = await load_time_policy(self.session, organization_id)
-        _require_enabled(policy)
+        row, rollup = await self.stage_create(
+            actor_id,
+            organization_id,
+            task_id,
+            work_date=work_date,
+            duration_minutes=duration_minutes,
+            user_id=user_id,
+            description=description,
+            started_at=started_at,
+            source=source,
+        )
+        task_id = row.worklog.task_id
+        await self.session.commit()
+        await publish_content_changed(ContentType.TASK, task_id, organization_id)
+        return row, rollup
+
+    async def stage_create(
+        self,
+        actor_id: UUID,
+        organization_id: UUID,
+        task_id: UUID,
+        *,
+        work_date: date,
+        duration_minutes: int,
+        user_id: UUID | None = None,
+        description: str = "",
+        started_at: datetime | None = None,
+        source: WorklogSource = WorklogSource.MANUAL,
+        policy: ResolvedTimePolicy | None = None,
+    ) -> tuple[WorklogRow, int]:
+        """Insert, rollup, activity and audit without the commit; the caller owns the transaction."""
+        if policy is None:
+            policy = await load_time_policy(self.session, organization_id)
+        require_enabled(policy)
         task = await self.access.require_task_view(actor_id, organization_id, task_id)
         subject_id = user_id or actor_id
         on_behalf = subject_id != actor_id
@@ -266,10 +294,7 @@ class WorklogOperations:
                 action=Action.WORKLOG_OVERRIDE if override else Action.WORKLOG_CREATED,
                 worklog=worklog,
             )
-        task_id, project_id = task.id, task.project_id
-        await self.session.commit()
-        await publish_content_changed(ContentType.TASK, task_id, organization_id)
-        return WorklogRow(worklog=worklog, project_id=project_id), rollup
+        return WorklogRow(worklog=worklog, project_id=task.project_id), rollup
 
     async def update(
         self,
@@ -282,7 +307,7 @@ class WorklogOperations:
         description: str | None = None,
     ) -> tuple[WorklogRow, int]:
         policy = await load_time_policy(self.session, organization_id)
-        _require_enabled(policy)
+        require_enabled(policy)
         row = await self._get(organization_id, worklog_id)
         worklog = row.worklog
         on_behalf = await self._require_own_or_reviewer(actor_id, organization_id, worklog)

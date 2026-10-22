@@ -54,6 +54,7 @@ import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
 import { WorklogSection } from "@/features/projects/components/time/WorklogSection";
+import { TimerButton } from "@/features/projects/components/time/TimerButton";
 import { ParentPicker } from "./ParentPicker";
 
 interface TaskDetailPanelProps {
@@ -188,6 +189,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <TimerButton task={task} />
           <WatchButton taskId={task.id} />
           {!isMobileOrTablet && (
             <button

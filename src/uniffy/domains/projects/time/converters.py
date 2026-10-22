@@ -17,6 +17,12 @@ from uniffy_proto.projects.v1.time_pb import (
     TimePolicy as ProtoTimePolicy,
 )
 from uniffy_proto.projects.v1.time_pb import (
+    Timer as ProtoTimer,
+)
+from uniffy_proto.projects.v1.time_pb import (
+    TimerPauseReason as ProtoTimerPauseReason,
+)
+from uniffy_proto.projects.v1.time_pb import (
     Worklog as ProtoWorklog,
 )
 from uniffy_proto.projects.v1.time_pb import (
@@ -25,8 +31,10 @@ from uniffy_proto.projects.v1.time_pb import (
 
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.projects.timer import TimerPauseReason
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 from uniffy.domains.projects.time.policy import PeriodType, ResolvedTimePolicy
+from uniffy.domains.projects.time.timers import TimerRow
 from uniffy.domains.projects.time.worklogs import AggregateGroupBy, AggregateRow
 
 _SOURCE_TO_PROTO = {
@@ -48,6 +56,30 @@ _GROUP_BY_FROM_PROTO = {
     ProtoAggregateGroupBy.USER: AggregateGroupBy.USER,
     ProtoAggregateGroupBy.PROJECT: AggregateGroupBy.PROJECT,
 }
+
+
+def timer_to_proto(row: TimerRow) -> ProtoTimer:
+    timer = row.timer
+    proto = ProtoTimer(
+        id=str(timer.id),
+        task_id=str(timer.task_id),
+        project_id=str(row.project_id),
+        description=timer.description,
+        accumulated_seconds=timer.accumulated_seconds,
+        pause_reason=(
+            ProtoTimerPauseReason.LIMIT
+            if timer.pause_reason == TimerPauseReason.LIMIT
+            else ProtoTimerPauseReason.UNSPECIFIED
+        ),
+        task_title=row.task_title,
+        task_number=row.task_number,
+        project_slug=row.project_slug,
+    )
+    if timer.started_at is not None:
+        proto.started_at = datetime_to_timestamp(timer.started_at)
+    if timer.paused_at is not None:
+        proto.paused_at = datetime_to_timestamp(timer.paused_at)
+    return proto
 
 
 def worklog_to_proto(worklog: Worklog, project_id: UUID) -> ProtoWorklog:

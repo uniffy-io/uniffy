@@ -365,6 +365,7 @@ const FILTER_TYPE_MAP: Record<string, number[]> = {
     NotificationType.TASK_ASSIGNED,
     NotificationType.TASK_DUE_SOON,
     NotificationType.TASK_OVERDUE,
+    NotificationType.TIMER_LIMIT_REACHED,
   ],
   chat: [
     NotificationType.CHAT_MENTION,

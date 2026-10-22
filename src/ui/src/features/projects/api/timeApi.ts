@@ -4,14 +4,19 @@ import { unaryTransport } from "@/config/api";
 import { ProjectsService } from "@uniffy/proto/projects/v1/projects_pb";
 import {
   TimePeriodType as ProtoTimePeriodType,
+  TimerPauseReason as ProtoTimerPauseReason,
   WorklogSource as ProtoWorklogSource,
   type TimePolicy as ProtoTimePolicy,
+  type Timer as ProtoTimer,
   type Worklog as ProtoWorklog,
 } from "@uniffy/proto/projects/v1/time_pb";
 import type {
   CreateWorklogInput,
+  StartTimerInput,
+  StopTimerInput,
   TimePeriodType,
   TimePolicy,
+  Timer,
   UpdateWorklogInput,
   Worklog,
   WorklogSource,
@@ -51,6 +56,22 @@ export function protoWorklogToFrontend(proto: ProtoWorklog): Worklog {
     source: SOURCE_FROM_PROTO[proto.source] ?? "manual",
     createdAt: isoOrEmpty(proto.createdAt),
     updatedAt: isoOrEmpty(proto.updatedAt),
+  };
+}
+
+export function protoTimerToFrontend(proto: ProtoTimer): Timer {
+  return {
+    id: proto.id,
+    taskId: proto.taskId,
+    projectId: proto.projectId,
+    description: proto.description,
+    startedAt: proto.startedAt ? timestampDate(proto.startedAt).toISOString() : null,
+    accumulatedSeconds: proto.accumulatedSeconds,
+    pausedAt: proto.pausedAt ? timestampDate(proto.pausedAt).toISOString() : null,
+    pauseReason: proto.pauseReason === ProtoTimerPauseReason.LIMIT ? "limit" : null,
+    taskTitle: proto.taskTitle,
+    taskNumber: proto.taskNumber,
+    projectSlug: proto.projectSlug,
   };
 }
 
@@ -143,6 +164,51 @@ export const timeApi = {
       toDate,
     });
     return response.worklogs.map(protoWorklogToFrontend);
+  },
+
+  getActiveTimer: async (organizationId: string): Promise<Timer | null> => {
+    const response = await timeClient.getActiveTimer({ organizationId });
+    return response.timer ? protoTimerToFrontend(response.timer) : null;
+  },
+
+  /** workDate is the day a replaced running timer logs on. */
+  startTimer: async (input: StartTimerInput, workDate: string, organizationId: string) => {
+    const response = await timeClient.startTimer({
+      organizationId,
+      taskId: input.taskId,
+      description: input.description ?? "",
+      workDate,
+    });
+    return {
+      timer: protoTimerToFrontend(response.timer!),
+      stoppedWorklog: response.stoppedWorklog
+        ? protoWorklogToFrontend(response.stoppedWorklog)
+        : null,
+    };
+  },
+
+  pauseTimer: async (organizationId: string): Promise<Timer> => {
+    const response = await timeClient.pauseTimer({ organizationId });
+    return protoTimerToFrontend(response.timer!);
+  },
+
+  resumeTimer: async (organizationId: string): Promise<Timer> => {
+    const response = await timeClient.resumeTimer({ organizationId });
+    return protoTimerToFrontend(response.timer!);
+  },
+
+  stopTimer: async (input: StopTimerInput, organizationId: string) => {
+    const response = await timeClient.stopTimer({
+      organizationId,
+      workDate: input.workDate ?? "",
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
+      discard: input.discard ?? false,
+    });
+    return {
+      worklog: response.worklog ? protoWorklogToFrontend(response.worklog) : null,
+      taskTimeSpentMinutes: response.taskTimeSpentMinutes,
+    };
   },
 
   getTimePolicy: async (organizationId: string): Promise<TimePolicy> => {

@@ -18,6 +18,7 @@ class NotificationPayloadType(StrEnum):
     CONTENT_ACCESS_CHANGED = "content_access_changed"
     MENTION_STATE_CHANGED = "mention_state_changed"
     ACCESS_REQUEST_CHANGED = "access_request_changed"
+    TIMER_CHANGED = "timer_changed"
 
 
 class ContentAccessAction(StrEnum):

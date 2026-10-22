@@ -15,6 +15,7 @@ import {
   ListChecks,
   ClockCountdown,
   Warning,
+  Timer,
   ChatCircle,
   ChatCenteredText,
   UserPlus,
@@ -126,6 +127,12 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
     label: "Overdue",
     color: "text-red-400",
     bgColor: "bg-red-500",
+  },
+  [NotificationType.TIMER_LIMIT_REACHED]: {
+    icon: Timer,
+    label: "Timer paused",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500",
   },
   [NotificationType.CHAT_MENTION]: {
     icon: ChatCircle,

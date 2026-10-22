@@ -41,6 +41,7 @@ import { TaskPickerSheet } from "@features/projects/components/TaskPickerSheet";
 import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
 import { LogTimeSheet } from "@features/projects/components/LogTimeSheet";
 import { useCreateWorklog } from "@features/projects/useTimeMutations";
+import { TimerHeaderControl } from "@features/projects/components/TimerHeaderControl";
 import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
 import { RecurrenceSheet } from "@features/projects/components/RecurrenceSheet";
 import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
@@ -258,6 +259,7 @@ export function TaskDetailScreen() {
           rightActions={
             <>
               {/* No share control: a task's access is its project's, shared from the project. */}
+              <TimerHeaderControl taskId={task.id} projectId={task.projectId} />
               <CommentButton contentType={ContentType.TASK} contentId={task.id} color={T.accent} />
               <TouchableOpacity
                 onPress={() => toggleWatcher.mutate(task.id)}

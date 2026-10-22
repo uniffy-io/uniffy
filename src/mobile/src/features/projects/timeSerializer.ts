@@ -1,5 +1,10 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
-import { WorklogSource, type Worklog } from "@uniffy/proto/projects/v1/time_pb";
+import {
+  TimerPauseReason,
+  WorklogSource,
+  type Timer,
+  type Worklog,
+} from "@uniffy/proto/projects/v1/time_pb";
 
 export type SerializedWorklogSource = "manual" | "timer" | "import" | "agent";
 
@@ -38,6 +43,53 @@ export function worklogToPlain(worklog: Worklog): SerializedWorklog {
     source: SOURCE[worklog.source] ?? "manual",
     createdAt: worklog.createdAt ? timestampDate(worklog.createdAt).toISOString() : "",
   };
+}
+
+export interface SerializedTimer {
+  id: string;
+  taskId: string;
+  projectId: string;
+  description: string;
+  /** Start of the running segment; null while paused. */
+  startedAt: string | null;
+  accumulatedSeconds: number;
+  pausedAt: string | null;
+  pauseReason: "limit" | null;
+  taskTitle: string;
+  taskNumber: number;
+  projectSlug: string;
+}
+
+export function timerToPlain(timer: Timer): SerializedTimer {
+  return {
+    id: timer.id,
+    taskId: timer.taskId,
+    projectId: timer.projectId,
+    description: timer.description,
+    startedAt: timer.startedAt ? timestampDate(timer.startedAt).toISOString() : null,
+    accumulatedSeconds: timer.accumulatedSeconds,
+    pausedAt: timer.pausedAt ? timestampDate(timer.pausedAt).toISOString() : null,
+    pauseReason: timer.pauseReason === TimerPauseReason.LIMIT ? "limit" : null,
+    taskTitle: timer.taskTitle,
+    taskNumber: timer.taskNumber,
+    projectSlug: timer.projectSlug,
+  };
+}
+
+/** Finished segments plus the running one; a clock behind the server never counts backwards. */
+export function timerElapsedSeconds(timer: SerializedTimer, nowMs: number): number {
+  const running = timer.startedAt ? Math.floor((nowMs - Date.parse(timer.startedAt)) / 1000) : 0;
+  return timer.accumulatedSeconds + Math.max(0, running);
+}
+
+/** h:mm:ss once an hour is reached, mm:ss before. */
+export function formatClock(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
 
 /** The device's calendar day as YYYY-MM-DD; the server never derives a day from an instant. */

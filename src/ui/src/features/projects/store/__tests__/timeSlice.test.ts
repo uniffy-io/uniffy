@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { Worklog } from "@/features/projects/types/time";
+import type { Timer, Worklog } from "@/features/projects/types/time";
 import { initialTimeState, timeReducer } from "@/features/projects/store/timeSlice";
 import {
   createWorklog,
   deleteWorklog,
+  fetchActiveTimer,
   fetchTaskWorklogs,
+  pauseTimer,
+  startTimer,
+  stopTimer,
   updateWorklog,
 } from "@/features/projects/store/timeThunks";
 
@@ -106,5 +110,95 @@ describe("timeSlice", () => {
       ),
     );
     expect(rejected.saving).toBe(false);
+  });
+});
+
+function timer(overrides: Partial<Timer> = {}): Timer {
+  return {
+    id: "timer-1",
+    taskId: "task-1",
+    projectId: "project-1",
+    description: "",
+    startedAt: "2026-10-22T10:00:00.000Z",
+    accumulatedSeconds: 0,
+    pausedAt: null,
+    pauseReason: null,
+    taskTitle: "Home feed",
+    taskNumber: 169,
+    projectSlug: "mob",
+    ...overrides,
+  };
+}
+
+describe("timeSlice timers", () => {
+  it("records the fetched timer and that the first fetch happened", () => {
+    const state = timeReducer(initialTimeState, fetchActiveTimer.fulfilled(null, "req"));
+    expect(state.activeTimer).toBeNull();
+    expect(state.timerLoaded).toBe(true);
+  });
+
+  it("starting replaces the timer and files the stopped entry under its task when loaded", () => {
+    let state = timeReducer(
+      initialTimeState,
+      fetchTaskWorklogs.fulfilled({ taskId: "task-0", worklogs: [] }, "req", "task-0"),
+    );
+    state = timeReducer(state, startTimer.pending("req", { taskId: "task-1" }));
+    expect(state.timerBusy).toBe(true);
+    state = timeReducer(
+      state,
+      startTimer.fulfilled(
+        {
+          timer: timer(),
+          stoppedWorklog: entry("stopped", { taskId: "task-0", source: "timer" }),
+        },
+        "req",
+        { taskId: "task-1" },
+      ),
+    );
+    expect(state.timerBusy).toBe(false);
+    expect(state.activeTimer?.taskId).toBe("task-1");
+    expect(state.worklogsByTask["task-0"].map((w) => w.id)).toEqual(["stopped"]);
+    expect(state.worklogsByTask["task-1"]).toBeUndefined();
+  });
+
+  it("pause swaps in the paused timer and stop clears it and files the entry", () => {
+    let state = timeReducer(initialTimeState, fetchActiveTimer.fulfilled(timer(), "req"));
+    state = timeReducer(
+      state,
+      pauseTimer.fulfilled(timer({ startedAt: null, accumulatedSeconds: 90 }), "req"),
+    );
+    expect(state.activeTimer?.startedAt).toBeNull();
+    expect(state.activeTimer?.accumulatedSeconds).toBe(90);
+
+    state = timeReducer(
+      state,
+      fetchTaskWorklogs.fulfilled({ taskId: "task-1", worklogs: [entry("a")] }, "req", "task-1"),
+    );
+    state = timeReducer(
+      state,
+      stopTimer.fulfilled(
+        {
+          taskId: "task-1",
+          worklog: entry("from-timer", { source: "timer", workDate: "2026-10-23" }),
+          taskTimeSpentMinutes: 120,
+        },
+        "req",
+        { workDate: "2026-10-23", durationMinutes: 90 },
+      ),
+    );
+    expect(state.activeTimer).toBeNull();
+    expect(state.worklogsByTask["task-1"].map((w) => w.id)).toEqual(["from-timer", "a"]);
+  });
+
+  it("a discarded stop clears the timer without touching the entries", () => {
+    let state = timeReducer(initialTimeState, fetchActiveTimer.fulfilled(timer(), "req"));
+    state = timeReducer(
+      state,
+      stopTimer.fulfilled({ taskId: "task-1", worklog: null, taskTimeSpentMinutes: 0 }, "req", {
+        discard: true,
+      }),
+    );
+    expect(state.activeTimer).toBeNull();
+    expect(state.worklogsByTask).toEqual({});
   });
 });

@@ -24,6 +24,7 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.search.workspace import WORKSPACE_SEARCH_CTX_KEY, WorkspaceSearch
 from uniffy.core.types import ContentRole, ContentType, SubjectType
 from uniffy.domains.projects.jobs.contracts import REFRESH_PROJECT_SEARCH_ACL
+from uniffy.domains.projects.time.timers import pause_timers_past_limit
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
 from uniffy.vendor.arq import Retry
@@ -319,4 +320,14 @@ async def check_task_due_dates(ctx: dict[str, Any]) -> dict[str, Any]:
             return {"status": "success", "count": count}
     except Exception:
         logger.exception("Error checking task due dates")
+        return {"status": "error"}
+
+
+async def pause_overrun_timers(ctx: dict[str, Any]) -> dict[str, Any]:
+    try:
+        async with open_session() as session:
+            count = await pause_timers_past_limit(session)
+            return {"status": "success", "count": count}
+    except Exception:
+        logger.exception("Error pausing overrun timers")
         return {"status": "error"}

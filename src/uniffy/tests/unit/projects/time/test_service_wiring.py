@@ -16,6 +16,11 @@ TIME_RPCS = (
     "aggregate_worklogs",
     "get_time_policy",
     "update_time_policy",
+    "start_timer",
+    "pause_timer",
+    "resume_timer",
+    "stop_timer",
+    "get_active_timer",
 )
 
 

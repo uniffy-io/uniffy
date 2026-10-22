@@ -63,6 +63,7 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
     "canvas.undo": "Ctrl+Z",
     "canvas.redo": "Ctrl+Shift+Z",
     "recording.toggleQuickClip": "Ctrl+Alt+S",
+    "time.toggleTimer": "Ctrl+Shift+L",
     # Notes editor entries are tooltip-only; Milkdown owns the actual keymap.
     "editor.undo": "Ctrl+Z",
     "editor.redo": "Ctrl+Shift+Z",
@@ -181,6 +182,7 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
         "browser": True,
         "email": False,
     },
+    NotificationType.TIMER_LIMIT_REACHED: {"in_app": True, "browser": True, "email": False},
 }
 
 # Types whose own domain composes and sends the message, so the generic

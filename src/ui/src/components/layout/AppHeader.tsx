@@ -8,6 +8,7 @@ import { openSpotlightSearch } from "@/features/search/hooks/useSpotlightTrigger
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { CalendarQuickView } from "@/features/calendar/components/quick-view/CalendarQuickView";
 import { RecordingNavTrigger } from "@/features/recording/components/RecordingNavTrigger";
+import { TimerPill } from "@/features/projects/components/time/TimerPill";
 import { CallHeaderPill } from "@/features/calls/components/CallHeaderPill";
 import { cn } from "@/shared/utils/cn";
 import { UrnType } from "@/shared/utils/urn";
@@ -348,6 +349,7 @@ export function AppHeader() {
             <CompactSearchButton />
             <CallHeaderPill />
             <RecordingNavTrigger />
+            <TimerPill />
             <CalendarQuickView />
             <NotificationBell />
             <UserMenu />

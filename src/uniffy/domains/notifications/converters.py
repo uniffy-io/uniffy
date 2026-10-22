@@ -41,6 +41,7 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.SUPPORT_SESSION_STARTED: (ProtoNotificationType.SUPPORT_SESSION_STARTED),
     NotificationType.SUPPORT_SESSION_REVOKED: (ProtoNotificationType.SUPPORT_SESSION_REVOKED),
     NotificationType.SUPPORT_SESSION_EXPIRED: (ProtoNotificationType.SUPPORT_SESSION_EXPIRED),
+    NotificationType.TIMER_LIMIT_REACHED: ProtoNotificationType.TIMER_LIMIT_REACHED,
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {

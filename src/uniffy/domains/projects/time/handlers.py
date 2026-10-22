@@ -50,6 +50,7 @@ from uniffy.domains.projects.time.converters import (
     group_by_from_proto,
     policy_from_proto,
     policy_to_proto,
+    timer_to_proto,
     worklog_to_proto,
 )
 from uniffy.domains.projects.time.policy import (
@@ -57,6 +58,7 @@ from uniffy.domains.projects.time.policy import (
     load_time_policy,
     save_time_policy,
 )
+from uniffy.domains.projects.time.timers import TimerOperations
 from uniffy.domains.projects.time.worklogs import WorklogOperations
 from uniffy.infrastructure.database import open_session
 
@@ -280,22 +282,98 @@ class TimeHandlers:
     async def start_timer(
         self, request: StartTimerRequest, ctx: RequestContext
     ) -> StartTimerResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Timers are not available yet")
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        task_id = parse_uuid(request.task_id, "task_id")
+        work_date = parse_date(request.work_date, "work_date")
+        try:
+            async with open_session() as session:
+                row, replaced = await TimerOperations(session).start(
+                    user_id,
+                    organization_id,
+                    task_id,
+                    work_date=work_date,
+                    description=request.description,
+                )
+                response = StartTimerResponse(timer=timer_to_proto(row))
+                if replaced is not None and replaced.worklog is not None:
+                    response.stopped_worklog = worklog_to_proto(
+                        replaced.worklog.worklog, replaced.worklog.project_id
+                    )
+                return response
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("start_timer", exc) from exc
 
     async def pause_timer(
         self, request: PauseTimerRequest, ctx: RequestContext
     ) -> PauseTimerResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Timers are not available yet")
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        try:
+            async with open_session() as session:
+                row = await TimerOperations(session).pause(user_id, organization_id)
+                return PauseTimerResponse(timer=timer_to_proto(row))
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("pause_timer", exc) from exc
 
     async def resume_timer(
         self, request: ResumeTimerRequest, ctx: RequestContext
     ) -> ResumeTimerResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Timers are not available yet")
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        try:
+            async with open_session() as session:
+                row = await TimerOperations(session).resume(user_id, organization_id)
+                return ResumeTimerResponse(timer=timer_to_proto(row))
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("resume_timer", exc) from exc
 
     async def stop_timer(self, request: StopTimerRequest, ctx: RequestContext) -> StopTimerResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Timers are not available yet")
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        work_date = None if request.discard else parse_date(request.work_date, "work_date")
+        try:
+            async with open_session() as session:
+                result = await TimerOperations(session).stop(
+                    user_id,
+                    organization_id,
+                    work_date=work_date,
+                    description=request.description if request.has_field("description") else None,
+                    duration_minutes=(
+                        request.duration_minutes if request.has_field("duration_minutes") else None
+                    ),
+                    discard=request.discard,
+                )
+                response = StopTimerResponse(task_time_spent_minutes=result.task_time_spent_minutes)
+                if result.worklog is not None:
+                    response.worklog = worklog_to_proto(
+                        result.worklog.worklog, result.worklog.project_id
+                    )
+                return response
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("stop_timer", exc) from exc
 
     async def get_active_timer(
         self, request: GetActiveTimerRequest, ctx: RequestContext
     ) -> GetActiveTimerResponse:
-        raise ConnectError(Code.UNIMPLEMENTED, "Timers are not available yet")
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        try:
+            async with open_session() as session:
+                row = await TimerOperations(session).get_active(user_id, organization_id)
+                response = GetActiveTimerResponse()
+                if row is not None:
+                    response.timer = timer_to_proto(row)
+                return response
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("get_active_timer", exc) from exc

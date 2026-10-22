@@ -159,6 +159,10 @@ function applyNotificationEvent(
       if (pc) applyPresenceChange(queryClient, orgId, pc.userId, pc.status);
       break;
     }
+    case StreamNotificationsResponse_EventType.TIMER_CHANGED: {
+      void queryClient.invalidateQueries({ queryKey: ["timer", orgId] });
+      break;
+    }
     case StreamNotificationsResponse_EventType.NEW_NOTIFICATION: {
       void queryClient.invalidateQueries({ queryKey: ["notifications", "feed", orgId] });
       void queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count", orgId] });

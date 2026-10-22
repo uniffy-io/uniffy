@@ -57,3 +57,36 @@ describe("parseTimeInput", () => {
     expect(parseTimeInput("1.5h")).toBe(90);
   });
 });
+
+describe("timerToPlain", () => {
+  it("keeps the running segment start and maps the limit reason", async () => {
+    const { create } = await import("@bufbuild/protobuf");
+    const { timestampFromDate } = await import("@bufbuild/protobuf/wkt");
+    const { TimerPauseReason, TimerSchema } = await import("@uniffy/proto/projects/v1/time_pb");
+    const { formatClock, timerElapsedSeconds, timerToPlain } =
+      await import("@features/projects/timeSerializer");
+    const started = new Date("2026-10-22T10:00:00.000Z");
+    const plain = timerToPlain(
+      create(TimerSchema, {
+        id: "t",
+        taskId: "task",
+        projectId: "project",
+        description: "Pairing",
+        startedAt: timestampFromDate(started),
+        accumulatedSeconds: 30,
+        pauseReason: TimerPauseReason.LIMIT,
+        taskTitle: "Home feed",
+        taskNumber: 169,
+        projectSlug: "mob",
+      }),
+    );
+    expect(plain.startedAt).toBe(started.toISOString());
+    expect(plain.pausedAt).toBeNull();
+    expect(plain.pauseReason).toBe("limit");
+    expect(plain.taskNumber).toBe(169);
+    expect(timerElapsedSeconds(plain, started.getTime() + 90_000)).toBe(120);
+    expect(timerElapsedSeconds({ ...plain, startedAt: null }, Date.now())).toBe(30);
+    expect(formatClock(3661)).toBe("1:01:01");
+    expect(formatClock(65)).toBe("01:05");
+  });
+});

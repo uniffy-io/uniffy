@@ -1,9 +1,18 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch, RootState } from "@/app/store";
+import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import { timeApi } from "../api/timeApi";
-import type { CreateWorklogInput, TimePolicy, UpdateWorklogInput, Worklog } from "../types/time";
+import type {
+  CreateWorklogInput,
+  StartTimerInput,
+  StopTimerInput,
+  TimePolicy,
+  Timer,
+  UpdateWorklogInput,
+  Worklog,
+} from "../types/time";
 import { applyTaskTimeSpent } from "./projectsSlice";
-import { fetchActivities } from "./projectsThunks";
+import { fetchActivities, fetchTask } from "./projectsThunks";
 
 type ThunkConfig = { dispatch: AppDispatch; state: RootState; rejectValue: string };
 
@@ -96,3 +105,80 @@ export const fetchTimePolicy = createAsyncThunk<TimePolicy, void, ThunkConfig>(
     }
   },
 );
+
+export const fetchActiveTimer = createAsyncThunk<Timer | null, void, ThunkConfig>(
+  "time/fetchActiveTimer",
+  async (_, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.getActiveTimer(orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to load the timer"));
+    }
+  },
+);
+
+/** A running timer on another task is stopped first; its entry lands on today's day. */
+export const startTimer = createAsyncThunk<
+  { timer: Timer; stoppedWorklog: Worklog | null },
+  StartTimerInput,
+  ThunkConfig
+>("time/startTimer", async (input, { getState, dispatch, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const result = await timeApi.startTimer(input, effectiveDayKey(new Date()), orgId);
+    if (result.stoppedWorklog) {
+      dispatch(fetchTask(result.stoppedWorklog.taskId));
+      dispatch(fetchActivities(result.stoppedWorklog.taskId));
+    }
+    return result;
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to start the timer"));
+  }
+});
+
+export const pauseTimer = createAsyncThunk<Timer, void, ThunkConfig>(
+  "time/pauseTimer",
+  async (_, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.pauseTimer(orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to pause the timer"));
+    }
+  },
+);
+
+export const resumeTimer = createAsyncThunk<Timer, void, ThunkConfig>(
+  "time/resumeTimer",
+  async (_, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.resumeTimer(orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to resume the timer"));
+    }
+  },
+);
+
+export const stopTimer = createAsyncThunk<
+  { taskId: string | null; worklog: Worklog | null; taskTimeSpentMinutes: number },
+  StopTimerInput,
+  ThunkConfig
+>("time/stopTimer", async (input, { getState, dispatch, rejectWithValue }) => {
+  const state = getState();
+  const orgId = organizationIdOf(state);
+  if (!orgId) return rejectWithValue("No organization selected");
+  const taskId = state.time.activeTimer?.taskId ?? null;
+  try {
+    const result = await timeApi.stopTimer(input, orgId);
+    if (result.worklog) applyRollup(dispatch, result.worklog.taskId, result.taskTimeSpentMinutes);
+    return { taskId, ...result };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to stop the timer"));
+  }
+});

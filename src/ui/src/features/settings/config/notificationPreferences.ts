@@ -82,6 +82,11 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         label: "Task overdue",
         defaults: { in_app: true, browser: true, email: true },
       },
+      {
+        type: "TIMER_LIMIT_REACHED",
+        label: "Timer paused at the limit",
+        defaults: { in_app: true, browser: true, email: false },
+      },
     ],
   },
   {

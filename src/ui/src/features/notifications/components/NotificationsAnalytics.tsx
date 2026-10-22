@@ -37,6 +37,7 @@ const TYPE_LABELS: Record<number, string> = {
   [NotificationType.TASK_ASSIGNED]: "Assigned",
   [NotificationType.TASK_DUE_SOON]: "Due soon",
   [NotificationType.TASK_OVERDUE]: "Overdue",
+  [NotificationType.TIMER_LIMIT_REACHED]: "Timer paused",
   [NotificationType.CHAT_MENTION]: "Chat mention",
   [NotificationType.CHAT_DM]: "DM",
   [NotificationType.CHAT_CHANNEL_INVITE]: "Channel invite",

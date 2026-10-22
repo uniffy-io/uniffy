@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { fetchAgents } from "@/features/agents/store/agentsThunks";
 import { fetchFile, initializeFilesData, removeFile } from "@/features/files/store/filesSlice";
 import { fetchFilesTree } from "@/features/files/store/filesTreeSlice";
+import { fetchActiveTimer } from "@/features/projects/store/timeThunks";
 import { initializeNotesData } from "@/features/notes/store/notesThunks";
 import { removeNote } from "@/features/notes/store/notesSlice";
 import {
@@ -72,6 +73,7 @@ export function useNotificationStream() {
     let pendingTreeRefresh: ReturnType<typeof setTimeout> | null = null;
     let pendingFilesRefresh: ReturnType<typeof setTimeout> | null = null;
     let pendingAgentsRefresh: ReturnType<typeof setTimeout> | null = null;
+    let pendingTimerRefresh: ReturnType<typeof setTimeout> | null = null;
 
     function scheduleApprovedMentionRefresh(urn: string, attempt = 0): void {
       const existing = pendingAccessRefreshes.get(urn);
@@ -114,6 +116,8 @@ export function useNotificationStream() {
             if (!received) {
               received = true;
               emitContentChanged(null);
+              // A timer change missed while disconnected is reconciled on every (re)connect.
+              dispatch(fetchActiveTimer());
             }
             if (
               event.eventType === StreamNotificationsResponse_EventType.CONTENT_CHANGED &&
@@ -206,6 +210,15 @@ export function useNotificationStream() {
                   playNotificationSound();
                 }
               }
+            }
+
+            // TIMER_CHANGED: the person's other sessions refetch the one active timer; bursts collapse.
+            if (event.eventType === StreamNotificationsResponse_EventType.TIMER_CHANGED) {
+              if (pendingTimerRefresh) clearTimeout(pendingTimerRefresh);
+              pendingTimerRefresh = setTimeout(() => {
+                pendingTimerRefresh = null;
+                dispatch(fetchActiveTimer());
+              }, 300);
             }
 
             // FILE_UPDATED: debounce per file so a burst of part-ack events collapses to one refetch.
@@ -425,6 +438,7 @@ export function useNotificationStream() {
       if (pendingTreeRefresh) clearTimeout(pendingTreeRefresh);
       if (pendingFilesRefresh) clearTimeout(pendingFilesRefresh);
       if (pendingAgentsRefresh) clearTimeout(pendingAgentsRefresh);
+      if (pendingTimerRefresh) clearTimeout(pendingTimerRefresh);
     };
   }, [dispatch, organizationId, userId, isAuthenticated]);
 }
