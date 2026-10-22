@@ -66,6 +66,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const currentSegment = segments[0] as string;
     const inAuth = currentSegment === "auth";
     const inSelectOrg = currentSegment === "select-org";
+    // Creating an organization is the other way out of having none.
+    const inCreateOrg = currentSegment === "create-organization";
     const organizationChanged =
       routedOrganizationId.current !== undefined && routedOrganizationId.current !== organizationId;
     routedOrganizationId.current = organizationId;
@@ -82,7 +84,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         resetTo("/auth");
       }
     } else if (!organizationId) {
-      if (!inSelectOrg) {
+      if (!inSelectOrg && !inCreateOrg) {
         resetTo("/select-org");
       }
     } else {
@@ -288,6 +290,7 @@ function RootLayoutNav() {
             <Stack.Screen name="you/notifications" />
             <Stack.Screen name="you/security" />
             <Stack.Screen name="you/organization" />
+            <Stack.Screen name="create-organization" />
           </Stack>
         </View>
         {/* The bar is a flow child on purpose: iOS 26 Fabric keeps absolutely

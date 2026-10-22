@@ -11,8 +11,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Buildings, SignOut } from "phosphor-react-native";
 import { useAuth } from "@core/providers/AuthContext";
+import { CreateOrganizationRow } from "@features/auth/components/CreateOrganizationRow";
+import { NoOrganizations } from "@features/auth/components/NoOrganizations";
 import { OrganizationList } from "@features/auth/components/OrganizationList";
-import { useMyOrganizations, useSelectOrganization } from "@features/auth/useMyOrganizations";
+import { PendingInvitations } from "@features/auth/components/PendingInvitations";
+import { useInvitationActions, useMyInvitations } from "@features/auth/useMyInvitations";
+import {
+  useCanCreateOrganization,
+  useMyOrganizations,
+  useSelectOrganization,
+} from "@features/auth/useMyOrganizations";
 import { useSignOut } from "@features/auth/useSignOut";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
@@ -23,9 +31,15 @@ export function SelectOrgScreen() {
   const { user, organizationId } = useAuth();
   const { signOut, signingOut } = useSignOut();
   const organizationsQuery = useMyOrganizations();
-  const { select, selectingOrganizationId, error } = useSelectOrganization();
+  const invitationsQuery = useMyInvitations();
+  const canCreate = useCanCreateOrganization();
+  const { select, selectingOrganizationId, error: selectError } = useSelectOrganization();
+  const invitationActions = useInvitationActions();
   const organizations = organizationsQuery.data ?? [];
+  const invitations = invitationsQuery.data ?? [];
   const loadFailed = organizationsQuery.isError && !organizationsQuery.data;
+  // Each hook clears only its own error, so both show until their next attempt.
+  const error = [selectError, invitationActions.error].filter(Boolean).join("\n") || null;
 
   const [enterAnim] = useState(() => new Animated.Value(0));
 
@@ -75,7 +89,10 @@ export function SelectOrgScreen() {
           </Text>
           <TouchableOpacity
             style={[styles.retryButton, { borderColor: T.border }]}
-            onPress={() => void organizationsQuery.refetch()}
+            onPress={() => {
+              void organizationsQuery.refetch();
+              void invitationsQuery.refetch();
+            }}
             disabled={organizationsQuery.isFetching}
             activeOpacity={0.7}
           >
@@ -84,13 +101,6 @@ export function SelectOrgScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      ) : organizations.length === 0 ? (
-        <View style={styles.center}>
-          <Buildings size={48} color={T.textDim} weight="duotone" />
-          <Text style={[styles.emptyText, { color: T.textDim }]}>
-            No organizations found.{"\n"}Ask an admin to invite you.
-          </Text>
-        </View>
       ) : (
         <OrganizationList
           organizations={organizations}
@@ -98,6 +108,18 @@ export function SelectOrgScreen() {
           selectingOrganizationId={selectingOrganizationId}
           onSelect={(organization) => void select(organization)}
           contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          header={
+            invitations.length > 0 ? (
+              <PendingInvitations
+                invitations={invitations}
+                pending={invitationActions.pending}
+                onAccept={(invitation) => void invitationActions.accept(invitation)}
+                onDecline={(invitation) => void invitationActions.decline(invitation)}
+              />
+            ) : null
+          }
+          footer={canCreate ? <CreateOrganizationRow /> : null}
+          empty={<NoOrganizations askAdmin={!canCreate && invitations.length === 0} />}
         />
       )}
 

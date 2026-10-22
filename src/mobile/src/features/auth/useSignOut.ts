@@ -8,10 +8,10 @@ import {
   toOrganizationSummaries,
   type OrganizationSummary,
 } from "@features/auth/organizationSerializer";
+import { MY_ORGANIZATIONS_QUERY_KEY } from "@features/auth/useMyOrganizations";
 import { userFacingError } from "@shared/lib/userFacingError";
 
 const SWITCH_FAILED_MESSAGE = "Could not switch to that organization. Try again.";
-const ORGANIZATIONS_QUERY_KEY = ["organizations", "mine"];
 // Names are a courtesy. Offline, the prompt goes out without them rather than waiting on a request.
 const ORGANIZATION_NAMES_WAIT_MS = 3_000;
 
@@ -19,12 +19,12 @@ type SignOutChoice = { kind: "cancel" } | { kind: "discard" } | { kind: "switch"
 
 /** The organizations sign-out names, or null when the list cannot be loaded in time. */
 async function memberOrganizations(): Promise<OrganizationSummary[] | null> {
-  const cached = queryClient.getQueryData<ListMyOrganizationsResponse>(ORGANIZATIONS_QUERY_KEY);
+  const cached = queryClient.getQueryData<ListMyOrganizationsResponse>(MY_ORGANIZATIONS_QUERY_KEY);
   if (cached) return toOrganizationSummaries(cached);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const fetched = queryClient
     .fetchQuery({
-      queryKey: ORGANIZATIONS_QUERY_KEY,
+      queryKey: MY_ORGANIZATIONS_QUERY_KEY,
       queryFn: authApi.listMyOrganizations,
       retry: false,
       // A paused query would hold the prompt until the device is back online.

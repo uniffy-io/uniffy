@@ -11,20 +11,12 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Check } from "phosphor-react-native";
-import type { OrganizationSummary } from "@features/auth/organizationSerializer";
+import {
+  organizationRoleLabel,
+  type OrganizationSummary,
+} from "@features/auth/organizationSerializer";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-import { OrganizationRole } from "@uniffy/proto/common/v1/common_pb";
-
-const ROLE_LABELS: Partial<Record<OrganizationRole, string>> = {
-  [OrganizationRole.OWNER]: "Owner",
-  [OrganizationRole.ADMIN]: "Admin",
-  [OrganizationRole.MEMBER]: "Member",
-};
-
-function getRoleLabel(role: OrganizationRole): string {
-  return ROLE_LABELS[role] ?? "Member";
-}
 
 function getOrgInitials(name: string): string {
   const initials = name
@@ -37,12 +29,24 @@ function getOrgInitials(name: string): string {
   return initials || "?";
 }
 
+export function OrganizationAvatar({ name, tint }: { name: string; tint: string }) {
+  return (
+    <LinearGradient colors={[tint + "20", tint + "08"]} style={styles.avatar}>
+      <Text style={[styles.initials, { color: tint }]}>{getOrgInitials(name)}</Text>
+    </LinearGradient>
+  );
+}
+
 type OrganizationListProps = {
   organizations: OrganizationSummary[];
   currentOrganizationId: string | null;
   selectingOrganizationId: string | null;
   onSelect: (organization: OrganizationSummary) => void;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  header?: React.ReactElement | null;
+  footer?: React.ReactElement | null;
+  /** Shown in place of the rows; `flex: 1` on it fills the space between header and footer. */
+  empty?: React.ReactElement | null;
 };
 
 export function OrganizationList({
@@ -51,6 +55,9 @@ export function OrganizationList({
   selectingOrganizationId,
   onSelect,
   contentContainerStyle,
+  header,
+  footer,
+  empty,
 }: OrganizationListProps) {
   const isBusy = selectingOrganizationId !== null;
 
@@ -58,7 +65,14 @@ export function OrganizationList({
     <FlatList
       data={organizations}
       keyExtractor={(item) => item.id}
-      contentContainerStyle={[styles.list, contentContainerStyle]}
+      contentContainerStyle={[
+        styles.list,
+        organizations.length === 0 && styles.listEmpty,
+        contentContainerStyle,
+      ]}
+      ListHeaderComponent={header}
+      ListFooterComponent={footer}
+      ListEmptyComponent={empty}
       renderItem={({ item }) => (
         <OrganizationRow
           organization={item}
@@ -108,9 +122,7 @@ function OrganizationRow({
         busy: isSelecting,
       }}
     >
-      <LinearGradient colors={[tint + "20", tint + "08"]} style={styles.avatar}>
-        <Text style={[styles.initials, { color: tint }]}>{getOrgInitials(organization.name)}</Text>
-      </LinearGradient>
+      <OrganizationAvatar name={organization.name} tint={tint} />
 
       <View style={styles.info}>
         <Text
@@ -124,7 +136,7 @@ function OrganizationRow({
             style={[styles.badge, { backgroundColor: suspended ? T.surfaceHover : T.accentSoft }]}
           >
             <Text style={[styles.badgeText, { color: tint }]}>
-              {getRoleLabel(organization.role)}
+              {organizationRoleLabel(organization.role)}
             </Text>
           </View>
           {suspended && (
@@ -150,6 +162,9 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: 16,
     gap: 10,
+  },
+  listEmpty: {
+    flexGrow: 1,
   },
   row: {
     flexDirection: "row",

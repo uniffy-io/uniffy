@@ -38,6 +38,17 @@ export const authApi = {
 
   listMyOrganizations: () => orgsClient.listMyOrganizations({}),
 
+  createOrganization: ({ name, slug }: { name: string; slug?: string }) =>
+    orgsClient.createOrganization({ name, slug }),
+
+  listMyInvitations: () => orgsClient.listMyInvitations({}),
+
+  acceptMyInvitation: ({ invitationId }: { invitationId: string }) =>
+    orgsClient.acceptMyInvitation({ lookup: { case: "invitationId", value: invitationId } }),
+
+  declineMyInvitation: ({ invitationId }: { invitationId: string }) =>
+    orgsClient.declineMyInvitation({ invitationId }),
+
   listSessions: () => authClient.listSessions({}),
 
   revokeSession: (sessionId: string) => authClient.revokeSession({ sessionId }),

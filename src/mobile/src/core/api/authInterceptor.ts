@@ -1,45 +1,23 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { Interceptor } from "@connectrpc/connect";
-import { BinaryReader, WireType } from "@bufbuild/protobuf/wire";
 import { getAccessToken } from "@core/auth/auth";
 import { isTokenExpiring } from "@core/auth/jwt";
 import { refreshAfterMembershipDenial, refreshSession } from "@core/auth/refresh";
 import { clientUserAgent } from "@core/api/userAgent";
+import { decodeErrorReason } from "@core/api/errorInfo";
 
 const userAgent = clientUserAgent();
 
-// No generated descriptor exists for google.rpc.ErrorInfo, so its two string fields are read off
-// the wire: reason is field 1, domain is field 2.
-const ERROR_INFO_TYPE = "google.rpc.ErrorInfo";
-const ERROR_INFO_DOMAIN = "uniffy";
 const MEMBERSHIP_REQUIRED_REASON = "membership_required";
-
-function readErrorInfo(value: Uint8Array): { reason: string; domain: string } | null {
-  try {
-    const reader = new BinaryReader(value);
-    let reason = "";
-    let domain = "";
-    while (reader.pos < reader.len) {
-      const [field, wireType] = reader.tag();
-      if (field === 1 && wireType === WireType.LengthDelimited) reason = reader.string();
-      else if (field === 2 && wireType === WireType.LengthDelimited) domain = reader.string();
-      else reader.skip(wireType, field);
-    }
-    return { reason, domain };
-  } catch {
-    return null;
-  }
-}
 
 /** The server refused because the caller is no active member of the organization. Only a hint:
  * a refresh decides whether the grant is gone. */
 export function isMembershipDenial(err: unknown): boolean {
-  if (!(err instanceof ConnectError) || err.code !== Code.PermissionDenied) return false;
-  return err.details.some((detail) => {
-    if (!("type" in detail) || detail.type !== ERROR_INFO_TYPE) return false;
-    const info = readErrorInfo(detail.value);
-    return info?.domain === ERROR_INFO_DOMAIN && info.reason === MEMBERSHIP_REQUIRED_REASON;
-  });
+  return (
+    err instanceof ConnectError &&
+    err.code === Code.PermissionDenied &&
+    decodeErrorReason(err) === MEMBERSHIP_REQUIRED_REASON
+  );
 }
 
 // Attaches the Bearer token, refreshing it proactively when it is about to
