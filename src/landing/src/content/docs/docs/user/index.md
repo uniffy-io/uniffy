@@ -20,6 +20,6 @@ This guide is for everyone using Uniffy.
 
 [Exporting projects](/docs/user/exporting-projects/) covers taking your tasks out as a CSV file, from one view, one project or several at once.
 
-[Switching organizations](/docs/user/organizations/) covers working in more than one organization. One sign in for all of them, and every tab in the organization you put it in.
+[Organizations](/docs/user/organizations/) covers joining from an invitation, creating an organization, switching, and leaving. One sign in for all of them, and every tab in the organization you put it in.
 
 Still to write: getting started, notes, files, chat, mentions and search, tasks and projects, calendar, keyboard shortcuts, and the mobile app.

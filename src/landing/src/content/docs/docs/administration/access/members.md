@@ -16,7 +16,7 @@ Search and the role filter both run as server queries, so they cover every membe
 
 You cannot change your own role. Have another admin make the change.
 
-You cannot remove the owner, and the owner badge is read only. Ownership moves through **Transfer ownership** on the Authentication page, never through the role dropdown.
+You cannot remove the owner, and the owner badge is read only. Ownership moves through **Transfer ownership** on the [Organization](/docs/administration/access/organization/) page, never through the role dropdown.
 
 ## Roles
 
@@ -32,7 +32,7 @@ It applies on the spot, with no grace period. A note they have open stops taking
 
 Content they created stays with the organization. Ownership does not fall back to anyone, so nothing is orphaned and nothing is deleted.
 
-Removal is reversible. Uniffy keeps the membership as history, so inviting or adding the same person again brings back their own work and the shares they held. They return with the role you pick. Their domain admin scopes and chat channel memberships do not come back on their own, so grant them again where they still apply.
+Removal is reversible. Uniffy keeps the membership as history, so when you invite the same person again and they accept, they get back their own work and the shares they held. They return with the role you pick. Their domain admin scopes and chat channel memberships do not come back on their own, so grant them again where they still apply.
 
 ## Inactive accounts
 
@@ -52,17 +52,25 @@ Invalidating caches forces that member's app to drop everything it has cached an
 
 ## Inviting
 
-An invitation carries an email address and the role the person joins with.
+An invitation carries an email address and the role the person joins with. Every invitation stays pending until the person accepts it. Nobody lands in your organization because you typed their address.
 
-It goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email](/docs/administration/workspace/email/) for how that resolves.
+Someone new to Uniffy follows the link in the mail and creates their account on the way in.
 
-When no mail is configured at all, the invitation is still created. You copy the link and deliver it yourself.
+Someone who already has an account accepts signed in. The mail link asks them to sign in first and brings them back to the invitation. They can also skip the mail, because their welcome page lists every pending invitation sent to their address and their user menu shows the count.
 
-Invitations expire on a window the deployment sets. The default is 7 days.
+Inviting someone who is already an active member is refused. Change their role instead. A removed member is no longer a member, so you can invite them back.
+
+Inviting the same address again replaces the pending invitation. The earlier link stops working.
+
+The mail goes out through whatever mail configuration is active. Yours if you set one up, the deployment default otherwise. See [Email](/docs/administration/workspace/email/) for how that resolves.
+
+When no mail is configured at all, the invitation is still created. Someone who already has an account finds it on their welcome page. Someone new has no other way to reach the link, so set up mail before you invite people who are new to Uniffy.
+
+Invitations expire after 30 days.
 
 ## Invitations after they go out
 
-Every invitation is pending, accepted, expired, or revoked.
+Every invitation is pending, accepted, expired, or revoked. When the person declines, the invitation reads as revoked, and the audit log records that they declined.
 
 **Revoke** kills a pending invitation immediately. **Resend** issues a fresh link with a new expiry and sends it again, and it works on expired invitations as well as pending ones.
 
@@ -74,19 +82,23 @@ Every change here writes an audit row. Search the Audit Log by action name.
 
 | Action | When it fires |
 |--------|---------------|
-| `organization.member_added` | A direct add, which is rare. Invitations are the normal path. |
-| `organization.member_added_via_invite` | An invitation is accepted and the membership is created |
+| `organization.member_invited` | A new invitation is created |
+| `auth.invitation_accepted` | The invited person accepts |
+| `organization.member_added` | A membership is created or restored. The row names the source, such as an accepted invitation. |
+| `organization.invitation_declined` | The invited person declines |
+| `organization.invitation_revoked` | An admin cancels a pending invitation |
+| `organization.invitation_resent` | A new link is generated and the email is sent again |
 | `organization.member_role_changed` | A role changes |
 | `organization.member_removed` | A removal is confirmed |
-| `organization.member_invited` | A new invitation is created |
-| `organization.invitation_revoked` | A pending invitation is cancelled |
-| `organization.invitation_resent` | A new link is generated and the email is sent again |
+| `organization.member_left` | A member leaves on their own |
 
 Each row records who acted, the target user or email, the old and new role where that applies, and the timestamp.
 
 ## Troubleshooting
 
-**The invitation email never arrived.** Open the Email page and look at Deliveries. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, clear the suppression, then resend.
+**The invitation email never arrived.** Open the Email page and look at Deliveries. If the row shows bounced or complained, that address is suppressed and Uniffy will not retry it. Fix the problem at the source, clear the suppression, then resend. If the person already has an account, they can accept from their welcome page while you sort out the mail.
+
+**The invite is refused as already a member.** That person is in your roster already. Find them there and change their role if that is what you meant.
 
 **A removed member still shows up in @ mentions or shares.** Caches lag for a few seconds. If it sticks, invalidate caches on any device still seeing them.
 
@@ -94,6 +106,7 @@ Each row records who acted, the target user or email, the old and new role where
 
 ## See also
 
+- [Organization](/docs/administration/access/organization/): rename the organization, transfer ownership, or delete it.
 - [Groups](/docs/administration/access/groups/): bundle members for permission grants.
 - [Domain Admins](/docs/administration/access/domain-admins/): narrower admin scopes per feature area.
 - [Default Permissions](/docs/administration/security/default-permissions/): what new content inherits when a member creates it.

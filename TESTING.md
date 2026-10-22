@@ -65,12 +65,44 @@ least one org configured at `/admin/email`. Local dev uses mailcatcher
 
 ### 4. Invite an email that already has an account (`(both products)`)
 
-1. As an admin in Org A, invite the email of an existing user from Org B.
-2. Toast: "<name> added to the organization". No invitation row is
-   created in the `Invitations` table.
-3. The existing user receives the `auth/added_to_org` email and finds
-   Org A in their org switcher on next login.
-4. Audit log records `Organization: Member added via invite`.
+Needs a user who belongs only to Org B. Remove them from Org A between the
+steps below so each one starts from a fresh invitation.
+
+1. As an admin in Org A, invite that user's email from `/admin/members`.
+   Toast: "Invitation sent to <email>." The **Invitations** table shows a
+   `PENDING` row and the user is not in the member list. The audit log
+   records `organization.member_invited` with `account_exists: true`.
+2. The user receives the `auth/invitation` email with an
+   `{UNIFFY_BASE_URL}/auth/accept-invite?token=...` link. No other mail
+   arrives and nothing changes for the user yet.
+3. As the invited user, signed in to Org B, reload. The user menu shows a
+   `1` badge on **All organizations**.
+4. Open `/welcome`. The **Invitations** list shows Org A with **Accept**
+   and **Decline**. Accept: toast "Welcome to Org A", the tab lands on `/`
+   in Org A, and the badge is gone. The admin's row
+   flips to `ACCEPTED`. The audit log records `Auth: Invitation accepted`
+   and `Organizations: Member added` with source `INVITE`.
+5. Accept from the mail link, signed in: open the link in a tab signed in as
+   the invited user. The page reads "Join Org A" with the role and
+   "Joining as <role> with <email>". **Join Org A** lands on `/` in Org A
+   with the same toast. `./manage.py db shell`:
+   `SELECT email_verified FROM login_users WHERE email = '<email>';` reads `t`.
+6. Mismatch: open a fresh link in a tab signed in as a different user. The
+   page reads "You are signed in as <other>. This invitation is for
+   <email>." with **Sign out and continue** and **Go to Uniffy**. Go to
+   Uniffy changes nothing. Sign out and continue signs out and returns to
+   the same invitation in the signed-out state below.
+7. Signed out: open a fresh link in a private window. The page reads "You
+   already have an account for <email>." with **Sign in to accept**, and no
+   account form. Sign in as the invited user: the browser returns to the
+   invitation with the token kept and shows **Join Org A**. A direct
+   `auth.v1.AuthService/AcceptInvitation` with that token, a username and a
+   password returns `FAILED_PRECONDITION` with reason `sign_in_required`
+   and creates no account.
+8. Decline a fresh invitation from `/welcome`. The row leaves the list, the
+   admin's row reads `REVOKED`, and the audit log records
+   `organization.invitation_declined`. The mail link now shows "This
+   invitation cannot be used".
 
 ### 5. Resend + revoke
 
@@ -2916,12 +2948,12 @@ dates and one custom single-select field makes every check reachable.
       opened views of the first account appear.
 ## Sign-out and organization switch reset
 
-Needs a user who belongs to two organizations; the org picker lives at `/select-org`, and the
+Needs a user who belongs to two organizations; the welcome page lives at `/welcome`, and the
 user menu switches as well. Stored state is readable from the browser console with
 `JSON.parse(JSON.parse(localStorage.getItem("persist:root")).projectsUi)`.
 
 - [ ] `(both products)` In organization A, open a project, change its view (hide a column) so the
-      tab shows the unsaved dot, and pick "Modal view" for task details. Go to `/select-org` and
+      tab shows the unsaved dot, and pick "Modal view" for task details. Go to `/welcome` and
       pick organization B. Projects shows only B's projects, Chat shows only B's channels, the
       notification badge shows B's count, and stored `viewDrafts` and `activeViewIds` retain A's
       project entries without showing A's content in B. The user is still signed in.
@@ -2929,7 +2961,7 @@ user menu switches as well. Stored state is readable from the browser console wi
       details still open as a modal.
 - [ ] Sign out from the user menu: the stored `auth` has no user, `viewDrafts` is empty, and the
       detail-mode preference is kept.
-- [ ] Sign in, pick an organization, go back to `/select-org` and use its Sign out button: the
+- [ ] Sign in, pick an organization, go back to `/welcome` and use its Sign out button: the
       same stored state as above, and the `uniffy-notes-cache` IndexedDB store is empty.
 - [ ] In an organization with no notes, open Notes: the editor pane says "No note selected", not
       a spinner that never ends.
@@ -2953,17 +2985,19 @@ in as the first user. (both products)
 
 - [ ] Header: organization switcher is absent at desktop, tablet, and mobile widths.
 - [ ] User menu: Organizations lists A, B and C with A checked. Pick B: the tab lands on `/` in B
-      without a sign-in prompt. "All organizations" opens `/select-org`. A user in a single organization signs in
-      straight to `/` with no picker, and the section shows that one checked row.
+      without a sign-in prompt. "All organizations" opens `/welcome`. A user in a single
+      organization signs in straight to `/` without the welcome page, and the section shows that
+      one checked row.
 - [ ] Fail the first organization-list request after reload. User menu still offers "All
-      organizations". Open it and retry: the picker loads current memberships without signing out.
+      organizations". Open it and retry: the welcome page loads current memberships without
+      signing out.
 - [ ] Two tabs in two organizations: tab 1 stays in A with a note open, tab 2 switches to B and
       opens a note there. Type in both for a minute: both badges stay Live, each note saves its
       own edits, and neither tab signs out, reloads or changes organization on its own.
 - [ ] Reload: with tab 2 last switched to B, reload tab 1 and open a fresh tab. Tab 1 stays in A
       with its note open. The fresh tab lands in B, the organization picked last on this device.
-      Sign out and back in: B opens with no picker. Remove `uniffy:last-org:<user id>` from
-      localStorage and sign in again: the picker shows.
+      Sign out and back in: B opens without the welcome page. Remove
+      `uniffy:last-org:<user id>` from localStorage and sign in again: the welcome page shows.
 - [ ] Recording: start a screen recording and switch from the user menu. "Discard active recording?"
       appears. Stay keeps the recording and the organization. "Discard and switch" cancels the
       recording and lands in the other organization.
@@ -2977,26 +3011,156 @@ in as the first user. (both products)
 - [ ] Reload during a resumable upload while delaying the storage-key request. Stored upload
       bytes remain intact and upload resumes once the key arrives.
 - [ ] Suspended organization: switch a tab to C and open a note, then the platform operator
-      suspends C. The note shows "Access lost", and a reload of that tab lands on `/select-org`.
-      C shows greyed with a Suspended badge in the user menu and
-      `/select-org`, and clicking it does nothing. Unsuspend C: it can be entered again.
+      suspends C. The note shows "Access lost", and a reload of that tab lands on `/welcome`.
+      C shows greyed with a Suspended badge in the user menu and on `/welcome`, and clicking it
+      does nothing. Unsuspend C: it can be entered again.
 - [ ] Member removal: in browser 1 switch one tab to B, then another tab to A last and open a
       note there. The admin of A removes the user. Within a second the note shows "Access lost"
       and refuses edits, and the B tab keeps working. A reload of the A tab lands on
-      `/select-org` with the toast "Your access to that organization ended.", A is gone from the
-      list and B is still there. The admin re-adds the user: A is back in the list and the
-      user's own notes open again.
+      `/welcome` with the toast "Your access to that organization ended.", A is gone from the
+      list and B is still there. The admin invites the user again and the user accepts from
+      `/welcome`: A is back in the list and the user's own notes open again.
 - [ ] Mobile: You > Organization shows the current organization name. The screen lists every
       organization with the current one marked and C disabled. Pick B: the app lands on the home
       tab in B and the chat list shows B's channels. The web tabs stay where they were.
 - [ ] Mobile access ends: with the app in B, the admin of B removes the user. Background the app
       for longer than the access token lifetime and bring it back: the app lands on the
       organization list, still signed in, B is gone and A is still there. Kill and relaunch the
-      app: it opens on the same list. Re-add the user to B and suspend C, then try C from
-      You > Organization while in A: the row is disabled. Lift the suspension, open the list,
-      have the operator suspend C again, then pick C: "You no longer have access to that
-      organization." shows, the app stays in A, and it is still in A after the next background
-      and foreground.
+      app: it opens on the same list. The admin of B invites the user again. Kill and relaunch
+      the app: the invitation shows at the top of the list. Accept it: the app lands in B. Switch
+      to A, have the operator suspend C, then try C from You > Organization: the row is
+      disabled. Lift the suspension, open the list, have the operator suspend C again, then pick
+      C: "You no longer have access to that organization." shows, the app stays in A, and it is
+      still in A after the next background and foreground.
+
+### Organization creation policy
+
+Needs a plain member of A who owns no organization, the owner of A, a platform operator with no
+membership, and a user with no membership at all (register one with public registration on, or
+remove a user from every organization). Each value adds to the one before it, and operators
+always may create. (both products)
+
+- [ ] Default `operators_and_owners`, nothing stored: `/platform/server-settings` > Organization
+      creation shows "Operators and organization owners" with the `default` badge. The plain
+      member sees no create card on `/welcome` and no **Create organization** in the user menu.
+      The owner of A sees both. The operator with no membership sees the card on `/welcome`. The
+      user with no membership sees "No organizations yet" and "Ask an organization admin to
+      invite you."
+- [ ] From the platform page, pick "Platform operators only": toast "Organization creation
+      updated" and the badge reads `deployment`. After a reload the owner of A has no card and no
+      menu entry; the operator still has the card. No redeploy, no restart.
+- [ ] Pick "Anyone with a membership": after a reload the plain member sees the card and the
+      menu entry. The user with no membership still sees the "ask your admin" state.
+- [ ] Pick "Any signed-in user": the user with no membership now sees the create card on
+      `/welcome`. With public registration on, a freshly registered account lands on `/welcome`
+      with the card.
+- [ ] Environment tier: `./manage.py db shell`,
+      `DELETE FROM deployment_settings WHERE namespace = 'system' AND key = 'org_creation';`.
+      The page badge reads `default`. Set `ALLOW_ORG_CREATION=members` in `.env` and run
+      `./manage.py stack recreate backend`: the badge reads `env`, the select shows "Anyone with
+      a membership", and the plain member sees the card. Set `ALLOW_ORG_CREATION=bogus` and
+      recreate: `docker compose logs --tail 80 backend` shows "Ignoring an unknown organization
+      creation policy" and the badge reads `default`. Restore the line and recreate.
+- [ ] A direct `organizations.v1.OrganizationsService/CreateOrganization` from a user the
+      current policy excludes returns `PERMISSION_DENIED` and creates nothing.
+
+### Creating, inviting, renaming, leaving, and deleting
+
+Needs the users above, mailcatcher, and a throwaway organization for the delete checks.
+(both products)
+
+- [ ] Create from `/welcome` as the owner of A: **Create organization**, name "Delta Test". The
+      slug follows as `delta-test`. Submit: toast "Welcome to Delta Test" and the tab lands on
+      `/` in Delta Test. The user menu lists it checked, `/settings?section=organization` shows
+      the Owner badge, Chat has `#general`, and `/admin/audit-logs` shows
+      `Organizations: Created` with this user as actor. Other tabs stay in their organizations.
+- [ ] Create from the user menu entry with A's slug typed in: the slug field shows "Slug is
+      already in use" and nothing is created. Change the slug and submit: the tab lands in the
+      new organization as owner.
+- [ ] Invite a current member: as the admin of A, invite the email of an active member of A.
+      An error toast says the person is already a member of the organization, no invitation row
+      appears, and no mail is sent. Inviting a member who was removed earlier creates a
+      `PENDING` row as usual.
+- [ ] `/admin/organization` as an admin of A who is not the owner: change the name and save.
+      Toast "Organization updated". The user menu and `/welcome` show the new name, and the
+      second browser shows it after a reload. Edit the slug: the hint "Changing the slug changes
+      links into this organization. Old links stop working." appears. Type B's slug and save:
+      "Slug is already in use" under the slug field and nothing saved. Type a free slug and
+      save: the audit log shows `Organizations: Settings changed` with `previous_slug`. The
+      danger zone shows only the Leave organization card.
+- [ ] As a plain member, open `/admin/organization`: the admin route sends you to the app home.
+- [ ] Transfer ownership as the owner of A: **Transfer ownership**, search, pick an active
+      member, then confirm "<name> becomes the owner. You stay as an admin." The danger zone
+      flips to the Leave organization card without a reload, and
+      `/settings?section=organization` shows Admin. The new owner sees Transfer ownership and
+      Delete organization after a reload. The audit log records
+      `organization.ownership_transferred`. In an organization with no other active member the
+      dialog reads "No other active members. Invite someone first, or delete the organization."
+- [ ] Leave from settings as a plain member of A, with a second tab in A and a third in B:
+      `/settings?section=organization` > **Leave organization**, confirm. Toast "You left A.",
+      the tab lands on `/welcome` with A gone, the second A tab shows "Access lost", and the B
+      tab keeps working. The audit log records `organization.member_left`. As the owner, the same
+      section reads "You own this organization. Transfer ownership or delete it from Organization
+      settings." with no Leave button.
+- [ ] Leave from the admin page as an admin of A who is not the owner: `/admin/organization` >
+      **Leave organization**, confirm. Same outcome as the member case.
+- [ ] Owner delete of the throwaway organization, with a second member signed in elsewhere and a
+      note open: **Delete organization** stays disabled until the slug is typed exactly.
+      Confirm: toast "<name> was deleted.", the tab lands on `/welcome`, and the organization is
+      gone from the list and the user menu. The second member's note shows "Access lost" and a
+      reload lands on `/welcome`. Mailcatcher has the deletion mail (template `platform/org_deleted`)
+      for the owner with a purge date 30 days out. The audit log records `organization.deleted`.
+      Creating an organization with the deleted slug is refused with "Slug is already in use".
+- [ ] `/platform/organizations` lists the deleted organization with **Restore**. Restore: the
+      former members see it in their list again after a reload.
+
+### First run setup
+
+(both products)
+
+- [ ] With `INITIAL_ADMIN_PASSWORD=admin` (the dev default), open `/setup` signed out: it
+      redirects to `/auth` and the sign-in form renders.
+- [ ] Empty database: set `INITIAL_ADMIN_PASSWORD=` (empty) in `.env`, run
+      `./manage.py stack recreate backend`, then `./manage.py stack reset-data`, then
+      `docker stop uniffy-dev-seeder` (it waits for an organization and would seed the demo company
+      into the one setup creates). `docker compose logs --tail 80 backend` shows
+      "INITIAL_ADMIN_PASSWORD is not set, so no user is seeded."
+- [ ] Open `/` in a private window: it goes through `/auth` to `/setup` ("Set up your
+      deployment"). Fill full name, email, a password of 8+ characters and an organization name.
+      The slug follows the name. Submit: the tab lands on `/` in the new organization, signed in,
+      with no two factor enrollment prompt. `/welcome` shows the Platform console card,
+      `/admin/organization` shows the owner danger zone, and the audit log records
+      `deployment.setup_completed`.
+- [ ] Open `/setup` again in another private window: it redirects to `/auth`. A direct
+      `auth.v1.AuthService/SetupDeployment` returns `FAILED_PRECONDITION` "Setup is already
+      complete".
+- [ ] Sign out and back in as the setup account: with the platform two factor requirement on (the
+      default), this sign-in asks for enrollment.
+- [ ] Restore `INITIAL_ADMIN_PASSWORD=admin`, `./manage.py stack recreate backend`, and
+      `./manage.py stack reset-data`: bootstrap seeds the admin accounts and the default
+      organization, `/setup` redirects to `/auth`, and the demo seeder runs again.
+
+### Mobile invitations and creation
+
+Needs the mobile dev build signed in as a user who owns A, plus the web admin of another
+organization to send invitations. (both products)
+
+- [ ] Invite the mobile user's address from the web. Kill and relaunch the app, then open You >
+      Organization: an Invitations section sits at the top with that organization, **Accept** and
+      **Decline**. Accept: the app lands on the home tab in that organization. Decline a second
+      invitation: the row leaves the list and the web admin sees `REVOKED`.
+- [ ] Under the default policy as the owner of A, You > Organization ends with "Create
+      organization / You become its owner". Tap it: the New organization screen. The slug
+      follows the name. A taken slug shows an inline error on the slug field. Create: the app
+      lands on the home tab in the new organization. A plain member who owns nothing sees no
+      create row.
+- [ ] Under "Any signed-in user", sign in on the phone as a user with no membership: the
+      Select workspace list shows any pending invitations and the create row.
+- [ ] Accept link signed out: sign out, tap "Have an invitation? Accept it" and paste the token
+      from a fresh invitation mail (the part after `token=`). The preview shows the
+      organization, inviter and email, then "You already have an account for <email>. Sign in,
+      then accept the invitation from your organizations list." with **Go to sign in** and no
+      account form. Sign in: the invitation is in the list. Accept it.
 
 ## Projects: tags in settings, status link and task key search
 

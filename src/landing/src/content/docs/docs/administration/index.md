@@ -1,6 +1,6 @@
 ---
 title: Uniffy administration guide
-description: Manage your Uniffy organization. Find guides to member roles, teams, sharing permissions, audit events, AI provider keys, budgets, and agent building.
+description: Manage your Uniffy organization. Find guides to organization settings, member roles, teams, sharing permissions, audit events, AI provider keys, budgets, and agent building.
 sidebar:
   label: Overview
   order: 0
@@ -16,7 +16,7 @@ The admin pages group everything by intent. These docs follow the same grouping,
 
 | Group | Pages | What it covers |
 |-------|-------|----------------|
-| Access | [Members](/docs/administration/access/members/), [Teams, Groups](/docs/administration/access/teams-and-groups/), Directory, Domain Admins | Who is in the org, what role they hold, and how people are organized |
+| Access | [Organization](/docs/administration/access/organization/), [Members](/docs/administration/access/members/), [Teams, Groups](/docs/administration/access/teams-and-groups/), Directory, Domain Admins | What the org is called, who owns it, who is in it, what role they hold, and how people are organized |
 | Security | [Default Permissions](/docs/administration/security/access-model/), Authentication, Encryption, Audit Log | How access is granted, proven, encrypted, and recorded |
 | Workspace | [Agents](/docs/administration/workspace/agents/), [Building agents](/docs/administration/workspace/building-agents/), Rooms, Storage, Email | Infrastructure and integrations scoped to your org |
 
@@ -24,7 +24,7 @@ The admin pages group everything by intent. These docs follow the same grouping,
 
 Anyone whose org role is owner or admin. Everyone else is sent back to the app home.
 
-A few pages gate further inside. Only the owner can transfer ownership. A domain admin can manage their own area here without holding admin over the whole org.
+A few pages gate further inside. Only the owner can transfer ownership or delete the organization. A domain admin can manage their own area here without holding admin over the whole org.
 
 ## Everything here is logged
 

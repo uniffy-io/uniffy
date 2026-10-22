@@ -55,7 +55,7 @@ The Vite dev server's `server.allowedHosts` includes `host.docker.internal` (see
 
 ## Default credentials (dev only)
 
-**Every seeded user shares one password** = `$INITIAL_ADMIN_PASSWORD` (default `admin`). All belong to the org **"Uniffy"** (the org card on `/select-org`).
+**Every seeded user shares one password** = `$INITIAL_ADMIN_PASSWORD` (default `admin`). All belong to the org **"Uniffy"** (the org card on `/welcome`).
 
 | Email | Username | Name | Org role | Notes |
 |---|---|---|---|---|
@@ -107,7 +107,7 @@ setVal(email, 'admin@uniffy.io');
 setVal(pwd, 'admin');
 ```
 
-Then `browser_click` on `[data-testid="auth-submit-login"]`, then click the workspace card on `/select-org`.
+Then `browser_click` on `[data-testid="auth-submit-login"]`. A user with one organization lands on `/`; if the tab lands on `/welcome` instead, click the **Uniffy** card under Your organizations.
 
 ## Core MCP tools
 

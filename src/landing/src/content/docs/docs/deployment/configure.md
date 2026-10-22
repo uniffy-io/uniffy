@@ -58,10 +58,10 @@ These settings control the first database seed, whether registration is open, an
 | Variable | Default | Purpose |
 |---|---|---|
 | `ALLOW_PUBLIC_REGISTRATION` | `false` | When `false`, accounts can only be created by invitation. The `Register` RPC returns `INVALID_ARGUMENT` and the `/auth/register` page hides its form. Set `true` for development or open self hosted deployments. |
-| `ALLOW_ORG_CREATION` | `operators_and_owners` | Who may create organizations from the app. `operators_only` keeps it to platform operators. `operators_and_owners` adds owners of an existing organization. `members` adds anyone who belongs to an organization. `anyone` adds signed in users with no organization, so someone who registers can go straight on to create their own. The Server Settings page in the platform pages overrides this value. |
-| `INITIAL_ADMIN_EMAIL` | `admin@uniffy.io` | Email of the seeded admin user; also used as the VAPID contact email for web push. |
-| `INITIAL_ADMIN_PASSWORD` | empty | Leave it empty and the first visit to the app opens a setup screen that creates the platform operator and the first organization. Set it to seed the admin and the default organization at first boot, with no setup screen. Change a seeded password right after the first sign in. |
-| `DEFAULT_ORG_NAME` | `Default` | Name of the org created at seed. |
+| `ALLOW_ORG_CREATION` | `operators_and_owners` | Who may create organizations from the app. Each value adds to the one before it. `operators_only` is platform operators. `operators_and_owners` adds anyone who owns an organization that is not suspended. `members` adds anyone with an active membership. `anyone` adds every signed in user, so someone who registers can go straight on to create their own. Platform operators can always create. A value set on the Server Settings platform page wins over this variable. An unknown value is ignored with a warning and the default applies. |
+| `INITIAL_ADMIN_EMAIL` | `admin@uniffy.io` | Email of the seeded admin user. Also the VAPID contact email for web push. |
+| `INITIAL_ADMIN_PASSWORD` | empty | Leave it empty and nothing is seeded. The first visit opens `/setup`, which creates the platform operator and the first organization in one step. Set it to seed the admin and the default organization at first boot instead, with no setup page. Change a seeded password right after the first sign in. |
+| `DEFAULT_ORG_NAME` | `Default` | Name of the organization seeded at first boot. The setup page asks for its own name. |
 | `DEFAULT_ORG_SLUG` | derived from name | Slug used in URLs. Leave empty to generate it from the name. |
 
 ## Valkey
