@@ -85,6 +85,8 @@ service ProjectsService {
   rpc ClosePeriod(ClosePeriodRequest) returns (ClosePeriodResponse);
   rpc ReopenPeriod(ReopenPeriodRequest) returns (ReopenPeriodResponse);
   rpc ListPeriods(ListPeriodsRequest) returns (ListPeriodsResponse);
+  rpc CreateInternalTimeProject(CreateInternalTimeProjectRequest) returns (CreateInternalTimeProjectResponse);
+  rpc GetSprintCapacity(GetSprintCapacityRequest) returns (GetSprintCapacityResponse);
 }
 
 // ============================================================================

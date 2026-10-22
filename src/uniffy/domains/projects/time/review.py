@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, exists, func, or_, select
@@ -19,7 +19,7 @@ from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.models.projects.timesheet import TimePeriodStatus, Timesheet, TimesheetStatus
 from uniffy.core.models.projects.worklog import Worklog
 from uniffy.domains.projects.time.access import TimeAccess
-from uniffy.domains.projects.time.capacity import required_minutes_on, workdays_for_users
+from uniffy.domains.projects.time.capacity import day_requirements_for
 from uniffy.domains.projects.time.closures import PeriodOperations, PeriodView
 from uniffy.domains.projects.time.locks import sheet_is_locked
 from uniffy.domains.projects.time.periods import period_for
@@ -35,6 +35,7 @@ class DayTotalView:
     day: date
     minutes: int
     required_minutes: int
+    off: bool = False
 
 
 @dataclass(frozen=True)
@@ -260,20 +261,22 @@ class TimesheetReview:
         minutes: dict[tuple[UUID, date], int] = {
             (user_id, day): int(total) for user_id, day, total in totals_result.all()
         }
-        workdays = await workdays_for_users(self.session, user_ids)
+        requirements = await day_requirements_for(
+            self.session, organization_id, user_ids, start, end, policy
+        )
         # Rows come back as plain strings; the StrEnum compares equal to its value.
         period_closed = period.status == TimePeriodStatus.CLOSED
-        days = [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
         rows: list[ReviewRow] = []
         for user_id in user_ids:
             sheet = sheets.get(user_id)
             day_totals = [
                 DayTotalView(
-                    day=day,
-                    minutes=minutes.get((user_id, day), 0),
-                    required_minutes=required_minutes_on(day, policy, workdays[user_id]),
+                    day=item.day,
+                    minutes=minutes.get((user_id, item.day), 0),
+                    required_minutes=item.required_minutes,
+                    off=item.off,
                 )
-                for day in days
+                for item in requirements[user_id]
             ]
             rows.append(
                 ReviewRow(

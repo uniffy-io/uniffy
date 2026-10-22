@@ -48,7 +48,7 @@ import {
   rejectTimesheet,
   reopenPeriod,
 } from "@/features/projects/store/timeThunks";
-import { addDays, dayStatus } from "@/features/projects/utils/timeWeek";
+import { addDays, dayStatus, offLabel } from "@/features/projects/utils/timeWeek";
 import { graceActive } from "@/features/projects/utils/timesheet";
 import { StatusPill } from "./PeriodBanner";
 
@@ -81,14 +81,16 @@ function DayMeters({ row }: { row: ReviewRow }) {
         const status = dayStatus(day.minutes, day.requiredMinutes);
         const scale = Math.max(day.requiredMinutes, 480);
         const height = Math.max(2, Math.min(16, Math.round((day.minutes / scale) * 16)));
+        const away = offLabel(day.requiredMinutes, day.off);
         return (
           <span
             key={day.day}
-            className="inline-block w-2 rounded-sm"
+            className={cn("inline-block w-2 rounded-sm", away && "opacity-60")}
             style={{ height, backgroundColor: METER_COLOR[status] }}
             title={`${formatDateShort(day.day)}: ${formatMinutes(day.minutes)}${
               day.requiredMinutes ? ` of ${formatMinutes(day.requiredMinutes)}` : ""
-            }`}
+            }${away ? ` (${away})` : ""}`}
+            data-off={away ? "true" : undefined}
           />
         );
       })}

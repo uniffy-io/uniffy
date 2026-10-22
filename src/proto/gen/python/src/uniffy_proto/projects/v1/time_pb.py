@@ -500,7 +500,7 @@ class ListUserWorklogsRequest(Message[_ListUserWorklogsRequestFields]):
         from_date: str
         to_date: str
 
-_ListUserWorklogsResponseFields: TypeAlias = Literal["worklogs"]
+_ListUserWorklogsResponseFields: TypeAlias = Literal["worklogs", "days"]
 
 class ListUserWorklogsResponse(Message[_ListUserWorklogsResponseFields]):
     """
@@ -513,9 +513,15 @@ class ListUserWorklogsResponse(Message[_ListUserWorklogsResponseFields]):
             ```proto
             repeated projects.v1.Worklog worklogs = 1;
             ```
+        days:
+            One per day in the range: the person's requirement after holidays and days off.
+
+            ```proto
+            repeated projects.v1.DayTotal days = 2;
+            ```
     """
 
-    __slots__ = ("worklogs",)
+    __slots__ = ("worklogs", "days")
 
     if TYPE_CHECKING:
 
@@ -523,10 +529,12 @@ class ListUserWorklogsResponse(Message[_ListUserWorklogsResponseFields]):
             self,
             *,
             worklogs: list[Worklog] | None = None,
+            days: list[DayTotal] | None = None,
         ) -> None:
             pass
 
         worklogs: list[Worklog]
+        days: list[DayTotal]
 
 _TimerFields: TypeAlias = Literal["id", "task_id", "project_id", "description", "started_at", "accumulated_seconds", "paused_at", "pause_reason", "task_title", "task_number", "project_slug"]
 
@@ -1501,7 +1509,7 @@ class Timesheet(Message[_TimesheetFields]):
         total_minutes: int
         required_minutes: int
 
-_DayTotalFields: TypeAlias = Literal["day", "minutes", "required_minutes"]
+_DayTotalFields: TypeAlias = Literal["day", "minutes", "required_minutes", "off"]
 
 class DayTotal(Message[_DayTotalFields]):
     """
@@ -1522,9 +1530,15 @@ class DayTotal(Message[_DayTotalFields]):
             ```proto
             int32 required_minutes = 3;
             ```
+        off:
+            A holiday or an out-of-office day; required_minutes already reflects it, half for a half day.
+
+            ```proto
+            bool off = 4;
+            ```
     """
 
-    __slots__ = ("day", "minutes", "required_minutes")
+    __slots__ = ("day", "minutes", "required_minutes", "off")
 
     if TYPE_CHECKING:
 
@@ -1534,12 +1548,14 @@ class DayTotal(Message[_DayTotalFields]):
             day: str = "",
             minutes: int = 0,
             required_minutes: int = 0,
+            off: bool = False,
         ) -> None:
             pass
 
         day: str
         minutes: int
         required_minutes: int
+        off: bool
 
 _TimePeriodFields: TypeAlias = Literal["id", "start_date", "end_date", "status", "closed_by_user_id", "closed_at"]
 
@@ -2401,6 +2417,212 @@ class ListPeriodsResponse(Message[_ListPeriodsResponseFields]):
 
         periods: list[TimePeriod]
 
+_CreateInternalTimeProjectRequestFields: TypeAlias = Literal["organization_id"]
+
+class CreateInternalTimeProjectRequest(Message[_CreateInternalTimeProjectRequestFields]):
+    """
+    ```proto
+    message projects.v1.CreateInternalTimeProjectRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+    """
+
+    __slots__ = ("organization_id",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+
+_CreateInternalTimeProjectResponseFields: TypeAlias = Literal["project_id", "slug", "created", "policy"]
+
+class CreateInternalTimeProjectResponse(Message[_CreateInternalTimeProjectResponseFields]):
+    """
+    ```proto
+    message projects.v1.CreateInternalTimeProjectResponse
+    ```
+
+    Attributes:
+        project_id:
+            ```proto
+            string project_id = 1;
+            ```
+        slug:
+            ```proto
+            string slug = 2;
+            ```
+        created:
+            False when the policy already named a live project and this call returned it.
+
+            ```proto
+            bool created = 3;
+            ```
+        policy:
+            ```proto
+            optional projects.v1.TimePolicy policy = 4;
+            ```
+    """
+
+    __slots__ = ("project_id", "slug", "created", "policy")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            project_id: str = "",
+            slug: str = "",
+            created: bool = False,
+            policy: TimePolicy | None = None,
+        ) -> None:
+            pass
+
+        project_id: str
+        slug: str
+        created: bool
+        policy: TimePolicy | None
+
+_GetSprintCapacityRequestFields: TypeAlias = Literal["organization_id", "sprint_id"]
+
+class GetSprintCapacityRequest(Message[_GetSprintCapacityRequestFields]):
+    """
+    ```proto
+    message projects.v1.GetSprintCapacityRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        sprint_id:
+            ```proto
+            string sprint_id = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "sprint_id")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            sprint_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+        sprint_id: str
+
+_SprintCapacityRowFields: TypeAlias = Literal["user_id", "capacity_minutes", "estimated_minutes", "logged_minutes"]
+
+class SprintCapacityRow(Message[_SprintCapacityRowFields]):
+    """
+    One assignee of the sprint's tasks; a task shared by several splits its estimate evenly.
+
+    ```proto
+    message projects.v1.SprintCapacityRow
+    ```
+
+    Attributes:
+        user_id:
+            ```proto
+            string user_id = 1;
+            ```
+        capacity_minutes:
+            Required minutes over the person's workdays inside the sprint dates, less days off.
+
+            ```proto
+            int32 capacity_minutes = 2;
+            ```
+        estimated_minutes:
+            ```proto
+            int32 estimated_minutes = 3;
+            ```
+        logged_minutes:
+            ```proto
+            int32 logged_minutes = 4;
+            ```
+    """
+
+    __slots__ = ("user_id", "capacity_minutes", "estimated_minutes", "logged_minutes")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            user_id: str = "",
+            capacity_minutes: int = 0,
+            estimated_minutes: int = 0,
+            logged_minutes: int = 0,
+        ) -> None:
+            pass
+
+        user_id: str
+        capacity_minutes: int
+        estimated_minutes: int
+        logged_minutes: int
+
+_GetSprintCapacityResponseFields: TypeAlias = Literal["rows", "capacity_minutes", "estimated_minutes", "logged_minutes"]
+
+class GetSprintCapacityResponse(Message[_GetSprintCapacityResponseFields]):
+    """
+    ```proto
+    message projects.v1.GetSprintCapacityResponse
+    ```
+
+    Attributes:
+        rows:
+            ```proto
+            repeated projects.v1.SprintCapacityRow rows = 1;
+            ```
+        capacity_minutes:
+            ```proto
+            int32 capacity_minutes = 2;
+            ```
+        estimated_minutes:
+            ```proto
+            int32 estimated_minutes = 3;
+            ```
+        logged_minutes:
+            ```proto
+            int32 logged_minutes = 4;
+            ```
+    """
+
+    __slots__ = ("rows", "capacity_minutes", "estimated_minutes", "logged_minutes")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            rows: list[SprintCapacityRow] | None = None,
+            capacity_minutes: int = 0,
+            estimated_minutes: int = 0,
+            logged_minutes: int = 0,
+        ) -> None:
+            pass
+
+        rows: list[SprintCapacityRow]
+        capacity_minutes: int
+        estimated_minutes: int
+        logged_minutes: int
+
 class WorklogSource(Enum):
     """
     ```proto
@@ -2580,7 +2802,7 @@ class TimePeriodStatus(Enum):
 
 
 _DESC = file_desc(
-    b'\n\x16projects/v1/time.proto\x12\x0bprojects.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\xfa\x03\n\x07Worklog\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x03 \x01(\tR\tprojectId\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12+\n\x12created_by_user_id\x18\x05 \x01(\tR\x0fcreatedByUserId\x12\x1b\n\twork_date\x18\x06 \x01(\tR\x08workDate\x12>\n\nstarted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartedAt\x88\x01\x01\x12)\n\x10duration_minutes\x18\x08 \x01(\x05R\x0fdurationMinutes\x12 \n\x0bdescription\x18\t \x01(\tR\x0bdescription\x122\n\x06source\x18\n \x01(\x0e2\x1a.projects.v1.WorklogSourceR\x06source\x129\n\ncreated_at\x18\x0b \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n\x0b_started_at"\xec\x01\n\x14CreateWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1c\n\x07user_id\x18\x03 \x01(\tH\x00R\x06userId\x88\x01\x01\x12\x1b\n\twork_date\x18\x04 \x01(\tR\x08workDate\x12)\n\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12 \n\x0bdescription\x18\x06 \x01(\tR\x0bdescriptionB\n\n\x08_user_id"~\n\x15CreateWorklogResponse\x12.\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogR\x07worklog\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"\x8a\x02\n\x14UpdateWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nworklog_id\x18\x02 \x01(\tR\tworklogId\x12 \n\twork_date\x18\x03 \x01(\tH\x00R\x08workDate\x88\x01\x01\x12.\n\x10duration_minutes\x18\x04 \x01(\x05H\x01R\x0fdurationMinutes\x88\x01\x01\x12%\n\x0bdescription\x18\x05 \x01(\tH\x02R\x0bdescription\x88\x01\x01B\x0c\n\n_work_dateB\x13\n\x11_duration_minutesB\x0e\n\x0c_description"~\n\x15UpdateWorklogResponse\x12.\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogR\x07worklog\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"^\n\x14DeleteWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nworklog_id\x18\x02 \x01(\tR\tworklogId"g\n\x15DeleteWorklogResponse\x12\x17\n\x07task_id\x18\x01 \x01(\tR\x06taskId\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"\x97\x01\n\x17ListTaskWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1b\n\tpage_size\x18\x03 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x04 \x01(\tR\tpageToken"t\n\x18ListTaskWorklogsResponse\x120\n\x08worklogs\x18\x01 \x03(\x0b2\x14.projects.v1.WorklogR\x08worklogs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken"\xa2\x01\n\x17ListUserWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12\x1b\n\tfrom_date\x18\x03 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x04 \x01(\tR\x06toDateB\n\n\x08_user_id"L\n\x18ListUserWorklogsResponse\x120\n\x08worklogs\x18\x01 \x03(\x0b2\x14.projects.v1.WorklogR\x08worklogs"\xe2\x03\n\x05Timer\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x03 \x01(\tR\tprojectId\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x12>\n\nstarted_at\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartedAt\x88\x01\x01\x12/\n\x13accumulated_seconds\x18\x06 \x01(\x05R\x12accumulatedSeconds\x12<\n\tpaused_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x08pausedAt\x88\x01\x01\x12@\n\x0cpause_reason\x18\x08 \x01(\x0e2\x1d.projects.v1.TimerPauseReasonR\x0bpauseReason\x12\x1d\n\ntask_title\x18\t \x01(\tR\ttaskTitle\x12\x1f\n\x0btask_number\x18\n \x01(\x05R\ntaskNumber\x12!\n\x0cproject_slug\x18\x0b \x01(\tR\x0bprojectSlugB\r\n\x0b_started_atB\x0c\n\n_paused_at"\x94\x01\n\x11StartTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12 \n\x0bdescription\x18\x03 \x01(\tR\x0bdescription\x12\x1b\n\twork_date\x18\x04 \x01(\tR\x08workDate"\x96\x01\n\x12StartTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer\x12B\n\x0fstopped_worklog\x18\x02 \x01(\x0b2\x14.projects.v1.WorklogH\x00R\x0estoppedWorklog\x88\x01\x01B\x12\n\x10_stopped_worklog"<\n\x11PauseTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId">\n\x12PauseTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer"=\n\x12ResumeTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"?\n\x13ResumeTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer"\xee\x01\n\x10StopTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\twork_date\x18\x02 \x01(\tR\x08workDate\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x12.\n\x10duration_minutes\x18\x04 \x01(\x05H\x01R\x0fdurationMinutes\x88\x01\x01\x12\x18\n\x07discard\x18\x05 \x01(\x08R\x07discardB\x0e\n\x0c_descriptionB\x13\n\x11_duration_minutes"\x8b\x01\n\x11StopTimerResponse\x123\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogH\x00R\x07worklog\x88\x01\x01\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutesB\n\n\x08_worklog"@\n\x15GetActiveTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"Q\n\x16GetActiveTimerResponse\x12-\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerH\x00R\x05timer\x88\x01\x01B\x08\n\x06_timer"\xf0\x06\n\nTimePolicy\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x18\n\x07enabled\x18\x02 \x01(\x08R\x07enabled\x12<\n\x0bperiod_type\x18\x03 \x01(\x0e2\x1b.projects.v1.TimePeriodTypeR\nperiodType\x12\x1d\n\nweek_start\x18\x04 \x01(\tR\tweekStart\x12&\n\x0fmonth_start_day\x18\x05 \x01(\x05R\rmonthStartDay\x12+\n\x11approvals_enabled\x18\x06 \x01(\x08R\x10approvalsEnabled\x12$\n\x0elock_on_submit\x18\x07 \x01(\x08R\x0clockOnSubmit\x123\n\x16period_lock_delay_days\x18\x08 \x01(\x05R\x13periodLockDelayDays\x12/\n\x14allow_log_for_others\x18\t \x01(\x08R\x11allowLogForOthers\x127\n\x18required_minutes_per_day\x18\n \x01(\x05R\x15requiredMinutesPerDay\x124\n\x16timer_rounding_minutes\x18\x0b \x01(\x05R\x14timerRoundingMinutes\x12,\n\x12allow_future_dates\x18\x0c \x01(\x08R\x10allowFutureDates\x12\'\n\rmax_days_back\x18\r \x01(\x05H\x00R\x0bmaxDaysBack\x88\x01\x01\x12&\n\x0fmax_timer_hours\x18\x0e \x01(\x05R\rmaxTimerHours\x12\x1f\n\x0bauto_submit\x18\x0f \x01(\x08R\nautoSubmit\x12\x1a\n\x08holidays\x18\x10 \x03(\tR\x08holidays\x123\n\x13internal_project_id\x18\x11 \x01(\tH\x01R\x11internalProjectId\x88\x01\x01\x12+\n\x11reminders_enabled\x18\x12 \x01(\x08R\x10remindersEnabled\x12*\n\x11reminder_hour_utc\x18\x13 \x01(\x05R\x0freminderHourUtcB\x10\n\x0e_max_days_backB\x16\n\x14_internal_project_id"?\n\x14GetTimePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"H\n\x15GetTimePolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"s\n\x17UpdateTimePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n\x06policy\x18\x02 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"K\n\x18UpdateTimePolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"\xf8\x01\n\x18AggregateWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\nproject_id\x18\x02 \x01(\tH\x00R\tprojectId\x12\x19\n\x07user_id\x18\x03 \x01(\tH\x00R\x06userId\x12\x1b\n\tfrom_date\x18\x04 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x05 \x01(\tR\x06toDate\x128\n\x08group_by\x18\x06 \x01(\x0e2\x1d.projects.v1.AggregateGroupByR\x07groupByB\x07\n\x05scope"j\n\x0cAggregateRow\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05label\x18\x02 \x01(\tR\x05label\x12\x18\n\x07minutes\x18\x03 \x01(\x05R\x07minutes\x12\x18\n\x07entries\x18\x04 \x01(\x05R\x07entries"o\n\x19AggregateWorklogsResponse\x12-\n\x04rows\x18\x01 \x03(\x0b2\x19.projects.v1.AggregateRowR\x04rows\x12#\n\rtotal_minutes\x18\x02 \x01(\x05R\x0ctotalMinutes"\xb2\x06\n\tTimesheet\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x1d\n\nperiod_end\x18\x04 \x01(\tR\tperiodEnd\x124\n\x06status\x18\x05 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12B\n\x0csubmitted_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x0bsubmittedAt\x88\x01\x01\x124\n\x14submitted_by_user_id\x18\x07 \x01(\tH\x01R\x11submittedByUserId\x88\x01\x01\x12%\n\x0esubmit_comment\x18\x08 \x01(\tR\rsubmitComment\x12-\n\x10reviewer_user_id\x18\t \x01(\tH\x02R\x0ereviewerUserId\x88\x01\x01\x12@\n\x0breviewed_at\x18\n \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\nreviewedAt\x88\x01\x01\x12%\n\x0ereview_comment\x18\x0b \x01(\tR\rreviewComment\x12@\n\x0bgrace_until\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampH\x04R\ngraceUntil\x88\x01\x01\x12\x16\n\x06locked\x18\r \x01(\x08R\x06locked\x12#\n\rperiod_closed\x18\x0e \x01(\x08R\x0cperiodClosed\x12\x1d\n\ncan_review\x18\x0f \x01(\x08R\tcanReview\x12#\n\rtotal_minutes\x18\x10 \x01(\x05R\x0ctotalMinutes\x12)\n\x10required_minutes\x18\x11 \x01(\x05R\x0frequiredMinutesB\x0f\n\r_submitted_atB\x17\n\x15_submitted_by_user_idB\x13\n\x11_reviewer_user_idB\x0e\n\x0c_reviewed_atB\x0e\n\x0c_grace_until"a\n\x08DayTotal\x12\x10\n\x03day\x18\x01 \x01(\tR\x03day\x12\x18\n\x07minutes\x18\x02 \x01(\x05R\x07minutes\x12)\n\x10required_minutes\x18\x03 \x01(\x05R\x0frequiredMinutes"\x9f\x02\n\nTimePeriod\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n\nstart_date\x18\x02 \x01(\tR\tstartDate\x12\x19\n\x08end_date\x18\x03 \x01(\tR\x07endDate\x125\n\x06status\x18\x04 \x01(\x0e2\x1d.projects.v1.TimePeriodStatusR\x06status\x12.\n\x11closed_by_user_id\x18\x05 \x01(\tH\x00R\x0eclosedByUserId\x88\x01\x01\x12<\n\tclosed_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x08closedAt\x88\x01\x01B\x14\n\x12_closed_by_user_idB\x0c\n\n_closed_at"\x8b\x01\n\x13GetTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStartB\n\n\x08_user_id"L\n\x14GetTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xa8\x01\n\x16SubmitTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x18\n\x07comment\x18\x04 \x01(\tR\x07commentB\n\n\x08_user_id"O\n\x17SubmitTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\x8e\x01\n\x16RecallTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStartB\n\n\x08_user_id"O\n\x17RecallTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xab\x02\n\x1bListReviewTimesheetsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart\x129\n\x06status\x18\x03 \x01(\x0e2\x1c.projects.v1.TimesheetStatusH\x00R\x06status\x88\x01\x01\x12\x1b\n\tpage_size\x18\x04 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x05 \x01(\tR\tpageToken\x12\x14\n\x05query\x18\x06 \x01(\tR\x05query\x12\x1c\n\x07team_id\x18\x07 \x01(\tH\x01R\x06teamId\x88\x01\x01B\t\n\x07_statusB\n\n\x08_team_id"\x96\x02\n\x12ReviewTimesheetRow\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x124\n\x06status\x18\x02 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12%\n\x0eperiod_minutes\x18\x03 \x01(\x05R\rperiodMinutes\x12)\n\x10required_minutes\x18\x04 \x01(\x05R\x0frequiredMinutes\x12)\n\x04days\x18\x05 \x03(\x0b2\x15.projects.v1.DayTotalR\x04days\x124\n\ttimesheet\x18\x06 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xeb\x01\n\x1cListReviewTimesheetsResponse\x123\n\x04rows\x18\x01 \x03(\x0b2\x1f.projects.v1.ReviewTimesheetRowR\x04rows\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12/\n\x06period\x18\x03 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period\x12=\n\x1bviewer_is_timekeeping_admin\x18\x04 \x01(\x08R\x18viewerIsTimekeepingAdmin"\x7f\n\x17ApproveTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0ctimesheet_id\x18\x02 \x01(\tR\x0btimesheetId\x12\x18\n\x07comment\x18\x03 \x01(\tR\x07comment"P\n\x18ApproveTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"~\n\x16RejectTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0ctimesheet_id\x18\x02 \x01(\tR\x0btimesheetId\x12\x18\n\x07comment\x18\x03 \x01(\tR\x07comment"O\n\x17RejectTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\x8e\x01\n\x11GrantGraceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x14\n\x05hours\x18\x04 \x01(\x05R\x05hours"J\n\x12GrantGraceResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"`\n\x12ClosePeriodRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart"F\n\x13ClosePeriodResponse\x12/\n\x06period\x18\x01 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period"a\n\x13ReopenPeriodRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart"G\n\x14ReopenPeriodResponse\x12/\n\x06period\x18\x01 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period"s\n\x12ListPeriodsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tfrom_date\x18\x02 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x03 \x01(\tR\x06toDate"H\n\x13ListPeriodsResponse\x121\n\x07periods\x18\x01 \x03(\x0b2\x17.projects.v1.TimePeriodR\x07periods*\x99\x01\n\rWorklogSource\x12\x1e\n\x1aWORKLOG_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n\x15WORKLOG_SOURCE_MANUAL\x10\x01\x12\x18\n\x14WORKLOG_SOURCE_TIMER\x10\x02\x12\x19\n\x15WORKLOG_SOURCE_IMPORT\x10\x03\x12\x18\n\x14WORKLOG_SOURCE_AGENT\x10\x04*T\n\x10TimerPauseReason\x12"\n\x1eTIMER_PAUSE_REASON_UNSPECIFIED\x10\x00\x12\x1c\n\x18TIMER_PAUSE_REASON_LIMIT\x10\x01*m\n\x0eTimePeriodType\x12 \n\x1cTIME_PERIOD_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17TIME_PERIOD_TYPE_WEEKLY\x10\x01\x12\x1c\n\x18TIME_PERIOD_TYPE_MONTHLY\x10\x02*\xac\x01\n\x10AggregateGroupBy\x12"\n\x1eAGGREGATE_GROUP_BY_UNSPECIFIED\x10\x00\x12\x1a\n\x16AGGREGATE_GROUP_BY_DAY\x10\x01\x12\x1b\n\x17AGGREGATE_GROUP_BY_TASK\x10\x02\x12\x1b\n\x17AGGREGATE_GROUP_BY_USER\x10\x03\x12\x1e\n\x1aAGGREGATE_GROUP_BY_PROJECT\x10\x04*\xac\x01\n\x0fTimesheetStatus\x12 \n\x1cTIMESHEET_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15TIMESHEET_STATUS_OPEN\x10\x01\x12\x1e\n\x1aTIMESHEET_STATUS_SUBMITTED\x10\x02\x12\x1d\n\x19TIMESHEET_STATUS_APPROVED\x10\x03\x12\x1d\n\x19TIMESHEET_STATUS_REJECTED\x10\x04*r\n\x10TimePeriodStatus\x12"\n\x1eTIME_PERIOD_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17TIME_PERIOD_STATUS_OPEN\x10\x01\x12\x1d\n\x19TIME_PERIOD_STATUS_CLOSED\x10\x02B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3',
+    b'\n\x16projects/v1/time.proto\x12\x0bprojects.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\xfa\x03\n\x07Worklog\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x03 \x01(\tR\tprojectId\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12+\n\x12created_by_user_id\x18\x05 \x01(\tR\x0fcreatedByUserId\x12\x1b\n\twork_date\x18\x06 \x01(\tR\x08workDate\x12>\n\nstarted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartedAt\x88\x01\x01\x12)\n\x10duration_minutes\x18\x08 \x01(\x05R\x0fdurationMinutes\x12 \n\x0bdescription\x18\t \x01(\tR\x0bdescription\x122\n\x06source\x18\n \x01(\x0e2\x1a.projects.v1.WorklogSourceR\x06source\x129\n\ncreated_at\x18\x0b \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n\nupdated_at\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n\x0b_started_at"\xec\x01\n\x14CreateWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1c\n\x07user_id\x18\x03 \x01(\tH\x00R\x06userId\x88\x01\x01\x12\x1b\n\twork_date\x18\x04 \x01(\tR\x08workDate\x12)\n\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12 \n\x0bdescription\x18\x06 \x01(\tR\x0bdescriptionB\n\n\x08_user_id"~\n\x15CreateWorklogResponse\x12.\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogR\x07worklog\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"\x8a\x02\n\x14UpdateWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nworklog_id\x18\x02 \x01(\tR\tworklogId\x12 \n\twork_date\x18\x03 \x01(\tH\x00R\x08workDate\x88\x01\x01\x12.\n\x10duration_minutes\x18\x04 \x01(\x05H\x01R\x0fdurationMinutes\x88\x01\x01\x12%\n\x0bdescription\x18\x05 \x01(\tH\x02R\x0bdescription\x88\x01\x01B\x0c\n\n_work_dateB\x13\n\x11_duration_minutesB\x0e\n\x0c_description"~\n\x15UpdateWorklogResponse\x12.\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogR\x07worklog\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"^\n\x14DeleteWorklogRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nworklog_id\x18\x02 \x01(\tR\tworklogId"g\n\x15DeleteWorklogResponse\x12\x17\n\x07task_id\x18\x01 \x01(\tR\x06taskId\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes"\x97\x01\n\x17ListTaskWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1b\n\tpage_size\x18\x03 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x04 \x01(\tR\tpageToken"t\n\x18ListTaskWorklogsResponse\x120\n\x08worklogs\x18\x01 \x03(\x0b2\x14.projects.v1.WorklogR\x08worklogs\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken"\xa2\x01\n\x17ListUserWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12\x1b\n\tfrom_date\x18\x03 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x04 \x01(\tR\x06toDateB\n\n\x08_user_id"w\n\x18ListUserWorklogsResponse\x120\n\x08worklogs\x18\x01 \x03(\x0b2\x14.projects.v1.WorklogR\x08worklogs\x12)\n\x04days\x18\x02 \x03(\x0b2\x15.projects.v1.DayTotalR\x04days"\xe2\x03\n\x05Timer\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x03 \x01(\tR\tprojectId\x12 \n\x0bdescription\x18\x04 \x01(\tR\x0bdescription\x12>\n\nstarted_at\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\tstartedAt\x88\x01\x01\x12/\n\x13accumulated_seconds\x18\x06 \x01(\x05R\x12accumulatedSeconds\x12<\n\tpaused_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x08pausedAt\x88\x01\x01\x12@\n\x0cpause_reason\x18\x08 \x01(\x0e2\x1d.projects.v1.TimerPauseReasonR\x0bpauseReason\x12\x1d\n\ntask_title\x18\t \x01(\tR\ttaskTitle\x12\x1f\n\x0btask_number\x18\n \x01(\x05R\ntaskNumber\x12!\n\x0cproject_slug\x18\x0b \x01(\tR\x0bprojectSlugB\r\n\x0b_started_atB\x0c\n\n_paused_at"\x94\x01\n\x11StartTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07task_id\x18\x02 \x01(\tR\x06taskId\x12 \n\x0bdescription\x18\x03 \x01(\tR\x0bdescription\x12\x1b\n\twork_date\x18\x04 \x01(\tR\x08workDate"\x96\x01\n\x12StartTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer\x12B\n\x0fstopped_worklog\x18\x02 \x01(\x0b2\x14.projects.v1.WorklogH\x00R\x0estoppedWorklog\x88\x01\x01B\x12\n\x10_stopped_worklog"<\n\x11PauseTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId">\n\x12PauseTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer"=\n\x12ResumeTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"?\n\x13ResumeTimerResponse\x12(\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerR\x05timer"\xee\x01\n\x10StopTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\twork_date\x18\x02 \x01(\tR\x08workDate\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x12.\n\x10duration_minutes\x18\x04 \x01(\x05H\x01R\x0fdurationMinutes\x88\x01\x01\x12\x18\n\x07discard\x18\x05 \x01(\x08R\x07discardB\x0e\n\x0c_descriptionB\x13\n\x11_duration_minutes"\x8b\x01\n\x11StopTimerResponse\x123\n\x07worklog\x18\x01 \x01(\x0b2\x14.projects.v1.WorklogH\x00R\x07worklog\x88\x01\x01\x125\n\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutesB\n\n\x08_worklog"@\n\x15GetActiveTimerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"Q\n\x16GetActiveTimerResponse\x12-\n\x05timer\x18\x01 \x01(\x0b2\x12.projects.v1.TimerH\x00R\x05timer\x88\x01\x01B\x08\n\x06_timer"\xf0\x06\n\nTimePolicy\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x18\n\x07enabled\x18\x02 \x01(\x08R\x07enabled\x12<\n\x0bperiod_type\x18\x03 \x01(\x0e2\x1b.projects.v1.TimePeriodTypeR\nperiodType\x12\x1d\n\nweek_start\x18\x04 \x01(\tR\tweekStart\x12&\n\x0fmonth_start_day\x18\x05 \x01(\x05R\rmonthStartDay\x12+\n\x11approvals_enabled\x18\x06 \x01(\x08R\x10approvalsEnabled\x12$\n\x0elock_on_submit\x18\x07 \x01(\x08R\x0clockOnSubmit\x123\n\x16period_lock_delay_days\x18\x08 \x01(\x05R\x13periodLockDelayDays\x12/\n\x14allow_log_for_others\x18\t \x01(\x08R\x11allowLogForOthers\x127\n\x18required_minutes_per_day\x18\n \x01(\x05R\x15requiredMinutesPerDay\x124\n\x16timer_rounding_minutes\x18\x0b \x01(\x05R\x14timerRoundingMinutes\x12,\n\x12allow_future_dates\x18\x0c \x01(\x08R\x10allowFutureDates\x12\'\n\rmax_days_back\x18\r \x01(\x05H\x00R\x0bmaxDaysBack\x88\x01\x01\x12&\n\x0fmax_timer_hours\x18\x0e \x01(\x05R\rmaxTimerHours\x12\x1f\n\x0bauto_submit\x18\x0f \x01(\x08R\nautoSubmit\x12\x1a\n\x08holidays\x18\x10 \x03(\tR\x08holidays\x123\n\x13internal_project_id\x18\x11 \x01(\tH\x01R\x11internalProjectId\x88\x01\x01\x12+\n\x11reminders_enabled\x18\x12 \x01(\x08R\x10remindersEnabled\x12*\n\x11reminder_hour_utc\x18\x13 \x01(\x05R\x0freminderHourUtcB\x10\n\x0e_max_days_backB\x16\n\x14_internal_project_id"?\n\x14GetTimePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"H\n\x15GetTimePolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"s\n\x17UpdateTimePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n\x06policy\x18\x02 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"K\n\x18UpdateTimePolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"\xf8\x01\n\x18AggregateWorklogsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\nproject_id\x18\x02 \x01(\tH\x00R\tprojectId\x12\x19\n\x07user_id\x18\x03 \x01(\tH\x00R\x06userId\x12\x1b\n\tfrom_date\x18\x04 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x05 \x01(\tR\x06toDate\x128\n\x08group_by\x18\x06 \x01(\x0e2\x1d.projects.v1.AggregateGroupByR\x07groupByB\x07\n\x05scope"j\n\x0cAggregateRow\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05label\x18\x02 \x01(\tR\x05label\x12\x18\n\x07minutes\x18\x03 \x01(\x05R\x07minutes\x12\x18\n\x07entries\x18\x04 \x01(\x05R\x07entries"o\n\x19AggregateWorklogsResponse\x12-\n\x04rows\x18\x01 \x03(\x0b2\x19.projects.v1.AggregateRowR\x04rows\x12#\n\rtotal_minutes\x18\x02 \x01(\x05R\x0ctotalMinutes"\xb2\x06\n\tTimesheet\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x1d\n\nperiod_end\x18\x04 \x01(\tR\tperiodEnd\x124\n\x06status\x18\x05 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12B\n\x0csubmitted_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x0bsubmittedAt\x88\x01\x01\x124\n\x14submitted_by_user_id\x18\x07 \x01(\tH\x01R\x11submittedByUserId\x88\x01\x01\x12%\n\x0esubmit_comment\x18\x08 \x01(\tR\rsubmitComment\x12-\n\x10reviewer_user_id\x18\t \x01(\tH\x02R\x0ereviewerUserId\x88\x01\x01\x12@\n\x0breviewed_at\x18\n \x01(\x0b2\x1a.google.protobuf.TimestampH\x03R\nreviewedAt\x88\x01\x01\x12%\n\x0ereview_comment\x18\x0b \x01(\tR\rreviewComment\x12@\n\x0bgrace_until\x18\x0c \x01(\x0b2\x1a.google.protobuf.TimestampH\x04R\ngraceUntil\x88\x01\x01\x12\x16\n\x06locked\x18\r \x01(\x08R\x06locked\x12#\n\rperiod_closed\x18\x0e \x01(\x08R\x0cperiodClosed\x12\x1d\n\ncan_review\x18\x0f \x01(\x08R\tcanReview\x12#\n\rtotal_minutes\x18\x10 \x01(\x05R\x0ctotalMinutes\x12)\n\x10required_minutes\x18\x11 \x01(\x05R\x0frequiredMinutesB\x0f\n\r_submitted_atB\x17\n\x15_submitted_by_user_idB\x13\n\x11_reviewer_user_idB\x0e\n\x0c_reviewed_atB\x0e\n\x0c_grace_until"s\n\x08DayTotal\x12\x10\n\x03day\x18\x01 \x01(\tR\x03day\x12\x18\n\x07minutes\x18\x02 \x01(\x05R\x07minutes\x12)\n\x10required_minutes\x18\x03 \x01(\x05R\x0frequiredMinutes\x12\x10\n\x03off\x18\x04 \x01(\x08R\x03off"\x9f\x02\n\nTimePeriod\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n\nstart_date\x18\x02 \x01(\tR\tstartDate\x12\x19\n\x08end_date\x18\x03 \x01(\tR\x07endDate\x125\n\x06status\x18\x04 \x01(\x0e2\x1d.projects.v1.TimePeriodStatusR\x06status\x12.\n\x11closed_by_user_id\x18\x05 \x01(\tH\x00R\x0eclosedByUserId\x88\x01\x01\x12<\n\tclosed_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\x08closedAt\x88\x01\x01B\x14\n\x12_closed_by_user_idB\x0c\n\n_closed_at"\x8b\x01\n\x13GetTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStartB\n\n\x08_user_id"L\n\x14GetTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xa8\x01\n\x16SubmitTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x18\n\x07comment\x18\x04 \x01(\tR\x07commentB\n\n\x08_user_id"O\n\x17SubmitTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\x8e\x01\n\x16RecallTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n\x07user_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStartB\n\n\x08_user_id"O\n\x17RecallTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xab\x02\n\x1bListReviewTimesheetsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart\x129\n\x06status\x18\x03 \x01(\x0e2\x1c.projects.v1.TimesheetStatusH\x00R\x06status\x88\x01\x01\x12\x1b\n\tpage_size\x18\x04 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x05 \x01(\tR\tpageToken\x12\x14\n\x05query\x18\x06 \x01(\tR\x05query\x12\x1c\n\x07team_id\x18\x07 \x01(\tH\x01R\x06teamId\x88\x01\x01B\t\n\x07_statusB\n\n\x08_team_id"\x96\x02\n\x12ReviewTimesheetRow\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x124\n\x06status\x18\x02 \x01(\x0e2\x1c.projects.v1.TimesheetStatusR\x06status\x12%\n\x0eperiod_minutes\x18\x03 \x01(\x05R\rperiodMinutes\x12)\n\x10required_minutes\x18\x04 \x01(\x05R\x0frequiredMinutes\x12)\n\x04days\x18\x05 \x03(\x0b2\x15.projects.v1.DayTotalR\x04days\x124\n\ttimesheet\x18\x06 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\xeb\x01\n\x1cListReviewTimesheetsResponse\x123\n\x04rows\x18\x01 \x03(\x0b2\x1f.projects.v1.ReviewTimesheetRowR\x04rows\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12/\n\x06period\x18\x03 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period\x12=\n\x1bviewer_is_timekeeping_admin\x18\x04 \x01(\x08R\x18viewerIsTimekeepingAdmin"\x7f\n\x17ApproveTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0ctimesheet_id\x18\x02 \x01(\tR\x0btimesheetId\x12\x18\n\x07comment\x18\x03 \x01(\tR\x07comment"P\n\x18ApproveTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"~\n\x16RejectTimesheetRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0ctimesheet_id\x18\x02 \x01(\tR\x0btimesheetId\x12\x18\n\x07comment\x18\x03 \x01(\tR\x07comment"O\n\x17RejectTimesheetResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"\x8e\x01\n\x11GrantGraceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12!\n\x0cperiod_start\x18\x03 \x01(\tR\x0bperiodStart\x12\x14\n\x05hours\x18\x04 \x01(\x05R\x05hours"J\n\x12GrantGraceResponse\x124\n\ttimesheet\x18\x01 \x01(\x0b2\x16.projects.v1.TimesheetR\ttimesheet"`\n\x12ClosePeriodRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart"F\n\x13ClosePeriodResponse\x12/\n\x06period\x18\x01 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period"a\n\x13ReopenPeriodRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cperiod_start\x18\x02 \x01(\tR\x0bperiodStart"G\n\x14ReopenPeriodResponse\x12/\n\x06period\x18\x01 \x01(\x0b2\x17.projects.v1.TimePeriodR\x06period"s\n\x12ListPeriodsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tfrom_date\x18\x02 \x01(\tR\x08fromDate\x12\x17\n\x07to_date\x18\x03 \x01(\tR\x06toDate"H\n\x13ListPeriodsResponse\x121\n\x07periods\x18\x01 \x03(\x0b2\x17.projects.v1.TimePeriodR\x07periods"K\n CreateInternalTimeProjectRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xa1\x01\n!CreateInternalTimeProjectResponse\x12\x1d\n\nproject_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n\x04slug\x18\x02 \x01(\tR\x04slug\x12\x18\n\x07created\x18\x03 \x01(\x08R\x07created\x12/\n\x06policy\x18\x04 \x01(\x0b2\x17.projects.v1.TimePolicyR\x06policy"`\n\x18GetSprintCapacityRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsprint_id\x18\x02 \x01(\tR\x08sprintId"\xab\x01\n\x11SprintCapacityRow\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12)\n\x10capacity_minutes\x18\x02 \x01(\x05R\x0fcapacityMinutes\x12+\n\x11estimated_minutes\x18\x03 \x01(\x05R\x10estimatedMinutes\x12%\n\x0elogged_minutes\x18\x04 \x01(\x05R\rloggedMinutes"\xce\x01\n\x19GetSprintCapacityResponse\x122\n\x04rows\x18\x01 \x03(\x0b2\x1e.projects.v1.SprintCapacityRowR\x04rows\x12)\n\x10capacity_minutes\x18\x02 \x01(\x05R\x0fcapacityMinutes\x12+\n\x11estimated_minutes\x18\x03 \x01(\x05R\x10estimatedMinutes\x12%\n\x0elogged_minutes\x18\x04 \x01(\x05R\rloggedMinutes*\x99\x01\n\rWorklogSource\x12\x1e\n\x1aWORKLOG_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n\x15WORKLOG_SOURCE_MANUAL\x10\x01\x12\x18\n\x14WORKLOG_SOURCE_TIMER\x10\x02\x12\x19\n\x15WORKLOG_SOURCE_IMPORT\x10\x03\x12\x18\n\x14WORKLOG_SOURCE_AGENT\x10\x04*T\n\x10TimerPauseReason\x12"\n\x1eTIMER_PAUSE_REASON_UNSPECIFIED\x10\x00\x12\x1c\n\x18TIMER_PAUSE_REASON_LIMIT\x10\x01*m\n\x0eTimePeriodType\x12 \n\x1cTIME_PERIOD_TYPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17TIME_PERIOD_TYPE_WEEKLY\x10\x01\x12\x1c\n\x18TIME_PERIOD_TYPE_MONTHLY\x10\x02*\xac\x01\n\x10AggregateGroupBy\x12"\n\x1eAGGREGATE_GROUP_BY_UNSPECIFIED\x10\x00\x12\x1a\n\x16AGGREGATE_GROUP_BY_DAY\x10\x01\x12\x1b\n\x17AGGREGATE_GROUP_BY_TASK\x10\x02\x12\x1b\n\x17AGGREGATE_GROUP_BY_USER\x10\x03\x12\x1e\n\x1aAGGREGATE_GROUP_BY_PROJECT\x10\x04*\xac\x01\n\x0fTimesheetStatus\x12 \n\x1cTIMESHEET_STATUS_UNSPECIFIED\x10\x00\x12\x19\n\x15TIMESHEET_STATUS_OPEN\x10\x01\x12\x1e\n\x1aTIMESHEET_STATUS_SUBMITTED\x10\x02\x12\x1d\n\x19TIMESHEET_STATUS_APPROVED\x10\x03\x12\x1d\n\x19TIMESHEET_STATUS_REJECTED\x10\x04*r\n\x10TimePeriodStatus\x12"\n\x1eTIME_PERIOD_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n\x17TIME_PERIOD_STATUS_OPEN\x10\x01\x12\x1d\n\x19TIME_PERIOD_STATUS_CLOSED\x10\x02B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3',
     [
         timestamp_pb.desc(),
     ],
@@ -2639,6 +2861,11 @@ _DESC = file_desc(
         "ReopenPeriodResponse": ReopenPeriodResponse,
         "ListPeriodsRequest": ListPeriodsRequest,
         "ListPeriodsResponse": ListPeriodsResponse,
+        "CreateInternalTimeProjectRequest": CreateInternalTimeProjectRequest,
+        "CreateInternalTimeProjectResponse": CreateInternalTimeProjectResponse,
+        "GetSprintCapacityRequest": GetSprintCapacityRequest,
+        "SprintCapacityRow": SprintCapacityRow,
+        "GetSprintCapacityResponse": GetSprintCapacityResponse,
         "WorklogSource": WorklogSource,
         "TimerPauseReason": TimerPauseReason,
         "TimePeriodType": TimePeriodType,

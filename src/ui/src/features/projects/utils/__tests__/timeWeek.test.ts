@@ -6,7 +6,9 @@ import {
   dayStatus,
   dayTotals,
   normalizeWeekStart,
+  offLabel,
   requiredMinutesOn,
+  requirementsFor,
   rowMinutes,
   rowsMissingFrom,
   weekDays,
@@ -123,5 +125,31 @@ describe("dayStatus", () => {
     expect(dayStatus(500, 480)).toBe("over");
     expect(dayStatus(60, 0)).toBe("logged");
     expect(dayStatus(0, 0)).toBe("none");
+  });
+});
+
+describe("requirementsFor", () => {
+  const rule = { requiredMinutesPerDay: 480, workdays: ["monday"], holidays: ["2026-10-19"] };
+
+  it("prefers the served days and falls back to the rule", () => {
+    const served = [
+      { day: "2026-10-12", minutes: 0, requiredMinutes: 240, off: true },
+      { day: "2026-10-13", minutes: 0, requiredMinutes: 0, off: true },
+    ];
+    expect(
+      requirementsFor(["2026-10-12", "2026-10-13", "2026-10-19", "2026-10-26"], served, rule),
+    ).toEqual({
+      "2026-10-12": { required: 240, off: true },
+      "2026-10-13": { required: 0, off: true },
+      "2026-10-19": { required: 0, off: true },
+      "2026-10-26": { required: 480, off: false },
+    });
+  });
+
+  it("labels whole and half days off", () => {
+    expect(offLabel(0, true)).toBe("off");
+    expect(offLabel(240, true)).toBe("half day");
+    expect(offLabel(0, false)).toBeNull();
+    expect(offLabel(480, false)).toBeNull();
   });
 });

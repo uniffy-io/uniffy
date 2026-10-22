@@ -17,7 +17,7 @@ from protobuf import DescService
 
 from . import projects_pb
 from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
-from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
+from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetSprintCapacityRequest, GetSprintCapacityResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Iterator, Mapping
@@ -219,6 +219,12 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_internal_time_project(self, request: CreateInternalTimeProjectRequest, ctx: RequestContext[CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse], /) -> CreateInternalTimeProjectResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -788,6 +794,26 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.list_periods,
+                ),
+                "/projects.v1.ProjectsService/CreateInternalTimeProject": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateInternalTimeProject",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateInternalTimeProjectRequest,
+                        output=CreateInternalTimeProjectResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_internal_time_project,
+                ),
+                "/projects.v1.ProjectsService/GetSprintCapacity": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSprintCapacity",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetSprintCapacityRequest,
+                        output=GetSprintCapacityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_sprint_capacity,
                 ),
             },
             interceptors=interceptors,
@@ -1930,6 +1956,46 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_internal_time_project(
+        self,
+        request: CreateInternalTimeProjectRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateInternalTimeProjectResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateInternalTimeProject",
+                service_name="projects.v1.ProjectsService",
+                input=CreateInternalTimeProjectRequest,
+                output=CreateInternalTimeProjectResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_sprint_capacity(
+        self,
+        request: GetSprintCapacityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetSprintCapacityResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSprintCapacity",
+                service_name="projects.v1.ProjectsService",
+                input=GetSprintCapacityRequest,
+                output=GetSprintCapacityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: CreateProjectRequest, ctx: RequestContext[CreateProjectRequest, CreateProjectResponse], /) -> CreateProjectResponse:
         """
@@ -2121,6 +2187,12 @@ class ProjectsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def create_internal_time_project(self, request: CreateInternalTimeProjectRequest, ctx: RequestContext[CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse], /) -> CreateInternalTimeProjectResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -2688,6 +2760,26 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.list_periods,
+                ),
+                "/projects.v1.ProjectsService/CreateInternalTimeProject": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateInternalTimeProject",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateInternalTimeProjectRequest,
+                        output=CreateInternalTimeProjectResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_internal_time_project,
+                ),
+                "/projects.v1.ProjectsService/GetSprintCapacity": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSprintCapacity",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetSprintCapacityRequest,
+                        output=GetSprintCapacityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_sprint_capacity,
                 ),
             },
             interceptors=interceptors,
@@ -3770,6 +3862,44 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=ListPeriodsRequest,
                 output=ListPeriodsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_internal_time_project(
+        self,
+        request: CreateInternalTimeProjectRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateInternalTimeProjectResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateInternalTimeProject",
+                service_name="projects.v1.ProjectsService",
+                input=CreateInternalTimeProjectRequest,
+                output=CreateInternalTimeProjectResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_sprint_capacity(
+        self,
+        request: GetSprintCapacityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetSprintCapacityResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSprintCapacity",
+                service_name="projects.v1.ProjectsService",
+                input=GetSprintCapacityRequest,
+                output=GetSprintCapacityResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -14,6 +14,10 @@ from uniffy_proto.projects.v1.time_pb import (
     DayTotal as ProtoDayTotal,
 )
 from uniffy_proto.projects.v1.time_pb import (
+    GetSprintCapacityResponse,
+    SprintCapacityRow,
+)
+from uniffy_proto.projects.v1.time_pb import (
     ReviewTimesheetRow as ProtoReviewTimesheetRow,
 )
 from uniffy_proto.projects.v1.time_pb import (
@@ -54,7 +58,8 @@ from uniffy.core.models.projects.timesheet import TimePeriodStatus, TimesheetSta
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 from uniffy.domains.projects.time.closures import PeriodView
 from uniffy.domains.projects.time.policy import PeriodType, ResolvedTimePolicy
-from uniffy.domains.projects.time.review import ReviewRow
+from uniffy.domains.projects.time.review import DayTotalView, ReviewRow
+from uniffy.domains.projects.time.sprint_capacity import SprintCapacity
 from uniffy.domains.projects.time.timers import TimerRow
 from uniffy.domains.projects.time.timesheets import SheetView
 from uniffy.domains.projects.time.worklogs import AggregateGroupBy, AggregateRow
@@ -260,19 +265,38 @@ def period_to_proto(view: PeriodView) -> ProtoTimePeriod:
     return proto
 
 
+def day_total_to_proto(total: DayTotalView) -> ProtoDayTotal:
+    return ProtoDayTotal(
+        day=total.day.isoformat(),
+        minutes=total.minutes,
+        required_minutes=total.required_minutes,
+        off=total.off,
+    )
+
+
+def sprint_capacity_to_proto(capacity: SprintCapacity) -> GetSprintCapacityResponse:
+    return GetSprintCapacityResponse(
+        rows=[
+            SprintCapacityRow(
+                user_id=str(row.user_id),
+                capacity_minutes=row.capacity_minutes,
+                estimated_minutes=row.estimated_minutes,
+                logged_minutes=row.logged_minutes,
+            )
+            for row in capacity.rows
+        ],
+        capacity_minutes=capacity.capacity_minutes,
+        estimated_minutes=capacity.estimated_minutes,
+        logged_minutes=capacity.logged_minutes,
+    )
+
+
 def review_row_to_proto(row: ReviewRow) -> ProtoReviewTimesheetRow:
     return ProtoReviewTimesheetRow(
         user_id=str(row.sheet.user_id),
         status=_SHEET_STATUS_TO_PROTO[TimesheetStatus(row.sheet.status)],
         period_minutes=row.sheet.total_minutes,
         required_minutes=row.sheet.required_minutes,
-        days=[
-            ProtoDayTotal(
-                day=total.day.isoformat(),
-                minutes=total.minutes,
-                required_minutes=total.required_minutes,
-            )
-            for total in row.days
-        ],
+        days=[day_total_to_proto(total) for total in row.days],
         timesheet=timesheet_to_proto(row.sheet),
     )

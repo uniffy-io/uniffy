@@ -4,15 +4,19 @@ import type { Timer, Worklog } from "@/features/projects/types/time";
 import {
   initialTimeState,
   selectSheetsTouching,
+  selectSprintCapacity,
+  selectWeekDays,
   timeReducer,
 } from "@/features/projects/store/timeSlice";
 import {
   approveTimesheet,
   closePeriod,
+  createInternalTimeProject,
   createWorklog,
   deleteWorklog,
   fetchActiveTimer,
   fetchReviewTimesheets,
+  fetchSprintCapacity,
   fetchTaskWorklogs,
   fetchTimesheet,
   fetchUserWorklogs,
@@ -223,7 +227,7 @@ describe("timeSlice weeks", () => {
     state = timeReducer(
       state,
       fetchUserWorklogs.fulfilled(
-        { key, worklogs: [entry("a", { workDate: "2026-10-20" })] },
+        { key, worklogs: [entry("a", { workDate: "2026-10-20" })], days: [] },
         "req",
         range,
       ),
@@ -366,5 +370,65 @@ describe("timeSlice approvals", () => {
     });
     expect(state.sheets["2026-10-12"].periodClosed).toBe(true);
     expect(state.sheets["2026-10-12"].locked).toBe(true);
+  });
+
+  it("keeps the served day requirements beside the week's entries", () => {
+    const range = { from: "2026-10-19", to: "2026-10-25" };
+    const key = "2026-10-19:2026-10-25";
+    const days = [
+      { day: "2026-10-19", minutes: 0, requiredMinutes: 480, off: false },
+      { day: "2026-10-20", minutes: 60, requiredMinutes: 240, off: true },
+    ];
+    const state = timeReducer(
+      initialTimeState,
+      fetchUserWorklogs.fulfilled({ key, worklogs: [], days }, "req", range),
+    );
+    expect(selectWeekDays(key)({ time: state } as unknown as RootState)).toEqual(days);
+    expect(selectWeekDays("other")({ time: state } as unknown as RootState)).toEqual([]);
+  });
+
+  it("stores a sprint's capacity and the internal project's policy", () => {
+    const capacity = {
+      rows: [{ userId: "u1", capacityMinutes: 4800, estimatedMinutes: 600, loggedMinutes: 90 }],
+      capacityMinutes: 4800,
+      estimatedMinutes: 600,
+      loggedMinutes: 90,
+    };
+    let state = timeReducer(
+      initialTimeState,
+      fetchSprintCapacity.fulfilled({ sprintId: "s1", capacity }, "req", { sprintId: "s1" }),
+    );
+    expect(selectSprintCapacity("s1")({ time: state } as unknown as RootState)).toEqual(capacity);
+    expect(selectSprintCapacity("s2")({ time: state } as unknown as RootState)).toBeNull();
+
+    const policy = {
+      organizationId: "org",
+      enabled: true,
+      periodType: "weekly" as const,
+      weekStart: "monday",
+      monthStartDay: 1,
+      approvalsEnabled: false,
+      lockOnSubmit: true,
+      periodLockDelayDays: 2,
+      allowLogForOthers: true,
+      requiredMinutesPerDay: 480,
+      timerRoundingMinutes: 1,
+      allowFutureDates: false,
+      maxDaysBack: null,
+      maxTimerHours: 12,
+      autoSubmit: false,
+      holidays: [],
+      internalProjectId: "p-int",
+      remindersEnabled: false,
+      reminderHourUtc: 9,
+    };
+    state = timeReducer(
+      state,
+      createInternalTimeProject.fulfilled(
+        { projectId: "p-int", slug: "INT", created: true, policy },
+        "req",
+      ),
+    );
+    expect(state.policy?.internalProjectId).toBe("p-int");
   });
 });

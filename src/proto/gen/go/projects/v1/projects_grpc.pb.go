@@ -19,61 +19,63 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProjectsService_CreateProject_FullMethodName         = "/projects.v1.ProjectsService/CreateProject"
-	ProjectsService_GetProject_FullMethodName            = "/projects.v1.ProjectsService/GetProject"
-	ProjectsService_UpdateProject_FullMethodName         = "/projects.v1.ProjectsService/UpdateProject"
-	ProjectsService_DeleteProject_FullMethodName         = "/projects.v1.ProjectsService/DeleteProject"
-	ProjectsService_ListProjects_FullMethodName          = "/projects.v1.ProjectsService/ListProjects"
-	ProjectsService_CreateTask_FullMethodName            = "/projects.v1.ProjectsService/CreateTask"
-	ProjectsService_GetTask_FullMethodName               = "/projects.v1.ProjectsService/GetTask"
-	ProjectsService_UpdateTask_FullMethodName            = "/projects.v1.ProjectsService/UpdateTask"
-	ProjectsService_DeleteTask_FullMethodName            = "/projects.v1.ProjectsService/DeleteTask"
-	ProjectsService_ListTasks_FullMethodName             = "/projects.v1.ProjectsService/ListTasks"
-	ProjectsService_MoveTask_FullMethodName              = "/projects.v1.ProjectsService/MoveTask"
-	ProjectsService_BulkUpdateTasks_FullMethodName       = "/projects.v1.ProjectsService/BulkUpdateTasks"
-	ProjectsService_DeleteTasks_FullMethodName           = "/projects.v1.ProjectsService/DeleteTasks"
-	ProjectsService_ExportTasks_FullMethodName           = "/projects.v1.ProjectsService/ExportTasks"
-	ProjectsService_CreateField_FullMethodName           = "/projects.v1.ProjectsService/CreateField"
-	ProjectsService_UpdateField_FullMethodName           = "/projects.v1.ProjectsService/UpdateField"
-	ProjectsService_DeleteField_FullMethodName           = "/projects.v1.ProjectsService/DeleteField"
-	ProjectsService_CreateView_FullMethodName            = "/projects.v1.ProjectsService/CreateView"
-	ProjectsService_UpdateView_FullMethodName            = "/projects.v1.ProjectsService/UpdateView"
-	ProjectsService_DeleteView_FullMethodName            = "/projects.v1.ProjectsService/DeleteView"
-	ProjectsService_ReorderViews_FullMethodName          = "/projects.v1.ProjectsService/ReorderViews"
-	ProjectsService_GetViewCatalog_FullMethodName        = "/projects.v1.ProjectsService/GetViewCatalog"
-	ProjectsService_ListActivities_FullMethodName        = "/projects.v1.ProjectsService/ListActivities"
-	ProjectsService_CreateSprint_FullMethodName          = "/projects.v1.ProjectsService/CreateSprint"
-	ProjectsService_UpdateSprint_FullMethodName          = "/projects.v1.ProjectsService/UpdateSprint"
-	ProjectsService_StartSprint_FullMethodName           = "/projects.v1.ProjectsService/StartSprint"
-	ProjectsService_CompleteSprint_FullMethodName        = "/projects.v1.ProjectsService/CompleteSprint"
-	ProjectsService_DeleteSprint_FullMethodName          = "/projects.v1.ProjectsService/DeleteSprint"
-	ProjectsService_ListSprints_FullMethodName           = "/projects.v1.ProjectsService/ListSprints"
-	ProjectsService_ToggleTaskWatcher_FullMethodName     = "/projects.v1.ProjectsService/ToggleTaskWatcher"
-	ProjectsService_ListTaskWatchers_FullMethodName      = "/projects.v1.ProjectsService/ListTaskWatchers"
-	ProjectsService_BulkCheckTaskWatchers_FullMethodName = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
-	ProjectsService_CreateWorklog_FullMethodName         = "/projects.v1.ProjectsService/CreateWorklog"
-	ProjectsService_UpdateWorklog_FullMethodName         = "/projects.v1.ProjectsService/UpdateWorklog"
-	ProjectsService_DeleteWorklog_FullMethodName         = "/projects.v1.ProjectsService/DeleteWorklog"
-	ProjectsService_ListTaskWorklogs_FullMethodName      = "/projects.v1.ProjectsService/ListTaskWorklogs"
-	ProjectsService_ListUserWorklogs_FullMethodName      = "/projects.v1.ProjectsService/ListUserWorklogs"
-	ProjectsService_StartTimer_FullMethodName            = "/projects.v1.ProjectsService/StartTimer"
-	ProjectsService_PauseTimer_FullMethodName            = "/projects.v1.ProjectsService/PauseTimer"
-	ProjectsService_ResumeTimer_FullMethodName           = "/projects.v1.ProjectsService/ResumeTimer"
-	ProjectsService_StopTimer_FullMethodName             = "/projects.v1.ProjectsService/StopTimer"
-	ProjectsService_GetActiveTimer_FullMethodName        = "/projects.v1.ProjectsService/GetActiveTimer"
-	ProjectsService_GetTimePolicy_FullMethodName         = "/projects.v1.ProjectsService/GetTimePolicy"
-	ProjectsService_UpdateTimePolicy_FullMethodName      = "/projects.v1.ProjectsService/UpdateTimePolicy"
-	ProjectsService_AggregateWorklogs_FullMethodName     = "/projects.v1.ProjectsService/AggregateWorklogs"
-	ProjectsService_GetTimesheet_FullMethodName          = "/projects.v1.ProjectsService/GetTimesheet"
-	ProjectsService_SubmitTimesheet_FullMethodName       = "/projects.v1.ProjectsService/SubmitTimesheet"
-	ProjectsService_RecallTimesheet_FullMethodName       = "/projects.v1.ProjectsService/RecallTimesheet"
-	ProjectsService_ListReviewTimesheets_FullMethodName  = "/projects.v1.ProjectsService/ListReviewTimesheets"
-	ProjectsService_ApproveTimesheet_FullMethodName      = "/projects.v1.ProjectsService/ApproveTimesheet"
-	ProjectsService_RejectTimesheet_FullMethodName       = "/projects.v1.ProjectsService/RejectTimesheet"
-	ProjectsService_GrantGrace_FullMethodName            = "/projects.v1.ProjectsService/GrantGrace"
-	ProjectsService_ClosePeriod_FullMethodName           = "/projects.v1.ProjectsService/ClosePeriod"
-	ProjectsService_ReopenPeriod_FullMethodName          = "/projects.v1.ProjectsService/ReopenPeriod"
-	ProjectsService_ListPeriods_FullMethodName           = "/projects.v1.ProjectsService/ListPeriods"
+	ProjectsService_CreateProject_FullMethodName             = "/projects.v1.ProjectsService/CreateProject"
+	ProjectsService_GetProject_FullMethodName                = "/projects.v1.ProjectsService/GetProject"
+	ProjectsService_UpdateProject_FullMethodName             = "/projects.v1.ProjectsService/UpdateProject"
+	ProjectsService_DeleteProject_FullMethodName             = "/projects.v1.ProjectsService/DeleteProject"
+	ProjectsService_ListProjects_FullMethodName              = "/projects.v1.ProjectsService/ListProjects"
+	ProjectsService_CreateTask_FullMethodName                = "/projects.v1.ProjectsService/CreateTask"
+	ProjectsService_GetTask_FullMethodName                   = "/projects.v1.ProjectsService/GetTask"
+	ProjectsService_UpdateTask_FullMethodName                = "/projects.v1.ProjectsService/UpdateTask"
+	ProjectsService_DeleteTask_FullMethodName                = "/projects.v1.ProjectsService/DeleteTask"
+	ProjectsService_ListTasks_FullMethodName                 = "/projects.v1.ProjectsService/ListTasks"
+	ProjectsService_MoveTask_FullMethodName                  = "/projects.v1.ProjectsService/MoveTask"
+	ProjectsService_BulkUpdateTasks_FullMethodName           = "/projects.v1.ProjectsService/BulkUpdateTasks"
+	ProjectsService_DeleteTasks_FullMethodName               = "/projects.v1.ProjectsService/DeleteTasks"
+	ProjectsService_ExportTasks_FullMethodName               = "/projects.v1.ProjectsService/ExportTasks"
+	ProjectsService_CreateField_FullMethodName               = "/projects.v1.ProjectsService/CreateField"
+	ProjectsService_UpdateField_FullMethodName               = "/projects.v1.ProjectsService/UpdateField"
+	ProjectsService_DeleteField_FullMethodName               = "/projects.v1.ProjectsService/DeleteField"
+	ProjectsService_CreateView_FullMethodName                = "/projects.v1.ProjectsService/CreateView"
+	ProjectsService_UpdateView_FullMethodName                = "/projects.v1.ProjectsService/UpdateView"
+	ProjectsService_DeleteView_FullMethodName                = "/projects.v1.ProjectsService/DeleteView"
+	ProjectsService_ReorderViews_FullMethodName              = "/projects.v1.ProjectsService/ReorderViews"
+	ProjectsService_GetViewCatalog_FullMethodName            = "/projects.v1.ProjectsService/GetViewCatalog"
+	ProjectsService_ListActivities_FullMethodName            = "/projects.v1.ProjectsService/ListActivities"
+	ProjectsService_CreateSprint_FullMethodName              = "/projects.v1.ProjectsService/CreateSprint"
+	ProjectsService_UpdateSprint_FullMethodName              = "/projects.v1.ProjectsService/UpdateSprint"
+	ProjectsService_StartSprint_FullMethodName               = "/projects.v1.ProjectsService/StartSprint"
+	ProjectsService_CompleteSprint_FullMethodName            = "/projects.v1.ProjectsService/CompleteSprint"
+	ProjectsService_DeleteSprint_FullMethodName              = "/projects.v1.ProjectsService/DeleteSprint"
+	ProjectsService_ListSprints_FullMethodName               = "/projects.v1.ProjectsService/ListSprints"
+	ProjectsService_ToggleTaskWatcher_FullMethodName         = "/projects.v1.ProjectsService/ToggleTaskWatcher"
+	ProjectsService_ListTaskWatchers_FullMethodName          = "/projects.v1.ProjectsService/ListTaskWatchers"
+	ProjectsService_BulkCheckTaskWatchers_FullMethodName     = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
+	ProjectsService_CreateWorklog_FullMethodName             = "/projects.v1.ProjectsService/CreateWorklog"
+	ProjectsService_UpdateWorklog_FullMethodName             = "/projects.v1.ProjectsService/UpdateWorklog"
+	ProjectsService_DeleteWorklog_FullMethodName             = "/projects.v1.ProjectsService/DeleteWorklog"
+	ProjectsService_ListTaskWorklogs_FullMethodName          = "/projects.v1.ProjectsService/ListTaskWorklogs"
+	ProjectsService_ListUserWorklogs_FullMethodName          = "/projects.v1.ProjectsService/ListUserWorklogs"
+	ProjectsService_StartTimer_FullMethodName                = "/projects.v1.ProjectsService/StartTimer"
+	ProjectsService_PauseTimer_FullMethodName                = "/projects.v1.ProjectsService/PauseTimer"
+	ProjectsService_ResumeTimer_FullMethodName               = "/projects.v1.ProjectsService/ResumeTimer"
+	ProjectsService_StopTimer_FullMethodName                 = "/projects.v1.ProjectsService/StopTimer"
+	ProjectsService_GetActiveTimer_FullMethodName            = "/projects.v1.ProjectsService/GetActiveTimer"
+	ProjectsService_GetTimePolicy_FullMethodName             = "/projects.v1.ProjectsService/GetTimePolicy"
+	ProjectsService_UpdateTimePolicy_FullMethodName          = "/projects.v1.ProjectsService/UpdateTimePolicy"
+	ProjectsService_AggregateWorklogs_FullMethodName         = "/projects.v1.ProjectsService/AggregateWorklogs"
+	ProjectsService_GetTimesheet_FullMethodName              = "/projects.v1.ProjectsService/GetTimesheet"
+	ProjectsService_SubmitTimesheet_FullMethodName           = "/projects.v1.ProjectsService/SubmitTimesheet"
+	ProjectsService_RecallTimesheet_FullMethodName           = "/projects.v1.ProjectsService/RecallTimesheet"
+	ProjectsService_ListReviewTimesheets_FullMethodName      = "/projects.v1.ProjectsService/ListReviewTimesheets"
+	ProjectsService_ApproveTimesheet_FullMethodName          = "/projects.v1.ProjectsService/ApproveTimesheet"
+	ProjectsService_RejectTimesheet_FullMethodName           = "/projects.v1.ProjectsService/RejectTimesheet"
+	ProjectsService_GrantGrace_FullMethodName                = "/projects.v1.ProjectsService/GrantGrace"
+	ProjectsService_ClosePeriod_FullMethodName               = "/projects.v1.ProjectsService/ClosePeriod"
+	ProjectsService_ReopenPeriod_FullMethodName              = "/projects.v1.ProjectsService/ReopenPeriod"
+	ProjectsService_ListPeriods_FullMethodName               = "/projects.v1.ProjectsService/ListPeriods"
+	ProjectsService_CreateInternalTimeProject_FullMethodName = "/projects.v1.ProjectsService/CreateInternalTimeProject"
+	ProjectsService_GetSprintCapacity_FullMethodName         = "/projects.v1.ProjectsService/GetSprintCapacity"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -144,6 +146,8 @@ type ProjectsServiceClient interface {
 	ClosePeriod(ctx context.Context, in *ClosePeriodRequest, opts ...grpc.CallOption) (*ClosePeriodResponse, error)
 	ReopenPeriod(ctx context.Context, in *ReopenPeriodRequest, opts ...grpc.CallOption) (*ReopenPeriodResponse, error)
 	ListPeriods(ctx context.Context, in *ListPeriodsRequest, opts ...grpc.CallOption) (*ListPeriodsResponse, error)
+	CreateInternalTimeProject(ctx context.Context, in *CreateInternalTimeProjectRequest, opts ...grpc.CallOption) (*CreateInternalTimeProjectResponse, error)
+	GetSprintCapacity(ctx context.Context, in *GetSprintCapacityRequest, opts ...grpc.CallOption) (*GetSprintCapacityResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -713,6 +717,26 @@ func (c *projectsServiceClient) ListPeriods(ctx context.Context, in *ListPeriods
 	return out, nil
 }
 
+func (c *projectsServiceClient) CreateInternalTimeProject(ctx context.Context, in *CreateInternalTimeProjectRequest, opts ...grpc.CallOption) (*CreateInternalTimeProjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateInternalTimeProjectResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_CreateInternalTimeProject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) GetSprintCapacity(ctx context.Context, in *GetSprintCapacityRequest, opts ...grpc.CallOption) (*GetSprintCapacityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSprintCapacityResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetSprintCapacity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -781,6 +805,8 @@ type ProjectsServiceServer interface {
 	ClosePeriod(context.Context, *ClosePeriodRequest) (*ClosePeriodResponse, error)
 	ReopenPeriod(context.Context, *ReopenPeriodRequest) (*ReopenPeriodResponse, error)
 	ListPeriods(context.Context, *ListPeriodsRequest) (*ListPeriodsResponse, error)
+	CreateInternalTimeProject(context.Context, *CreateInternalTimeProjectRequest) (*CreateInternalTimeProjectResponse, error)
+	GetSprintCapacity(context.Context, *GetSprintCapacityRequest) (*GetSprintCapacityResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -955,6 +981,12 @@ func (UnimplementedProjectsServiceServer) ReopenPeriod(context.Context, *ReopenP
 }
 func (UnimplementedProjectsServiceServer) ListPeriods(context.Context, *ListPeriodsRequest) (*ListPeriodsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListPeriods not implemented")
+}
+func (UnimplementedProjectsServiceServer) CreateInternalTimeProject(context.Context, *CreateInternalTimeProjectRequest) (*CreateInternalTimeProjectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateInternalTimeProject not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetSprintCapacity(context.Context, *GetSprintCapacityRequest) (*GetSprintCapacityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSprintCapacity not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -1960,6 +1992,42 @@ func _ProjectsService_ListPeriods_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_CreateInternalTimeProject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateInternalTimeProjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).CreateInternalTimeProject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_CreateInternalTimeProject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).CreateInternalTimeProject(ctx, req.(*CreateInternalTimeProjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_GetSprintCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSprintCapacityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetSprintCapacity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetSprintCapacity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetSprintCapacity(ctx, req.(*GetSprintCapacityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2182,6 +2250,14 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPeriods",
 			Handler:    _ProjectsService_ListPeriods_Handler,
+		},
+		{
+			MethodName: "CreateInternalTimeProject",
+			Handler:    _ProjectsService_CreateInternalTimeProject_Handler,
+		},
+		{
+			MethodName: "GetSprintCapacity",
+			Handler:    _ProjectsService_GetSprintCapacity_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

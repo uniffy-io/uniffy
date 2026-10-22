@@ -120,6 +120,8 @@ message ListUserWorklogsRequest {
 
 message ListUserWorklogsResponse {
   repeated Worklog worklogs = 1;
+  // One per day in the range: the person's requirement after holidays and days off.
+  repeated DayTotal days = 2;
 }
 
 message Timer {
@@ -306,6 +308,8 @@ message DayTotal {
   string day = 1;
   int32 minutes = 2;
   int32 required_minutes = 3;
+  // A holiday or an out-of-office day; required_minutes already reflects it, half for a half day.
+  bool off = 4;
 }
 
 message TimePeriod {
@@ -443,4 +447,37 @@ message ListPeriodsRequest {
 
 message ListPeriodsResponse {
   repeated TimePeriod periods = 1;
+}
+
+message CreateInternalTimeProjectRequest {
+  string organization_id = 1;
+}
+
+message CreateInternalTimeProjectResponse {
+  string project_id = 1;
+  string slug = 2;
+  // False when the policy already named a live project and this call returned it.
+  bool created = 3;
+  TimePolicy policy = 4;
+}
+
+message GetSprintCapacityRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+}
+
+// One assignee of the sprint's tasks; a task shared by several splits its estimate evenly.
+message SprintCapacityRow {
+  string user_id = 1;
+  // Required minutes over the person's workdays inside the sprint dates, less days off.
+  int32 capacity_minutes = 2;
+  int32 estimated_minutes = 3;
+  int32 logged_minutes = 4;
+}
+
+message GetSprintCapacityResponse {
+  repeated SprintCapacityRow rows = 1;
+  int32 capacity_minutes = 2;
+  int32 estimated_minutes = 3;
+  int32 logged_minutes = 4;
 }

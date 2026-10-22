@@ -7,6 +7,7 @@ import pytest
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.timesheet import TimePeriod, Timesheet, TimesheetStatus
+from uniffy.domains.projects.time.capacity import DayRequirement, days_between, required_minutes_on
 from uniffy.domains.projects.time.closures import PeriodView
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy
 from uniffy.domains.projects.time.review import MAX_PAGE_SIZE, TimesheetReview
@@ -18,6 +19,23 @@ ALICE = uuid4()
 BOB = uuid4()
 MODULE = "uniffy.domains.projects.time.review"
 PERIOD_START = date(2026, 10, 12)
+
+
+WORKDAYS = {ALICE: ("monday", "tuesday"), BOB: ("monday",)}
+
+
+async def _requirements(session, organization_id, user_ids, start, end, policy):  # noqa: ANN001
+    return {
+        user_id: [
+            DayRequirement(
+                day=day,
+                required_minutes=required_minutes_on(day, policy, WORKDAYS.get(user_id, ())),
+                off=False,
+            )
+            for day in days_between(start, end)
+        ]
+        for user_id in user_ids
+    }
 
 
 def _compiled(stmt) -> str:  # noqa: ANN001
@@ -75,8 +93,8 @@ def _env(*, admin: bool, people: list, sheets: list | None = None, totals: list 
     stack.enter_context(patch(f"{MODULE}.PeriodOperations", return_value=periods))
     stack.enter_context(
         patch(
-            f"{MODULE}.workdays_for_users",
-            new=AsyncMock(return_value={ALICE: ("monday", "tuesday"), BOB: ("monday",)}),
+            f"{MODULE}.day_requirements_for",
+            new=AsyncMock(side_effect=_requirements),
         )
     )
     return stack, session, TimesheetReview(session)  # type: ignore[arg-type]

@@ -41,6 +41,7 @@ import {
   selectSheetBusy,
   selectSheetsTouching,
   selectTimePolicy,
+  selectWeekDays,
   selectWeekLoading,
   selectWeekWorklogs,
 } from "@/features/projects/store/timeSlice";
@@ -60,7 +61,8 @@ import {
   dayStatus,
   dayTotals,
   normalizeWeekStart,
-  requiredMinutesOn,
+  offLabel,
+  requirementsFor,
   rowMinutes,
   rowsMissingFrom,
   sumMinutes,
@@ -197,6 +199,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   const rangeKey = weekRangeKey(days[0], days[6]);
   const selectWorklogs = useMemo(() => selectWeekWorklogs(rangeKey), [rangeKey]);
   const worklogs = useAppSelector(selectWorklogs);
+  const servedDays = useAppSelector(selectWeekDays(rangeKey));
   const loading = useAppSelector(selectWeekLoading(rangeKey));
   const selectSheets = useMemo(() => selectSheetsTouching(days[0], days[6]), [days]);
   const sheets = useAppSelector(selectSheets);
@@ -245,9 +248,13 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
     [policy, workdays],
   );
   const totals = useMemo(() => dayTotals(rows, days), [rows, days]);
+  const requirements = useMemo(
+    () => requirementsFor(days, servedDays, rule),
+    [days, servedDays, rule],
+  );
   const required = useMemo(
-    () => Object.fromEntries(days.map((day) => [day, requiredMinutesOn(day, rule)])),
-    [days, rule],
+    () => Object.fromEntries(days.map((day) => [day, requirements[day].required])),
+    [days, requirements],
   );
   const weekTotal = days.reduce((sum, day) => sum + totals[day], 0);
   const weekRequired = days.reduce((sum, day) => sum + required[day], 0);
@@ -406,6 +413,14 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
                   >
                     <div>{weekdayShort(day)}</div>
                     <div className="text-[10px] font-normal">{day.slice(5).replace("-", "/")}</div>
+                    {offLabel(required[day], requirements[day].off) && (
+                      <div
+                        className="whitespace-nowrap text-[9px] font-normal normal-case tracking-normal text-subtle-foreground"
+                        data-testid="week-day-off"
+                      >
+                        {offLabel(required[day], requirements[day].off)}
+                      </div>
+                    )}
                   </TableHead>
                 ))}
                 <TableHead className="text-right">Total</TableHead>

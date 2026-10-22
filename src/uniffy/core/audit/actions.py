@@ -203,6 +203,7 @@ class Action:
     WORKLOG_DELETED = "worklog.deleted"
     WORKLOG_OVERRIDE = "worklog.override"
     TIME_POLICY_UPDATED = "time_policy.updated"
+    INTERNAL_TIME_PROJECT_CREATED = "time_policy.internal_project_created"
     TIMESHEET_SUBMITTED = "timesheet.submitted"
     TIMESHEET_RECALLED = "timesheet.recalled"
     TIMESHEET_APPROVED = "timesheet.approved"

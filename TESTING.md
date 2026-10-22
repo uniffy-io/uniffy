@@ -3200,8 +3200,20 @@ they belong to; with neither, org admins review.
 - [ ] Notifications: submit reaches the reviewers (in app and email), approve and reject reach the
       member; clicking a reviewer notification opens Approvals on that period, a member's opens
       their week. (`(both products)`)
+- [ ] Days off: add an all-day out of office event on your calendar for a workday, and one
+      covering the morning only; My time shows `off` under the first and `half day` under the
+      second with half the required hours; the reviewer's inbox meters and the period total use
+      the same numbers. (`(both products)`)
+- [ ] `/admin/projects` > Internal time project: Create project makes an open `INT` project with
+      six tasks and the row turns into a link; a second visit shows the link, never a second
+      project; the Internal group sits first in the My time rail.
+- [ ] Backlog > sprint card with dates: the estimated and logged meters read against the team's
+      capacity (required hours over each assignee's workdays in the sprint, less days off); the
+      estimate turns red past capacity; the per member popover lists every assignee.
 - [ ] Agent: ask an agent with the Tasks tools to log `30m` on a task; the entry appears as the
-      asking user with source `agent`; asking it to log time for someone else is refused.
+      asking user with source `agent`; asking it to log time for someone else is refused. Ask it
+      to summarize your week and the totals match My time; asking about a project you cannot open
+      is refused.
 - [ ] Demo data: after `./manage.py stack reset-data`, `SELECT count(*) FROM projects_tasks t WHERE
       coalesce(time_spent_minutes,0) <> (SELECT coalesce(sum(duration_minutes),0) FROM
       projects_worklogs w WHERE w.task_id=t.id AND NOT w.is_deleted)` is 0, one timer runs, and the

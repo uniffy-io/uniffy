@@ -9,6 +9,7 @@ import {
   TimerPauseReason as ProtoTimerPauseReason,
   TimesheetStatus as ProtoTimesheetStatus,
   WorklogSource as ProtoWorklogSource,
+  type DayTotal as ProtoDayTotal,
   type ReviewTimesheetRow as ProtoReviewTimesheetRow,
   type TimePeriod as ProtoTimePeriod,
   type TimePolicy as ProtoTimePolicy,
@@ -19,11 +20,14 @@ import {
 import type {
   AggregateGroupBy,
   CreateWorklogInput,
+  DayTotal,
+  InternalProjectResult,
   ProjectReport,
   ReportQuery,
   ReviewPage,
   ReviewQuery,
   ReviewRow,
+  SprintCapacity,
   StartTimerInput,
   StopTimerInput,
   TimePeriod,
@@ -34,6 +38,7 @@ import type {
   Timesheet,
   TimesheetStatus,
   UpdateWorklogInput,
+  UserWeek,
   Worklog,
   WorklogSource,
 } from "../types/time";
@@ -127,17 +132,22 @@ export function protoPeriodToFrontend(proto: ProtoTimePeriod): TimePeriod {
   };
 }
 
+function protoDayTotalToFrontend(proto: ProtoDayTotal): DayTotal {
+  return {
+    day: proto.day,
+    minutes: proto.minutes,
+    requiredMinutes: proto.requiredMinutes,
+    off: proto.off,
+  };
+}
+
 function protoReviewRowToFrontend(proto: ProtoReviewTimesheetRow): ReviewRow {
   return {
     userId: proto.userId,
     status: SHEET_STATUS_FROM_PROTO[proto.status] ?? "open",
     periodMinutes: proto.periodMinutes,
     requiredMinutes: proto.requiredMinutes,
-    days: proto.days.map((day) => ({
-      day: day.day,
-      minutes: day.minutes,
-      requiredMinutes: day.requiredMinutes,
-    })),
+    days: proto.days.map(protoDayTotalToFrontend),
     timesheet: protoTimesheetToFrontend(proto.timesheet!),
   };
 }
@@ -256,14 +266,43 @@ export const timeApi = {
     fromDate: string,
     toDate: string,
     userId?: string,
-  ): Promise<Worklog[]> => {
+  ): Promise<UserWeek> => {
     const response = await timeClient.listUserWorklogs({
       organizationId,
       ...(userId ? { userId } : {}),
       fromDate,
       toDate,
     });
-    return response.worklogs.map(protoWorklogToFrontend);
+    return {
+      worklogs: response.worklogs.map(protoWorklogToFrontend),
+      days: response.days.map(protoDayTotalToFrontend),
+    };
+  },
+
+  getSprintCapacity: async (sprintId: string, organizationId: string): Promise<SprintCapacity> => {
+    const response = await timeClient.getSprintCapacity({ organizationId, sprintId });
+    return {
+      rows: response.rows.map((row) => ({
+        userId: row.userId,
+        capacityMinutes: row.capacityMinutes,
+        estimatedMinutes: row.estimatedMinutes,
+        loggedMinutes: row.loggedMinutes,
+      })),
+      capacityMinutes: response.capacityMinutes,
+      estimatedMinutes: response.estimatedMinutes,
+      loggedMinutes: response.loggedMinutes,
+    };
+  },
+
+  /** Creates the organization's internal time project once; later calls return it. */
+  createInternalTimeProject: async (organizationId: string): Promise<InternalProjectResult> => {
+    const response = await timeClient.createInternalTimeProject({ organizationId });
+    return {
+      projectId: response.projectId,
+      slug: response.slug,
+      created: response.created,
+      policy: protoPolicyToFrontend(response.policy!),
+    };
   },
 
   aggregateWorklogs: async (query: ReportQuery, organizationId: string): Promise<ProjectReport> => {

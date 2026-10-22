@@ -32,6 +32,8 @@ TIME_RPCS = (
     "close_period",
     "reopen_period",
     "list_periods",
+    "create_internal_time_project",
+    "get_sprint_capacity",
 )
 
 

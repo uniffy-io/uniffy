@@ -8,6 +8,7 @@ import pytest
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.models.projects.timesheet import Timesheet, TimesheetStatus
+from uniffy.domains.projects.time.capacity import DayRequirement, days_between, required_minutes_on
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy
 from uniffy.domains.projects.time.timesheets import (
     MAX_GRACE_HOURS,
@@ -21,6 +22,20 @@ REVIEWER = uuid4()
 MODULE = "uniffy.domains.projects.time.timesheets"
 PERIOD_START = date(2026, 10, 12)
 PERIOD_END = date(2026, 10, 18)
+
+
+async def _requirements(session, organization_id, user_ids, start, end, policy):  # noqa: ANN001
+    return {
+        user_id: [
+            DayRequirement(
+                day=day,
+                required_minutes=required_minutes_on(day, policy, ("monday",)),
+                off=False,
+            )
+            for day in days_between(start, end)
+        ]
+        for user_id in user_ids
+    }
 
 
 def _policy(**overrides) -> ResolvedTimePolicy:  # noqa: ANN003
@@ -111,7 +126,7 @@ def _env(
         patch(f"{MODULE}.period_is_closed", new=AsyncMock(return_value=period_closed))
     )
     stack.enter_context(
-        patch(f"{MODULE}.workdays_for_users", new=AsyncMock(return_value={WORKER: ("monday",)}))
+        patch(f"{MODULE}.day_requirements_for", new=AsyncMock(side_effect=_requirements))
     )
     env = _Env(stack, session, access)
     stack.enter_context(patch(f"{MODULE}.write_audit_event", new=env.audit))

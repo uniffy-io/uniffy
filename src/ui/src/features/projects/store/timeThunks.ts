@@ -5,10 +5,12 @@ import { timeApi } from "../api/timeApi";
 import { weekRangeKey } from "../utils/timeWeek";
 import type {
   CreateWorklogInput,
+  InternalProjectResult,
   ProjectReport,
   ReportQuery,
   ReviewPage,
   ReviewQuery,
+  SprintCapacity,
   StartTimerInput,
   StopTimerInput,
   TimePeriod,
@@ -16,6 +18,7 @@ import type {
   Timer,
   Timesheet,
   UpdateWorklogInput,
+  UserWeek,
   Worklog,
 } from "../types/time";
 import { applyTaskTimeSpent } from "./projectsSlice";
@@ -201,15 +204,15 @@ export const stopTimer = createAsyncThunk<
 
 /** The signed-in person's own entries over an inclusive day range, kept under the range key. */
 export const fetchUserWorklogs = createAsyncThunk<
-  { key: string; worklogs: Worklog[] },
+  { key: string } & UserWeek,
   { from: string; to: string },
   ThunkConfig
 >("time/fetchUserWorklogs", async ({ from, to }, { getState, rejectWithValue }) => {
   const orgId = organizationIdOf(getState());
   if (!orgId) return rejectWithValue("No organization selected");
   try {
-    const worklogs = await timeApi.listUserWorklogs(orgId, from, to);
-    return { key: weekRangeKey(from, to), worklogs };
+    const week = await timeApi.listUserWorklogs(orgId, from, to);
+    return { key: weekRangeKey(from, to), ...week };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to load your time"));
   }
@@ -360,15 +363,15 @@ export const reopenPeriod = createAsyncThunk<TimePeriod, { day: string }, ThunkC
 
 /** Another person's entries over a range, for a reviewer's read-only week. */
 export const fetchPersonWorklogs = createAsyncThunk<
-  { key: string; worklogs: Worklog[] },
+  { key: string } & UserWeek,
   { userId: string; from: string; to: string },
   ThunkConfig
 >("time/fetchPersonWorklogs", async ({ userId, from, to }, { getState, rejectWithValue }) => {
   const orgId = organizationIdOf(getState());
   if (!orgId) return rejectWithValue("No organization selected");
   try {
-    const worklogs = await timeApi.listUserWorklogs(orgId, from, to, userId);
-    return { key: personRangeKey(userId, from, to), worklogs };
+    const week = await timeApi.listUserWorklogs(orgId, from, to, userId);
+    return { key: personRangeKey(userId, from, to), ...week };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to load their time"));
   }
@@ -391,3 +394,32 @@ export const fetchPersonTimesheet = createAsyncThunk<
 export function personRangeKey(userId: string, from: string, to: string): string {
   return `${userId}:${weekRangeKey(from, to)}`;
 }
+
+export const fetchSprintCapacity = createAsyncThunk<
+  { sprintId: string; capacity: SprintCapacity },
+  { sprintId: string },
+  ThunkConfig
+>("time/fetchSprintCapacity", async ({ sprintId }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const capacity = await timeApi.getSprintCapacity(sprintId, orgId);
+    return { sprintId, capacity };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to load the sprint capacity"));
+  }
+});
+
+/** Timekeeping admins only; the policy comes back naming the project either way. */
+export const createInternalTimeProject = createAsyncThunk<InternalProjectResult, void, ThunkConfig>(
+  "time/createInternalTimeProject",
+  async (_, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.createInternalTimeProject(orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to create the internal time project"));
+    }
+  },
+);

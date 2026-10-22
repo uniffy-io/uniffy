@@ -1,6 +1,6 @@
 ---
 title: Time tracking on projects
-description: Log time on tasks, run one timer, review your week in My time, and submit periods for approval when your organization turns approvals on.
+description: Log time on tasks, run one timer, review your week in My time, plan sprints against capacity, and submit periods for approval when your organization turns approvals on.
 sidebar:
   label: Time tracking
   order: 7
@@ -36,6 +36,18 @@ Every project has a Time page for anyone who can open the project. Pick a range,
 
 The page reports time on work you can already see. It does not reveal a person's time on projects you cannot open.
 
+## Days off
+
+A required day is a workday from your scheduling settings. Holidays the organization lists expect nothing, and so does a day you are out of office on your calendar. An out of office event that covers your whole working window makes the day off. One that covers at least half of it makes a half day, so the requirement halves. Those days read as off on My time, in the reviewer inbox and in the period total, from the same number.
+
+## The internal project
+
+An admin can create one Internal project for the organization. It is open to everyone and holds six standing tasks: Meetings, Vacation, Sick leave, Training, Support rotation and Admin. Its tasks are pinned first on My time, so the hours that belong to no project still have a home. The admin page creates it once and links to it after that.
+
+## Sprint capacity
+
+A sprint with dates shows what its people can give it. Capacity is the required minutes over each assignee's workdays inside the sprint, less their days off. The sprint card sets the estimates against that capacity and reads red once the plan asks for more than the team has, and it sets the logged time against it too. Open the card's meter for the same picture per person. A task shared by several people splits its estimate between them.
+
 ## Periods and approvals
 
 Approvals are off by default. Turn them on from the Projects admin page and every person's time falls into **periods**, a week or a month at a time.
@@ -51,6 +63,8 @@ Auto submit hands in whatever was logged once the slack runs out, and reminders 
 ## Agents
 
 Ask an agent to log time and it writes an entry for you, on a task you can open, as you. An agent never logs time for anyone else, whatever the prompt says.
+
+Ask an agent how your week went and it sums your own entries, by task, day or project. Ask about a project and it answers only for projects you can open, with the same totals the project's Time page shows.
 
 ## Cloud and self hosted
 

@@ -15,12 +15,14 @@ from uniffy_proto.projects.v1.time_pb import (
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 from uniffy.domains.projects.time.converters import (
+    day_total_to_proto,
     group_by_from_proto,
     policy_from_proto,
     policy_to_proto,
     worklog_to_proto,
 )
 from uniffy.domains.projects.time.policy import PeriodType, ResolvedTimePolicy
+from uniffy.domains.projects.time.review import DayTotalView
 from uniffy.domains.projects.time.worklogs import AggregateGroupBy
 
 ORG = uuid4()
@@ -133,3 +135,15 @@ def test_group_by_maps_every_proto_value(
 def test_group_by_rejects_unspecified() -> None:
     with pytest.raises(ValidationError):
         group_by_from_proto(ProtoAggregateGroupBy.UNSPECIFIED)
+
+
+def test_day_totals_carry_the_off_flag() -> None:
+    proto = day_total_to_proto(
+        DayTotalView(day=date(2026, 10, 13), minutes=120, required_minutes=240, off=True)
+    )
+    assert (proto.day, proto.minutes, proto.required_minutes, proto.off) == (
+        "2026-10-13",
+        120,
+        240,
+        True,
+    )

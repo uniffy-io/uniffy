@@ -13,6 +13,7 @@ import {
 } from "@/features/settings/hooks/useSettings";
 import {
   selectTimePolicy,
+  selectWeekDays,
   selectWeekLoading,
   selectWeekWorklogs,
 } from "@/features/projects/store/timeSlice";
@@ -20,7 +21,7 @@ import { fetchTimePolicy, fetchUserWorklogs } from "@/features/projects/store/ti
 import {
   dayStatus,
   normalizeWeekStart,
-  requiredMinutesOn,
+  requirementsFor,
   weekDays,
   weekRangeKey,
   weekStartOf,
@@ -40,6 +41,7 @@ export function MyTimeWidget() {
   const rangeKey = weekRangeKey(days[0], days[6]);
   const selectWorklogs = useMemo(() => selectWeekWorklogs(rangeKey), [rangeKey]);
   const worklogs = useAppSelector(selectWorklogs);
+  const servedDays = useAppSelector(selectWeekDays(rangeKey));
   const loading = useAppSelector(selectWeekLoading(rangeKey));
   const enabled = policy?.enabled ?? false;
 
@@ -57,14 +59,15 @@ export function MyTimeWidget() {
       workdays,
       holidays: policy?.holidays ?? [],
     };
+    const requirements = requirementsFor(days, servedDays, rule);
     return days.map((day) => {
       const total = worklogs
         .filter((entry) => entry.workDate === day)
         .reduce((sum, entry) => sum + entry.durationMinutes, 0);
-      const required = requiredMinutesOn(day, rule);
+      const required = requirements[day].required;
       return { day, total, required, status: dayStatus(total, required) };
     });
-  }, [days, worklogs, workdays, policy]);
+  }, [days, worklogs, servedDays, workdays, policy]);
 
   if (!policy || !policy.enabled) return null;
 

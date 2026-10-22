@@ -25,6 +25,7 @@ import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
 import {
   selectPersonSheet,
   selectPersonWeek,
+  selectPersonWeekDays,
   selectTimePolicy,
 } from "@/features/projects/store/timeSlice";
 import {
@@ -42,6 +43,8 @@ import {
   dayStatus,
   dayTotals,
   normalizeWeekStart,
+  offLabel,
+  requirementsFor,
   rowMinutes,
   sumMinutes,
   taskUrn,
@@ -63,6 +66,8 @@ const STATUS_COLOR: Record<DayStatus, string | undefined> = {
 
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const GRACE_HOURS = 24;
+// A reviewer knows nothing about the person's days until the server answers.
+const NO_RULE = { requiredMinutesPerDay: 0, workdays: [], holidays: [] };
 
 function weekdayShort(key: string): string {
   const [year, month, day] = key.split("-").map(Number);
@@ -87,6 +92,7 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   const key = personRangeKey(userId, days[0], days[6]);
   const selectWorklogs = useMemo(() => selectPersonWeek(key), [key]);
   const worklogs = useAppSelector(selectWorklogs);
+  const servedDays = useAppSelector(selectPersonWeekDays(key));
   const [sheetStart, setSheetStart] = useState<string | null>(null);
   const sheet = useAppSelector(selectPersonSheet(userId, sheetStart ?? ""));
   const { subjects } = useSubjectResolver([userId]);
@@ -112,6 +118,10 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   const rowTaskIds = useMemo(() => rows.map((row) => row.taskId), [rows]);
   const labels = useTaskLabels(rowTaskIds);
   const totals = useMemo(() => dayTotals(rows, days), [rows, days]);
+  const requirements = useMemo(
+    () => requirementsFor(days, servedDays, NO_RULE),
+    [days, servedDays],
+  );
   const weekTotal = days.reduce((sum, day) => sum + totals[day], 0);
 
   const run = async (action: Promise<unknown>) => {
@@ -234,10 +244,19 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
                   className={cn(
                     "w-[76px] text-right tabular-nums",
                     day === today && "text-primary",
+                    requirements[day].required === 0 && "text-subtle-foreground",
                   )}
                 >
                   <div>{weekdayShort(day)}</div>
                   <div className="text-[10px] font-normal">{day.slice(5).replace("-", "/")}</div>
+                  {offLabel(requirements[day].required, requirements[day].off) && (
+                    <div
+                      className="whitespace-nowrap text-[9px] font-normal normal-case tracking-normal text-subtle-foreground"
+                      data-testid="review-day-off"
+                    >
+                      {offLabel(requirements[day].required, requirements[day].off)}
+                    </div>
+                  )}
                 </TableHead>
               ))}
               <TableHead className="text-right">Total</TableHead>
@@ -285,15 +304,29 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
             ))}
             <TableRow className="bg-muted/30">
               <TableCell className="text-xs text-muted-foreground">Total</TableCell>
-              {days.map((day) => (
-                <TableCell
-                  key={day}
-                  className="text-right text-xs font-medium tabular-nums"
-                  style={{ color: STATUS_COLOR[dayStatus(totals[day], 0)] }}
-                >
-                  {totals[day] > 0 ? formatMinutes(totals[day]) : ""}
-                </TableCell>
-              ))}
+              {days.map((day) => {
+                const status = dayStatus(totals[day], requirements[day].required);
+                return (
+                  <TableCell
+                    key={day}
+                    className="text-right text-xs font-medium tabular-nums"
+                    style={{ color: STATUS_COLOR[status] }}
+                    title={
+                      requirements[day].required > 0
+                        ? `${formatMinutes(requirements[day].required)} required`
+                        : undefined
+                    }
+                    data-testid="review-day-total"
+                    data-status={status}
+                  >
+                    {totals[day] > 0
+                      ? formatMinutes(totals[day])
+                      : requirements[day].required > 0
+                        ? "0m"
+                        : ""}
+                  </TableCell>
+                );
+              })}
               <TableCell className="text-right text-xs font-semibold tabular-nums">
                 {formatMinutes(weekTotal)}
               </TableCell>

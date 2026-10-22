@@ -1,4 +1,4 @@
-import type { Worklog } from "@/features/projects/types/time";
+import type { DayTotal, Worklog } from "@/features/projects/types/time";
 
 export type WeekStart = "monday" | "saturday" | "sunday";
 
@@ -78,6 +78,32 @@ export function taskUrn(taskId: string): string {
 export function requiredMinutesOn(key: string, rule: RequirementRule): number {
   if (rule.holidays.includes(key)) return 0;
   return rule.workdays.includes(weekdayOf(key)) ? rule.requiredMinutesPerDay : 0;
+}
+
+/** What each day asks, preferring the server's answer (which knows about days off). */
+export function requirementsFor(
+  days: readonly string[],
+  served: readonly DayTotal[],
+  rule: RequirementRule,
+): Record<string, { required: number; off: boolean }> {
+  const byDay = new Map(served.map((day) => [day.day, day]));
+  return Object.fromEntries(
+    days.map((day) => {
+      const known = byDay.get(day);
+      return [
+        day,
+        known
+          ? { required: known.requiredMinutes, off: known.off }
+          : { required: requiredMinutesOn(day, rule), off: rule.holidays.includes(day) },
+      ];
+    }),
+  );
+}
+
+/** The word under a day that is away: a whole day off, or half of one. */
+export function offLabel(required: number, off: boolean): string | null {
+  if (!off) return null;
+  return required > 0 ? "half day" : "off";
 }
 
 export function sumMinutes(worklogs: readonly Worklog[]): number {

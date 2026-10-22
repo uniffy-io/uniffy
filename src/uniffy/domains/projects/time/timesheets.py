@@ -18,7 +18,7 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.timesheet import Timesheet, TimesheetStatus
 from uniffy.core.models.projects.worklog import Worklog
 from uniffy.domains.projects.time.access import TimeAccess
-from uniffy.domains.projects.time.capacity import required_minutes_between, workdays_for_users
+from uniffy.domains.projects.time.capacity import day_requirements_for
 from uniffy.domains.projects.time.events import (
     notify_grace,
     notify_reviewed,
@@ -157,7 +157,9 @@ class TimesheetOperations:
                 Worklog.work_date <= end,
             )
         )
-        workdays = (await workdays_for_users(self.session, [user_id]))[user_id]
+        requirements = await day_requirements_for(
+            self.session, organization_id, [user_id], start, end, policy
+        )
         can_review = actor_id != user_id and await self.access.is_reviewer_of(
             actor_id, organization_id, user_id
         )
@@ -173,7 +175,7 @@ class TimesheetOperations:
             period_closed=period_closed,
             can_review=can_review,
             total_minutes=int(total.scalar_one()),
-            required_minutes=required_minutes_between(start, end, policy, workdays),
+            required_minutes=sum(item.required_minutes for item in requirements[user_id]),
         )
 
     async def get(

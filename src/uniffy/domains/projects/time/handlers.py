@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -12,12 +13,16 @@ from protobuf import Oneof
 from uniffy_proto.projects.v1.time_pb import (
     AggregateWorklogsRequest,
     AggregateWorklogsResponse,
+    CreateInternalTimeProjectRequest,
+    CreateInternalTimeProjectResponse,
     CreateWorklogRequest,
     CreateWorklogResponse,
     DeleteWorklogRequest,
     DeleteWorklogResponse,
     GetActiveTimerRequest,
     GetActiveTimerResponse,
+    GetSprintCapacityRequest,
+    GetSprintCapacityResponse,
     GetTimePolicyRequest,
     GetTimePolicyResponse,
     ListTaskWorklogsRequest,
@@ -42,22 +47,31 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.models.audit.event import AuditResourceType
+from uniffy.core.realtime.buffer import UpdateBuffer
+from uniffy.core.search import SearchIndexer
+from uniffy.core.storage import ObjectStorage
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.projects.rpc import map_domain_error, parse_date, parse_uuid
 from uniffy.domains.projects.time.access import TimeAccess
+from uniffy.domains.projects.time.capacity import day_requirements_for
 from uniffy.domains.projects.time.converters import (
     aggregate_row_to_proto,
+    day_total_to_proto,
     group_by_from_proto,
     policy_from_proto,
     policy_to_proto,
+    sprint_capacity_to_proto,
     timer_to_proto,
     worklog_to_proto,
 )
+from uniffy.domains.projects.time.internal import InternalProjectOperations
 from uniffy.domains.projects.time.policy import (
     _to_blob,
     load_time_policy,
     save_time_policy,
 )
+from uniffy.domains.projects.time.review import DayTotalView
+from uniffy.domains.projects.time.sprint_capacity import SprintCapacityReader
 from uniffy.domains.projects.time.timers import TimerOperations
 from uniffy.domains.projects.time.worklogs import WorklogOperations
 from uniffy.infrastructure.database import open_session
@@ -79,6 +93,10 @@ def parse_aggregate_scope(request: AggregateWorklogsRequest) -> tuple[UUID | Non
 
 
 class TimeHandlers:
+    storage: ObjectStorage
+    search_indexer: SearchIndexer
+    buffer: UpdateBuffer
+
     async def create_worklog(
         self, request: CreateWorklogRequest, ctx: RequestContext
     ) -> CreateWorklogResponse:
@@ -199,8 +217,28 @@ class TimeHandlers:
                 rows = await WorklogOperations(session).list_for_user(
                     user_id, organization_id, subject_id, from_date=from_date, to_date=to_date
                 )
+                policy = await load_time_policy(session, organization_id)
+                requirements = await day_requirements_for(
+                    session, organization_id, [subject_id], from_date, to_date, policy
+                )
+                minutes: dict[date, int] = {}
+                for row in rows:
+                    minutes[row.worklog.work_date] = (
+                        minutes.get(row.worklog.work_date, 0) + row.worklog.duration_minutes
+                    )
                 return ListUserWorklogsResponse(
-                    worklogs=[worklog_to_proto(row.worklog, row.project_id) for row in rows]
+                    worklogs=[worklog_to_proto(row.worklog, row.project_id) for row in rows],
+                    days=[
+                        day_total_to_proto(
+                            DayTotalView(
+                                day=item.day,
+                                minutes=minutes.get(item.day, 0),
+                                required_minutes=item.required_minutes,
+                                off=item.off,
+                            )
+                        )
+                        for item in requirements[subject_id]
+                    ],
                 )
         except ConnectError:
             raise
@@ -377,3 +415,41 @@ class TimeHandlers:
             raise
         except Exception as exc:
             raise map_domain_error("get_active_timer", exc) from exc
+
+    async def create_internal_time_project(
+        self, request: CreateInternalTimeProjectRequest, ctx: RequestContext
+    ) -> CreateInternalTimeProjectResponse:
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        try:
+            async with open_session() as session:
+                result = await InternalProjectOperations(
+                    session, self.storage, self.search_indexer, self.buffer
+                ).ensure(user_id, organization_id)
+                return CreateInternalTimeProjectResponse(
+                    project_id=str(result.project.id),
+                    slug=result.project.slug,
+                    created=result.created,
+                    policy=policy_to_proto(result.policy),
+                )
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("create_internal_time_project", exc) from exc
+
+    async def get_sprint_capacity(
+        self, request: GetSprintCapacityRequest, ctx: RequestContext
+    ) -> GetSprintCapacityResponse:
+        user_id = current_user_id()
+        organization_id = parse_uuid(request.organization_id, "organization_id")
+        sprint_id = parse_uuid(request.sprint_id, "sprint_id")
+        try:
+            async with open_session() as session:
+                capacity = await SprintCapacityReader(session).get(
+                    user_id, organization_id, sprint_id
+                )
+                return sprint_capacity_to_proto(capacity)
+        except ConnectError:
+            raise
+        except Exception as exc:
+            raise map_domain_error("get_sprint_capacity", exc) from exc

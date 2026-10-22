@@ -8648,7 +8648,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x1bACTIVITY_ACTION_TIME_LOGGED\x10\n" +
 	"\x12 \n" +
 	"\x1cACTIVITY_ACTION_TIME_UPDATED\x10\v\x12 \n" +
-	"\x1cACTIVITY_ACTION_TIME_REMOVED\x10\f2\xad%\n" +
+	"\x1cACTIVITY_ACTION_TIME_REMOVED\x10\f2\x8d'\n" +
 	"\x0fProjectsService\x12V\n" +
 	"\rCreateProject\x12!.projects.v1.CreateProjectRequest\x1a\".projects.v1.CreateProjectResponse\x12M\n" +
 	"\n" +
@@ -8714,7 +8714,9 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"GrantGrace\x12\x1e.projects.v1.GrantGraceRequest\x1a\x1f.projects.v1.GrantGraceResponse\x12P\n" +
 	"\vClosePeriod\x12\x1f.projects.v1.ClosePeriodRequest\x1a .projects.v1.ClosePeriodResponse\x12S\n" +
 	"\fReopenPeriod\x12 .projects.v1.ReopenPeriodRequest\x1a!.projects.v1.ReopenPeriodResponse\x12P\n" +
-	"\vListPeriods\x12\x1f.projects.v1.ListPeriodsRequest\x1a .projects.v1.ListPeriodsResponseB=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
+	"\vListPeriods\x12\x1f.projects.v1.ListPeriodsRequest\x1a .projects.v1.ListPeriodsResponse\x12z\n" +
+	"\x19CreateInternalTimeProject\x12-.projects.v1.CreateInternalTimeProjectRequest\x1a..projects.v1.CreateInternalTimeProjectResponse\x12b\n" +
+	"\x11GetSprintCapacity\x12%.projects.v1.GetSprintCapacityRequest\x1a&.projects.v1.GetSprintCapacityResponseB=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3"
 
 var (
 	file_projects_v1_projects_proto_rawDescOnce sync.Once
@@ -8731,176 +8733,180 @@ func file_projects_v1_projects_proto_rawDescGZIP() []byte {
 var file_projects_v1_projects_proto_enumTypes = make([]protoimpl.EnumInfo, 13)
 var file_projects_v1_projects_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
 var file_projects_v1_projects_proto_goTypes = []any{
-	(FieldType)(0),                        // 0: projects.v1.FieldType
-	(ViewType)(0),                         // 1: projects.v1.ViewType
-	(ViewVisibility)(0),                   // 2: projects.v1.ViewVisibility
-	(TaskPseudoField)(0),                  // 3: projects.v1.TaskPseudoField
-	(TaskFilterOperator)(0),               // 4: projects.v1.TaskFilterOperator
-	(FilterLogic)(0),                      // 5: projects.v1.FilterLogic
-	(SortDirection)(0),                    // 6: projects.v1.SortDirection
-	(RelativeDateAnchor)(0),               // 7: projects.v1.RelativeDateAnchor
-	(ViewIdFlag)(0),                       // 8: projects.v1.ViewIdFlag
-	(TaskExportFormat)(0),                 // 9: projects.v1.TaskExportFormat
-	(TaskExportLayout)(0),                 // 10: projects.v1.TaskExportLayout
-	(RoadmapZoom)(0),                      // 11: projects.v1.RoadmapZoom
-	(ActivityAction)(0),                   // 12: projects.v1.ActivityAction
-	(*Project)(nil),                       // 13: projects.v1.Project
-	(*Task)(nil),                          // 14: projects.v1.Task
-	(*FieldDefinition)(nil),               // 15: projects.v1.FieldDefinition
-	(*TypeFieldSchema)(nil),               // 16: projects.v1.TypeFieldSchema
-	(*TaskFieldRef)(nil),                  // 17: projects.v1.TaskFieldRef
-	(*TaskFilterIdSet)(nil),               // 18: projects.v1.TaskFilterIdSet
-	(*RelativeDate)(nil),                  // 19: projects.v1.RelativeDate
-	(*TaskFilterDate)(nil),                // 20: projects.v1.TaskFilterDate
-	(*TaskFilterDateRange)(nil),           // 21: projects.v1.TaskFilterDateRange
-	(*TaskFilterNumberRange)(nil),         // 22: projects.v1.TaskFilterNumberRange
-	(*TaskFilterValue)(nil),               // 23: projects.v1.TaskFilterValue
-	(*TaskFilterCondition)(nil),           // 24: projects.v1.TaskFilterCondition
-	(*TaskFilterNode)(nil),                // 25: projects.v1.TaskFilterNode
-	(*TaskFilterGroup)(nil),               // 26: projects.v1.TaskFilterGroup
-	(*TaskSort)(nil),                      // 27: projects.v1.TaskSort
-	(*TaskGroupBy)(nil),                   // 28: projects.v1.TaskGroupBy
-	(*TableLayout)(nil),                   // 29: projects.v1.TableLayout
-	(*BoardLayout)(nil),                   // 30: projects.v1.BoardLayout
-	(*RoadmapLayout)(nil),                 // 31: projects.v1.RoadmapLayout
-	(*BacklogLayout)(nil),                 // 32: projects.v1.BacklogLayout
-	(*GraphLayout)(nil),                   // 33: projects.v1.GraphLayout
-	(*ResourcesLayout)(nil),               // 34: projects.v1.ResourcesLayout
-	(*ColumnWidth)(nil),                   // 35: projects.v1.ColumnWidth
-	(*ViewDefinition)(nil),                // 36: projects.v1.ViewDefinition
-	(*ViewConfig)(nil),                    // 37: projects.v1.ViewConfig
-	(*TaskActivity)(nil),                  // 38: projects.v1.TaskActivity
-	(*SelectOption)(nil),                  // 39: projects.v1.SelectOption
-	(*Sprint)(nil),                        // 40: projects.v1.Sprint
-	(*CreateProjectRequest)(nil),          // 41: projects.v1.CreateProjectRequest
-	(*GetProjectRequest)(nil),             // 42: projects.v1.GetProjectRequest
-	(*UpdateProjectRequest)(nil),          // 43: projects.v1.UpdateProjectRequest
-	(*ProjectTagIds)(nil),                 // 44: projects.v1.ProjectTagIds
-	(*DeleteProjectRequest)(nil),          // 45: projects.v1.DeleteProjectRequest
-	(*ListProjectsRequest)(nil),           // 46: projects.v1.ListProjectsRequest
-	(*CreateProjectResponse)(nil),         // 47: projects.v1.CreateProjectResponse
-	(*GetProjectResponse)(nil),            // 48: projects.v1.GetProjectResponse
-	(*UpdateProjectResponse)(nil),         // 49: projects.v1.UpdateProjectResponse
-	(*DeleteProjectResponse)(nil),         // 50: projects.v1.DeleteProjectResponse
-	(*ListProjectsResponse)(nil),          // 51: projects.v1.ListProjectsResponse
-	(*CreateTaskRequest)(nil),             // 52: projects.v1.CreateTaskRequest
-	(*GetTaskRequest)(nil),                // 53: projects.v1.GetTaskRequest
-	(*UpdateTaskRequest)(nil),             // 54: projects.v1.UpdateTaskRequest
-	(*TaskTagIds)(nil),                    // 55: projects.v1.TaskTagIds
-	(*TaskAssigneeIds)(nil),               // 56: projects.v1.TaskAssigneeIds
-	(*MoveTaskRequest)(nil),               // 57: projects.v1.MoveTaskRequest
-	(*BulkUpdateTasksRequest)(nil),        // 58: projects.v1.BulkUpdateTasksRequest
-	(*DeleteTaskRequest)(nil),             // 59: projects.v1.DeleteTaskRequest
-	(*DeleteTasksRequest)(nil),            // 60: projects.v1.DeleteTasksRequest
-	(*ListTasksRequest)(nil),              // 61: projects.v1.ListTasksRequest
-	(*ExportTasksRequest)(nil),            // 62: projects.v1.ExportTasksRequest
-	(*ExportTasksResponse)(nil),           // 63: projects.v1.ExportTasksResponse
-	(*CreateTaskResponse)(nil),            // 64: projects.v1.CreateTaskResponse
-	(*GetTaskResponse)(nil),               // 65: projects.v1.GetTaskResponse
-	(*UpdateTaskResponse)(nil),            // 66: projects.v1.UpdateTaskResponse
-	(*MoveTaskResponse)(nil),              // 67: projects.v1.MoveTaskResponse
-	(*DeleteTaskResponse)(nil),            // 68: projects.v1.DeleteTaskResponse
-	(*DeleteTasksResponse)(nil),           // 69: projects.v1.DeleteTasksResponse
-	(*BulkUpdateTasksResponse)(nil),       // 70: projects.v1.BulkUpdateTasksResponse
-	(*ListTasksResponse)(nil),             // 71: projects.v1.ListTasksResponse
-	(*CreateFieldRequest)(nil),            // 72: projects.v1.CreateFieldRequest
-	(*UpdateFieldRequest)(nil),            // 73: projects.v1.UpdateFieldRequest
-	(*DeleteFieldRequest)(nil),            // 74: projects.v1.DeleteFieldRequest
-	(*CreateFieldResponse)(nil),           // 75: projects.v1.CreateFieldResponse
-	(*UpdateFieldResponse)(nil),           // 76: projects.v1.UpdateFieldResponse
-	(*DeleteFieldResponse)(nil),           // 77: projects.v1.DeleteFieldResponse
-	(*CreateViewRequest)(nil),             // 78: projects.v1.CreateViewRequest
-	(*UpdateViewRequest)(nil),             // 79: projects.v1.UpdateViewRequest
-	(*DeleteViewRequest)(nil),             // 80: projects.v1.DeleteViewRequest
-	(*CreateViewResponse)(nil),            // 81: projects.v1.CreateViewResponse
-	(*UpdateViewResponse)(nil),            // 82: projects.v1.UpdateViewResponse
-	(*DeleteViewResponse)(nil),            // 83: projects.v1.DeleteViewResponse
-	(*ReorderViewsRequest)(nil),           // 84: projects.v1.ReorderViewsRequest
-	(*ReorderViewsResponse)(nil),          // 85: projects.v1.ReorderViewsResponse
-	(*ViewFieldCapabilities)(nil),         // 86: projects.v1.ViewFieldCapabilities
-	(*ViewCatalogFieldType)(nil),          // 87: projects.v1.ViewCatalogFieldType
-	(*ViewCatalogPseudoField)(nil),        // 88: projects.v1.ViewCatalogPseudoField
-	(*ViewFilterLimits)(nil),              // 89: projects.v1.ViewFilterLimits
-	(*GetViewCatalogRequest)(nil),         // 90: projects.v1.GetViewCatalogRequest
-	(*GetViewCatalogResponse)(nil),        // 91: projects.v1.GetViewCatalogResponse
-	(*CreateSprintRequest)(nil),           // 92: projects.v1.CreateSprintRequest
-	(*UpdateSprintRequest)(nil),           // 93: projects.v1.UpdateSprintRequest
-	(*StartSprintRequest)(nil),            // 94: projects.v1.StartSprintRequest
-	(*CompleteSprintRequest)(nil),         // 95: projects.v1.CompleteSprintRequest
-	(*DeleteSprintRequest)(nil),           // 96: projects.v1.DeleteSprintRequest
-	(*ListSprintsRequest)(nil),            // 97: projects.v1.ListSprintsRequest
-	(*CreateSprintResponse)(nil),          // 98: projects.v1.CreateSprintResponse
-	(*UpdateSprintResponse)(nil),          // 99: projects.v1.UpdateSprintResponse
-	(*StartSprintResponse)(nil),           // 100: projects.v1.StartSprintResponse
-	(*CompleteSprintResponse)(nil),        // 101: projects.v1.CompleteSprintResponse
-	(*DeleteSprintResponse)(nil),          // 102: projects.v1.DeleteSprintResponse
-	(*ListSprintsResponse)(nil),           // 103: projects.v1.ListSprintsResponse
-	(*ListActivitiesRequest)(nil),         // 104: projects.v1.ListActivitiesRequest
-	(*ListActivitiesResponse)(nil),        // 105: projects.v1.ListActivitiesResponse
-	(*ToggleTaskWatcherRequest)(nil),      // 106: projects.v1.ToggleTaskWatcherRequest
-	(*ToggleTaskWatcherResponse)(nil),     // 107: projects.v1.ToggleTaskWatcherResponse
-	(*ListTaskWatchersRequest)(nil),       // 108: projects.v1.ListTaskWatchersRequest
-	(*ListTaskWatchersResponse)(nil),      // 109: projects.v1.ListTaskWatchersResponse
-	(*BulkCheckTaskWatchersRequest)(nil),  // 110: projects.v1.BulkCheckTaskWatchersRequest
-	(*BulkCheckTaskWatchersResponse)(nil), // 111: projects.v1.BulkCheckTaskWatchersResponse
-	nil,                                   // 112: projects.v1.Project.TypeFieldSchemasEntry
-	nil,                                   // 113: projects.v1.Task.FieldValuesEntry
-	nil,                                   // 114: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
-	nil,                                   // 115: projects.v1.CreateTaskRequest.FieldValuesEntry
-	nil,                                   // 116: projects.v1.UpdateTaskRequest.FieldValuesEntry
-	nil,                                   // 117: projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	(v1.AccessMode)(0),                    // 118: common.v1.AccessMode
-	(*timestamppb.Timestamp)(nil),         // 119: google.protobuf.Timestamp
-	(v1.ContentRole)(0),                   // 120: common.v1.ContentRole
-	(*v11.Tag)(nil),                       // 121: tags.v1.Tag
-	(*v1.PaginationRequest)(nil),          // 122: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),         // 123: common.v1.PaginationResponse
-	(*CreateWorklogRequest)(nil),          // 124: projects.v1.CreateWorklogRequest
-	(*UpdateWorklogRequest)(nil),          // 125: projects.v1.UpdateWorklogRequest
-	(*DeleteWorklogRequest)(nil),          // 126: projects.v1.DeleteWorklogRequest
-	(*ListTaskWorklogsRequest)(nil),       // 127: projects.v1.ListTaskWorklogsRequest
-	(*ListUserWorklogsRequest)(nil),       // 128: projects.v1.ListUserWorklogsRequest
-	(*StartTimerRequest)(nil),             // 129: projects.v1.StartTimerRequest
-	(*PauseTimerRequest)(nil),             // 130: projects.v1.PauseTimerRequest
-	(*ResumeTimerRequest)(nil),            // 131: projects.v1.ResumeTimerRequest
-	(*StopTimerRequest)(nil),              // 132: projects.v1.StopTimerRequest
-	(*GetActiveTimerRequest)(nil),         // 133: projects.v1.GetActiveTimerRequest
-	(*GetTimePolicyRequest)(nil),          // 134: projects.v1.GetTimePolicyRequest
-	(*UpdateTimePolicyRequest)(nil),       // 135: projects.v1.UpdateTimePolicyRequest
-	(*AggregateWorklogsRequest)(nil),      // 136: projects.v1.AggregateWorklogsRequest
-	(*GetTimesheetRequest)(nil),           // 137: projects.v1.GetTimesheetRequest
-	(*SubmitTimesheetRequest)(nil),        // 138: projects.v1.SubmitTimesheetRequest
-	(*RecallTimesheetRequest)(nil),        // 139: projects.v1.RecallTimesheetRequest
-	(*ListReviewTimesheetsRequest)(nil),   // 140: projects.v1.ListReviewTimesheetsRequest
-	(*ApproveTimesheetRequest)(nil),       // 141: projects.v1.ApproveTimesheetRequest
-	(*RejectTimesheetRequest)(nil),        // 142: projects.v1.RejectTimesheetRequest
-	(*GrantGraceRequest)(nil),             // 143: projects.v1.GrantGraceRequest
-	(*ClosePeriodRequest)(nil),            // 144: projects.v1.ClosePeriodRequest
-	(*ReopenPeriodRequest)(nil),           // 145: projects.v1.ReopenPeriodRequest
-	(*ListPeriodsRequest)(nil),            // 146: projects.v1.ListPeriodsRequest
-	(*CreateWorklogResponse)(nil),         // 147: projects.v1.CreateWorklogResponse
-	(*UpdateWorklogResponse)(nil),         // 148: projects.v1.UpdateWorklogResponse
-	(*DeleteWorklogResponse)(nil),         // 149: projects.v1.DeleteWorklogResponse
-	(*ListTaskWorklogsResponse)(nil),      // 150: projects.v1.ListTaskWorklogsResponse
-	(*ListUserWorklogsResponse)(nil),      // 151: projects.v1.ListUserWorklogsResponse
-	(*StartTimerResponse)(nil),            // 152: projects.v1.StartTimerResponse
-	(*PauseTimerResponse)(nil),            // 153: projects.v1.PauseTimerResponse
-	(*ResumeTimerResponse)(nil),           // 154: projects.v1.ResumeTimerResponse
-	(*StopTimerResponse)(nil),             // 155: projects.v1.StopTimerResponse
-	(*GetActiveTimerResponse)(nil),        // 156: projects.v1.GetActiveTimerResponse
-	(*GetTimePolicyResponse)(nil),         // 157: projects.v1.GetTimePolicyResponse
-	(*UpdateTimePolicyResponse)(nil),      // 158: projects.v1.UpdateTimePolicyResponse
-	(*AggregateWorklogsResponse)(nil),     // 159: projects.v1.AggregateWorklogsResponse
-	(*GetTimesheetResponse)(nil),          // 160: projects.v1.GetTimesheetResponse
-	(*SubmitTimesheetResponse)(nil),       // 161: projects.v1.SubmitTimesheetResponse
-	(*RecallTimesheetResponse)(nil),       // 162: projects.v1.RecallTimesheetResponse
-	(*ListReviewTimesheetsResponse)(nil),  // 163: projects.v1.ListReviewTimesheetsResponse
-	(*ApproveTimesheetResponse)(nil),      // 164: projects.v1.ApproveTimesheetResponse
-	(*RejectTimesheetResponse)(nil),       // 165: projects.v1.RejectTimesheetResponse
-	(*GrantGraceResponse)(nil),            // 166: projects.v1.GrantGraceResponse
-	(*ClosePeriodResponse)(nil),           // 167: projects.v1.ClosePeriodResponse
-	(*ReopenPeriodResponse)(nil),          // 168: projects.v1.ReopenPeriodResponse
-	(*ListPeriodsResponse)(nil),           // 169: projects.v1.ListPeriodsResponse
+	(FieldType)(0),                            // 0: projects.v1.FieldType
+	(ViewType)(0),                             // 1: projects.v1.ViewType
+	(ViewVisibility)(0),                       // 2: projects.v1.ViewVisibility
+	(TaskPseudoField)(0),                      // 3: projects.v1.TaskPseudoField
+	(TaskFilterOperator)(0),                   // 4: projects.v1.TaskFilterOperator
+	(FilterLogic)(0),                          // 5: projects.v1.FilterLogic
+	(SortDirection)(0),                        // 6: projects.v1.SortDirection
+	(RelativeDateAnchor)(0),                   // 7: projects.v1.RelativeDateAnchor
+	(ViewIdFlag)(0),                           // 8: projects.v1.ViewIdFlag
+	(TaskExportFormat)(0),                     // 9: projects.v1.TaskExportFormat
+	(TaskExportLayout)(0),                     // 10: projects.v1.TaskExportLayout
+	(RoadmapZoom)(0),                          // 11: projects.v1.RoadmapZoom
+	(ActivityAction)(0),                       // 12: projects.v1.ActivityAction
+	(*Project)(nil),                           // 13: projects.v1.Project
+	(*Task)(nil),                              // 14: projects.v1.Task
+	(*FieldDefinition)(nil),                   // 15: projects.v1.FieldDefinition
+	(*TypeFieldSchema)(nil),                   // 16: projects.v1.TypeFieldSchema
+	(*TaskFieldRef)(nil),                      // 17: projects.v1.TaskFieldRef
+	(*TaskFilterIdSet)(nil),                   // 18: projects.v1.TaskFilterIdSet
+	(*RelativeDate)(nil),                      // 19: projects.v1.RelativeDate
+	(*TaskFilterDate)(nil),                    // 20: projects.v1.TaskFilterDate
+	(*TaskFilterDateRange)(nil),               // 21: projects.v1.TaskFilterDateRange
+	(*TaskFilterNumberRange)(nil),             // 22: projects.v1.TaskFilterNumberRange
+	(*TaskFilterValue)(nil),                   // 23: projects.v1.TaskFilterValue
+	(*TaskFilterCondition)(nil),               // 24: projects.v1.TaskFilterCondition
+	(*TaskFilterNode)(nil),                    // 25: projects.v1.TaskFilterNode
+	(*TaskFilterGroup)(nil),                   // 26: projects.v1.TaskFilterGroup
+	(*TaskSort)(nil),                          // 27: projects.v1.TaskSort
+	(*TaskGroupBy)(nil),                       // 28: projects.v1.TaskGroupBy
+	(*TableLayout)(nil),                       // 29: projects.v1.TableLayout
+	(*BoardLayout)(nil),                       // 30: projects.v1.BoardLayout
+	(*RoadmapLayout)(nil),                     // 31: projects.v1.RoadmapLayout
+	(*BacklogLayout)(nil),                     // 32: projects.v1.BacklogLayout
+	(*GraphLayout)(nil),                       // 33: projects.v1.GraphLayout
+	(*ResourcesLayout)(nil),                   // 34: projects.v1.ResourcesLayout
+	(*ColumnWidth)(nil),                       // 35: projects.v1.ColumnWidth
+	(*ViewDefinition)(nil),                    // 36: projects.v1.ViewDefinition
+	(*ViewConfig)(nil),                        // 37: projects.v1.ViewConfig
+	(*TaskActivity)(nil),                      // 38: projects.v1.TaskActivity
+	(*SelectOption)(nil),                      // 39: projects.v1.SelectOption
+	(*Sprint)(nil),                            // 40: projects.v1.Sprint
+	(*CreateProjectRequest)(nil),              // 41: projects.v1.CreateProjectRequest
+	(*GetProjectRequest)(nil),                 // 42: projects.v1.GetProjectRequest
+	(*UpdateProjectRequest)(nil),              // 43: projects.v1.UpdateProjectRequest
+	(*ProjectTagIds)(nil),                     // 44: projects.v1.ProjectTagIds
+	(*DeleteProjectRequest)(nil),              // 45: projects.v1.DeleteProjectRequest
+	(*ListProjectsRequest)(nil),               // 46: projects.v1.ListProjectsRequest
+	(*CreateProjectResponse)(nil),             // 47: projects.v1.CreateProjectResponse
+	(*GetProjectResponse)(nil),                // 48: projects.v1.GetProjectResponse
+	(*UpdateProjectResponse)(nil),             // 49: projects.v1.UpdateProjectResponse
+	(*DeleteProjectResponse)(nil),             // 50: projects.v1.DeleteProjectResponse
+	(*ListProjectsResponse)(nil),              // 51: projects.v1.ListProjectsResponse
+	(*CreateTaskRequest)(nil),                 // 52: projects.v1.CreateTaskRequest
+	(*GetTaskRequest)(nil),                    // 53: projects.v1.GetTaskRequest
+	(*UpdateTaskRequest)(nil),                 // 54: projects.v1.UpdateTaskRequest
+	(*TaskTagIds)(nil),                        // 55: projects.v1.TaskTagIds
+	(*TaskAssigneeIds)(nil),                   // 56: projects.v1.TaskAssigneeIds
+	(*MoveTaskRequest)(nil),                   // 57: projects.v1.MoveTaskRequest
+	(*BulkUpdateTasksRequest)(nil),            // 58: projects.v1.BulkUpdateTasksRequest
+	(*DeleteTaskRequest)(nil),                 // 59: projects.v1.DeleteTaskRequest
+	(*DeleteTasksRequest)(nil),                // 60: projects.v1.DeleteTasksRequest
+	(*ListTasksRequest)(nil),                  // 61: projects.v1.ListTasksRequest
+	(*ExportTasksRequest)(nil),                // 62: projects.v1.ExportTasksRequest
+	(*ExportTasksResponse)(nil),               // 63: projects.v1.ExportTasksResponse
+	(*CreateTaskResponse)(nil),                // 64: projects.v1.CreateTaskResponse
+	(*GetTaskResponse)(nil),                   // 65: projects.v1.GetTaskResponse
+	(*UpdateTaskResponse)(nil),                // 66: projects.v1.UpdateTaskResponse
+	(*MoveTaskResponse)(nil),                  // 67: projects.v1.MoveTaskResponse
+	(*DeleteTaskResponse)(nil),                // 68: projects.v1.DeleteTaskResponse
+	(*DeleteTasksResponse)(nil),               // 69: projects.v1.DeleteTasksResponse
+	(*BulkUpdateTasksResponse)(nil),           // 70: projects.v1.BulkUpdateTasksResponse
+	(*ListTasksResponse)(nil),                 // 71: projects.v1.ListTasksResponse
+	(*CreateFieldRequest)(nil),                // 72: projects.v1.CreateFieldRequest
+	(*UpdateFieldRequest)(nil),                // 73: projects.v1.UpdateFieldRequest
+	(*DeleteFieldRequest)(nil),                // 74: projects.v1.DeleteFieldRequest
+	(*CreateFieldResponse)(nil),               // 75: projects.v1.CreateFieldResponse
+	(*UpdateFieldResponse)(nil),               // 76: projects.v1.UpdateFieldResponse
+	(*DeleteFieldResponse)(nil),               // 77: projects.v1.DeleteFieldResponse
+	(*CreateViewRequest)(nil),                 // 78: projects.v1.CreateViewRequest
+	(*UpdateViewRequest)(nil),                 // 79: projects.v1.UpdateViewRequest
+	(*DeleteViewRequest)(nil),                 // 80: projects.v1.DeleteViewRequest
+	(*CreateViewResponse)(nil),                // 81: projects.v1.CreateViewResponse
+	(*UpdateViewResponse)(nil),                // 82: projects.v1.UpdateViewResponse
+	(*DeleteViewResponse)(nil),                // 83: projects.v1.DeleteViewResponse
+	(*ReorderViewsRequest)(nil),               // 84: projects.v1.ReorderViewsRequest
+	(*ReorderViewsResponse)(nil),              // 85: projects.v1.ReorderViewsResponse
+	(*ViewFieldCapabilities)(nil),             // 86: projects.v1.ViewFieldCapabilities
+	(*ViewCatalogFieldType)(nil),              // 87: projects.v1.ViewCatalogFieldType
+	(*ViewCatalogPseudoField)(nil),            // 88: projects.v1.ViewCatalogPseudoField
+	(*ViewFilterLimits)(nil),                  // 89: projects.v1.ViewFilterLimits
+	(*GetViewCatalogRequest)(nil),             // 90: projects.v1.GetViewCatalogRequest
+	(*GetViewCatalogResponse)(nil),            // 91: projects.v1.GetViewCatalogResponse
+	(*CreateSprintRequest)(nil),               // 92: projects.v1.CreateSprintRequest
+	(*UpdateSprintRequest)(nil),               // 93: projects.v1.UpdateSprintRequest
+	(*StartSprintRequest)(nil),                // 94: projects.v1.StartSprintRequest
+	(*CompleteSprintRequest)(nil),             // 95: projects.v1.CompleteSprintRequest
+	(*DeleteSprintRequest)(nil),               // 96: projects.v1.DeleteSprintRequest
+	(*ListSprintsRequest)(nil),                // 97: projects.v1.ListSprintsRequest
+	(*CreateSprintResponse)(nil),              // 98: projects.v1.CreateSprintResponse
+	(*UpdateSprintResponse)(nil),              // 99: projects.v1.UpdateSprintResponse
+	(*StartSprintResponse)(nil),               // 100: projects.v1.StartSprintResponse
+	(*CompleteSprintResponse)(nil),            // 101: projects.v1.CompleteSprintResponse
+	(*DeleteSprintResponse)(nil),              // 102: projects.v1.DeleteSprintResponse
+	(*ListSprintsResponse)(nil),               // 103: projects.v1.ListSprintsResponse
+	(*ListActivitiesRequest)(nil),             // 104: projects.v1.ListActivitiesRequest
+	(*ListActivitiesResponse)(nil),            // 105: projects.v1.ListActivitiesResponse
+	(*ToggleTaskWatcherRequest)(nil),          // 106: projects.v1.ToggleTaskWatcherRequest
+	(*ToggleTaskWatcherResponse)(nil),         // 107: projects.v1.ToggleTaskWatcherResponse
+	(*ListTaskWatchersRequest)(nil),           // 108: projects.v1.ListTaskWatchersRequest
+	(*ListTaskWatchersResponse)(nil),          // 109: projects.v1.ListTaskWatchersResponse
+	(*BulkCheckTaskWatchersRequest)(nil),      // 110: projects.v1.BulkCheckTaskWatchersRequest
+	(*BulkCheckTaskWatchersResponse)(nil),     // 111: projects.v1.BulkCheckTaskWatchersResponse
+	nil,                                       // 112: projects.v1.Project.TypeFieldSchemasEntry
+	nil,                                       // 113: projects.v1.Task.FieldValuesEntry
+	nil,                                       // 114: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
+	nil,                                       // 115: projects.v1.CreateTaskRequest.FieldValuesEntry
+	nil,                                       // 116: projects.v1.UpdateTaskRequest.FieldValuesEntry
+	nil,                                       // 117: projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
+	(v1.AccessMode)(0),                        // 118: common.v1.AccessMode
+	(*timestamppb.Timestamp)(nil),             // 119: google.protobuf.Timestamp
+	(v1.ContentRole)(0),                       // 120: common.v1.ContentRole
+	(*v11.Tag)(nil),                           // 121: tags.v1.Tag
+	(*v1.PaginationRequest)(nil),              // 122: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),             // 123: common.v1.PaginationResponse
+	(*CreateWorklogRequest)(nil),              // 124: projects.v1.CreateWorklogRequest
+	(*UpdateWorklogRequest)(nil),              // 125: projects.v1.UpdateWorklogRequest
+	(*DeleteWorklogRequest)(nil),              // 126: projects.v1.DeleteWorklogRequest
+	(*ListTaskWorklogsRequest)(nil),           // 127: projects.v1.ListTaskWorklogsRequest
+	(*ListUserWorklogsRequest)(nil),           // 128: projects.v1.ListUserWorklogsRequest
+	(*StartTimerRequest)(nil),                 // 129: projects.v1.StartTimerRequest
+	(*PauseTimerRequest)(nil),                 // 130: projects.v1.PauseTimerRequest
+	(*ResumeTimerRequest)(nil),                // 131: projects.v1.ResumeTimerRequest
+	(*StopTimerRequest)(nil),                  // 132: projects.v1.StopTimerRequest
+	(*GetActiveTimerRequest)(nil),             // 133: projects.v1.GetActiveTimerRequest
+	(*GetTimePolicyRequest)(nil),              // 134: projects.v1.GetTimePolicyRequest
+	(*UpdateTimePolicyRequest)(nil),           // 135: projects.v1.UpdateTimePolicyRequest
+	(*AggregateWorklogsRequest)(nil),          // 136: projects.v1.AggregateWorklogsRequest
+	(*GetTimesheetRequest)(nil),               // 137: projects.v1.GetTimesheetRequest
+	(*SubmitTimesheetRequest)(nil),            // 138: projects.v1.SubmitTimesheetRequest
+	(*RecallTimesheetRequest)(nil),            // 139: projects.v1.RecallTimesheetRequest
+	(*ListReviewTimesheetsRequest)(nil),       // 140: projects.v1.ListReviewTimesheetsRequest
+	(*ApproveTimesheetRequest)(nil),           // 141: projects.v1.ApproveTimesheetRequest
+	(*RejectTimesheetRequest)(nil),            // 142: projects.v1.RejectTimesheetRequest
+	(*GrantGraceRequest)(nil),                 // 143: projects.v1.GrantGraceRequest
+	(*ClosePeriodRequest)(nil),                // 144: projects.v1.ClosePeriodRequest
+	(*ReopenPeriodRequest)(nil),               // 145: projects.v1.ReopenPeriodRequest
+	(*ListPeriodsRequest)(nil),                // 146: projects.v1.ListPeriodsRequest
+	(*CreateInternalTimeProjectRequest)(nil),  // 147: projects.v1.CreateInternalTimeProjectRequest
+	(*GetSprintCapacityRequest)(nil),          // 148: projects.v1.GetSprintCapacityRequest
+	(*CreateWorklogResponse)(nil),             // 149: projects.v1.CreateWorklogResponse
+	(*UpdateWorklogResponse)(nil),             // 150: projects.v1.UpdateWorklogResponse
+	(*DeleteWorklogResponse)(nil),             // 151: projects.v1.DeleteWorklogResponse
+	(*ListTaskWorklogsResponse)(nil),          // 152: projects.v1.ListTaskWorklogsResponse
+	(*ListUserWorklogsResponse)(nil),          // 153: projects.v1.ListUserWorklogsResponse
+	(*StartTimerResponse)(nil),                // 154: projects.v1.StartTimerResponse
+	(*PauseTimerResponse)(nil),                // 155: projects.v1.PauseTimerResponse
+	(*ResumeTimerResponse)(nil),               // 156: projects.v1.ResumeTimerResponse
+	(*StopTimerResponse)(nil),                 // 157: projects.v1.StopTimerResponse
+	(*GetActiveTimerResponse)(nil),            // 158: projects.v1.GetActiveTimerResponse
+	(*GetTimePolicyResponse)(nil),             // 159: projects.v1.GetTimePolicyResponse
+	(*UpdateTimePolicyResponse)(nil),          // 160: projects.v1.UpdateTimePolicyResponse
+	(*AggregateWorklogsResponse)(nil),         // 161: projects.v1.AggregateWorklogsResponse
+	(*GetTimesheetResponse)(nil),              // 162: projects.v1.GetTimesheetResponse
+	(*SubmitTimesheetResponse)(nil),           // 163: projects.v1.SubmitTimesheetResponse
+	(*RecallTimesheetResponse)(nil),           // 164: projects.v1.RecallTimesheetResponse
+	(*ListReviewTimesheetsResponse)(nil),      // 165: projects.v1.ListReviewTimesheetsResponse
+	(*ApproveTimesheetResponse)(nil),          // 166: projects.v1.ApproveTimesheetResponse
+	(*RejectTimesheetResponse)(nil),           // 167: projects.v1.RejectTimesheetResponse
+	(*GrantGraceResponse)(nil),                // 168: projects.v1.GrantGraceResponse
+	(*ClosePeriodResponse)(nil),               // 169: projects.v1.ClosePeriodResponse
+	(*ReopenPeriodResponse)(nil),              // 170: projects.v1.ReopenPeriodResponse
+	(*ListPeriodsResponse)(nil),               // 171: projects.v1.ListPeriodsResponse
+	(*CreateInternalTimeProjectResponse)(nil), // 172: projects.v1.CreateInternalTimeProjectResponse
+	(*GetSprintCapacityResponse)(nil),         // 173: projects.v1.GetSprintCapacityResponse
 }
 var file_projects_v1_projects_proto_depIdxs = []int32{
 	118, // 0: projects.v1.Project.access_mode:type_name -> common.v1.AccessMode
@@ -9090,63 +9096,67 @@ var file_projects_v1_projects_proto_depIdxs = []int32{
 	144, // 184: projects.v1.ProjectsService.ClosePeriod:input_type -> projects.v1.ClosePeriodRequest
 	145, // 185: projects.v1.ProjectsService.ReopenPeriod:input_type -> projects.v1.ReopenPeriodRequest
 	146, // 186: projects.v1.ProjectsService.ListPeriods:input_type -> projects.v1.ListPeriodsRequest
-	47,  // 187: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.CreateProjectResponse
-	48,  // 188: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.GetProjectResponse
-	49,  // 189: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.UpdateProjectResponse
-	50,  // 190: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
-	51,  // 191: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
-	64,  // 192: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.CreateTaskResponse
-	65,  // 193: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.GetTaskResponse
-	66,  // 194: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.UpdateTaskResponse
-	68,  // 195: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
-	71,  // 196: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
-	67,  // 197: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.MoveTaskResponse
-	70,  // 198: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
-	69,  // 199: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
-	63,  // 200: projects.v1.ProjectsService.ExportTasks:output_type -> projects.v1.ExportTasksResponse
-	75,  // 201: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.CreateFieldResponse
-	76,  // 202: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.UpdateFieldResponse
-	77,  // 203: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
-	81,  // 204: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.CreateViewResponse
-	82,  // 205: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.UpdateViewResponse
-	83,  // 206: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
-	85,  // 207: projects.v1.ProjectsService.ReorderViews:output_type -> projects.v1.ReorderViewsResponse
-	91,  // 208: projects.v1.ProjectsService.GetViewCatalog:output_type -> projects.v1.GetViewCatalogResponse
-	105, // 209: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
-	98,  // 210: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.CreateSprintResponse
-	99,  // 211: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.UpdateSprintResponse
-	100, // 212: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.StartSprintResponse
-	101, // 213: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.CompleteSprintResponse
-	102, // 214: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
-	103, // 215: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
-	107, // 216: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
-	109, // 217: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
-	111, // 218: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
-	147, // 219: projects.v1.ProjectsService.CreateWorklog:output_type -> projects.v1.CreateWorklogResponse
-	148, // 220: projects.v1.ProjectsService.UpdateWorklog:output_type -> projects.v1.UpdateWorklogResponse
-	149, // 221: projects.v1.ProjectsService.DeleteWorklog:output_type -> projects.v1.DeleteWorklogResponse
-	150, // 222: projects.v1.ProjectsService.ListTaskWorklogs:output_type -> projects.v1.ListTaskWorklogsResponse
-	151, // 223: projects.v1.ProjectsService.ListUserWorklogs:output_type -> projects.v1.ListUserWorklogsResponse
-	152, // 224: projects.v1.ProjectsService.StartTimer:output_type -> projects.v1.StartTimerResponse
-	153, // 225: projects.v1.ProjectsService.PauseTimer:output_type -> projects.v1.PauseTimerResponse
-	154, // 226: projects.v1.ProjectsService.ResumeTimer:output_type -> projects.v1.ResumeTimerResponse
-	155, // 227: projects.v1.ProjectsService.StopTimer:output_type -> projects.v1.StopTimerResponse
-	156, // 228: projects.v1.ProjectsService.GetActiveTimer:output_type -> projects.v1.GetActiveTimerResponse
-	157, // 229: projects.v1.ProjectsService.GetTimePolicy:output_type -> projects.v1.GetTimePolicyResponse
-	158, // 230: projects.v1.ProjectsService.UpdateTimePolicy:output_type -> projects.v1.UpdateTimePolicyResponse
-	159, // 231: projects.v1.ProjectsService.AggregateWorklogs:output_type -> projects.v1.AggregateWorklogsResponse
-	160, // 232: projects.v1.ProjectsService.GetTimesheet:output_type -> projects.v1.GetTimesheetResponse
-	161, // 233: projects.v1.ProjectsService.SubmitTimesheet:output_type -> projects.v1.SubmitTimesheetResponse
-	162, // 234: projects.v1.ProjectsService.RecallTimesheet:output_type -> projects.v1.RecallTimesheetResponse
-	163, // 235: projects.v1.ProjectsService.ListReviewTimesheets:output_type -> projects.v1.ListReviewTimesheetsResponse
-	164, // 236: projects.v1.ProjectsService.ApproveTimesheet:output_type -> projects.v1.ApproveTimesheetResponse
-	165, // 237: projects.v1.ProjectsService.RejectTimesheet:output_type -> projects.v1.RejectTimesheetResponse
-	166, // 238: projects.v1.ProjectsService.GrantGrace:output_type -> projects.v1.GrantGraceResponse
-	167, // 239: projects.v1.ProjectsService.ClosePeriod:output_type -> projects.v1.ClosePeriodResponse
-	168, // 240: projects.v1.ProjectsService.ReopenPeriod:output_type -> projects.v1.ReopenPeriodResponse
-	169, // 241: projects.v1.ProjectsService.ListPeriods:output_type -> projects.v1.ListPeriodsResponse
-	187, // [187:242] is the sub-list for method output_type
-	132, // [132:187] is the sub-list for method input_type
+	147, // 187: projects.v1.ProjectsService.CreateInternalTimeProject:input_type -> projects.v1.CreateInternalTimeProjectRequest
+	148, // 188: projects.v1.ProjectsService.GetSprintCapacity:input_type -> projects.v1.GetSprintCapacityRequest
+	47,  // 189: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.CreateProjectResponse
+	48,  // 190: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.GetProjectResponse
+	49,  // 191: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.UpdateProjectResponse
+	50,  // 192: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
+	51,  // 193: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
+	64,  // 194: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.CreateTaskResponse
+	65,  // 195: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.GetTaskResponse
+	66,  // 196: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.UpdateTaskResponse
+	68,  // 197: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
+	71,  // 198: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
+	67,  // 199: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.MoveTaskResponse
+	70,  // 200: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
+	69,  // 201: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
+	63,  // 202: projects.v1.ProjectsService.ExportTasks:output_type -> projects.v1.ExportTasksResponse
+	75,  // 203: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.CreateFieldResponse
+	76,  // 204: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.UpdateFieldResponse
+	77,  // 205: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
+	81,  // 206: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.CreateViewResponse
+	82,  // 207: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.UpdateViewResponse
+	83,  // 208: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
+	85,  // 209: projects.v1.ProjectsService.ReorderViews:output_type -> projects.v1.ReorderViewsResponse
+	91,  // 210: projects.v1.ProjectsService.GetViewCatalog:output_type -> projects.v1.GetViewCatalogResponse
+	105, // 211: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
+	98,  // 212: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.CreateSprintResponse
+	99,  // 213: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.UpdateSprintResponse
+	100, // 214: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.StartSprintResponse
+	101, // 215: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.CompleteSprintResponse
+	102, // 216: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
+	103, // 217: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
+	107, // 218: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
+	109, // 219: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
+	111, // 220: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
+	149, // 221: projects.v1.ProjectsService.CreateWorklog:output_type -> projects.v1.CreateWorklogResponse
+	150, // 222: projects.v1.ProjectsService.UpdateWorklog:output_type -> projects.v1.UpdateWorklogResponse
+	151, // 223: projects.v1.ProjectsService.DeleteWorklog:output_type -> projects.v1.DeleteWorklogResponse
+	152, // 224: projects.v1.ProjectsService.ListTaskWorklogs:output_type -> projects.v1.ListTaskWorklogsResponse
+	153, // 225: projects.v1.ProjectsService.ListUserWorklogs:output_type -> projects.v1.ListUserWorklogsResponse
+	154, // 226: projects.v1.ProjectsService.StartTimer:output_type -> projects.v1.StartTimerResponse
+	155, // 227: projects.v1.ProjectsService.PauseTimer:output_type -> projects.v1.PauseTimerResponse
+	156, // 228: projects.v1.ProjectsService.ResumeTimer:output_type -> projects.v1.ResumeTimerResponse
+	157, // 229: projects.v1.ProjectsService.StopTimer:output_type -> projects.v1.StopTimerResponse
+	158, // 230: projects.v1.ProjectsService.GetActiveTimer:output_type -> projects.v1.GetActiveTimerResponse
+	159, // 231: projects.v1.ProjectsService.GetTimePolicy:output_type -> projects.v1.GetTimePolicyResponse
+	160, // 232: projects.v1.ProjectsService.UpdateTimePolicy:output_type -> projects.v1.UpdateTimePolicyResponse
+	161, // 233: projects.v1.ProjectsService.AggregateWorklogs:output_type -> projects.v1.AggregateWorklogsResponse
+	162, // 234: projects.v1.ProjectsService.GetTimesheet:output_type -> projects.v1.GetTimesheetResponse
+	163, // 235: projects.v1.ProjectsService.SubmitTimesheet:output_type -> projects.v1.SubmitTimesheetResponse
+	164, // 236: projects.v1.ProjectsService.RecallTimesheet:output_type -> projects.v1.RecallTimesheetResponse
+	165, // 237: projects.v1.ProjectsService.ListReviewTimesheets:output_type -> projects.v1.ListReviewTimesheetsResponse
+	166, // 238: projects.v1.ProjectsService.ApproveTimesheet:output_type -> projects.v1.ApproveTimesheetResponse
+	167, // 239: projects.v1.ProjectsService.RejectTimesheet:output_type -> projects.v1.RejectTimesheetResponse
+	168, // 240: projects.v1.ProjectsService.GrantGrace:output_type -> projects.v1.GrantGraceResponse
+	169, // 241: projects.v1.ProjectsService.ClosePeriod:output_type -> projects.v1.ClosePeriodResponse
+	170, // 242: projects.v1.ProjectsService.ReopenPeriod:output_type -> projects.v1.ReopenPeriodResponse
+	171, // 243: projects.v1.ProjectsService.ListPeriods:output_type -> projects.v1.ListPeriodsResponse
+	172, // 244: projects.v1.ProjectsService.CreateInternalTimeProject:output_type -> projects.v1.CreateInternalTimeProjectResponse
+	173, // 245: projects.v1.ProjectsService.GetSprintCapacity:output_type -> projects.v1.GetSprintCapacityResponse
+	189, // [189:246] is the sub-list for method output_type
+	132, // [132:189] is the sub-list for method input_type
 	132, // [132:132] is the sub-list for extension type_name
 	132, // [132:132] is the sub-list for extension extendee
 	0,   // [0:132] is the sub-list for field type_name

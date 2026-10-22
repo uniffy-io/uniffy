@@ -2,8 +2,10 @@ import { createSelector, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import {
   reportKey,
+  type DayTotal,
   type ProjectReport,
   type ReviewRow,
+  type SprintCapacity,
   type TimePeriod,
   type TimePolicy,
   type Timer,
@@ -13,6 +15,7 @@ import {
 import {
   approveTimesheet,
   closePeriod,
+  createInternalTimeProject,
   createWorklog,
   deleteWorklog,
   fetchActiveTimer,
@@ -20,6 +23,7 @@ import {
   fetchPersonWorklogs,
   fetchProjectReport,
   fetchReviewTimesheets,
+  fetchSprintCapacity,
   fetchTaskWorklogs,
   fetchTimePolicy,
   fetchTimesheet,
@@ -57,6 +61,8 @@ export interface TimeState {
   timerBusy: boolean;
   /** The person's own entries per inclusive day range, keyed "from:to". */
   weeks: Record<string, Worklog[]>;
+  /** What each day of a loaded range asks of the person, days off included. */
+  weekDays: Record<string, DayTotal[]>;
   weekLoading: Record<string, boolean>;
   /** The person's own sheets keyed by period start. */
   sheets: Record<string, Timesheet>;
@@ -64,10 +70,13 @@ export interface TimeState {
   review: ReviewState;
   /** Other people's entries, keyed "userId:from:to", and their sheets keyed "userId:periodStart". */
   personWeeks: Record<string, Worklog[]>;
+  personWeekDays: Record<string, DayTotal[]>;
   personSheets: Record<string, Timesheet>;
   /** Project aggregates keyed by `reportKey`; a stale report stays while its refresh runs. */
   reports: Record<string, ProjectReport>;
   reportLoading: Record<string, boolean>;
+  /** Per sprint: each assignee's capacity against the estimates and the entries. */
+  sprintCapacity: Record<string, SprintCapacity>;
 }
 
 export const initialTimeState: TimeState = {
@@ -79,6 +88,7 @@ export const initialTimeState: TimeState = {
   timerLoaded: false,
   timerBusy: false,
   weeks: {},
+  weekDays: {},
   weekLoading: {},
   sheets: {},
   sheetBusy: false,
@@ -91,9 +101,11 @@ export const initialTimeState: TimeState = {
     loaded: false,
   },
   personWeeks: {},
+  personWeekDays: {},
   personSheets: {},
   reports: {},
   reportLoading: {},
+  sprintCapacity: {},
 };
 
 function storeSheet(state: TimeState, sheet: Timesheet, ownerId: string | null): void {
@@ -273,6 +285,7 @@ export const timeSlice = createSlice({
       .addCase(fetchUserWorklogs.fulfilled, (state, action) => {
         state.weekLoading[action.payload.key] = false;
         state.weeks[action.payload.key] = sortEntries(action.payload.worklogs);
+        state.weekDays[action.payload.key] = action.payload.days;
       })
       .addCase(fetchUserWorklogs.rejected, (state, action) => {
         const { from, to } = action.meta.arg;
@@ -346,6 +359,13 @@ export const timeSlice = createSlice({
       })
       .addCase(fetchPersonWorklogs.fulfilled, (state, action) => {
         state.personWeeks[action.payload.key] = sortEntries(action.payload.worklogs);
+        state.personWeekDays[action.payload.key] = action.payload.days;
+      })
+      .addCase(fetchSprintCapacity.fulfilled, (state, action) => {
+        state.sprintCapacity[action.payload.sprintId] = action.payload.capacity;
+      })
+      .addCase(createInternalTimeProject.fulfilled, (state, action) => {
+        state.policy = action.payload.policy;
       })
       .addCase(fetchPersonTimesheet.fulfilled, (state, action) => {
         state.personSheets[`${action.payload.userId}:${action.payload.periodStart}`] =
@@ -376,6 +396,17 @@ export const selectWeekWorklogs = (key: string) =>
 
 export const selectWeekLoading = (key: string) => (state: RootState) =>
   state.time.weekLoading[key] ?? false;
+
+const NO_DAYS: DayTotal[] = [];
+
+export const selectWeekDays = (key: string) => (state: RootState) =>
+  state.time.weekDays[key] ?? NO_DAYS;
+
+export const selectPersonWeekDays = (key: string) => (state: RootState) =>
+  state.time.personWeekDays[key] ?? NO_DAYS;
+
+export const selectSprintCapacity = (sprintId: string) => (state: RootState) =>
+  state.time.sprintCapacity[sprintId] ?? null;
 
 export const selectActiveTimer = (state: RootState) => state.time.activeTimer;
 

@@ -1030,8 +1030,10 @@ func (x *ListUserWorklogsRequest) GetToDate() string {
 }
 
 type ListUserWorklogsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Worklogs      []*Worklog             `protobuf:"bytes,1,rep,name=worklogs,proto3" json:"worklogs,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Worklogs []*Worklog             `protobuf:"bytes,1,rep,name=worklogs,proto3" json:"worklogs,omitempty"`
+	// One per day in the range: the person's requirement after holidays and days off.
+	Days          []*DayTotal `protobuf:"bytes,2,rep,name=days,proto3" json:"days,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1069,6 +1071,13 @@ func (*ListUserWorklogsResponse) Descriptor() ([]byte, []int) {
 func (x *ListUserWorklogsResponse) GetWorklogs() []*Worklog {
 	if x != nil {
 		return x.Worklogs
+	}
+	return nil
+}
+
+func (x *ListUserWorklogsResponse) GetDays() []*DayTotal {
+	if x != nil {
+		return x.Days
 	}
 	return nil
 }
@@ -2513,8 +2522,10 @@ type DayTotal struct {
 	Day             string                 `protobuf:"bytes,1,opt,name=day,proto3" json:"day,omitempty"`
 	Minutes         int32                  `protobuf:"varint,2,opt,name=minutes,proto3" json:"minutes,omitempty"`
 	RequiredMinutes int32                  `protobuf:"varint,3,opt,name=required_minutes,json=requiredMinutes,proto3" json:"required_minutes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// A holiday or an out-of-office day; required_minutes already reflects it, half for a half day.
+	Off           bool `protobuf:"varint,4,opt,name=off,proto3" json:"off,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DayTotal) Reset() {
@@ -2566,6 +2577,13 @@ func (x *DayTotal) GetRequiredMinutes() int32 {
 		return x.RequiredMinutes
 	}
 	return 0
+}
+
+func (x *DayTotal) GetOff() bool {
+	if x != nil {
+		return x.Off
+	}
+	return false
 }
 
 type TimePeriod struct {
@@ -3844,6 +3862,309 @@ func (x *ListPeriodsResponse) GetPeriods() []*TimePeriod {
 	return nil
 }
 
+type CreateInternalTimeProjectRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreateInternalTimeProjectRequest) Reset() {
+	*x = CreateInternalTimeProjectRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInternalTimeProjectRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInternalTimeProjectRequest) ProtoMessage() {}
+
+func (x *CreateInternalTimeProjectRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInternalTimeProjectRequest.ProtoReflect.Descriptor instead.
+func (*CreateInternalTimeProjectRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *CreateInternalTimeProjectRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type CreateInternalTimeProjectResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Slug      string                 `protobuf:"bytes,2,opt,name=slug,proto3" json:"slug,omitempty"`
+	// False when the policy already named a live project and this call returned it.
+	Created       bool        `protobuf:"varint,3,opt,name=created,proto3" json:"created,omitempty"`
+	Policy        *TimePolicy `protobuf:"bytes,4,opt,name=policy,proto3" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateInternalTimeProjectResponse) Reset() {
+	*x = CreateInternalTimeProjectResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateInternalTimeProjectResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateInternalTimeProjectResponse) ProtoMessage() {}
+
+func (x *CreateInternalTimeProjectResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateInternalTimeProjectResponse.ProtoReflect.Descriptor instead.
+func (*CreateInternalTimeProjectResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *CreateInternalTimeProjectResponse) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CreateInternalTimeProjectResponse) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
+func (x *CreateInternalTimeProjectResponse) GetCreated() bool {
+	if x != nil {
+		return x.Created
+	}
+	return false
+}
+
+func (x *CreateInternalTimeProjectResponse) GetPolicy() *TimePolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
+type GetSprintCapacityRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	SprintId       string                 `protobuf:"bytes,2,opt,name=sprint_id,json=sprintId,proto3" json:"sprint_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetSprintCapacityRequest) Reset() {
+	*x = GetSprintCapacityRequest{}
+	mi := &file_projects_v1_time_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSprintCapacityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSprintCapacityRequest) ProtoMessage() {}
+
+func (x *GetSprintCapacityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSprintCapacityRequest.ProtoReflect.Descriptor instead.
+func (*GetSprintCapacityRequest) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *GetSprintCapacityRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetSprintCapacityRequest) GetSprintId() string {
+	if x != nil {
+		return x.SprintId
+	}
+	return ""
+}
+
+// One assignee of the sprint's tasks; a task shared by several splits its estimate evenly.
+type SprintCapacityRow struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	UserId string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// Required minutes over the person's workdays inside the sprint dates, less days off.
+	CapacityMinutes  int32 `protobuf:"varint,2,opt,name=capacity_minutes,json=capacityMinutes,proto3" json:"capacity_minutes,omitempty"`
+	EstimatedMinutes int32 `protobuf:"varint,3,opt,name=estimated_minutes,json=estimatedMinutes,proto3" json:"estimated_minutes,omitempty"`
+	LoggedMinutes    int32 `protobuf:"varint,4,opt,name=logged_minutes,json=loggedMinutes,proto3" json:"logged_minutes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SprintCapacityRow) Reset() {
+	*x = SprintCapacityRow{}
+	mi := &file_projects_v1_time_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SprintCapacityRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SprintCapacityRow) ProtoMessage() {}
+
+func (x *SprintCapacityRow) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SprintCapacityRow.ProtoReflect.Descriptor instead.
+func (*SprintCapacityRow) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *SprintCapacityRow) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SprintCapacityRow) GetCapacityMinutes() int32 {
+	if x != nil {
+		return x.CapacityMinutes
+	}
+	return 0
+}
+
+func (x *SprintCapacityRow) GetEstimatedMinutes() int32 {
+	if x != nil {
+		return x.EstimatedMinutes
+	}
+	return 0
+}
+
+func (x *SprintCapacityRow) GetLoggedMinutes() int32 {
+	if x != nil {
+		return x.LoggedMinutes
+	}
+	return 0
+}
+
+type GetSprintCapacityResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Rows             []*SprintCapacityRow   `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	CapacityMinutes  int32                  `protobuf:"varint,2,opt,name=capacity_minutes,json=capacityMinutes,proto3" json:"capacity_minutes,omitempty"`
+	EstimatedMinutes int32                  `protobuf:"varint,3,opt,name=estimated_minutes,json=estimatedMinutes,proto3" json:"estimated_minutes,omitempty"`
+	LoggedMinutes    int32                  `protobuf:"varint,4,opt,name=logged_minutes,json=loggedMinutes,proto3" json:"logged_minutes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *GetSprintCapacityResponse) Reset() {
+	*x = GetSprintCapacityResponse{}
+	mi := &file_projects_v1_time_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSprintCapacityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSprintCapacityResponse) ProtoMessage() {}
+
+func (x *GetSprintCapacityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_time_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSprintCapacityResponse.ProtoReflect.Descriptor instead.
+func (*GetSprintCapacityResponse) Descriptor() ([]byte, []int) {
+	return file_projects_v1_time_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *GetSprintCapacityResponse) GetRows() []*SprintCapacityRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+func (x *GetSprintCapacityResponse) GetCapacityMinutes() int32 {
+	if x != nil {
+		return x.CapacityMinutes
+	}
+	return 0
+}
+
+func (x *GetSprintCapacityResponse) GetEstimatedMinutes() int32 {
+	if x != nil {
+		return x.EstimatedMinutes
+	}
+	return 0
+}
+
+func (x *GetSprintCapacityResponse) GetLoggedMinutes() int32 {
+	if x != nil {
+		return x.LoggedMinutes
+	}
+	return 0
+}
+
 var File_projects_v1_time_proto protoreflect.FileDescriptor
 
 const file_projects_v1_time_proto_rawDesc = "" +
@@ -3916,9 +4237,10 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\tfrom_date\x18\x03 \x01(\tR\bfromDate\x12\x17\n" +
 	"\ato_date\x18\x04 \x01(\tR\x06toDateB\n" +
 	"\n" +
-	"\b_user_id\"L\n" +
+	"\b_user_id\"w\n" +
 	"\x18ListUserWorklogsResponse\x120\n" +
-	"\bworklogs\x18\x01 \x03(\v2\x14.projects.v1.WorklogR\bworklogs\"\xe2\x03\n" +
+	"\bworklogs\x18\x01 \x03(\v2\x14.projects.v1.WorklogR\bworklogs\x12)\n" +
+	"\x04days\x18\x02 \x03(\v2\x15.projects.v1.DayTotalR\x04days\"\xe2\x03\n" +
 	"\x05Timer\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1d\n" +
@@ -4054,11 +4376,12 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\x15_submitted_by_user_idB\x13\n" +
 	"\x11_reviewer_user_idB\x0e\n" +
 	"\f_reviewed_atB\x0e\n" +
-	"\f_grace_until\"a\n" +
+	"\f_grace_until\"s\n" +
 	"\bDayTotal\x12\x10\n" +
 	"\x03day\x18\x01 \x01(\tR\x03day\x12\x18\n" +
 	"\aminutes\x18\x02 \x01(\x05R\aminutes\x12)\n" +
-	"\x10required_minutes\x18\x03 \x01(\x05R\x0frequiredMinutes\"\x9f\x02\n" +
+	"\x10required_minutes\x18\x03 \x01(\x05R\x0frequiredMinutes\x12\x10\n" +
+	"\x03off\x18\x04 \x01(\bR\x03off\"\x9f\x02\n" +
 	"\n" +
 	"TimePeriod\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
@@ -4154,7 +4477,28 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\tfrom_date\x18\x02 \x01(\tR\bfromDate\x12\x17\n" +
 	"\ato_date\x18\x03 \x01(\tR\x06toDate\"H\n" +
 	"\x13ListPeriodsResponse\x121\n" +
-	"\aperiods\x18\x01 \x03(\v2\x17.projects.v1.TimePeriodR\aperiods*\x99\x01\n" +
+	"\aperiods\x18\x01 \x03(\v2\x17.projects.v1.TimePeriodR\aperiods\"K\n" +
+	" CreateInternalTimeProjectRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xa1\x01\n" +
+	"!CreateInternalTimeProjectResponse\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
+	"\x04slug\x18\x02 \x01(\tR\x04slug\x12\x18\n" +
+	"\acreated\x18\x03 \x01(\bR\acreated\x12/\n" +
+	"\x06policy\x18\x04 \x01(\v2\x17.projects.v1.TimePolicyR\x06policy\"`\n" +
+	"\x18GetSprintCapacityRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
+	"\tsprint_id\x18\x02 \x01(\tR\bsprintId\"\xab\x01\n" +
+	"\x11SprintCapacityRow\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12)\n" +
+	"\x10capacity_minutes\x18\x02 \x01(\x05R\x0fcapacityMinutes\x12+\n" +
+	"\x11estimated_minutes\x18\x03 \x01(\x05R\x10estimatedMinutes\x12%\n" +
+	"\x0elogged_minutes\x18\x04 \x01(\x05R\rloggedMinutes\"\xce\x01\n" +
+	"\x19GetSprintCapacityResponse\x122\n" +
+	"\x04rows\x18\x01 \x03(\v2\x1e.projects.v1.SprintCapacityRowR\x04rows\x12)\n" +
+	"\x10capacity_minutes\x18\x02 \x01(\x05R\x0fcapacityMinutes\x12+\n" +
+	"\x11estimated_minutes\x18\x03 \x01(\x05R\x10estimatedMinutes\x12%\n" +
+	"\x0elogged_minutes\x18\x04 \x01(\x05R\rloggedMinutes*\x99\x01\n" +
 	"\rWorklogSource\x12\x1e\n" +
 	"\x1aWORKLOG_SOURCE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15WORKLOG_SOURCE_MANUAL\x10\x01\x12\x18\n" +
@@ -4198,120 +4542,128 @@ func file_projects_v1_time_proto_rawDescGZIP() []byte {
 }
 
 var file_projects_v1_time_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_projects_v1_time_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
+var file_projects_v1_time_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_projects_v1_time_proto_goTypes = []any{
-	(WorklogSource)(0),                   // 0: projects.v1.WorklogSource
-	(TimerPauseReason)(0),                // 1: projects.v1.TimerPauseReason
-	(TimePeriodType)(0),                  // 2: projects.v1.TimePeriodType
-	(AggregateGroupBy)(0),                // 3: projects.v1.AggregateGroupBy
-	(TimesheetStatus)(0),                 // 4: projects.v1.TimesheetStatus
-	(TimePeriodStatus)(0),                // 5: projects.v1.TimePeriodStatus
-	(*Worklog)(nil),                      // 6: projects.v1.Worklog
-	(*CreateWorklogRequest)(nil),         // 7: projects.v1.CreateWorklogRequest
-	(*CreateWorklogResponse)(nil),        // 8: projects.v1.CreateWorklogResponse
-	(*UpdateWorklogRequest)(nil),         // 9: projects.v1.UpdateWorklogRequest
-	(*UpdateWorklogResponse)(nil),        // 10: projects.v1.UpdateWorklogResponse
-	(*DeleteWorklogRequest)(nil),         // 11: projects.v1.DeleteWorklogRequest
-	(*DeleteWorklogResponse)(nil),        // 12: projects.v1.DeleteWorklogResponse
-	(*ListTaskWorklogsRequest)(nil),      // 13: projects.v1.ListTaskWorklogsRequest
-	(*ListTaskWorklogsResponse)(nil),     // 14: projects.v1.ListTaskWorklogsResponse
-	(*ListUserWorklogsRequest)(nil),      // 15: projects.v1.ListUserWorklogsRequest
-	(*ListUserWorklogsResponse)(nil),     // 16: projects.v1.ListUserWorklogsResponse
-	(*Timer)(nil),                        // 17: projects.v1.Timer
-	(*StartTimerRequest)(nil),            // 18: projects.v1.StartTimerRequest
-	(*StartTimerResponse)(nil),           // 19: projects.v1.StartTimerResponse
-	(*PauseTimerRequest)(nil),            // 20: projects.v1.PauseTimerRequest
-	(*PauseTimerResponse)(nil),           // 21: projects.v1.PauseTimerResponse
-	(*ResumeTimerRequest)(nil),           // 22: projects.v1.ResumeTimerRequest
-	(*ResumeTimerResponse)(nil),          // 23: projects.v1.ResumeTimerResponse
-	(*StopTimerRequest)(nil),             // 24: projects.v1.StopTimerRequest
-	(*StopTimerResponse)(nil),            // 25: projects.v1.StopTimerResponse
-	(*GetActiveTimerRequest)(nil),        // 26: projects.v1.GetActiveTimerRequest
-	(*GetActiveTimerResponse)(nil),       // 27: projects.v1.GetActiveTimerResponse
-	(*TimePolicy)(nil),                   // 28: projects.v1.TimePolicy
-	(*GetTimePolicyRequest)(nil),         // 29: projects.v1.GetTimePolicyRequest
-	(*GetTimePolicyResponse)(nil),        // 30: projects.v1.GetTimePolicyResponse
-	(*UpdateTimePolicyRequest)(nil),      // 31: projects.v1.UpdateTimePolicyRequest
-	(*UpdateTimePolicyResponse)(nil),     // 32: projects.v1.UpdateTimePolicyResponse
-	(*AggregateWorklogsRequest)(nil),     // 33: projects.v1.AggregateWorklogsRequest
-	(*AggregateRow)(nil),                 // 34: projects.v1.AggregateRow
-	(*AggregateWorklogsResponse)(nil),    // 35: projects.v1.AggregateWorklogsResponse
-	(*Timesheet)(nil),                    // 36: projects.v1.Timesheet
-	(*DayTotal)(nil),                     // 37: projects.v1.DayTotal
-	(*TimePeriod)(nil),                   // 38: projects.v1.TimePeriod
-	(*GetTimesheetRequest)(nil),          // 39: projects.v1.GetTimesheetRequest
-	(*GetTimesheetResponse)(nil),         // 40: projects.v1.GetTimesheetResponse
-	(*SubmitTimesheetRequest)(nil),       // 41: projects.v1.SubmitTimesheetRequest
-	(*SubmitTimesheetResponse)(nil),      // 42: projects.v1.SubmitTimesheetResponse
-	(*RecallTimesheetRequest)(nil),       // 43: projects.v1.RecallTimesheetRequest
-	(*RecallTimesheetResponse)(nil),      // 44: projects.v1.RecallTimesheetResponse
-	(*ListReviewTimesheetsRequest)(nil),  // 45: projects.v1.ListReviewTimesheetsRequest
-	(*ReviewTimesheetRow)(nil),           // 46: projects.v1.ReviewTimesheetRow
-	(*ListReviewTimesheetsResponse)(nil), // 47: projects.v1.ListReviewTimesheetsResponse
-	(*ApproveTimesheetRequest)(nil),      // 48: projects.v1.ApproveTimesheetRequest
-	(*ApproveTimesheetResponse)(nil),     // 49: projects.v1.ApproveTimesheetResponse
-	(*RejectTimesheetRequest)(nil),       // 50: projects.v1.RejectTimesheetRequest
-	(*RejectTimesheetResponse)(nil),      // 51: projects.v1.RejectTimesheetResponse
-	(*GrantGraceRequest)(nil),            // 52: projects.v1.GrantGraceRequest
-	(*GrantGraceResponse)(nil),           // 53: projects.v1.GrantGraceResponse
-	(*ClosePeriodRequest)(nil),           // 54: projects.v1.ClosePeriodRequest
-	(*ClosePeriodResponse)(nil),          // 55: projects.v1.ClosePeriodResponse
-	(*ReopenPeriodRequest)(nil),          // 56: projects.v1.ReopenPeriodRequest
-	(*ReopenPeriodResponse)(nil),         // 57: projects.v1.ReopenPeriodResponse
-	(*ListPeriodsRequest)(nil),           // 58: projects.v1.ListPeriodsRequest
-	(*ListPeriodsResponse)(nil),          // 59: projects.v1.ListPeriodsResponse
-	(*timestamppb.Timestamp)(nil),        // 60: google.protobuf.Timestamp
+	(WorklogSource)(0),                        // 0: projects.v1.WorklogSource
+	(TimerPauseReason)(0),                     // 1: projects.v1.TimerPauseReason
+	(TimePeriodType)(0),                       // 2: projects.v1.TimePeriodType
+	(AggregateGroupBy)(0),                     // 3: projects.v1.AggregateGroupBy
+	(TimesheetStatus)(0),                      // 4: projects.v1.TimesheetStatus
+	(TimePeriodStatus)(0),                     // 5: projects.v1.TimePeriodStatus
+	(*Worklog)(nil),                           // 6: projects.v1.Worklog
+	(*CreateWorklogRequest)(nil),              // 7: projects.v1.CreateWorklogRequest
+	(*CreateWorklogResponse)(nil),             // 8: projects.v1.CreateWorklogResponse
+	(*UpdateWorklogRequest)(nil),              // 9: projects.v1.UpdateWorklogRequest
+	(*UpdateWorklogResponse)(nil),             // 10: projects.v1.UpdateWorklogResponse
+	(*DeleteWorklogRequest)(nil),              // 11: projects.v1.DeleteWorklogRequest
+	(*DeleteWorklogResponse)(nil),             // 12: projects.v1.DeleteWorklogResponse
+	(*ListTaskWorklogsRequest)(nil),           // 13: projects.v1.ListTaskWorklogsRequest
+	(*ListTaskWorklogsResponse)(nil),          // 14: projects.v1.ListTaskWorklogsResponse
+	(*ListUserWorklogsRequest)(nil),           // 15: projects.v1.ListUserWorklogsRequest
+	(*ListUserWorklogsResponse)(nil),          // 16: projects.v1.ListUserWorklogsResponse
+	(*Timer)(nil),                             // 17: projects.v1.Timer
+	(*StartTimerRequest)(nil),                 // 18: projects.v1.StartTimerRequest
+	(*StartTimerResponse)(nil),                // 19: projects.v1.StartTimerResponse
+	(*PauseTimerRequest)(nil),                 // 20: projects.v1.PauseTimerRequest
+	(*PauseTimerResponse)(nil),                // 21: projects.v1.PauseTimerResponse
+	(*ResumeTimerRequest)(nil),                // 22: projects.v1.ResumeTimerRequest
+	(*ResumeTimerResponse)(nil),               // 23: projects.v1.ResumeTimerResponse
+	(*StopTimerRequest)(nil),                  // 24: projects.v1.StopTimerRequest
+	(*StopTimerResponse)(nil),                 // 25: projects.v1.StopTimerResponse
+	(*GetActiveTimerRequest)(nil),             // 26: projects.v1.GetActiveTimerRequest
+	(*GetActiveTimerResponse)(nil),            // 27: projects.v1.GetActiveTimerResponse
+	(*TimePolicy)(nil),                        // 28: projects.v1.TimePolicy
+	(*GetTimePolicyRequest)(nil),              // 29: projects.v1.GetTimePolicyRequest
+	(*GetTimePolicyResponse)(nil),             // 30: projects.v1.GetTimePolicyResponse
+	(*UpdateTimePolicyRequest)(nil),           // 31: projects.v1.UpdateTimePolicyRequest
+	(*UpdateTimePolicyResponse)(nil),          // 32: projects.v1.UpdateTimePolicyResponse
+	(*AggregateWorklogsRequest)(nil),          // 33: projects.v1.AggregateWorklogsRequest
+	(*AggregateRow)(nil),                      // 34: projects.v1.AggregateRow
+	(*AggregateWorklogsResponse)(nil),         // 35: projects.v1.AggregateWorklogsResponse
+	(*Timesheet)(nil),                         // 36: projects.v1.Timesheet
+	(*DayTotal)(nil),                          // 37: projects.v1.DayTotal
+	(*TimePeriod)(nil),                        // 38: projects.v1.TimePeriod
+	(*GetTimesheetRequest)(nil),               // 39: projects.v1.GetTimesheetRequest
+	(*GetTimesheetResponse)(nil),              // 40: projects.v1.GetTimesheetResponse
+	(*SubmitTimesheetRequest)(nil),            // 41: projects.v1.SubmitTimesheetRequest
+	(*SubmitTimesheetResponse)(nil),           // 42: projects.v1.SubmitTimesheetResponse
+	(*RecallTimesheetRequest)(nil),            // 43: projects.v1.RecallTimesheetRequest
+	(*RecallTimesheetResponse)(nil),           // 44: projects.v1.RecallTimesheetResponse
+	(*ListReviewTimesheetsRequest)(nil),       // 45: projects.v1.ListReviewTimesheetsRequest
+	(*ReviewTimesheetRow)(nil),                // 46: projects.v1.ReviewTimesheetRow
+	(*ListReviewTimesheetsResponse)(nil),      // 47: projects.v1.ListReviewTimesheetsResponse
+	(*ApproveTimesheetRequest)(nil),           // 48: projects.v1.ApproveTimesheetRequest
+	(*ApproveTimesheetResponse)(nil),          // 49: projects.v1.ApproveTimesheetResponse
+	(*RejectTimesheetRequest)(nil),            // 50: projects.v1.RejectTimesheetRequest
+	(*RejectTimesheetResponse)(nil),           // 51: projects.v1.RejectTimesheetResponse
+	(*GrantGraceRequest)(nil),                 // 52: projects.v1.GrantGraceRequest
+	(*GrantGraceResponse)(nil),                // 53: projects.v1.GrantGraceResponse
+	(*ClosePeriodRequest)(nil),                // 54: projects.v1.ClosePeriodRequest
+	(*ClosePeriodResponse)(nil),               // 55: projects.v1.ClosePeriodResponse
+	(*ReopenPeriodRequest)(nil),               // 56: projects.v1.ReopenPeriodRequest
+	(*ReopenPeriodResponse)(nil),              // 57: projects.v1.ReopenPeriodResponse
+	(*ListPeriodsRequest)(nil),                // 58: projects.v1.ListPeriodsRequest
+	(*ListPeriodsResponse)(nil),               // 59: projects.v1.ListPeriodsResponse
+	(*CreateInternalTimeProjectRequest)(nil),  // 60: projects.v1.CreateInternalTimeProjectRequest
+	(*CreateInternalTimeProjectResponse)(nil), // 61: projects.v1.CreateInternalTimeProjectResponse
+	(*GetSprintCapacityRequest)(nil),          // 62: projects.v1.GetSprintCapacityRequest
+	(*SprintCapacityRow)(nil),                 // 63: projects.v1.SprintCapacityRow
+	(*GetSprintCapacityResponse)(nil),         // 64: projects.v1.GetSprintCapacityResponse
+	(*timestamppb.Timestamp)(nil),             // 65: google.protobuf.Timestamp
 }
 var file_projects_v1_time_proto_depIdxs = []int32{
-	60, // 0: projects.v1.Worklog.started_at:type_name -> google.protobuf.Timestamp
+	65, // 0: projects.v1.Worklog.started_at:type_name -> google.protobuf.Timestamp
 	0,  // 1: projects.v1.Worklog.source:type_name -> projects.v1.WorklogSource
-	60, // 2: projects.v1.Worklog.created_at:type_name -> google.protobuf.Timestamp
-	60, // 3: projects.v1.Worklog.updated_at:type_name -> google.protobuf.Timestamp
+	65, // 2: projects.v1.Worklog.created_at:type_name -> google.protobuf.Timestamp
+	65, // 3: projects.v1.Worklog.updated_at:type_name -> google.protobuf.Timestamp
 	6,  // 4: projects.v1.CreateWorklogResponse.worklog:type_name -> projects.v1.Worklog
 	6,  // 5: projects.v1.UpdateWorklogResponse.worklog:type_name -> projects.v1.Worklog
 	6,  // 6: projects.v1.ListTaskWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
 	6,  // 7: projects.v1.ListUserWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
-	60, // 8: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
-	60, // 9: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
-	1,  // 10: projects.v1.Timer.pause_reason:type_name -> projects.v1.TimerPauseReason
-	17, // 11: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
-	6,  // 12: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
-	17, // 13: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
-	17, // 14: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
-	6,  // 15: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
-	17, // 16: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
-	2,  // 17: projects.v1.TimePolicy.period_type:type_name -> projects.v1.TimePeriodType
-	28, // 18: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
-	28, // 19: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
-	28, // 20: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
-	3,  // 21: projects.v1.AggregateWorklogsRequest.group_by:type_name -> projects.v1.AggregateGroupBy
-	34, // 22: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
-	4,  // 23: projects.v1.Timesheet.status:type_name -> projects.v1.TimesheetStatus
-	60, // 24: projects.v1.Timesheet.submitted_at:type_name -> google.protobuf.Timestamp
-	60, // 25: projects.v1.Timesheet.reviewed_at:type_name -> google.protobuf.Timestamp
-	60, // 26: projects.v1.Timesheet.grace_until:type_name -> google.protobuf.Timestamp
-	5,  // 27: projects.v1.TimePeriod.status:type_name -> projects.v1.TimePeriodStatus
-	60, // 28: projects.v1.TimePeriod.closed_at:type_name -> google.protobuf.Timestamp
-	36, // 29: projects.v1.GetTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 30: projects.v1.SubmitTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 31: projects.v1.RecallTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	4,  // 32: projects.v1.ListReviewTimesheetsRequest.status:type_name -> projects.v1.TimesheetStatus
-	4,  // 33: projects.v1.ReviewTimesheetRow.status:type_name -> projects.v1.TimesheetStatus
-	37, // 34: projects.v1.ReviewTimesheetRow.days:type_name -> projects.v1.DayTotal
-	36, // 35: projects.v1.ReviewTimesheetRow.timesheet:type_name -> projects.v1.Timesheet
-	46, // 36: projects.v1.ListReviewTimesheetsResponse.rows:type_name -> projects.v1.ReviewTimesheetRow
-	38, // 37: projects.v1.ListReviewTimesheetsResponse.period:type_name -> projects.v1.TimePeriod
-	36, // 38: projects.v1.ApproveTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 39: projects.v1.RejectTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 40: projects.v1.GrantGraceResponse.timesheet:type_name -> projects.v1.Timesheet
-	38, // 41: projects.v1.ClosePeriodResponse.period:type_name -> projects.v1.TimePeriod
-	38, // 42: projects.v1.ReopenPeriodResponse.period:type_name -> projects.v1.TimePeriod
-	38, // 43: projects.v1.ListPeriodsResponse.periods:type_name -> projects.v1.TimePeriod
-	44, // [44:44] is the sub-list for method output_type
-	44, // [44:44] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	37, // 8: projects.v1.ListUserWorklogsResponse.days:type_name -> projects.v1.DayTotal
+	65, // 9: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
+	65, // 10: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
+	1,  // 11: projects.v1.Timer.pause_reason:type_name -> projects.v1.TimerPauseReason
+	17, // 12: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 13: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
+	17, // 14: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
+	17, // 15: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 16: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
+	17, // 17: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
+	2,  // 18: projects.v1.TimePolicy.period_type:type_name -> projects.v1.TimePeriodType
+	28, // 19: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	28, // 20: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
+	28, // 21: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	3,  // 22: projects.v1.AggregateWorklogsRequest.group_by:type_name -> projects.v1.AggregateGroupBy
+	34, // 23: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
+	4,  // 24: projects.v1.Timesheet.status:type_name -> projects.v1.TimesheetStatus
+	65, // 25: projects.v1.Timesheet.submitted_at:type_name -> google.protobuf.Timestamp
+	65, // 26: projects.v1.Timesheet.reviewed_at:type_name -> google.protobuf.Timestamp
+	65, // 27: projects.v1.Timesheet.grace_until:type_name -> google.protobuf.Timestamp
+	5,  // 28: projects.v1.TimePeriod.status:type_name -> projects.v1.TimePeriodStatus
+	65, // 29: projects.v1.TimePeriod.closed_at:type_name -> google.protobuf.Timestamp
+	36, // 30: projects.v1.GetTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 31: projects.v1.SubmitTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 32: projects.v1.RecallTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	4,  // 33: projects.v1.ListReviewTimesheetsRequest.status:type_name -> projects.v1.TimesheetStatus
+	4,  // 34: projects.v1.ReviewTimesheetRow.status:type_name -> projects.v1.TimesheetStatus
+	37, // 35: projects.v1.ReviewTimesheetRow.days:type_name -> projects.v1.DayTotal
+	36, // 36: projects.v1.ReviewTimesheetRow.timesheet:type_name -> projects.v1.Timesheet
+	46, // 37: projects.v1.ListReviewTimesheetsResponse.rows:type_name -> projects.v1.ReviewTimesheetRow
+	38, // 38: projects.v1.ListReviewTimesheetsResponse.period:type_name -> projects.v1.TimePeriod
+	36, // 39: projects.v1.ApproveTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 40: projects.v1.RejectTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 41: projects.v1.GrantGraceResponse.timesheet:type_name -> projects.v1.Timesheet
+	38, // 42: projects.v1.ClosePeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 43: projects.v1.ReopenPeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 44: projects.v1.ListPeriodsResponse.periods:type_name -> projects.v1.TimePeriod
+	28, // 45: projects.v1.CreateInternalTimeProjectResponse.policy:type_name -> projects.v1.TimePolicy
+	63, // 46: projects.v1.GetSprintCapacityResponse.rows:type_name -> projects.v1.SprintCapacityRow
+	47, // [47:47] is the sub-list for method output_type
+	47, // [47:47] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_time_proto_init() }
@@ -4345,7 +4697,7 @@ func file_projects_v1_time_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_projects_v1_time_proto_rawDesc), len(file_projects_v1_time_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   54,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

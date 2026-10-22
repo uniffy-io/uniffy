@@ -197,6 +197,12 @@ const (
 	// ProjectsServiceListPeriodsProcedure is the fully-qualified name of the ProjectsService's
 	// ListPeriods RPC.
 	ProjectsServiceListPeriodsProcedure = "/projects.v1.ProjectsService/ListPeriods"
+	// ProjectsServiceCreateInternalTimeProjectProcedure is the fully-qualified name of the
+	// ProjectsService's CreateInternalTimeProject RPC.
+	ProjectsServiceCreateInternalTimeProjectProcedure = "/projects.v1.ProjectsService/CreateInternalTimeProject"
+	// ProjectsServiceGetSprintCapacityProcedure is the fully-qualified name of the ProjectsService's
+	// GetSprintCapacity RPC.
+	ProjectsServiceGetSprintCapacityProcedure = "/projects.v1.ProjectsService/GetSprintCapacity"
 )
 
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
@@ -265,6 +271,8 @@ type ProjectsServiceClient interface {
 	ClosePeriod(context.Context, *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error)
 	ReopenPeriod(context.Context, *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error)
 	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
+	CreateInternalTimeProject(context.Context, *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error)
+	GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error)
 }
 
 // NewProjectsServiceClient constructs a client for the projects.v1.ProjectsService service. By
@@ -608,66 +616,80 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("ListPeriods")),
 			connect.WithClientOptions(opts...),
 		),
+		createInternalTimeProject: connect.NewClient[v1.CreateInternalTimeProjectRequest, v1.CreateInternalTimeProjectResponse](
+			httpClient,
+			baseURL+ProjectsServiceCreateInternalTimeProjectProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("CreateInternalTimeProject")),
+			connect.WithClientOptions(opts...),
+		),
+		getSprintCapacity: connect.NewClient[v1.GetSprintCapacityRequest, v1.GetSprintCapacityResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetSprintCapacityProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetSprintCapacity")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // projectsServiceClient implements ProjectsServiceClient.
 type projectsServiceClient struct {
-	createProject         *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	getProject            *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	updateProject         *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
-	deleteProject         *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
-	listProjects          *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	createTask            *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	getTask               *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	updateTask            *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	deleteTask            *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
-	listTasks             *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	moveTask              *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
-	bulkUpdateTasks       *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
-	deleteTasks           *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
-	exportTasks           *connect.Client[v1.ExportTasksRequest, v1.ExportTasksResponse]
-	createField           *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
-	updateField           *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
-	deleteField           *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
-	createView            *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
-	updateView            *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
-	deleteView            *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
-	reorderViews          *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
-	getViewCatalog        *connect.Client[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse]
-	listActivities        *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
-	createSprint          *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
-	updateSprint          *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
-	startSprint           *connect.Client[v1.StartSprintRequest, v1.StartSprintResponse]
-	completeSprint        *connect.Client[v1.CompleteSprintRequest, v1.CompleteSprintResponse]
-	deleteSprint          *connect.Client[v1.DeleteSprintRequest, v1.DeleteSprintResponse]
-	listSprints           *connect.Client[v1.ListSprintsRequest, v1.ListSprintsResponse]
-	toggleTaskWatcher     *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
-	listTaskWatchers      *connect.Client[v1.ListTaskWatchersRequest, v1.ListTaskWatchersResponse]
-	bulkCheckTaskWatchers *connect.Client[v1.BulkCheckTaskWatchersRequest, v1.BulkCheckTaskWatchersResponse]
-	createWorklog         *connect.Client[v1.CreateWorklogRequest, v1.CreateWorklogResponse]
-	updateWorklog         *connect.Client[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse]
-	deleteWorklog         *connect.Client[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse]
-	listTaskWorklogs      *connect.Client[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse]
-	listUserWorklogs      *connect.Client[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse]
-	startTimer            *connect.Client[v1.StartTimerRequest, v1.StartTimerResponse]
-	pauseTimer            *connect.Client[v1.PauseTimerRequest, v1.PauseTimerResponse]
-	resumeTimer           *connect.Client[v1.ResumeTimerRequest, v1.ResumeTimerResponse]
-	stopTimer             *connect.Client[v1.StopTimerRequest, v1.StopTimerResponse]
-	getActiveTimer        *connect.Client[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse]
-	getTimePolicy         *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
-	updateTimePolicy      *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
-	aggregateWorklogs     *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
-	getTimesheet          *connect.Client[v1.GetTimesheetRequest, v1.GetTimesheetResponse]
-	submitTimesheet       *connect.Client[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse]
-	recallTimesheet       *connect.Client[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse]
-	listReviewTimesheets  *connect.Client[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse]
-	approveTimesheet      *connect.Client[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse]
-	rejectTimesheet       *connect.Client[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse]
-	grantGrace            *connect.Client[v1.GrantGraceRequest, v1.GrantGraceResponse]
-	closePeriod           *connect.Client[v1.ClosePeriodRequest, v1.ClosePeriodResponse]
-	reopenPeriod          *connect.Client[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse]
-	listPeriods           *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
+	createProject             *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	getProject                *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	updateProject             *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
+	deleteProject             *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
+	listProjects              *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	createTask                *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	getTask                   *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	updateTask                *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	deleteTask                *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
+	listTasks                 *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	moveTask                  *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
+	bulkUpdateTasks           *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
+	deleteTasks               *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
+	exportTasks               *connect.Client[v1.ExportTasksRequest, v1.ExportTasksResponse]
+	createField               *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
+	updateField               *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
+	deleteField               *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
+	createView                *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
+	updateView                *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
+	deleteView                *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
+	reorderViews              *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
+	getViewCatalog            *connect.Client[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse]
+	listActivities            *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
+	createSprint              *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
+	updateSprint              *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
+	startSprint               *connect.Client[v1.StartSprintRequest, v1.StartSprintResponse]
+	completeSprint            *connect.Client[v1.CompleteSprintRequest, v1.CompleteSprintResponse]
+	deleteSprint              *connect.Client[v1.DeleteSprintRequest, v1.DeleteSprintResponse]
+	listSprints               *connect.Client[v1.ListSprintsRequest, v1.ListSprintsResponse]
+	toggleTaskWatcher         *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
+	listTaskWatchers          *connect.Client[v1.ListTaskWatchersRequest, v1.ListTaskWatchersResponse]
+	bulkCheckTaskWatchers     *connect.Client[v1.BulkCheckTaskWatchersRequest, v1.BulkCheckTaskWatchersResponse]
+	createWorklog             *connect.Client[v1.CreateWorklogRequest, v1.CreateWorklogResponse]
+	updateWorklog             *connect.Client[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse]
+	deleteWorklog             *connect.Client[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse]
+	listTaskWorklogs          *connect.Client[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse]
+	listUserWorklogs          *connect.Client[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse]
+	startTimer                *connect.Client[v1.StartTimerRequest, v1.StartTimerResponse]
+	pauseTimer                *connect.Client[v1.PauseTimerRequest, v1.PauseTimerResponse]
+	resumeTimer               *connect.Client[v1.ResumeTimerRequest, v1.ResumeTimerResponse]
+	stopTimer                 *connect.Client[v1.StopTimerRequest, v1.StopTimerResponse]
+	getActiveTimer            *connect.Client[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse]
+	getTimePolicy             *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
+	updateTimePolicy          *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
+	aggregateWorklogs         *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
+	getTimesheet              *connect.Client[v1.GetTimesheetRequest, v1.GetTimesheetResponse]
+	submitTimesheet           *connect.Client[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse]
+	recallTimesheet           *connect.Client[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse]
+	listReviewTimesheets      *connect.Client[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse]
+	approveTimesheet          *connect.Client[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse]
+	rejectTimesheet           *connect.Client[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse]
+	grantGrace                *connect.Client[v1.GrantGraceRequest, v1.GrantGraceResponse]
+	closePeriod               *connect.Client[v1.ClosePeriodRequest, v1.ClosePeriodResponse]
+	reopenPeriod              *connect.Client[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse]
+	listPeriods               *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
+	createInternalTimeProject *connect.Client[v1.CreateInternalTimeProjectRequest, v1.CreateInternalTimeProjectResponse]
+	getSprintCapacity         *connect.Client[v1.GetSprintCapacityRequest, v1.GetSprintCapacityResponse]
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
@@ -945,6 +967,16 @@ func (c *projectsServiceClient) ListPeriods(ctx context.Context, req *connect.Re
 	return c.listPeriods.CallUnary(ctx, req)
 }
 
+// CreateInternalTimeProject calls projects.v1.ProjectsService.CreateInternalTimeProject.
+func (c *projectsServiceClient) CreateInternalTimeProject(ctx context.Context, req *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error) {
+	return c.createInternalTimeProject.CallUnary(ctx, req)
+}
+
+// GetSprintCapacity calls projects.v1.ProjectsService.GetSprintCapacity.
+func (c *projectsServiceClient) GetSprintCapacity(ctx context.Context, req *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error) {
+	return c.getSprintCapacity.CallUnary(ctx, req)
+}
+
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
@@ -1011,6 +1043,8 @@ type ProjectsServiceHandler interface {
 	ClosePeriod(context.Context, *connect.Request[v1.ClosePeriodRequest]) (*connect.Response[v1.ClosePeriodResponse], error)
 	ReopenPeriod(context.Context, *connect.Request[v1.ReopenPeriodRequest]) (*connect.Response[v1.ReopenPeriodResponse], error)
 	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
+	CreateInternalTimeProject(context.Context, *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error)
+	GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error)
 }
 
 // NewProjectsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1350,6 +1384,18 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("ListPeriods")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceCreateInternalTimeProjectHandler := connect.NewUnaryHandler(
+		ProjectsServiceCreateInternalTimeProjectProcedure,
+		svc.CreateInternalTimeProject,
+		connect.WithSchema(projectsServiceMethods.ByName("CreateInternalTimeProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceGetSprintCapacityHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetSprintCapacityProcedure,
+		svc.GetSprintCapacity,
+		connect.WithSchema(projectsServiceMethods.ByName("GetSprintCapacity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/projects.v1.ProjectsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectsServiceCreateProjectProcedure:
@@ -1462,6 +1508,10 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceReopenPeriodHandler.ServeHTTP(w, r)
 		case ProjectsServiceListPeriodsProcedure:
 			projectsServiceListPeriodsHandler.ServeHTTP(w, r)
+		case ProjectsServiceCreateInternalTimeProjectProcedure:
+			projectsServiceCreateInternalTimeProjectHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetSprintCapacityProcedure:
+			projectsServiceGetSprintCapacityHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1689,4 +1739,12 @@ func (UnimplementedProjectsServiceHandler) ReopenPeriod(context.Context, *connec
 
 func (UnimplementedProjectsServiceHandler) ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.ListPeriods is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) CreateInternalTimeProject(context.Context, *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.CreateInternalTimeProject is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetSprintCapacity is not implemented"))
 }

@@ -146,6 +146,36 @@ export interface DayTotal {
   day: string;
   minutes: number;
   requiredMinutes: number;
+  /** A holiday or an out-of-office day; requiredMinutes already reflects it, half for a half day. */
+  off: boolean;
+}
+
+/** A person's entries over a range plus what each day asks of them. */
+export interface UserWeek {
+  worklogs: Worklog[];
+  days: DayTotal[];
+}
+
+export interface MemberCapacity {
+  userId: string;
+  /** Required minutes over the person's workdays inside the sprint dates, less days off. */
+  capacityMinutes: number;
+  estimatedMinutes: number;
+  loggedMinutes: number;
+}
+
+export interface SprintCapacity {
+  rows: MemberCapacity[];
+  capacityMinutes: number;
+  estimatedMinutes: number;
+  loggedMinutes: number;
+}
+
+export interface InternalProjectResult {
+  projectId: string;
+  slug: string;
+  created: boolean;
+  policy: TimePolicy;
 }
 
 export interface TimePeriod {

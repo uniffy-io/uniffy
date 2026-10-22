@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Kanban, Warning } from "@phosphor-icons/react";
+import { Link } from "react-router-dom";
+import { ArrowSquareOut, Kanban, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
 import { NumberInput } from "@/components/ui/number-input";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,6 +13,7 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 import { timeApi } from "@/features/projects/api/timeApi";
 import { timePolicyLoaded } from "@/features/projects/store/timeSlice";
+import { createInternalTimeProject } from "@/features/projects/store/timeThunks";
 import type { TimePeriodType, TimePolicy } from "@/features/projects/types/time";
 
 const ROUNDING_OPTIONS: SelectOption<number>[] = [1, 5, 6, 10, 15].map((minutes) => ({
@@ -59,6 +62,7 @@ export function TimePolicySection() {
   const [holidaysText, setHolidaysText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingInternal, setCreatingInternal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -108,6 +112,22 @@ export function TimePolicySection() {
 
   const update = <K extends keyof TimePolicy>(key: K, value: TimePolicy[K]) =>
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
+
+  const createInternal = async () => {
+    if (creatingInternal) return;
+    setCreatingInternal(true);
+    try {
+      const result = await dispatch(createInternalTimeProject()).unwrap();
+      update("internalProjectId", result.projectId);
+      toast.success(
+        result.created ? `Project ${result.slug} created` : `Project ${result.slug} already exists`,
+      );
+    } catch {
+      // The rejected thunk already raised the toast.
+    } finally {
+      setCreatingInternal(false);
+    }
+  };
 
   const disabled = !isAdmin || saving;
   const approvalsOff = !form?.approvalsEnabled;
@@ -175,6 +195,32 @@ export function TimePolicySection() {
                 className="w-28"
                 data-testid="policy-required-hours"
               />
+            </Row>
+            <Row
+              title="Internal time project"
+              description="An organization-wide project with standing tasks for meetings, leave, training, support rotation and admin, pinned first on My time."
+            >
+              {form.internalProjectId ? (
+                <Link
+                  to={`/projects/${form.internalProjectId}`}
+                  className="flex items-center gap-1 text-sm text-primary hover:underline"
+                  data-testid="internal-project-link"
+                >
+                  Open project
+                  <ArrowSquareOut size={14} />
+                </Link>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void createInternal()}
+                  disabled={disabled || creatingInternal}
+                  data-testid="internal-project-create"
+                >
+                  {creatingInternal ? "Creating..." : "Create project"}
+                </Button>
+              )}
             </Row>
             <Row
               title="Timer rounding"
