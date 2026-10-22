@@ -1,8 +1,7 @@
 """Invite + accept flows with DB session, queue, and OrgOps mocked.
 
-Tests focus on the dispatch contract: which audit actions are written,
-which email template gets enqueued, and that the existing-user branch
-stages organization membership before the owning commit.
+Every address that is not already an active member gets a pending invitation and
+the accept-link mail; membership is staged only when the invitation is accepted.
 """
 
 from dataclasses import dataclass
@@ -14,6 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.errors import ConflictError, PermissionDeniedError
 from uniffy.core.models.login.organization_member import (
     OrganizationMemberSource,
     OrganizationRole,
@@ -21,15 +21,15 @@ from uniffy.core.models.login.organization_member import (
 from uniffy.core.types import generate_id
 from uniffy.domains.organizations.invitations.errors import (
     InvitationAlreadyUsedError,
-    InvitationEmailConflictError,
     InvitationExpiredError,
+    InvitationNotFoundError,
     InvitationRevokedError,
 )
 from uniffy.domains.organizations.invitations.operations import (
     InvitationOperations,
     InviteOutcome,
-    _hash_token,
 )
+from uniffy.domains.organizations.invitations.reader import hash_token
 
 
 @dataclass
@@ -49,16 +49,13 @@ class _FakeOrg:
     id: Any
     name: str = "Acme"
     slug: str = "acme"
+    deleted_at: datetime | None = None
+    is_suspended: bool = False
 
 
 @dataclass
 class _Invitation:
-    """Stand-in for the SQLModel row -- attributes set by the ops layer.
-
-    Mocking the actual SQLModel is awkward because ``self._session.add`` does
-    not run validators; instead we drop the object the caller hands us into
-    this fake row container.
-    """
+    """Stand-in for the SQLModel row, since a mocked ``session.add`` runs no validators."""
 
     organization_id: Any
     email: str
@@ -79,6 +76,19 @@ class _Invitation:
             self.id = generate_id()
         if self.created_at is None:
             self.created_at = datetime.now(UTC)
+
+
+def _pending_invitation(**fields: Any) -> _Invitation:
+    values: dict[str, Any] = {
+        "organization_id": generate_id(),
+        "email": "x@y.com",
+        "role": OrganizationRole.MEMBER,
+        "invited_by_user_id": generate_id(),
+        "token_hash": hash_token("raw"),
+        "expires_at": datetime.now(UTC) + timedelta(days=1),
+    }
+    values.update(fields)
+    return _Invitation(**values)
 
 
 def _result(scalar=None, scalars=None):
@@ -102,7 +112,7 @@ def _make_session(execute_results: list[Any]):
         except StopIteration:
             return _result()
 
-    session.execute = execute
+    session.execute = AsyncMock(side_effect=execute)
     session.add = MagicMock()
     session.commit = AsyncMock()
     session.flush = AsyncMock()
@@ -127,10 +137,16 @@ def _patch_audit():
     )
 
 
-def _patch_org_ops(*, get_by_id_returns: _FakeOrg, stage_member_returns: Any | None = None):
+def _patch_org_ops(
+    *,
+    get_by_id_returns: _FakeOrg,
+    stage_member_returns: Any | None = None,
+    membership: Any | None = None,
+):
     org_ops = MagicMock()
     org_ops.require_org_admin = AsyncMock()
     org_ops.get_by_id = AsyncMock(return_value=get_by_id_returns)
+    org_ops.get_membership = AsyncMock(return_value=membership)
     org_ops.stage_member = AsyncMock(return_value=stage_member_returns)
     org_ops.finish_member_add_after_commit = AsyncMock()
     return patch(
@@ -139,44 +155,124 @@ def _patch_org_ops(*, get_by_id_returns: _FakeOrg, stage_member_returns: Any | N
     ), org_ops
 
 
+def _invited_details(audit: AsyncMock) -> dict[str, Any]:
+    (invited,) = [
+        c.kwargs
+        for c in audit.call_args_list
+        if c.kwargs["action"] == Action.ORGANIZATION_MEMBER_INVITED
+    ]
+    return invited["details"]
+
+
 class TestInviteExistingUser:
-    async def test_auto_adds_member_and_emails(self) -> None:
+    async def test_active_account_gets_a_pending_invitation_and_the_accept_link(self) -> None:
         inviter_id = generate_id()
-        existing_id = generate_id()
+        account_id = generate_id()
         org = _FakeOrg(id=generate_id())
         inviter = _FakeUser(id=inviter_id, email="boss@acme.io", username="boss")
-        existing = _FakeUser(id=existing_id, email="member@acme.io")
-        membership = SimpleNamespace(id=generate_id(), role=OrganizationRole.MEMBER)
 
-        # Order: lookup inviter, lookup existing user-by-email.
-        session = _make_session([_result(scalar=inviter), _result(scalar=existing)])
+        # Order: lookup inviter, account holding the email, select pending (none).
+        session = _make_session([
+            _result(scalar=inviter),
+            _result(scalar=account_id),
+            _result(scalars=[]),
+        ])
         queue_patch, queue = _patch_queue()
-        org_ops_patch, org_ops = _patch_org_ops(
-            get_by_id_returns=org,
-            stage_member_returns=SimpleNamespace(membership=membership),
-        )
+        org_ops_patch, org_ops = _patch_org_ops(get_by_id_returns=org)
 
-        with _patch_audit(), queue_patch, org_ops_patch:
-            ops = InvitationOperations(session)
-            result = await ops.invite(
+        with _patch_audit() as audit, queue_patch, org_ops_patch:
+            result = await InvitationOperations(session).invite(
                 org_id=org.id,
                 email="MEMBER@acme.io",
                 role=OrganizationRole.MEMBER,
                 inviter_id=inviter_id,
-                search_indexer=MagicMock(),
             )
 
-        assert result.outcome is InviteOutcome.ADDED
-        assert result.member is membership
-        org_ops.stage_member.assert_awaited_once()
-        staged = org_ops.stage_member.await_args.kwargs
-        assert staged["source"] is OrganizationMemberSource.ADDED
-        assert staged["invited_by_user_id"] == inviter_id
-        org_ops.finish_member_add_after_commit.assert_awaited_once()
-        # Template enqueued is the courtesy notice, not the accept link.
-        queue.enqueue_job.assert_awaited()
+        assert result.outcome is InviteOutcome.INVITED
+        assert result.invitation.email == "member@acme.io"
+        session.add.assert_called_once_with(result.invitation)
+        org_ops.get_membership.assert_awaited_once_with(account_id, org.id)
+        org_ops.stage_member.assert_not_awaited()
+        org_ops.finish_member_add_after_commit.assert_not_awaited()
+        assert _invited_details(audit)["account_exists"] is True
         call = queue.enqueue_job.await_args
-        assert call.args[2] == "auth/added_to_org"
+        assert call.args[2] == "auth/invitation"
+
+    async def test_a_removed_member_gets_a_pending_invitation(self) -> None:
+        inviter_id = generate_id()
+        org = _FakeOrg(id=generate_id())
+        session = _make_session([
+            _result(scalar=_FakeUser(id=inviter_id, email="boss@acme.io")),
+            _result(scalar=generate_id()),
+            _result(scalars=[]),
+        ])
+        queue_patch, queue = _patch_queue()
+        org_ops_patch, _org_ops = _patch_org_ops(
+            get_by_id_returns=org, membership=SimpleNamespace(is_active=False)
+        )
+
+        with _patch_audit(), queue_patch, org_ops_patch:
+            result = await InvitationOperations(session).invite(
+                org_id=org.id,
+                email="removed@acme.io",
+                role=OrganizationRole.MEMBER,
+                inviter_id=inviter_id,
+            )
+
+        assert result.outcome is InviteOutcome.INVITED
+        session.commit.assert_awaited_once()
+        queue.enqueue_job.assert_awaited_once()
+
+    async def test_an_active_member_is_a_conflict_and_nothing_is_written(self) -> None:
+        inviter_id = generate_id()
+        org = _FakeOrg(id=generate_id())
+        earlier = _pending_invitation(organization_id=org.id, email="member@acme.io")
+        session = _make_session([
+            _result(scalar=_FakeUser(id=inviter_id, email="boss@acme.io")),
+            _result(scalar=generate_id()),
+            _result(scalars=[earlier]),
+        ])
+        queue_patch, queue = _patch_queue()
+        org_ops_patch, _org_ops = _patch_org_ops(
+            get_by_id_returns=org, membership=SimpleNamespace(is_active=True)
+        )
+
+        with (
+            _patch_audit() as audit,
+            queue_patch,
+            org_ops_patch,
+            pytest.raises(ConflictError, match="already a member of the organization"),
+        ):
+            await InvitationOperations(session).invite(
+                org_id=org.id,
+                email="member@acme.io",
+                role=OrganizationRole.MEMBER,
+                inviter_id=inviter_id,
+            )
+
+        assert session.execute.await_count == 2
+        assert earlier.revoked_at is None
+        session.add.assert_not_called()
+        session.flush.assert_not_awaited()
+        session.commit.assert_not_awaited()
+        audit.assert_not_awaited()
+        queue.enqueue_job.assert_not_awaited()
+
+    async def test_a_non_admin_learns_nothing_about_membership(self) -> None:
+        session = _make_session([])
+        org_ops_patch, org_ops = _patch_org_ops(get_by_id_returns=_FakeOrg(id=generate_id()))
+        org_ops.require_org_admin.side_effect = PermissionDeniedError("Requires org admin")
+
+        with org_ops_patch, pytest.raises(PermissionDeniedError):
+            await InvitationOperations(session).invite(
+                org_id=generate_id(),
+                email="member@acme.io",
+                role=OrganizationRole.MEMBER,
+                inviter_id=generate_id(),
+            )
+
+        session.execute.assert_not_awaited()
+        org_ops.get_membership.assert_not_awaited()
 
 
 class TestInviteNewEmail:
@@ -185,15 +281,14 @@ class TestInviteNewEmail:
         org = _FakeOrg(id=generate_id())
         inviter = _FakeUser(id=inviter_id, email="boss@acme.io", username="boss")
 
-        # Order: lookup inviter, lookup existing-by-email (None), select pending (none).
-        pending = []
+        # Order: lookup inviter, account holding the email (none), select pending (none).
         session = _make_session([
             _result(scalar=inviter),
             _result(scalar=None),
-            _result(scalars=pending),
+            _result(scalars=[]),
         ])
         queue_patch, queue = _patch_queue()
-        org_ops_patch, _org = _patch_org_ops(get_by_id_returns=org)
+        org_ops_patch, org_ops = _patch_org_ops(get_by_id_returns=org)
 
         with _patch_audit() as audit, queue_patch, org_ops_patch:
             ops = InvitationOperations(session)
@@ -202,15 +297,13 @@ class TestInviteNewEmail:
                 email="new@acme.io",
                 role=OrganizationRole.MEMBER,
                 inviter_id=inviter_id,
-                search_indexer=MagicMock(),
             )
 
         assert result.outcome is InviteOutcome.INVITED
         # Session received an Invitation row via .add().
         session.add.assert_called_once()
-        # Audit event emitted with the invite action.
-        actions = [c.kwargs["action"] for c in audit.call_args_list]
-        assert Action.ORGANIZATION_MEMBER_INVITED in actions
+        org_ops.get_membership.assert_not_awaited()
+        assert _invited_details(audit)["account_exists"] is False
         # Email enqueued with the invitation template.
         call = queue.enqueue_job.await_args
         assert call.args[2] == "auth/invitation"
@@ -228,93 +321,89 @@ class TestRejectsObviouslyBadEmail:
                     email="not-an-email",
                     role=OrganizationRole.MEMBER,
                     inviter_id=generate_id(),
-                    search_indexer=MagicMock(),
                 )
 
 
 class TestLoadByToken:
     async def test_expired_raises(self) -> None:
-        org_id = generate_id()
-        inv = _Invitation(
-            organization_id=org_id,
-            email="x@y.com",
-            role=OrganizationRole.MEMBER,
-            invited_by_user_id=generate_id(),
-            token_hash=_hash_token("raw"),
-            expires_at=datetime.now(UTC) - timedelta(seconds=1),
-        )
+        inv = _pending_invitation(expires_at=datetime.now(UTC) - timedelta(seconds=1))
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationExpiredError):
             await ops.get_for_token("raw")
 
     async def test_revoked_raises(self) -> None:
-        inv = _Invitation(
-            organization_id=generate_id(),
-            email="x@y.com",
-            role=OrganizationRole.MEMBER,
-            invited_by_user_id=generate_id(),
-            token_hash=_hash_token("raw"),
-            expires_at=datetime.now(UTC) + timedelta(days=1),
-            revoked_at=datetime.now(UTC),
-        )
+        inv = _pending_invitation(revoked_at=datetime.now(UTC))
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationRevokedError):
             await ops.get_for_token("raw")
 
     async def test_already_used_raises(self) -> None:
-        inv = _Invitation(
-            organization_id=generate_id(),
-            email="x@y.com",
-            role=OrganizationRole.MEMBER,
-            invited_by_user_id=generate_id(),
-            token_hash=_hash_token("raw"),
-            expires_at=datetime.now(UTC) + timedelta(days=1),
-            accepted_at=datetime.now(UTC),
-        )
+        inv = _pending_invitation(accepted_at=datetime.now(UTC))
         session = _make_session([_result(scalar=inv)])
         ops = InvitationOperations(session)
         with pytest.raises(InvitationAlreadyUsedError):
             await ops.get_for_token("raw")
 
 
-class TestAcceptRejectsConflict:
-    async def test_existing_user_with_same_email_blocks_accept(self) -> None:
-        existing = _FakeUser(id=generate_id(), email="x@y.com")
-        inv = _Invitation(
-            organization_id=generate_id(),
-            email="x@y.com",
-            role=OrganizationRole.MEMBER,
-            invited_by_user_id=generate_id(),
-            token_hash=_hash_token("raw"),
-            expires_at=datetime.now(UTC) + timedelta(days=1),
-        )
-        # Load invitation -> ok; lookup email -> conflict.
-        session = _make_session([_result(scalar=inv), _result(scalar=existing)])
-        ops = InvitationOperations(session)
-        with pytest.raises(InvitationEmailConflictError):
-            await ops.accept(
-                raw_token="raw",
-                username="new_user",
-                password="Passw0rd!ok",
-                full_name=None,
-                user_agent="pytest",
-                search_indexer=MagicMock(),
-            )
+def _patch_preview_rate_limit():
+    return patch(
+        "uniffy.domains.organizations.invitations.reader.check_rate_limit",
+        new=AsyncMock(),
+    )
+
+
+class TestPreview:
+    @pytest.mark.parametrize("has_account", [True, False], ids=["account", "no-account"])
+    async def test_account_exists_whenever_an_account_holds_the_address(
+        self, has_account: bool
+    ) -> None:
+        inv = _pending_invitation()
+        org = _FakeOrg(id=inv.organization_id)
+        # Order: load invitation, organization, inviter, account holding the email.
+        session = _make_session([
+            _result(scalar=inv),
+            _result(scalar=org),
+            _result(scalar=None),
+            _result(scalar=generate_id() if has_account else None),
+        ])
+        with _patch_preview_rate_limit():
+            preview = await InvitationOperations(session).get_for_token("raw")
+
+        assert preview.account_exists is has_account
+        assert preview.organization is org
+        assert preview.inviter_display_name == "A teammate"
+
+    @pytest.mark.parametrize(
+        ("fields", "error"),
+        [
+            ({"deleted_at": datetime.now(UTC)}, InvitationNotFoundError),
+            ({"is_suspended": True}, PermissionDeniedError),
+        ],
+        ids=["deleted", "suspended"],
+    )
+    async def test_a_closed_organization_is_refused(
+        self, fields: dict[str, Any], error: type[Exception]
+    ) -> None:
+        inv = _pending_invitation()
+        session = _make_session([
+            _result(scalar=inv),
+            _result(scalar=_FakeOrg(id=inv.organization_id, **fields)),
+        ])
+
+        with _patch_preview_rate_limit(), pytest.raises(error):
+            await InvitationOperations(session).get_for_token("raw")
+
+        # Neither the inviter nor the account behind the address is looked up.
+        assert session.execute.await_count == 2
 
 
 class TestAcceptStagesInvitedMembership:
     async def test_membership_records_invite_source_and_inviter(self) -> None:
         inviter_id = generate_id()
-        inv = _Invitation(
-            organization_id=generate_id(),
-            email="new@acme.io",
-            role=OrganizationRole.MEMBER,
-            invited_by_user_id=inviter_id,
-            token_hash=_hash_token("raw"),
-            expires_at=datetime.now(UTC) + timedelta(days=1),
-        )
+        inv = _pending_invitation(email="new@acme.io", invited_by_user_id=inviter_id)
+        org = _FakeOrg(id=inv.organization_id)
         new_user = _FakeUser(id=generate_id(), email="new@acme.io", username="new_user")
         outcome = object()
         staged_auth = SimpleNamespace(
@@ -322,14 +411,15 @@ class TestAcceptStagesInvitedMembership:
             session_id=generate_id(),
             outcome=outcome,
         )
-        # Order: load invitation, email free, username free.
+        # Order: load invitation, organization, email free, username free.
         session = _make_session([
             _result(scalar=inv),
+            _result(scalar=org),
             _result(scalar=None),
             _result(scalar=None),
         ])
         org_ops_patch, org_ops = _patch_org_ops(
-            get_by_id_returns=_FakeOrg(id=inv.organization_id),
+            get_by_id_returns=org,
             stage_member_returns=SimpleNamespace(
                 membership=SimpleNamespace(id=generate_id()),
                 organization_slug="acme",

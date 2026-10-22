@@ -21,6 +21,66 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Who may create organizations through organizations.v1.CreateOrganization.
+// Each level includes the ones before it; platform operators always may.
+type OrgCreationPolicy int32
+
+const (
+	OrgCreationPolicy_ORG_CREATION_POLICY_UNSPECIFIED    OrgCreationPolicy = 0
+	OrgCreationPolicy_ORG_CREATION_POLICY_OPERATORS_ONLY OrgCreationPolicy = 1
+	// Plus owners of an existing organization. The coded default.
+	OrgCreationPolicy_ORG_CREATION_POLICY_OPERATORS_AND_OWNERS OrgCreationPolicy = 2
+	// Plus anyone holding an active membership somewhere.
+	OrgCreationPolicy_ORG_CREATION_POLICY_MEMBERS OrgCreationPolicy = 3
+	// Plus signed-in users with no membership: register, then create.
+	OrgCreationPolicy_ORG_CREATION_POLICY_ANYONE OrgCreationPolicy = 4
+)
+
+// Enum value maps for OrgCreationPolicy.
+var (
+	OrgCreationPolicy_name = map[int32]string{
+		0: "ORG_CREATION_POLICY_UNSPECIFIED",
+		1: "ORG_CREATION_POLICY_OPERATORS_ONLY",
+		2: "ORG_CREATION_POLICY_OPERATORS_AND_OWNERS",
+		3: "ORG_CREATION_POLICY_MEMBERS",
+		4: "ORG_CREATION_POLICY_ANYONE",
+	}
+	OrgCreationPolicy_value = map[string]int32{
+		"ORG_CREATION_POLICY_UNSPECIFIED":          0,
+		"ORG_CREATION_POLICY_OPERATORS_ONLY":       1,
+		"ORG_CREATION_POLICY_OPERATORS_AND_OWNERS": 2,
+		"ORG_CREATION_POLICY_MEMBERS":              3,
+		"ORG_CREATION_POLICY_ANYONE":               4,
+	}
+)
+
+func (x OrgCreationPolicy) Enum() *OrgCreationPolicy {
+	p := new(OrgCreationPolicy)
+	*p = x
+	return p
+}
+
+func (x OrgCreationPolicy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OrgCreationPolicy) Descriptor() protoreflect.EnumDescriptor {
+	return file_superadmin_v1_system_config_proto_enumTypes[0].Descriptor()
+}
+
+func (OrgCreationPolicy) Type() protoreflect.EnumType {
+	return &file_superadmin_v1_system_config_proto_enumTypes[0]
+}
+
+func (x OrgCreationPolicy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OrgCreationPolicy.Descriptor instead.
+func (OrgCreationPolicy) EnumDescriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{0}
+}
+
 // Whether the serving Valkey instance may hold accepted realtime edits.
 type RealtimeBufferVerdict int32
 
@@ -64,11 +124,11 @@ func (x RealtimeBufferVerdict) String() string {
 }
 
 func (RealtimeBufferVerdict) Descriptor() protoreflect.EnumDescriptor {
-	return file_superadmin_v1_system_config_proto_enumTypes[0].Descriptor()
+	return file_superadmin_v1_system_config_proto_enumTypes[1].Descriptor()
 }
 
 func (RealtimeBufferVerdict) Type() protoreflect.EnumType {
-	return &file_superadmin_v1_system_config_proto_enumTypes[0]
+	return &file_superadmin_v1_system_config_proto_enumTypes[1]
 }
 
 func (x RealtimeBufferVerdict) Number() protoreflect.EnumNumber {
@@ -77,7 +137,7 @@ func (x RealtimeBufferVerdict) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RealtimeBufferVerdict.Descriptor instead.
 func (RealtimeBufferVerdict) EnumDescriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{0}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{1}
 }
 
 // One configuration flag's effective state.
@@ -134,17 +194,71 @@ func (x *SystemFlag) GetSource() string {
 	return ""
 }
 
+type OrgCreationSetting struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Policy OrgCreationPolicy      `protobuf:"varint,1,opt,name=policy,proto3,enum=superadmin.v1.OrgCreationPolicy" json:"policy,omitempty"`
+	// 'deployment' | 'env' | 'default'
+	Source        string `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OrgCreationSetting) Reset() {
+	*x = OrgCreationSetting{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OrgCreationSetting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OrgCreationSetting) ProtoMessage() {}
+
+func (x *OrgCreationSetting) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OrgCreationSetting.ProtoReflect.Descriptor instead.
+func (*OrgCreationSetting) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OrgCreationSetting) GetPolicy() OrgCreationPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return OrgCreationPolicy_ORG_CREATION_POLICY_UNSPECIFIED
+}
+
+func (x *OrgCreationSetting) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
 type SystemConfig struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Allow self-service Register RPC to create accounts without an invite.
-	PublicRegistration *SystemFlag `protobuf:"bytes,1,opt,name=public_registration,json=publicRegistration,proto3" json:"public_registration,omitempty"`
+	PublicRegistration *SystemFlag         `protobuf:"bytes,1,opt,name=public_registration,json=publicRegistration,proto3" json:"public_registration,omitempty"`
+	OrgCreation        *OrgCreationSetting `protobuf:"bytes,2,opt,name=org_creation,json=orgCreation,proto3" json:"org_creation,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
 
 func (x *SystemConfig) Reset() {
 	*x = SystemConfig{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[1]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -156,7 +270,7 @@ func (x *SystemConfig) String() string {
 func (*SystemConfig) ProtoMessage() {}
 
 func (x *SystemConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[1]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -169,12 +283,107 @@ func (x *SystemConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SystemConfig.ProtoReflect.Descriptor instead.
 func (*SystemConfig) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{1}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SystemConfig) GetPublicRegistration() *SystemFlag {
 	if x != nil {
 		return x.PublicRegistration
+	}
+	return nil
+}
+
+func (x *SystemConfig) GetOrgCreation() *OrgCreationSetting {
+	if x != nil {
+		return x.OrgCreation
+	}
+	return nil
+}
+
+type SetOrgCreationPolicyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Policy        OrgCreationPolicy      `protobuf:"varint,1,opt,name=policy,proto3,enum=superadmin.v1.OrgCreationPolicy" json:"policy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetOrgCreationPolicyRequest) Reset() {
+	*x = SetOrgCreationPolicyRequest{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetOrgCreationPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetOrgCreationPolicyRequest) ProtoMessage() {}
+
+func (x *SetOrgCreationPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetOrgCreationPolicyRequest.ProtoReflect.Descriptor instead.
+func (*SetOrgCreationPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SetOrgCreationPolicyRequest) GetPolicy() OrgCreationPolicy {
+	if x != nil {
+		return x.Policy
+	}
+	return OrgCreationPolicy_ORG_CREATION_POLICY_UNSPECIFIED
+}
+
+type SetOrgCreationPolicyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Config        *SystemConfig          `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetOrgCreationPolicyResponse) Reset() {
+	*x = SetOrgCreationPolicyResponse{}
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetOrgCreationPolicyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetOrgCreationPolicyResponse) ProtoMessage() {}
+
+func (x *SetOrgCreationPolicyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetOrgCreationPolicyResponse.ProtoReflect.Descriptor instead.
+func (*SetOrgCreationPolicyResponse) Descriptor() ([]byte, []int) {
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SetOrgCreationPolicyResponse) GetConfig() *SystemConfig {
+	if x != nil {
+		return x.Config
 	}
 	return nil
 }
@@ -187,7 +396,7 @@ type GetSystemConfigRequest struct {
 
 func (x *GetSystemConfigRequest) Reset() {
 	*x = GetSystemConfigRequest{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[2]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -199,7 +408,7 @@ func (x *GetSystemConfigRequest) String() string {
 func (*GetSystemConfigRequest) ProtoMessage() {}
 
 func (x *GetSystemConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[2]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -212,7 +421,7 @@ func (x *GetSystemConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetSystemConfigRequest) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{2}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{5}
 }
 
 type GetSystemConfigResponse struct {
@@ -224,7 +433,7 @@ type GetSystemConfigResponse struct {
 
 func (x *GetSystemConfigResponse) Reset() {
 	*x = GetSystemConfigResponse{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[3]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -236,7 +445,7 @@ func (x *GetSystemConfigResponse) String() string {
 func (*GetSystemConfigResponse) ProtoMessage() {}
 
 func (x *GetSystemConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[3]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -249,7 +458,7 @@ func (x *GetSystemConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetSystemConfigResponse) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{3}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetSystemConfigResponse) GetConfig() *SystemConfig {
@@ -268,7 +477,7 @@ type SetPublicRegistrationRequest struct {
 
 func (x *SetPublicRegistrationRequest) Reset() {
 	*x = SetPublicRegistrationRequest{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[4]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -280,7 +489,7 @@ func (x *SetPublicRegistrationRequest) String() string {
 func (*SetPublicRegistrationRequest) ProtoMessage() {}
 
 func (x *SetPublicRegistrationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[4]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -293,7 +502,7 @@ func (x *SetPublicRegistrationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPublicRegistrationRequest.ProtoReflect.Descriptor instead.
 func (*SetPublicRegistrationRequest) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{4}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SetPublicRegistrationRequest) GetEnabled() bool {
@@ -312,7 +521,7 @@ type SetPublicRegistrationResponse struct {
 
 func (x *SetPublicRegistrationResponse) Reset() {
 	*x = SetPublicRegistrationResponse{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[5]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -324,7 +533,7 @@ func (x *SetPublicRegistrationResponse) String() string {
 func (*SetPublicRegistrationResponse) ProtoMessage() {}
 
 func (x *SetPublicRegistrationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[5]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -337,7 +546,7 @@ func (x *SetPublicRegistrationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPublicRegistrationResponse.ProtoReflect.Descriptor instead.
 func (*SetPublicRegistrationResponse) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{5}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SetPublicRegistrationResponse) GetConfig() *SystemConfig {
@@ -359,7 +568,7 @@ type MfaPolicy struct {
 
 func (x *MfaPolicy) Reset() {
 	*x = MfaPolicy{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -371,7 +580,7 @@ func (x *MfaPolicy) String() string {
 func (*MfaPolicy) ProtoMessage() {}
 
 func (x *MfaPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[6]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -384,7 +593,7 @@ func (x *MfaPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MfaPolicy.ProtoReflect.Descriptor instead.
 func (*MfaPolicy) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{6}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *MfaPolicy) GetRequiredForSystemAdmins() bool {
@@ -402,7 +611,7 @@ type GetMfaPolicyRequest struct {
 
 func (x *GetMfaPolicyRequest) Reset() {
 	*x = GetMfaPolicyRequest{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -414,7 +623,7 @@ func (x *GetMfaPolicyRequest) String() string {
 func (*GetMfaPolicyRequest) ProtoMessage() {}
 
 func (x *GetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[7]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -427,7 +636,7 @@ func (x *GetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMfaPolicyRequest.ProtoReflect.Descriptor instead.
 func (*GetMfaPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{7}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{10}
 }
 
 type GetMfaPolicyResponse struct {
@@ -439,7 +648,7 @@ type GetMfaPolicyResponse struct {
 
 func (x *GetMfaPolicyResponse) Reset() {
 	*x = GetMfaPolicyResponse{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -451,7 +660,7 @@ func (x *GetMfaPolicyResponse) String() string {
 func (*GetMfaPolicyResponse) ProtoMessage() {}
 
 func (x *GetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[8]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -464,7 +673,7 @@ func (x *GetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMfaPolicyResponse.ProtoReflect.Descriptor instead.
 func (*GetMfaPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{8}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetMfaPolicyResponse) GetPolicy() *MfaPolicy {
@@ -483,7 +692,7 @@ type SetMfaPolicyRequest struct {
 
 func (x *SetMfaPolicyRequest) Reset() {
 	*x = SetMfaPolicyRequest{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -495,7 +704,7 @@ func (x *SetMfaPolicyRequest) String() string {
 func (*SetMfaPolicyRequest) ProtoMessage() {}
 
 func (x *SetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[9]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -508,7 +717,7 @@ func (x *SetMfaPolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetMfaPolicyRequest.ProtoReflect.Descriptor instead.
 func (*SetMfaPolicyRequest) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{9}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SetMfaPolicyRequest) GetRequiredForSystemAdmins() bool {
@@ -527,7 +736,7 @@ type SetMfaPolicyResponse struct {
 
 func (x *SetMfaPolicyResponse) Reset() {
 	*x = SetMfaPolicyResponse{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -539,7 +748,7 @@ func (x *SetMfaPolicyResponse) String() string {
 func (*SetMfaPolicyResponse) ProtoMessage() {}
 
 func (x *SetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[10]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -552,7 +761,7 @@ func (x *SetMfaPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetMfaPolicyResponse.ProtoReflect.Descriptor instead.
 func (*SetMfaPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{10}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SetMfaPolicyResponse) GetPolicy() *MfaPolicy {
@@ -586,7 +795,7 @@ type RealtimeBufferPreflight struct {
 
 func (x *RealtimeBufferPreflight) Reset() {
 	*x = RealtimeBufferPreflight{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -598,7 +807,7 @@ func (x *RealtimeBufferPreflight) String() string {
 func (*RealtimeBufferPreflight) ProtoMessage() {}
 
 func (x *RealtimeBufferPreflight) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[11]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -611,7 +820,7 @@ func (x *RealtimeBufferPreflight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RealtimeBufferPreflight.ProtoReflect.Descriptor instead.
 func (*RealtimeBufferPreflight) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{11}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RealtimeBufferPreflight) GetEvictionPolicy() string {
@@ -686,7 +895,7 @@ type RealtimeBufferTotals struct {
 
 func (x *RealtimeBufferTotals) Reset() {
 	*x = RealtimeBufferTotals{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -698,7 +907,7 @@ func (x *RealtimeBufferTotals) String() string {
 func (*RealtimeBufferTotals) ProtoMessage() {}
 
 func (x *RealtimeBufferTotals) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[12]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -711,7 +920,7 @@ func (x *RealtimeBufferTotals) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RealtimeBufferTotals.ProtoReflect.Descriptor instead.
 func (*RealtimeBufferTotals) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{12}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RealtimeBufferTotals) GetPendingBytes() int64 {
@@ -765,7 +974,7 @@ type RealtimeBufferStatus struct {
 
 func (x *RealtimeBufferStatus) Reset() {
 	*x = RealtimeBufferStatus{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -777,7 +986,7 @@ func (x *RealtimeBufferStatus) String() string {
 func (*RealtimeBufferStatus) ProtoMessage() {}
 
 func (x *RealtimeBufferStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[13]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -790,7 +999,7 @@ func (x *RealtimeBufferStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RealtimeBufferStatus.ProtoReflect.Descriptor instead.
 func (*RealtimeBufferStatus) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{13}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RealtimeBufferStatus) GetVerdict() RealtimeBufferVerdict {
@@ -850,7 +1059,7 @@ type GetRealtimeBufferStatusRequest struct {
 
 func (x *GetRealtimeBufferStatusRequest) Reset() {
 	*x = GetRealtimeBufferStatusRequest{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +1071,7 @@ func (x *GetRealtimeBufferStatusRequest) String() string {
 func (*GetRealtimeBufferStatusRequest) ProtoMessage() {}
 
 func (x *GetRealtimeBufferStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[14]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +1084,7 @@ func (x *GetRealtimeBufferStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRealtimeBufferStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetRealtimeBufferStatusRequest) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{14}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{17}
 }
 
 type GetRealtimeBufferStatusResponse struct {
@@ -887,7 +1096,7 @@ type GetRealtimeBufferStatusResponse struct {
 
 func (x *GetRealtimeBufferStatusResponse) Reset() {
 	*x = GetRealtimeBufferStatusResponse{}
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -899,7 +1108,7 @@ func (x *GetRealtimeBufferStatusResponse) String() string {
 func (*GetRealtimeBufferStatusResponse) ProtoMessage() {}
 
 func (x *GetRealtimeBufferStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_superadmin_v1_system_config_proto_msgTypes[15]
+	mi := &file_superadmin_v1_system_config_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -912,7 +1121,7 @@ func (x *GetRealtimeBufferStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRealtimeBufferStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetRealtimeBufferStatusResponse) Descriptor() ([]byte, []int) {
-	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{15}
+	return file_superadmin_v1_system_config_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GetRealtimeBufferStatusResponse) GetStatus() *RealtimeBufferStatus {
@@ -930,9 +1139,17 @@ const file_superadmin_v1_system_config_proto_rawDesc = "" +
 	"\n" +
 	"SystemFlag\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x16\n" +
-	"\x06source\x18\x02 \x01(\tR\x06source\"Z\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\"f\n" +
+	"\x12OrgCreationSetting\x128\n" +
+	"\x06policy\x18\x01 \x01(\x0e2 .superadmin.v1.OrgCreationPolicyR\x06policy\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\"\xa0\x01\n" +
 	"\fSystemConfig\x12J\n" +
-	"\x13public_registration\x18\x01 \x01(\v2\x19.superadmin.v1.SystemFlagR\x12publicRegistration\"\x18\n" +
+	"\x13public_registration\x18\x01 \x01(\v2\x19.superadmin.v1.SystemFlagR\x12publicRegistration\x12D\n" +
+	"\forg_creation\x18\x02 \x01(\v2!.superadmin.v1.OrgCreationSettingR\vorgCreation\"W\n" +
+	"\x1bSetOrgCreationPolicyRequest\x128\n" +
+	"\x06policy\x18\x01 \x01(\x0e2 .superadmin.v1.OrgCreationPolicyR\x06policy\"S\n" +
+	"\x1cSetOrgCreationPolicyResponse\x123\n" +
+	"\x06config\x18\x01 \x01(\v2\x1b.superadmin.v1.SystemConfigR\x06config\"\x18\n" +
 	"\x16GetSystemConfigRequest\"N\n" +
 	"\x17GetSystemConfigResponse\x123\n" +
 	"\x06config\x18\x01 \x01(\v2\x1b.superadmin.v1.SystemConfigR\x06config\"8\n" +
@@ -985,16 +1202,23 @@ const file_superadmin_v1_system_config_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\" \n" +
 	"\x1eGetRealtimeBufferStatusRequest\"^\n" +
 	"\x1fGetRealtimeBufferStatusResponse\x12;\n" +
-	"\x06status\x18\x01 \x01(\v2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xd5\x01\n" +
+	"\x06status\x18\x01 \x01(\v2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xcf\x01\n" +
+	"\x11OrgCreationPolicy\x12#\n" +
+	"\x1fORG_CREATION_POLICY_UNSPECIFIED\x10\x00\x12&\n" +
+	"\"ORG_CREATION_POLICY_OPERATORS_ONLY\x10\x01\x12,\n" +
+	"(ORG_CREATION_POLICY_OPERATORS_AND_OWNERS\x10\x02\x12\x1f\n" +
+	"\x1bORG_CREATION_POLICY_MEMBERS\x10\x03\x12\x1e\n" +
+	"\x1aORG_CREATION_POLICY_ANYONE\x10\x04*\xd5\x01\n" +
 	"\x15RealtimeBufferVerdict\x12'\n" +
 	"#REALTIME_BUFFER_VERDICT_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fREALTIME_BUFFER_VERDICT_NOT_RUN\x10\x01\x12#\n" +
 	"\x1fREALTIME_BUFFER_VERDICT_ENABLED\x10\x02\x12$\n" +
 	" REALTIME_BUFFER_VERDICT_DISABLED\x10\x03\x12#\n" +
-	"\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\xa1\x04\n" +
+	"\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\x94\x05\n" +
 	"\x13SystemConfigService\x12b\n" +
 	"\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse\"\x00\x12t\n" +
-	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12Y\n" +
+	"\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse\"\x00\x12q\n" +
+	"\x14SetOrgCreationPolicy\x12*.superadmin.v1.SetOrgCreationPolicyRequest\x1a+.superadmin.v1.SetOrgCreationPolicyResponse\"\x00\x12Y\n" +
 	"\fGetMfaPolicy\x12\".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse\"\x00\x12Y\n" +
 	"\fSetMfaPolicy\x12\".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse\"\x00\x12z\n" +
 	"\x17GetRealtimeBufferStatus\x12-.superadmin.v1.GetRealtimeBufferStatusRequest\x1a..superadmin.v1.GetRealtimeBufferStatusResponse\"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3"
@@ -1011,56 +1235,66 @@ func file_superadmin_v1_system_config_proto_rawDescGZIP() []byte {
 	return file_superadmin_v1_system_config_proto_rawDescData
 }
 
-var file_superadmin_v1_system_config_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_superadmin_v1_system_config_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_superadmin_v1_system_config_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_superadmin_v1_system_config_proto_goTypes = []any{
-	(RealtimeBufferVerdict)(0),              // 0: superadmin.v1.RealtimeBufferVerdict
-	(*SystemFlag)(nil),                      // 1: superadmin.v1.SystemFlag
-	(*SystemConfig)(nil),                    // 2: superadmin.v1.SystemConfig
-	(*GetSystemConfigRequest)(nil),          // 3: superadmin.v1.GetSystemConfigRequest
-	(*GetSystemConfigResponse)(nil),         // 4: superadmin.v1.GetSystemConfigResponse
-	(*SetPublicRegistrationRequest)(nil),    // 5: superadmin.v1.SetPublicRegistrationRequest
-	(*SetPublicRegistrationResponse)(nil),   // 6: superadmin.v1.SetPublicRegistrationResponse
-	(*MfaPolicy)(nil),                       // 7: superadmin.v1.MfaPolicy
-	(*GetMfaPolicyRequest)(nil),             // 8: superadmin.v1.GetMfaPolicyRequest
-	(*GetMfaPolicyResponse)(nil),            // 9: superadmin.v1.GetMfaPolicyResponse
-	(*SetMfaPolicyRequest)(nil),             // 10: superadmin.v1.SetMfaPolicyRequest
-	(*SetMfaPolicyResponse)(nil),            // 11: superadmin.v1.SetMfaPolicyResponse
-	(*RealtimeBufferPreflight)(nil),         // 12: superadmin.v1.RealtimeBufferPreflight
-	(*RealtimeBufferTotals)(nil),            // 13: superadmin.v1.RealtimeBufferTotals
-	(*RealtimeBufferStatus)(nil),            // 14: superadmin.v1.RealtimeBufferStatus
-	(*GetRealtimeBufferStatusRequest)(nil),  // 15: superadmin.v1.GetRealtimeBufferStatusRequest
-	(*GetRealtimeBufferStatusResponse)(nil), // 16: superadmin.v1.GetRealtimeBufferStatusResponse
-	nil,                                     // 17: superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
-	nil,                                     // 18: superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
+	(OrgCreationPolicy)(0),                  // 0: superadmin.v1.OrgCreationPolicy
+	(RealtimeBufferVerdict)(0),              // 1: superadmin.v1.RealtimeBufferVerdict
+	(*SystemFlag)(nil),                      // 2: superadmin.v1.SystemFlag
+	(*OrgCreationSetting)(nil),              // 3: superadmin.v1.OrgCreationSetting
+	(*SystemConfig)(nil),                    // 4: superadmin.v1.SystemConfig
+	(*SetOrgCreationPolicyRequest)(nil),     // 5: superadmin.v1.SetOrgCreationPolicyRequest
+	(*SetOrgCreationPolicyResponse)(nil),    // 6: superadmin.v1.SetOrgCreationPolicyResponse
+	(*GetSystemConfigRequest)(nil),          // 7: superadmin.v1.GetSystemConfigRequest
+	(*GetSystemConfigResponse)(nil),         // 8: superadmin.v1.GetSystemConfigResponse
+	(*SetPublicRegistrationRequest)(nil),    // 9: superadmin.v1.SetPublicRegistrationRequest
+	(*SetPublicRegistrationResponse)(nil),   // 10: superadmin.v1.SetPublicRegistrationResponse
+	(*MfaPolicy)(nil),                       // 11: superadmin.v1.MfaPolicy
+	(*GetMfaPolicyRequest)(nil),             // 12: superadmin.v1.GetMfaPolicyRequest
+	(*GetMfaPolicyResponse)(nil),            // 13: superadmin.v1.GetMfaPolicyResponse
+	(*SetMfaPolicyRequest)(nil),             // 14: superadmin.v1.SetMfaPolicyRequest
+	(*SetMfaPolicyResponse)(nil),            // 15: superadmin.v1.SetMfaPolicyResponse
+	(*RealtimeBufferPreflight)(nil),         // 16: superadmin.v1.RealtimeBufferPreflight
+	(*RealtimeBufferTotals)(nil),            // 17: superadmin.v1.RealtimeBufferTotals
+	(*RealtimeBufferStatus)(nil),            // 18: superadmin.v1.RealtimeBufferStatus
+	(*GetRealtimeBufferStatusRequest)(nil),  // 19: superadmin.v1.GetRealtimeBufferStatusRequest
+	(*GetRealtimeBufferStatusResponse)(nil), // 20: superadmin.v1.GetRealtimeBufferStatusResponse
+	nil,                                     // 21: superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
+	nil,                                     // 22: superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
 }
 var file_superadmin_v1_system_config_proto_depIdxs = []int32{
-	1,  // 0: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
-	2,  // 1: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
-	2,  // 2: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
-	7,  // 3: superadmin.v1.GetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
-	7,  // 4: superadmin.v1.SetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
-	0,  // 5: superadmin.v1.RealtimeBufferStatus.verdict:type_name -> superadmin.v1.RealtimeBufferVerdict
-	12, // 6: superadmin.v1.RealtimeBufferStatus.preflight:type_name -> superadmin.v1.RealtimeBufferPreflight
-	13, // 7: superadmin.v1.RealtimeBufferStatus.totals:type_name -> superadmin.v1.RealtimeBufferTotals
-	17, // 8: superadmin.v1.RealtimeBufferStatus.epoch_resets:type_name -> superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
-	18, // 9: superadmin.v1.RealtimeBufferStatus.poisoned_checkpoints:type_name -> superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
-	14, // 10: superadmin.v1.GetRealtimeBufferStatusResponse.status:type_name -> superadmin.v1.RealtimeBufferStatus
-	3,  // 11: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
-	5,  // 12: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
-	8,  // 13: superadmin.v1.SystemConfigService.GetMfaPolicy:input_type -> superadmin.v1.GetMfaPolicyRequest
-	10, // 14: superadmin.v1.SystemConfigService.SetMfaPolicy:input_type -> superadmin.v1.SetMfaPolicyRequest
-	15, // 15: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:input_type -> superadmin.v1.GetRealtimeBufferStatusRequest
-	4,  // 16: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
-	6,  // 17: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
-	9,  // 18: superadmin.v1.SystemConfigService.GetMfaPolicy:output_type -> superadmin.v1.GetMfaPolicyResponse
-	11, // 19: superadmin.v1.SystemConfigService.SetMfaPolicy:output_type -> superadmin.v1.SetMfaPolicyResponse
-	16, // 20: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:output_type -> superadmin.v1.GetRealtimeBufferStatusResponse
-	16, // [16:21] is the sub-list for method output_type
-	11, // [11:16] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	0,  // 0: superadmin.v1.OrgCreationSetting.policy:type_name -> superadmin.v1.OrgCreationPolicy
+	2,  // 1: superadmin.v1.SystemConfig.public_registration:type_name -> superadmin.v1.SystemFlag
+	3,  // 2: superadmin.v1.SystemConfig.org_creation:type_name -> superadmin.v1.OrgCreationSetting
+	0,  // 3: superadmin.v1.SetOrgCreationPolicyRequest.policy:type_name -> superadmin.v1.OrgCreationPolicy
+	4,  // 4: superadmin.v1.SetOrgCreationPolicyResponse.config:type_name -> superadmin.v1.SystemConfig
+	4,  // 5: superadmin.v1.GetSystemConfigResponse.config:type_name -> superadmin.v1.SystemConfig
+	4,  // 6: superadmin.v1.SetPublicRegistrationResponse.config:type_name -> superadmin.v1.SystemConfig
+	11, // 7: superadmin.v1.GetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	11, // 8: superadmin.v1.SetMfaPolicyResponse.policy:type_name -> superadmin.v1.MfaPolicy
+	1,  // 9: superadmin.v1.RealtimeBufferStatus.verdict:type_name -> superadmin.v1.RealtimeBufferVerdict
+	16, // 10: superadmin.v1.RealtimeBufferStatus.preflight:type_name -> superadmin.v1.RealtimeBufferPreflight
+	17, // 11: superadmin.v1.RealtimeBufferStatus.totals:type_name -> superadmin.v1.RealtimeBufferTotals
+	21, // 12: superadmin.v1.RealtimeBufferStatus.epoch_resets:type_name -> superadmin.v1.RealtimeBufferStatus.EpochResetsEntry
+	22, // 13: superadmin.v1.RealtimeBufferStatus.poisoned_checkpoints:type_name -> superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntry
+	18, // 14: superadmin.v1.GetRealtimeBufferStatusResponse.status:type_name -> superadmin.v1.RealtimeBufferStatus
+	7,  // 15: superadmin.v1.SystemConfigService.GetSystemConfig:input_type -> superadmin.v1.GetSystemConfigRequest
+	9,  // 16: superadmin.v1.SystemConfigService.SetPublicRegistration:input_type -> superadmin.v1.SetPublicRegistrationRequest
+	5,  // 17: superadmin.v1.SystemConfigService.SetOrgCreationPolicy:input_type -> superadmin.v1.SetOrgCreationPolicyRequest
+	12, // 18: superadmin.v1.SystemConfigService.GetMfaPolicy:input_type -> superadmin.v1.GetMfaPolicyRequest
+	14, // 19: superadmin.v1.SystemConfigService.SetMfaPolicy:input_type -> superadmin.v1.SetMfaPolicyRequest
+	19, // 20: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:input_type -> superadmin.v1.GetRealtimeBufferStatusRequest
+	8,  // 21: superadmin.v1.SystemConfigService.GetSystemConfig:output_type -> superadmin.v1.GetSystemConfigResponse
+	10, // 22: superadmin.v1.SystemConfigService.SetPublicRegistration:output_type -> superadmin.v1.SetPublicRegistrationResponse
+	6,  // 23: superadmin.v1.SystemConfigService.SetOrgCreationPolicy:output_type -> superadmin.v1.SetOrgCreationPolicyResponse
+	13, // 24: superadmin.v1.SystemConfigService.GetMfaPolicy:output_type -> superadmin.v1.GetMfaPolicyResponse
+	15, // 25: superadmin.v1.SystemConfigService.SetMfaPolicy:output_type -> superadmin.v1.SetMfaPolicyResponse
+	20, // 26: superadmin.v1.SystemConfigService.GetRealtimeBufferStatus:output_type -> superadmin.v1.GetRealtimeBufferStatusResponse
+	21, // [21:27] is the sub-list for method output_type
+	15, // [15:21] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_superadmin_v1_system_config_proto_init() }
@@ -1068,14 +1302,14 @@ func file_superadmin_v1_system_config_proto_init() {
 	if File_superadmin_v1_system_config_proto != nil {
 		return
 	}
-	file_superadmin_v1_system_config_proto_msgTypes[11].OneofWrappers = []any{}
+	file_superadmin_v1_system_config_proto_msgTypes[14].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_superadmin_v1_system_config_proto_rawDesc), len(file_superadmin_v1_system_config_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   18,
+			NumEnums:      2,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -273,3 +273,19 @@ class TestRemoveMember:
         assert membership.is_active is True
         assert order == []
         publish.assert_not_awaited()
+
+    async def test_staging_refuses_an_owner_before_any_write(self) -> None:
+        membership = OrganizationMember(
+            user_id=generate_id(),
+            organization_id=generate_id(),
+            role=OrganizationRole.OWNER,
+        )
+        session = _removal_session(membership, [])
+
+        with pytest.raises(PermissionDeniedError):
+            await OrganizationOperations(session).stage_member_removal(
+                membership, actor_user_id=generate_id()
+            )
+
+        session.execute.assert_not_awaited()
+        assert membership.is_active is True

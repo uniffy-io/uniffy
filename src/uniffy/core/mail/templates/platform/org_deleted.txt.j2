@@ -1,12 +1,24 @@
 {% extends "base.txt.j2" %}
 {% block content %}
+{% set by_owner = deleted_by_owner is defined and deleted_by_owner %}
 {{ org_name }} has been scheduled for deletion.
 
+{% if by_owner %}
+The owner of {{ org_name }} deleted the workspace on {{ deleted_at }}. Sign-in is blocked from now on. The data stays restorable for {{ grace_days }} days, until {{ purge_at }}; after that it can be removed permanently at any time.
+
+{% else %}
 A platform operator marked your workspace for deletion on {{ deleted_at }}. Sign-in is blocked from now on. The data stays restorable for {{ grace_days }} days, until {{ purge_at }}; after that it can be removed permanently at any time.
 
-{% if reason %}Reason recorded by the operator: {{ reason }}
+{% if reason %}
+Reason recorded by the operator: {{ reason }}
+
+{% endif %}
 {% endif %}
 If this was unexpected, contact support immediately. You can restore the workspace from your platform admin contact while it is still within the grace window.
 
+{% if by_owner %}
+This action is recorded in your workspace audit log.
+{% else %}
 This action was performed by a platform operator and is recorded in your workspace audit log.
+{% endif %}
 {% endblock %}

@@ -39,7 +39,7 @@ class ListMyOrganizationsRequest(Message[_ListMyOrganizationsRequestFields]):
         ) -> None:
             pass
 
-_ListMyOrganizationsResponseFields: TypeAlias = Literal["organizations"]
+_ListMyOrganizationsResponseFields: TypeAlias = Literal["organizations", "can_create_organization"]
 
 class ListMyOrganizationsResponse(Message[_ListMyOrganizationsResponseFields]):
     """
@@ -52,9 +52,15 @@ class ListMyOrganizationsResponse(Message[_ListMyOrganizationsResponseFields]):
             ```proto
             repeated organizations.v1.MyOrganization organizations = 1;
             ```
+        can_create_organization:
+            Whether the deployment's org_creation policy lets this caller create one.
+
+            ```proto
+            bool can_create_organization = 2;
+            ```
     """
 
-    __slots__ = ("organizations",)
+    __slots__ = ("organizations", "can_create_organization")
 
     if TYPE_CHECKING:
 
@@ -62,10 +68,12 @@ class ListMyOrganizationsResponse(Message[_ListMyOrganizationsResponseFields]):
             self,
             *,
             organizations: list[MyOrganization] | None = None,
+            can_create_organization: bool = False,
         ) -> None:
             pass
 
         organizations: list[MyOrganization]
+        can_create_organization: bool
 
 _MyOrganizationFields: TypeAlias = Literal["organization", "role", "joined_at", "suspended"]
 
@@ -114,6 +122,456 @@ class MyOrganization(Message[_MyOrganizationFields]):
         role: OrganizationRole
         joined_at: Timestamp | None
         suspended: bool
+
+_CreateOrganizationRequestFields: TypeAlias = Literal["name", "slug"]
+
+class CreateOrganizationRequest(Message[_CreateOrganizationRequestFields]):
+    """
+    ```proto
+    message organizations.v1.CreateOrganizationRequest
+    ```
+
+    Attributes:
+        name:
+            ```proto
+            string name = 1;
+            ```
+        slug:
+            Derived from the name when empty.
+
+            ```proto
+            optional string slug = 2;
+            ```
+    """
+
+    __slots__ = ("name", "slug")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            name: str = "",
+            slug: str | None = None,
+        ) -> None:
+            pass
+
+        name: str
+        slug: str
+
+_CreateOrganizationResponseFields: TypeAlias = Literal["organization"]
+
+class CreateOrganizationResponse(Message[_CreateOrganizationResponseFields]):
+    """
+    ```proto
+    message organizations.v1.CreateOrganizationResponse
+    ```
+
+    Attributes:
+        organization:
+            ```proto
+            optional organizations.v1.MyOrganization organization = 1;
+            ```
+    """
+
+    __slots__ = ("organization",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization: MyOrganization | None = None,
+        ) -> None:
+            pass
+
+        organization: MyOrganization | None
+
+_ListMyInvitationsRequestFields: TypeAlias = NoReturn
+
+class ListMyInvitationsRequest(Message[_ListMyInvitationsRequestFields]):
+    """
+    ```proto
+    message organizations.v1.ListMyInvitationsRequest
+    ```
+    """
+
+    __slots__ = ()
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+        ) -> None:
+            pass
+
+_ListMyInvitationsResponseFields: TypeAlias = Literal["invitations"]
+
+class ListMyInvitationsResponse(Message[_ListMyInvitationsResponseFields]):
+    """
+    ```proto
+    message organizations.v1.ListMyInvitationsResponse
+    ```
+
+    Attributes:
+        invitations:
+            ```proto
+            repeated organizations.v1.MyInvitation invitations = 1;
+            ```
+    """
+
+    __slots__ = ("invitations",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            invitations: list[MyInvitation] | None = None,
+        ) -> None:
+            pass
+
+        invitations: list[MyInvitation]
+
+_MyInvitationFields: TypeAlias = Literal["id", "organization", "role", "inviter_display_name", "expires_at", "created_at"]
+
+class MyInvitation(Message[_MyInvitationFields]):
+    """
+    A pending invitation addressed to the caller's email.
+
+    ```proto
+    message organizations.v1.MyInvitation
+    ```
+
+    Attributes:
+        id:
+            ```proto
+            string id = 1;
+            ```
+        organization:
+            ```proto
+            optional common.v1.OrganizationInfo organization = 2;
+            ```
+        role:
+            ```proto
+            common.v1.OrganizationRole role = 3;
+            ```
+        inviter_display_name:
+            ```proto
+            optional string inviter_display_name = 4;
+            ```
+        expires_at:
+            ```proto
+            optional google.protobuf.Timestamp expires_at = 5;
+            ```
+        created_at:
+            ```proto
+            optional google.protobuf.Timestamp created_at = 6;
+            ```
+    """
+
+    __slots__ = ("id", "organization", "role", "inviter_display_name", "expires_at", "created_at")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            id: str = "",
+            organization: OrganizationInfo | None = None,
+            role: OrganizationRole | None = None,
+            inviter_display_name: str | None = None,
+            expires_at: Timestamp | None = None,
+            created_at: Timestamp | None = None,
+        ) -> None:
+            pass
+
+        id: str
+        organization: OrganizationInfo | None
+        role: OrganizationRole
+        inviter_display_name: str
+        expires_at: Timestamp | None
+        created_at: Timestamp | None
+
+_AcceptMyInvitationRequestFields: TypeAlias = Literal["invitation_id", "token"]
+
+class AcceptMyInvitationRequest(Message[_AcceptMyInvitationRequestFields]):
+    """
+    ```proto
+    message organizations.v1.AcceptMyInvitationRequest
+    ```
+
+    Attributes:
+        lookup:
+            ```proto
+            oneof lookup
+            ```
+    """
+
+    __slots__ = ("lookup",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            lookup: Oneof[Literal["invitation_id"], str] | Oneof[Literal["token"], str] | None = None,
+        ) -> None:
+            pass
+
+        lookup: Oneof[Literal["invitation_id"], str] | Oneof[Literal["token"], str] | None
+
+_AcceptMyInvitationResponseFields: TypeAlias = Literal["organization"]
+
+class AcceptMyInvitationResponse(Message[_AcceptMyInvitationResponseFields]):
+    """
+    ```proto
+    message organizations.v1.AcceptMyInvitationResponse
+    ```
+
+    Attributes:
+        organization:
+            ```proto
+            optional organizations.v1.MyOrganization organization = 1;
+            ```
+    """
+
+    __slots__ = ("organization",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization: MyOrganization | None = None,
+        ) -> None:
+            pass
+
+        organization: MyOrganization | None
+
+_DeclineMyInvitationRequestFields: TypeAlias = Literal["invitation_id"]
+
+class DeclineMyInvitationRequest(Message[_DeclineMyInvitationRequestFields]):
+    """
+    ```proto
+    message organizations.v1.DeclineMyInvitationRequest
+    ```
+
+    Attributes:
+        invitation_id:
+            ```proto
+            string invitation_id = 1;
+            ```
+    """
+
+    __slots__ = ("invitation_id",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            invitation_id: str = "",
+        ) -> None:
+            pass
+
+        invitation_id: str
+
+_DeclineMyInvitationResponseFields: TypeAlias = NoReturn
+
+class DeclineMyInvitationResponse(Message[_DeclineMyInvitationResponseFields]):
+    """
+    ```proto
+    message organizations.v1.DeclineMyInvitationResponse
+    ```
+    """
+
+    __slots__ = ()
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+        ) -> None:
+            pass
+
+_LeaveOrganizationRequestFields: TypeAlias = Literal["organization_id"]
+
+class LeaveOrganizationRequest(Message[_LeaveOrganizationRequestFields]):
+    """
+    ```proto
+    message organizations.v1.LeaveOrganizationRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+    """
+
+    __slots__ = ("organization_id",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+
+_LeaveOrganizationResponseFields: TypeAlias = NoReturn
+
+class LeaveOrganizationResponse(Message[_LeaveOrganizationResponseFields]):
+    """
+    ```proto
+    message organizations.v1.LeaveOrganizationResponse
+    ```
+    """
+
+    __slots__ = ()
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+        ) -> None:
+            pass
+
+_TransferOwnershipRequestFields: TypeAlias = Literal["organization_id", "new_owner_user_id"]
+
+class TransferOwnershipRequest(Message[_TransferOwnershipRequestFields]):
+    """
+    ```proto
+    message organizations.v1.TransferOwnershipRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        new_owner_user_id:
+            ```proto
+            string new_owner_user_id = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "new_owner_user_id")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            new_owner_user_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+        new_owner_user_id: str
+
+_TransferOwnershipResponseFields: TypeAlias = Literal["new_owner", "previous_owner"]
+
+class TransferOwnershipResponse(Message[_TransferOwnershipResponseFields]):
+    """
+    ```proto
+    message organizations.v1.TransferOwnershipResponse
+    ```
+
+    Attributes:
+        new_owner:
+            ```proto
+            optional common.v1.MemberInfo new_owner = 1;
+            ```
+        previous_owner:
+            ```proto
+            optional common.v1.MemberInfo previous_owner = 2;
+            ```
+    """
+
+    __slots__ = ("new_owner", "previous_owner")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            new_owner: MemberInfo | None = None,
+            previous_owner: MemberInfo | None = None,
+        ) -> None:
+            pass
+
+        new_owner: MemberInfo | None
+        previous_owner: MemberInfo | None
+
+_DeleteOrganizationRequestFields: TypeAlias = Literal["organization_id", "confirm_slug"]
+
+class DeleteOrganizationRequest(Message[_DeleteOrganizationRequestFields]):
+    """
+    ```proto
+    message organizations.v1.DeleteOrganizationRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        confirm_slug:
+            Must equal the organization's slug.
+
+            ```proto
+            string confirm_slug = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "confirm_slug")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            confirm_slug: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+        confirm_slug: str
+
+_DeleteOrganizationResponseFields: TypeAlias = Literal["purge_at"]
+
+class DeleteOrganizationResponse(Message[_DeleteOrganizationResponseFields]):
+    """
+    ```proto
+    message organizations.v1.DeleteOrganizationResponse
+    ```
+
+    Attributes:
+        purge_at:
+            ```proto
+            optional google.protobuf.Timestamp purge_at = 1;
+            ```
+    """
+
+    __slots__ = ("purge_at",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            purge_at: Timestamp | None = None,
+        ) -> None:
+            pass
+
+        purge_at: Timestamp | None
 
 _ResolveContentOrganizationRequestFields: TypeAlias = Literal["urn"]
 
@@ -1429,36 +1887,35 @@ class InviteMemberRequest(Message[_InviteMemberRequestFields]):
         email: str
         role: OrganizationRole
 
-_InviteMemberResponseFields: TypeAlias = Literal["added_member", "invitation"]
+_InviteMemberResponseFields: TypeAlias = Literal["invitation"]
 
 class InviteMemberResponse(Message[_InviteMemberResponseFields]):
     """
-    Two-shape response: existing user becomes a member immediately;
-    a brand-new email gets a pending invitation row to accept.
+    Every email gets a pending invitation; an existing account accepts it signed in.
 
     ```proto
     message organizations.v1.InviteMemberResponse
     ```
 
     Attributes:
-        result:
+        invitation:
             ```proto
-            oneof result
+            optional organizations.v1.Invitation invitation = 1;
             ```
     """
 
-    __slots__ = ("result",)
+    __slots__ = ("invitation",)
 
     if TYPE_CHECKING:
 
         def __init__(
             self,
             *,
-            result: Oneof[Literal["added_member"], MemberInfo] | Oneof[Literal["invitation"], Invitation] | None = None,
+            invitation: Invitation | None = None,
         ) -> None:
             pass
 
-        result: Oneof[Literal["added_member"], MemberInfo] | Oneof[Literal["invitation"], Invitation] | None
+        invitation: Invitation | None
 
 _ListInvitationsRequestFields: TypeAlias = Literal["organization_id", "status"]
 
@@ -1852,7 +2309,7 @@ class InvitationStatus(Enum):
 
 
 _DESC = file_desc(
-    b'\n$organizations/v1/organizations.proto\x12\x10organizations.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"\x1c\n\x1aListMyOrganizationsRequest"e\n\x1bListMyOrganizationsResponse\x12F\n\rorganizations\x18\x01 \x03(\x0b2 .organizations.v1.MyOrganizationR\rorganizations"\xd9\x01\n\x0eMyOrganization\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12/\n\x04role\x18\x02 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x127\n\tjoined_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x08joinedAt\x12\x1c\n\tsuspended\x18\x04 \x01(\x08R\tsuspended"5\n!ResolveContentOrganizationRequest\x12\x10\n\x03urn\x18\x01 \x01(\tR\x03urn"\x96\x01\n"ResolveContentOrganizationResponse\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12/\n\x04role\x18\x02 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"\xb6\x01\n\x12OrganizationDetail\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12!\n\x0cmember_count\x18\x02 \x01(\x05R\x0bmemberCount\x12\x1f\n\x0bgroup_count\x18\x03 \x01(\x05R\ngroupCount\x12\x1b\n\tis_active\x18\x04 \x01(\x08R\x08isActive"A\n\x16GetOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"c\n\x17GetOrganizationResponse\x12H\n\x0corganization\x18\x01 \x01(\x0b2$.organizations.v1.OrganizationDetailR\x0corganization"]\n\x1aUpdateOrganizationResponse\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization"\xe5\x01\n\x19UpdateOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n\x04slug\x18\x03 \x01(\tH\x01R\x04slug\x88\x01\x01\x12\x1e\n\x08logo_url\x18\x04 \x01(\tH\x02R\x07logoUrl\x88\x01\x01\x12 \n\tis_active\x18\x05 \x01(\x08H\x03R\x08isActive\x88\x01\x01B\x07\n\x05_nameB\x07\n\x05_slugB\x0b\n\t_logo_urlB\x0c\n\n_is_active"I\n\x1eGetOrganizationOverviewRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"e\n\x1fGetOrganizationOverviewResponse\x12B\n\x08overview\x18\x01 \x01(\x0b2&.organizations.v1.OrganizationOverviewR\x08overview"\xe6\x01\n\x14OrganizationOverview\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12!\n\x0cmember_count\x18\x02 \x01(\x05R\x0bmemberCount\x12\x1f\n\x0bgroup_count\x18\x03 \x01(\x05R\ngroupCount\x12I\n\x0econtent_counts\x18\x04 \x03(\x0b2".organizations.v1.ContentTypeCountR\rcontentCounts"c\n\x10ContentTypeCount\x129\n\x0ccontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12\x14\n\x05count\x18\x02 \x01(\x05R\x05count"\xcf\x02\n\x12ListMembersRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n\npagination\x18\x02 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x12A\n\x0brole_filter\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleH\x01R\nroleFilter\x88\x01\x01\x12\x1b\n\x06search\x18\x04 \x01(\tH\x02R\x06search\x88\x01\x01\x12.\n\x10include_inactive\x18\x05 \x01(\x08H\x03R\x0fincludeInactive\x88\x01\x01B\r\n\x0b_paginationB\x0e\n\x0c_role_filterB\t\n\x07_searchB\x13\n\x11_include_inactive"\x99\x01\n\x13ListMembersResponse\x12/\n\x07members\x18\x01 \x03(\x0b2\x15.common.v1.MemberInfoR\x07members\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"\x85\x01\n\x10AddMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"B\n\x11AddMemberResponse\x12-\n\x06member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x06member"\x8c\x01\n\x17UpdateMemberRoleRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"I\n\x18UpdateMemberRoleResponse\x12-\n\x06member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x06member"W\n\x13RemoveMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"0\n\x14RemoveMemberResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"G\n\x1cGetPermissionDefaultsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"b\n\x1dGetPermissionDefaultsResponse\x12A\n\x08defaults\x18\x01 \x03(\x0b2%.organizations.v1.ContentTypeDefaultsR\x08defaults"e\n UpdatePermissionDefaultsResponse\x12A\n\x08defaults\x18\x01 \x01(\x0b2%.organizations.v1.ContentTypeDefaultsR\x08defaults"\xd4\x02\n\x1fUpdatePermissionDefaultsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\x0ccontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12J\n\x13default_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\x11defaultAccessMode\x88\x01\x01\x12O\n\x15default_baseline_role\x18\x08 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\x13defaultBaselineRole\x88\x01\x01B\x16\n\x14_default_access_modeB\x18\n\x16_default_baseline_role"\xbd\x02\n\x13ContentTypeDefaults\x129\n\x0ccontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12E\n\x13default_access_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\x11defaultAccessMode\x129\n\nupdated_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n\x15default_baseline_role\x18\x08 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x13defaultBaselineRole\x88\x01\x01B\x18\n\x16_default_baseline_role"\x8a\x01\n\x17GrantDomainAdminRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12-\n\x06domain\x18\x03 \x01(\x0e2\x15.common.v1.DomainTypeR\x06domain"Y\n\x18GrantDomainAdminResponse\x12=\n\x0cdomain_admin\x18\x01 \x01(\x0b2\x1a.common.v1.DomainAdminInfoR\x0bdomainAdmin"\x8b\x01\n\x18RevokeDomainAdminRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12-\n\x06domain\x18\x03 \x01(\x0e2\x15.common.v1.DomainTypeR\x06domain"5\n\x19RevokeDomainAdminResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe7\x01\n\x17ListDomainAdminsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12?\n\rdomain_filter\x18\x02 \x01(\x0e2\x15.common.v1.DomainTypeH\x00R\x0cdomainFilter\x88\x01\x01\x12A\n\npagination\x18\x03 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x01R\npagination\x88\x01\x01B\x10\n\x0e_domain_filterB\r\n\x0b_pagination"\xae\x01\n\x18ListDomainAdminsResponse\x12?\n\rdomain_admins\x18\x01 \x03(\x0b2\x1a.common.v1.DomainAdminInfoR\x0cdomainAdmins\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"^\n\x1aGetUserDomainAdminsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"N\n\x1bGetUserDomainAdminsResponse\x12/\n\x07domains\x18\x01 \x03(\x0e2\x15.common.v1.DomainTypeR\x07domains"E\n\x1aRotateEncryptionKeyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xa4\x01\n\x1bRotateEncryptionKeyResponse\x12\x1f\n\x0bnew_version\x18\x01 \x01(\x05R\nnewVersion\x12)\n\x10previous_version\x18\x02 \x01(\x05R\x0fpreviousVersion\x129\n\nrotated_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\trotatedAt"\x80\x05\n\nInvitation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05email\x18\x03 \x01(\tR\x05email\x12/\n\x04role\x18\x04 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x129\n\nexpires_at\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt\x129\n\ncreated_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x12@\n\x0baccepted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\nacceptedAt\x88\x01\x01\x12>\n\nrevoked_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\trevokedAt\x88\x01\x01\x120\n\x12invited_by_user_id\x18\t \x01(\tH\x02R\x0finvitedByUserId\x88\x01\x01\x12:\n\x17invited_by_display_name\x18\n \x01(\tH\x03R\x14invitedByDisplayName\x88\x01\x01\x12:\n\x06status\x18\x0b \x01(\x0e2".organizations.v1.InvitationStatusR\x06statusB\x0e\n\x0c_accepted_atB\r\n\x0b_revoked_atB\x15\n\x13_invited_by_user_idB\x1a\n\x18_invited_by_display_name"\x85\x01\n\x13InviteMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05email\x18\x02 \x01(\tR\x05email\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"\x9c\x01\n\x14InviteMemberResponse\x12:\n\x0cadded_member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoH\x00R\x0baddedMember\x12>\n\ninvitation\x18\x02 \x01(\x0b2\x1c.organizations.v1.InvitationH\x00R\ninvitationB\x08\n\x06result"\x8d\x01\n\x16ListInvitationsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12?\n\x06status\x18\x02 \x01(\x0e2".organizations.v1.InvitationStatusH\x00R\x06status\x88\x01\x01B\t\n\x07_status"Y\n\x17ListInvitationsResponse\x12>\n\x0binvitations\x18\x01 \x03(\x0b2\x1c.organizations.v1.InvitationR\x0binvitations">\n\x17RevokeInvitationRequest\x12#\n\rinvitation_id\x18\x01 \x01(\tR\x0cinvitationId"X\n\x18RevokeInvitationResponse\x12<\n\ninvitation\x18\x01 \x01(\x0b2\x1c.organizations.v1.InvitationR\ninvitation">\n\x17ResendInvitationRequest\x12#\n\rinvitation_id\x18\x01 \x01(\tR\x0cinvitationId"X\n\x18ResendInvitationResponse\x12<\n\ninvitation\x18\x01 \x01(\x0b2\x1c.organizations.v1.InvitationR\ninvitation"\xb8\x01\n\x10SecuritySettings\x124\n\x16password_reset_enabled\x18\x01 \x01(\x08R\x14passwordResetEnabled\x127\n\x18mfa_required_for_members\x18\x02 \x01(\x08R\x15mfaRequiredForMembers\x125\n\x17mfa_required_for_admins\x18\x03 \x01(\x08R\x14mfaRequiredForAdmins"E\n\x1aGetSecuritySettingsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"]\n\x1bGetSecuritySettingsResponse\x12>\n\x08settings\x18\x01 \x01(\x0b2".organizations.v1.SecuritySettingsR\x08settings"\xd1\x02\n\x1dUpdateSecuritySettingsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\x16password_reset_enabled\x18\x02 \x01(\x08H\x00R\x14passwordResetEnabled\x88\x01\x01\x12<\n\x18mfa_required_for_members\x18\x03 \x01(\x08H\x01R\x15mfaRequiredForMembers\x88\x01\x01\x12:\n\x17mfa_required_for_admins\x18\x04 \x01(\x08H\x02R\x14mfaRequiredForAdmins\x88\x01\x01B\x19\n\x17_password_reset_enabledB\x1b\n\x19_mfa_required_for_membersB\x1a\n\x18_mfa_required_for_admins"`\n\x1eUpdateSecuritySettingsResponse\x12>\n\x08settings\x18\x01 \x01(\x0b2".organizations.v1.SecuritySettingsR\x08settings*\xb2\x01\n\x10InvitationStatus\x12!\n\x1dINVITATION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n\x19INVITATION_STATUS_PENDING\x10\x01\x12\x1e\n\x1aINVITATION_STATUS_ACCEPTED\x10\x02\x12\x1d\n\x19INVITATION_STATUS_REVOKED\x10\x03\x12\x1d\n\x19INVITATION_STATUS_EXPIRED\x10\x042\xa1\x13\n\x14OrganizationsService\x12r\n\x13ListMyOrganizations\x12,.organizations.v1.ListMyOrganizationsRequest\x1a-.organizations.v1.ListMyOrganizationsResponse\x12\x87\x01\n\x1aResolveContentOrganization\x123.organizations.v1.ResolveContentOrganizationRequest\x1a4.organizations.v1.ResolveContentOrganizationResponse\x12f\n\x0fGetOrganization\x12(.organizations.v1.GetOrganizationRequest\x1a).organizations.v1.GetOrganizationResponse\x12o\n\x12UpdateOrganization\x12+.organizations.v1.UpdateOrganizationRequest\x1a,.organizations.v1.UpdateOrganizationResponse\x12~\n\x17GetOrganizationOverview\x120.organizations.v1.GetOrganizationOverviewRequest\x1a1.organizations.v1.GetOrganizationOverviewResponse\x12Z\n\x0bListMembers\x12$.organizations.v1.ListMembersRequest\x1a%.organizations.v1.ListMembersResponse\x12T\n\tAddMember\x12".organizations.v1.AddMemberRequest\x1a#.organizations.v1.AddMemberResponse\x12i\n\x10UpdateMemberRole\x12).organizations.v1.UpdateMemberRoleRequest\x1a*.organizations.v1.UpdateMemberRoleResponse\x12]\n\x0cRemoveMember\x12%.organizations.v1.RemoveMemberRequest\x1a&.organizations.v1.RemoveMemberResponse\x12]\n\x0cInviteMember\x12%.organizations.v1.InviteMemberRequest\x1a&.organizations.v1.InviteMemberResponse\x12f\n\x0fListInvitations\x12(.organizations.v1.ListInvitationsRequest\x1a).organizations.v1.ListInvitationsResponse\x12i\n\x10RevokeInvitation\x12).organizations.v1.RevokeInvitationRequest\x1a*.organizations.v1.RevokeInvitationResponse\x12i\n\x10ResendInvitation\x12).organizations.v1.ResendInvitationRequest\x1a*.organizations.v1.ResendInvitationResponse\x12r\n\x13GetSecuritySettings\x12,.organizations.v1.GetSecuritySettingsRequest\x1a-.organizations.v1.GetSecuritySettingsResponse\x12{\n\x16UpdateSecuritySettings\x12/.organizations.v1.UpdateSecuritySettingsRequest\x1a0.organizations.v1.UpdateSecuritySettingsResponse\x12x\n\x15GetPermissionDefaults\x12..organizations.v1.GetPermissionDefaultsRequest\x1a/.organizations.v1.GetPermissionDefaultsResponse\x12\x81\x01\n\x18UpdatePermissionDefaults\x121.organizations.v1.UpdatePermissionDefaultsRequest\x1a2.organizations.v1.UpdatePermissionDefaultsResponse\x12i\n\x10GrantDomainAdmin\x12).organizations.v1.GrantDomainAdminRequest\x1a*.organizations.v1.GrantDomainAdminResponse\x12l\n\x11RevokeDomainAdmin\x12*.organizations.v1.RevokeDomainAdminRequest\x1a+.organizations.v1.RevokeDomainAdminResponse\x12i\n\x10ListDomainAdmins\x12).organizations.v1.ListDomainAdminsRequest\x1a*.organizations.v1.ListDomainAdminsResponse\x12r\n\x13GetUserDomainAdmins\x12,.organizations.v1.GetUserDomainAdminsRequest\x1a-.organizations.v1.GetUserDomainAdminsResponse\x12r\n\x13RotateEncryptionKey\x12,.organizations.v1.RotateEncryptionKeyRequest\x1a-.organizations.v1.RotateEncryptionKeyResponseBGZEgithub.com/uniffy-io/uniffy-proto-go/organizations/v1;organizationsv1b\x06proto3',
+    b'\n$organizations/v1/organizations.proto\x12\x10organizations.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"\x1c\n\x1aListMyOrganizationsRequest"\x9d\x01\n\x1bListMyOrganizationsResponse\x12F\n\rorganizations\x18\x01 \x03(\x0b2 .organizations.v1.MyOrganizationR\rorganizations\x126\n\x17can_create_organization\x18\x02 \x01(\x08R\x15canCreateOrganization"\xd9\x01\n\x0eMyOrganization\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12/\n\x04role\x18\x02 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x127\n\tjoined_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\x08joinedAt\x12\x1c\n\tsuspended\x18\x04 \x01(\x08R\tsuspended"Q\n\x19CreateOrganizationRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x17\n\x04slug\x18\x02 \x01(\tH\x00R\x04slug\x88\x01\x01B\x07\n\x05_slug"b\n\x1aCreateOrganizationResponse\x12D\n\x0corganization\x18\x01 \x01(\x0b2 .organizations.v1.MyOrganizationR\x0corganization"\x1a\n\x18ListMyInvitationsRequest"]\n\x19ListMyInvitationsResponse\x12@\n\x0binvitations\x18\x01 \x03(\x0b2\x1e.organizations.v1.MyInvitationR\x0binvitations"\xd6\x02\n\x0cMyInvitation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12?\n\x0corganization\x18\x02 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x125\n\x14inviter_display_name\x18\x04 \x01(\tH\x00R\x12inviterDisplayName\x88\x01\x01\x129\n\nexpires_at\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt\x129\n\ncreated_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAtB\x17\n\x15_inviter_display_name"d\n\x19AcceptMyInvitationRequest\x12%\n\rinvitation_id\x18\x01 \x01(\tH\x00R\x0cinvitationId\x12\x16\n\x05token\x18\x02 \x01(\tH\x00R\x05tokenB\x08\n\x06lookup"b\n\x1aAcceptMyInvitationResponse\x12D\n\x0corganization\x18\x01 \x01(\x0b2 .organizations.v1.MyOrganizationR\x0corganization"A\n\x1aDeclineMyInvitationRequest\x12#\n\rinvitation_id\x18\x01 \x01(\tR\x0cinvitationId"\x1d\n\x1bDeclineMyInvitationResponse"C\n\x18LeaveOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\x1b\n\x19LeaveOrganizationResponse"n\n\x18TransferOwnershipRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12)\n\x11new_owner_user_id\x18\x02 \x01(\tR\x0enewOwnerUserId"\x8d\x01\n\x19TransferOwnershipResponse\x122\n\tnew_owner\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x08newOwner\x12<\n\x0eprevious_owner\x18\x02 \x01(\x0b2\x15.common.v1.MemberInfoR\rpreviousOwner"g\n\x19DeleteOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12!\n\x0cconfirm_slug\x18\x02 \x01(\tR\x0bconfirmSlug"S\n\x1aDeleteOrganizationResponse\x125\n\x08purge_at\x18\x01 \x01(\x0b2\x1a.google.protobuf.TimestampR\x07purgeAt"5\n!ResolveContentOrganizationRequest\x12\x10\n\x03urn\x18\x01 \x01(\tR\x03urn"\x96\x01\n"ResolveContentOrganizationResponse\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12/\n\x04role\x18\x02 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"\xb6\x01\n\x12OrganizationDetail\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12!\n\x0cmember_count\x18\x02 \x01(\x05R\x0bmemberCount\x12\x1f\n\x0bgroup_count\x18\x03 \x01(\x05R\ngroupCount\x12\x1b\n\tis_active\x18\x04 \x01(\x08R\x08isActive"A\n\x16GetOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"c\n\x17GetOrganizationResponse\x12H\n\x0corganization\x18\x01 \x01(\x0b2$.organizations.v1.OrganizationDetailR\x0corganization"]\n\x1aUpdateOrganizationResponse\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization"\xe5\x01\n\x19UpdateOrganizationRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x17\n\x04slug\x18\x03 \x01(\tH\x01R\x04slug\x88\x01\x01\x12\x1e\n\x08logo_url\x18\x04 \x01(\tH\x02R\x07logoUrl\x88\x01\x01\x12 \n\tis_active\x18\x05 \x01(\x08H\x03R\x08isActive\x88\x01\x01B\x07\n\x05_nameB\x07\n\x05_slugB\x0b\n\t_logo_urlB\x0c\n\n_is_active"I\n\x1eGetOrganizationOverviewRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"e\n\x1fGetOrganizationOverviewResponse\x12B\n\x08overview\x18\x01 \x01(\x0b2&.organizations.v1.OrganizationOverviewR\x08overview"\xe6\x01\n\x14OrganizationOverview\x12?\n\x0corganization\x18\x01 \x01(\x0b2\x1b.common.v1.OrganizationInfoR\x0corganization\x12!\n\x0cmember_count\x18\x02 \x01(\x05R\x0bmemberCount\x12\x1f\n\x0bgroup_count\x18\x03 \x01(\x05R\ngroupCount\x12I\n\x0econtent_counts\x18\x04 \x03(\x0b2".organizations.v1.ContentTypeCountR\rcontentCounts"c\n\x10ContentTypeCount\x129\n\x0ccontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12\x14\n\x05count\x18\x02 \x01(\x05R\x05count"\xcf\x02\n\x12ListMembersRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n\npagination\x18\x02 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x12A\n\x0brole_filter\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleH\x01R\nroleFilter\x88\x01\x01\x12\x1b\n\x06search\x18\x04 \x01(\tH\x02R\x06search\x88\x01\x01\x12.\n\x10include_inactive\x18\x05 \x01(\x08H\x03R\x0fincludeInactive\x88\x01\x01B\r\n\x0b_paginationB\x0e\n\x0c_role_filterB\t\n\x07_searchB\x13\n\x11_include_inactive"\x99\x01\n\x13ListMembersResponse\x12/\n\x07members\x18\x01 \x03(\x0b2\x15.common.v1.MemberInfoR\x07members\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"\x85\x01\n\x10AddMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"B\n\x11AddMemberResponse\x12-\n\x06member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x06member"\x8c\x01\n\x17UpdateMemberRoleRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"I\n\x18UpdateMemberRoleResponse\x12-\n\x06member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x06member"W\n\x13RemoveMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"0\n\x14RemoveMemberResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"G\n\x1cGetPermissionDefaultsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"b\n\x1dGetPermissionDefaultsResponse\x12A\n\x08defaults\x18\x01 \x03(\x0b2%.organizations.v1.ContentTypeDefaultsR\x08defaults"e\n UpdatePermissionDefaultsResponse\x12A\n\x08defaults\x18\x01 \x01(\x0b2%.organizations.v1.ContentTypeDefaultsR\x08defaults"\xd4\x02\n\x1fUpdatePermissionDefaultsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\x0ccontent_type\x18\x02 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12J\n\x13default_access_mode\x18\x03 \x01(\x0e2\x15.common.v1.AccessModeH\x00R\x11defaultAccessMode\x88\x01\x01\x12O\n\x15default_baseline_role\x18\x08 \x01(\x0e2\x16.common.v1.ContentRoleH\x01R\x13defaultBaselineRole\x88\x01\x01B\x16\n\x14_default_access_modeB\x18\n\x16_default_baseline_role"\xbd\x02\n\x13ContentTypeDefaults\x129\n\x0ccontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\x0bcontentType\x12E\n\x13default_access_mode\x18\x02 \x01(\x0e2\x15.common.v1.AccessModeR\x11defaultAccessMode\x129\n\nupdated_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\tupdatedAt\x12O\n\x15default_baseline_role\x18\x08 \x01(\x0e2\x16.common.v1.ContentRoleH\x00R\x13defaultBaselineRole\x88\x01\x01B\x18\n\x16_default_baseline_role"\x8a\x01\n\x17GrantDomainAdminRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12-\n\x06domain\x18\x03 \x01(\x0e2\x15.common.v1.DomainTypeR\x06domain"Y\n\x18GrantDomainAdminResponse\x12=\n\x0cdomain_admin\x18\x01 \x01(\x0b2\x1a.common.v1.DomainAdminInfoR\x0bdomainAdmin"\x8b\x01\n\x18RevokeDomainAdminRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12-\n\x06domain\x18\x03 \x01(\x0e2\x15.common.v1.DomainTypeR\x06domain"5\n\x19RevokeDomainAdminResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe7\x01\n\x17ListDomainAdminsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12?\n\rdomain_filter\x18\x02 \x01(\x0e2\x15.common.v1.DomainTypeH\x00R\x0cdomainFilter\x88\x01\x01\x12A\n\npagination\x18\x03 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x01R\npagination\x88\x01\x01B\x10\n\x0e_domain_filterB\r\n\x0b_pagination"\xae\x01\n\x18ListDomainAdminsResponse\x12?\n\rdomain_admins\x18\x01 \x03(\x0b2\x1a.common.v1.DomainAdminInfoR\x0cdomainAdmins\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"^\n\x1aGetUserDomainAdminsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"N\n\x1bGetUserDomainAdminsResponse\x12/\n\x07domains\x18\x01 \x03(\x0e2\x15.common.v1.DomainTypeR\x07domains"E\n\x1aRotateEncryptionKeyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xa4\x01\n\x1bRotateEncryptionKeyResponse\x12\x1f\n\x0bnew_version\x18\x01 \x01(\x05R\nnewVersion\x12)\n\x10previous_version\x18\x02 \x01(\x05R\x0fpreviousVersion\x129\n\nrotated_at\x18\x03 \x01(\x0b2\x1a.google.protobuf.TimestampR\trotatedAt"\x80\x05\n\nInvitation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x14\n\x05email\x18\x03 \x01(\tR\x05email\x12/\n\x04role\x18\x04 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x129\n\nexpires_at\x18\x05 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt\x129\n\ncreated_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAt\x12@\n\x0baccepted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\nacceptedAt\x88\x01\x01\x12>\n\nrevoked_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x01R\trevokedAt\x88\x01\x01\x120\n\x12invited_by_user_id\x18\t \x01(\tH\x02R\x0finvitedByUserId\x88\x01\x01\x12:\n\x17invited_by_display_name\x18\n \x01(\tH\x03R\x14invitedByDisplayName\x88\x01\x01\x12:\n\x06status\x18\x0b \x01(\x0e2".organizations.v1.InvitationStatusR\x06statusB\x0e\n\x0c_accepted_atB\r\n\x0b_revoked_atB\x15\n\x13_invited_by_user_idB\x1a\n\x18_invited_by_display_name"\x85\x01\n\x13InviteMemberRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x14\n\x05email\x18\x02 \x01(\tR\x05email\x12/\n\x04role\x18\x03 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role"T\n\x14InviteMemberResponse\x12<\n\ninvitation\x18\x01 \x01(\x0b2\x1c.organizations.v1.InvitationR\ninvitation"\x8d\x01\n\x16ListInvitationsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12?\n\x06status\x18\x02 \x01(\x0e2".organizations.v1.InvitationStatusH\x00R\x06status\x88\x01\x01B\t\n\x07_status"Y\n\x17ListInvitationsResponse\x12>\n\x0binvitations\x18\x01 \x03(\x0b2\x1c.organizations.v1.InvitationR\x0binvitations">\n\x17RevokeInvitationRequest\x12#\n\rinvitation_id\x18\x01 \x01(\tR\x0cinvitationId"X\n\x18RevokeInvitationResponse\x12<\n\ninvitation\x18\x01 \x01(\x0b2\x1c.organizations.v1.InvitationR\ninvitation">\n\x17ResendInvitationRequest\x12#\n\rinvitation_id\x18\x01 \x01(\tR\x0cinvitationId"X\n\x18ResendInvitationResponse\x12<\n\ninvitation\x18\x01 \x01(\x0b2\x1c.organizations.v1.InvitationR\ninvitation"\xb8\x01\n\x10SecuritySettings\x124\n\x16password_reset_enabled\x18\x01 \x01(\x08R\x14passwordResetEnabled\x127\n\x18mfa_required_for_members\x18\x02 \x01(\x08R\x15mfaRequiredForMembers\x125\n\x17mfa_required_for_admins\x18\x03 \x01(\x08R\x14mfaRequiredForAdmins"E\n\x1aGetSecuritySettingsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"]\n\x1bGetSecuritySettingsResponse\x12>\n\x08settings\x18\x01 \x01(\x0b2".organizations.v1.SecuritySettingsR\x08settings"\xd1\x02\n\x1dUpdateSecuritySettingsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x129\n\x16password_reset_enabled\x18\x02 \x01(\x08H\x00R\x14passwordResetEnabled\x88\x01\x01\x12<\n\x18mfa_required_for_members\x18\x03 \x01(\x08H\x01R\x15mfaRequiredForMembers\x88\x01\x01\x12:\n\x17mfa_required_for_admins\x18\x04 \x01(\x08H\x02R\x14mfaRequiredForAdmins\x88\x01\x01B\x19\n\x17_password_reset_enabledB\x1b\n\x19_mfa_required_for_membersB\x1a\n\x18_mfa_required_for_admins"`\n\x1eUpdateSecuritySettingsResponse\x12>\n\x08settings\x18\x01 \x01(\x0b2".organizations.v1.SecuritySettingsR\x08settings*\xb2\x01\n\x10InvitationStatus\x12!\n\x1dINVITATION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n\x19INVITATION_STATUS_PENDING\x10\x01\x12\x1e\n\x1aINVITATION_STATUS_ACCEPTED\x10\x02\x12\x1d\n\x19INVITATION_STATUS_REVOKED\x10\x03\x12\x1d\n\x19INVITATION_STATUS_EXPIRED\x10\x042\xb2\x19\n\x14OrganizationsService\x12r\n\x13ListMyOrganizations\x12,.organizations.v1.ListMyOrganizationsRequest\x1a-.organizations.v1.ListMyOrganizationsResponse\x12\x87\x01\n\x1aResolveContentOrganization\x123.organizations.v1.ResolveContentOrganizationRequest\x1a4.organizations.v1.ResolveContentOrganizationResponse\x12o\n\x12CreateOrganization\x12+.organizations.v1.CreateOrganizationRequest\x1a,.organizations.v1.CreateOrganizationResponse\x12l\n\x11ListMyInvitations\x12*.organizations.v1.ListMyInvitationsRequest\x1a+.organizations.v1.ListMyInvitationsResponse\x12o\n\x12AcceptMyInvitation\x12+.organizations.v1.AcceptMyInvitationRequest\x1a,.organizations.v1.AcceptMyInvitationResponse\x12r\n\x13DeclineMyInvitation\x12,.organizations.v1.DeclineMyInvitationRequest\x1a-.organizations.v1.DeclineMyInvitationResponse\x12f\n\x0fGetOrganization\x12(.organizations.v1.GetOrganizationRequest\x1a).organizations.v1.GetOrganizationResponse\x12o\n\x12UpdateOrganization\x12+.organizations.v1.UpdateOrganizationRequest\x1a,.organizations.v1.UpdateOrganizationResponse\x12l\n\x11LeaveOrganization\x12*.organizations.v1.LeaveOrganizationRequest\x1a+.organizations.v1.LeaveOrganizationResponse\x12l\n\x11TransferOwnership\x12*.organizations.v1.TransferOwnershipRequest\x1a+.organizations.v1.TransferOwnershipResponse\x12o\n\x12DeleteOrganization\x12+.organizations.v1.DeleteOrganizationRequest\x1a,.organizations.v1.DeleteOrganizationResponse\x12~\n\x17GetOrganizationOverview\x120.organizations.v1.GetOrganizationOverviewRequest\x1a1.organizations.v1.GetOrganizationOverviewResponse\x12Z\n\x0bListMembers\x12$.organizations.v1.ListMembersRequest\x1a%.organizations.v1.ListMembersResponse\x12T\n\tAddMember\x12".organizations.v1.AddMemberRequest\x1a#.organizations.v1.AddMemberResponse\x12i\n\x10UpdateMemberRole\x12).organizations.v1.UpdateMemberRoleRequest\x1a*.organizations.v1.UpdateMemberRoleResponse\x12]\n\x0cRemoveMember\x12%.organizations.v1.RemoveMemberRequest\x1a&.organizations.v1.RemoveMemberResponse\x12]\n\x0cInviteMember\x12%.organizations.v1.InviteMemberRequest\x1a&.organizations.v1.InviteMemberResponse\x12f\n\x0fListInvitations\x12(.organizations.v1.ListInvitationsRequest\x1a).organizations.v1.ListInvitationsResponse\x12i\n\x10RevokeInvitation\x12).organizations.v1.RevokeInvitationRequest\x1a*.organizations.v1.RevokeInvitationResponse\x12i\n\x10ResendInvitation\x12).organizations.v1.ResendInvitationRequest\x1a*.organizations.v1.ResendInvitationResponse\x12r\n\x13GetSecuritySettings\x12,.organizations.v1.GetSecuritySettingsRequest\x1a-.organizations.v1.GetSecuritySettingsResponse\x12{\n\x16UpdateSecuritySettings\x12/.organizations.v1.UpdateSecuritySettingsRequest\x1a0.organizations.v1.UpdateSecuritySettingsResponse\x12x\n\x15GetPermissionDefaults\x12..organizations.v1.GetPermissionDefaultsRequest\x1a/.organizations.v1.GetPermissionDefaultsResponse\x12\x81\x01\n\x18UpdatePermissionDefaults\x121.organizations.v1.UpdatePermissionDefaultsRequest\x1a2.organizations.v1.UpdatePermissionDefaultsResponse\x12i\n\x10GrantDomainAdmin\x12).organizations.v1.GrantDomainAdminRequest\x1a*.organizations.v1.GrantDomainAdminResponse\x12l\n\x11RevokeDomainAdmin\x12*.organizations.v1.RevokeDomainAdminRequest\x1a+.organizations.v1.RevokeDomainAdminResponse\x12i\n\x10ListDomainAdmins\x12).organizations.v1.ListDomainAdminsRequest\x1a*.organizations.v1.ListDomainAdminsResponse\x12r\n\x13GetUserDomainAdmins\x12,.organizations.v1.GetUserDomainAdminsRequest\x1a-.organizations.v1.GetUserDomainAdminsResponse\x12r\n\x13RotateEncryptionKey\x12,.organizations.v1.RotateEncryptionKeyRequest\x1a-.organizations.v1.RotateEncryptionKeyResponseBGZEgithub.com/uniffy-io/uniffy-proto-go/organizations/v1;organizationsv1b\x06proto3',
     [
         common_pb.desc(),
         timestamp_pb.desc(),
@@ -1861,6 +2318,21 @@ _DESC = file_desc(
         "ListMyOrganizationsRequest": ListMyOrganizationsRequest,
         "ListMyOrganizationsResponse": ListMyOrganizationsResponse,
         "MyOrganization": MyOrganization,
+        "CreateOrganizationRequest": CreateOrganizationRequest,
+        "CreateOrganizationResponse": CreateOrganizationResponse,
+        "ListMyInvitationsRequest": ListMyInvitationsRequest,
+        "ListMyInvitationsResponse": ListMyInvitationsResponse,
+        "MyInvitation": MyInvitation,
+        "AcceptMyInvitationRequest": AcceptMyInvitationRequest,
+        "AcceptMyInvitationResponse": AcceptMyInvitationResponse,
+        "DeclineMyInvitationRequest": DeclineMyInvitationRequest,
+        "DeclineMyInvitationResponse": DeclineMyInvitationResponse,
+        "LeaveOrganizationRequest": LeaveOrganizationRequest,
+        "LeaveOrganizationResponse": LeaveOrganizationResponse,
+        "TransferOwnershipRequest": TransferOwnershipRequest,
+        "TransferOwnershipResponse": TransferOwnershipResponse,
+        "DeleteOrganizationRequest": DeleteOrganizationRequest,
+        "DeleteOrganizationResponse": DeleteOrganizationResponse,
         "ResolveContentOrganizationRequest": ResolveContentOrganizationRequest,
         "ResolveContentOrganizationResponse": ResolveContentOrganizationResponse,
         "OrganizationDetail": OrganizationDetail,

@@ -18,11 +18,13 @@ from uniffy.core.errors import (
     AuthenticationError,
     BudgetExceededError,
     ConflictError,
+    InvitationSignInRequiredError,
     MembershipRequiredError,
     NotFoundError,
     PermissionDeniedError,
     RateLimitExceededError,
     RuntimeDeadlineExceededError,
+    SetupAlreadyCompletedError,
     UnavailableError,
     UNIFFYError,
     ValidationError,
@@ -56,16 +58,22 @@ DOMAIN_ERROR_CODES: dict[type[UNIFFYError], Code] = {
     BudgetExceededError: Code.RESOURCE_EXHAUSTED,
     RuntimeDeadlineExceededError: Code.DEADLINE_EXCEEDED,
     UnavailableError: Code.UNAVAILABLE,
+    InvitationSignInRequiredError: Code.FAILED_PRECONDITION,
+    SetupAlreadyCompletedError: Code.FAILED_PRECONDITION,
 }
 
 
 ERROR_INFO_DOMAIN = "uniffy"
 MEMBERSHIP_REQUIRED_REASON = "membership_required"
+SIGN_IN_REQUIRED_REASON = "sign_in_required"
+SETUP_COMPLETED_REASON = "setup_completed"
 
 # A typed reason lets a client act on a refusal without parsing its message. Each
 # one rides as a google.rpc.ErrorInfo detail with ERROR_INFO_DOMAIN as its domain.
 DOMAIN_ERROR_REASONS: dict[type[UNIFFYError], str] = {
     MembershipRequiredError: MEMBERSHIP_REQUIRED_REASON,
+    InvitationSignInRequiredError: SIGN_IN_REQUIRED_REASON,
+    SetupAlreadyCompletedError: SETUP_COMPLETED_REASON,
 }
 
 _ERROR_INFO_TYPE_URL = "type.googleapis.com/google.rpc.ErrorInfo"

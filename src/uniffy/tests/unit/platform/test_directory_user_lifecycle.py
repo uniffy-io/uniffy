@@ -268,7 +268,6 @@ class TestOrganizationShutdown:
             is_suspended=False,
         )
         ops._require_org = AsyncMock(return_value=org)
-        ops._enqueue_org_deleted_emails = AsyncMock()
         ops.get_organization = AsyncMock(return_value="detail")
         audit = AsyncMock()
         publish = AsyncMock(side_effect=lambda *_: events.append("publish"))
@@ -286,6 +285,9 @@ class TestOrganizationShutdown:
                 "uniffy.domains.platform.directory.operations.publish_membership_revoke_safe",
                 publish,
             ),
+            patch("uniffy.domains.organizations.lifecycle.write_audit_event", audit),
+            patch("uniffy.domains.organizations.lifecycle.publish_membership_revoke_safe", publish),
+            patch("uniffy.domains.organizations.lifecycle.enqueue_org_deleted_emails", AsyncMock()),
         ):
             result = await getattr(ops, method)(
                 user_id=actor_id,

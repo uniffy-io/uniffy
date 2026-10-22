@@ -63,6 +63,9 @@ const (
 	// AuthServiceGetAuthConfigProcedure is the fully-qualified name of the AuthService's GetAuthConfig
 	// RPC.
 	AuthServiceGetAuthConfigProcedure = "/auth.v1.AuthService/GetAuthConfig"
+	// AuthServiceSetupDeploymentProcedure is the fully-qualified name of the AuthService's
+	// SetupDeployment RPC.
+	AuthServiceSetupDeploymentProcedure = "/auth.v1.AuthService/SetupDeployment"
 	// AuthServiceGetInvitationProcedure is the fully-qualified name of the AuthService's GetInvitation
 	// RPC.
 	AuthServiceGetInvitationProcedure = "/auth.v1.AuthService/GetInvitation"
@@ -105,6 +108,10 @@ type AuthServiceClient interface {
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -194,6 +201,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		setupDeployment: connect.NewClient[v1.SetupDeploymentRequest, v1.SetupDeploymentResponse](
+			httpClient,
+			baseURL+AuthServiceSetupDeploymentProcedure,
+			connect.WithSchema(authServiceMethods.ByName("SetupDeployment")),
+			connect.WithClientOptions(opts...),
+		),
 		getInvitation: connect.NewClient[v1.GetInvitationRequest, v1.GetInvitationResponse](
 			httpClient,
 			baseURL+AuthServiceGetInvitationProcedure,
@@ -240,6 +253,7 @@ type authServiceClient struct {
 	getCacheKeySeed          *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
 	rotateCacheKeySeed       *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
 	getAuthConfig            *connect.Client[v1.GetAuthConfigRequest, v1.GetAuthConfigResponse]
+	setupDeployment          *connect.Client[v1.SetupDeploymentRequest, v1.SetupDeploymentResponse]
 	getInvitation            *connect.Client[v1.GetInvitationRequest, v1.GetInvitationResponse]
 	acceptInvitation         *connect.Client[v1.AcceptInvitationRequest, v1.AcceptInvitationResponse]
 	sendPasswordReset        *connect.Client[v1.SendPasswordResetRequest, v1.SendPasswordResetResponse]
@@ -302,6 +316,11 @@ func (c *authServiceClient) GetAuthConfig(ctx context.Context, req *connect.Requ
 	return c.getAuthConfig.CallUnary(ctx, req)
 }
 
+// SetupDeployment calls auth.v1.AuthService.SetupDeployment.
+func (c *authServiceClient) SetupDeployment(ctx context.Context, req *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error) {
+	return c.setupDeployment.CallUnary(ctx, req)
+}
+
 // GetInvitation calls auth.v1.AuthService.GetInvitation.
 func (c *authServiceClient) GetInvitation(ctx context.Context, req *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error) {
 	return c.getInvitation.CallUnary(ctx, req)
@@ -352,6 +371,10 @@ type AuthServiceHandler interface {
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -437,6 +460,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceSetupDeploymentHandler := connect.NewUnaryHandler(
+		AuthServiceSetupDeploymentProcedure,
+		svc.SetupDeployment,
+		connect.WithSchema(authServiceMethods.ByName("SetupDeployment")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceGetInvitationHandler := connect.NewUnaryHandler(
 		AuthServiceGetInvitationProcedure,
 		svc.GetInvitation,
@@ -491,6 +520,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRotateCacheKeySeedHandler.ServeHTTP(w, r)
 		case AuthServiceGetAuthConfigProcedure:
 			authServiceGetAuthConfigHandler.ServeHTTP(w, r)
+		case AuthServiceSetupDeploymentProcedure:
+			authServiceSetupDeploymentHandler.ServeHTTP(w, r)
 		case AuthServiceGetInvitationProcedure:
 			authServiceGetInvitationHandler.ServeHTTP(w, r)
 		case AuthServiceAcceptInvitationProcedure:
@@ -552,6 +583,10 @@ func (UnimplementedAuthServiceHandler) RotateCacheKeySeed(context.Context, *conn
 
 func (UnimplementedAuthServiceHandler) GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetAuthConfig is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.SetupDeployment is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error) {

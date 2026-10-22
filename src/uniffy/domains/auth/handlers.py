@@ -39,6 +39,8 @@ from uniffy_proto.auth.v1.auth_pb import (
     RotateCacheKeySeedResponse,
     SendPasswordResetRequest,
     SendPasswordResetResponse,
+    SetupDeploymentRequest,
+    SetupDeploymentResponse,
     VerifyPasswordResetTokenRequest,
     VerifyPasswordResetTokenResponse,
 )
@@ -68,7 +70,13 @@ from uniffy.core.converters import (
     domain_type_to_proto,
     org_role_to_proto,
 )
-from uniffy.core.errors import RateLimitExceededError, ValidationError
+from uniffy.core.errors import (
+    InvitationSignInRequiredError,
+    PermissionDeniedError,
+    RateLimitExceededError,
+    SetupAlreadyCompletedError,
+    ValidationError,
+)
 from uniffy.core.models.shared import DomainType
 from uniffy.core.search import SearchIndexer
 from uniffy.domains.auth.converters import session_to_proto, user_to_proto
@@ -93,12 +101,12 @@ from uniffy.domains.auth.types import (
 from uniffy.domains.calls.lifecycle import CallRevocationLifecycle
 from uniffy.domains.organizations.invitations import (
     InvitationAlreadyUsedError,
-    InvitationEmailConflictError,
     InvitationExpiredError,
     InvitationNotFoundError,
     InvitationOperations,
     InvitationRevokedError,
 )
+from uniffy.domains.platform.setup import setup_deployment, setup_required
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="auth.handlers")
@@ -503,11 +511,47 @@ class AuthHandlers:
         request: GetAuthConfigRequest,
         ctx: RequestContext,
     ) -> GetAuthConfigResponse:
-        """Public auth configuration the login / register pages need."""
+        """Public auth configuration the login, register and setup pages need."""
         del request, ctx
         async with open_session() as session:
             enabled = await public_registration_enabled(session)
-        return GetAuthConfigResponse(public_registration_enabled=enabled)
+            needs_setup = await setup_required(session)
+        return GetAuthConfigResponse(
+            public_registration_enabled=enabled,
+            setup_required=needs_setup,
+        )
+
+    async def setup_deployment(
+        self,
+        request: SetupDeploymentRequest,
+        ctx: RequestContext,
+    ) -> SetupDeploymentResponse:
+        try:
+            result = await setup_deployment(
+                email=request.email,
+                password=request.password,
+                full_name=request.full_name if request.has_field("full_name") else None,
+                organization_name=request.organization_name,
+                organization_slug=(
+                    request.organization_slug if request.has_field("organization_slug") else None
+                ),
+                user_agent=request_user_agent(ctx),
+                search_indexer=self.search_indexer,
+                call_lifecycle=self.call_lifecycle,
+            )
+            auth_result = _auth_result_to_proto(result)
+            auth_result.asset_cookie = _set_asset_cookie(ctx, result)
+            return SetupDeploymentResponse(auth_result=auth_result)
+        except RateLimitExceededError as e:
+            raise ConnectError(Code.RESOURCE_EXHAUSTED, str(e))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
+        except SetupAlreadyCompletedError as e:
+            # The chained domain error carries the setup_completed reason to the client.
+            raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except Exception:
+            logger.exception("Deployment setup error")
+            raise ConnectError(Code.INTERNAL, "Internal server error")
 
     async def get_invitation(
         self,
@@ -528,6 +572,7 @@ class AuthHandlers:
                     organization_slug=preview.organization.slug,
                     role=org_role_to_proto(preview.invitation.role),
                     expires_at=datetime_to_timestamp(preview.invitation.expires_at),
+                    account_exists=preview.account_exists,
                 )
                 if preview.inviter_display_name:
                     response.inviter_display_name = preview.inviter_display_name
@@ -542,6 +587,8 @@ class AuthHandlers:
             InvitationAlreadyUsedError,
         ) as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except PermissionDeniedError as e:
+            raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except Exception as e:
             logger.exception(f"Error fetching invitation: {e}")
             raise ConnectError(Code.INTERNAL, "Internal server error")
@@ -551,7 +598,7 @@ class AuthHandlers:
         request: AcceptInvitationRequest,
         ctx: RequestContext,
     ) -> AcceptInvitationResponse:
-        """Consume an invitation token; creates the user + membership.
+        """Consume an invitation token for a new account and sign it in.
 
         Returns the ``auth_result`` variant on a steady-state success, or
         the ``enrollment_required`` variant when the org/platform
@@ -591,9 +638,11 @@ class AuthHandlers:
             InvitationExpiredError,
             InvitationRevokedError,
             InvitationAlreadyUsedError,
-            InvitationEmailConflictError,
         ) as e:
             raise ConnectError(Code.FAILED_PRECONDITION, str(e))
+        except InvitationSignInRequiredError, PermissionDeniedError:
+            # The interceptor maps these and attaches the sign_in_required reason clients route on.
+            raise
         except ValidationError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except ValueError as e:

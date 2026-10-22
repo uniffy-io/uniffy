@@ -53,13 +53,14 @@ Store `APP_MASTER_KEY` in a secrets manager and back it up outside the deploymen
 
 ## Initial seed and registration
 
-These settings control the first database seed and whether registration is open.
+These settings control the first database seed, whether registration is open, and who may create organizations.
 
 | Variable | Default | Purpose |
 |---|---|---|
 | `ALLOW_PUBLIC_REGISTRATION` | `false` | When `false`, accounts can only be created by invitation. The `Register` RPC returns `INVALID_ARGUMENT` and the `/auth/register` page hides its form. Set `true` for development or open self hosted deployments. |
+| `ALLOW_ORG_CREATION` | `operators_and_owners` | Who may create organizations from the app. `operators_only` keeps it to platform operators. `operators_and_owners` adds owners of an existing organization. `members` adds anyone who belongs to an organization. `anyone` adds signed in users with no organization, so someone who registers can go straight on to create their own. The Server Settings page in the platform pages overrides this value. |
 | `INITIAL_ADMIN_EMAIL` | `admin@uniffy.io` | Email of the seeded admin user; also used as the VAPID contact email for web push. |
-| `INITIAL_ADMIN_PASSWORD` | `admin` | Seed password. Change immediately after first login. Development only. |
+| `INITIAL_ADMIN_PASSWORD` | empty | Leave it empty and the first visit to the app opens a setup screen that creates the platform operator and the first organization. Set it to seed the admin and the default organization at first boot, with no setup screen. Change a seeded password right after the first sign in. |
 | `DEFAULT_ORG_NAME` | `Default` | Name of the org created at seed. |
 | `DEFAULT_ORG_SLUG` | derived from name | Slug used in URLs. Leave empty to generate it from the name. |
 
@@ -85,7 +86,7 @@ The backend and every worker read the eviction policy, `maxmemory` and the persi
 
 Some managed services hide `CONFIG`. The policy is then unknown. Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview. The card also shows the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment. It refreshes every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
 
-The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. One organization may use at most half of that share, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment with open sign up, someone who creates several organizations can still fill a bucket; keep `ALLOW_PUBLIC_REGISTRATION` off unless you watch `uniffy_realtime_buffer_pending_bytes`.
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. One organization may use at most half of that share, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment where anyone may sign up and create organizations, someone who creates several of them can still fill a bucket. Keep `ALLOW_PUBLIC_REGISTRATION` off, or `ALLOW_ORG_CREATION` below `anyone`, unless you watch `uniffy_realtime_buffer_pending_bytes`.
 
 ## Realtime editing
 

@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import auth_pb
-from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
+from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, SetupDeploymentRequest, SetupDeploymentResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -98,6 +98,14 @@ class AuthService(Protocol):
     async def get_auth_config(self, request: GetAuthConfigRequest, ctx: RequestContext[GetAuthConfigRequest, GetAuthConfigResponse], /) -> GetAuthConfigResponse:
         """
         Public auth configuration (e.g. whether registration is open).
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def setup_deployment(self, request: SetupDeploymentRequest, ctx: RequestContext[SetupDeploymentRequest, SetupDeploymentResponse], /) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -258,6 +266,16 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_auth_config,
+                ),
+                "/auth.v1.AuthService/SetupDeployment": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetupDeployment",
+                        service_name="auth.v1.AuthService",
+                        input=SetupDeploymentRequest,
+                        output=SetupDeploymentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.setup_deployment,
                 ),
                 "/auth.v1.AuthService/GetInvitation": Endpoint.unary(
                     method=MethodInfo(
@@ -583,6 +601,31 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def setup_deployment(
+        self,
+        request: SetupDeploymentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetupDeployment",
+                service_name="auth.v1.AuthService",
+                input=SetupDeploymentRequest,
+                output=SetupDeploymentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_invitation(
         self,
         request: GetInvitationRequest,
@@ -772,6 +815,14 @@ class AuthServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def setup_deployment(self, request: SetupDeploymentRequest, ctx: RequestContext[SetupDeploymentRequest, SetupDeploymentResponse], /) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def get_invitation(self, request: GetInvitationRequest, ctx: RequestContext[GetInvitationRequest, GetInvitationResponse], /) -> GetInvitationResponse:
         """
         Preview an invitation by token (un-authenticated).
@@ -927,6 +978,16 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_auth_config,
+                ),
+                "/auth.v1.AuthService/SetupDeployment": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetupDeployment",
+                        service_name="auth.v1.AuthService",
+                        input=SetupDeploymentRequest,
+                        output=SetupDeploymentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.setup_deployment,
                 ),
                 "/auth.v1.AuthService/GetInvitation": EndpointSync.unary(
                     method=MethodInfo(
@@ -1236,6 +1297,30 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=GetAuthConfigRequest,
                 output=GetAuthConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def setup_deployment(
+        self,
+        request: SetupDeploymentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetupDeployment",
+                service_name="auth.v1.AuthService",
+                input=SetupDeploymentRequest,
+                output=SetupDeploymentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

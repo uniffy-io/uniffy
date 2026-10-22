@@ -30,6 +30,7 @@ const (
 	AuthService_GetCacheKeySeed_FullMethodName          = "/auth.v1.AuthService/GetCacheKeySeed"
 	AuthService_RotateCacheKeySeed_FullMethodName       = "/auth.v1.AuthService/RotateCacheKeySeed"
 	AuthService_GetAuthConfig_FullMethodName            = "/auth.v1.AuthService/GetAuthConfig"
+	AuthService_SetupDeployment_FullMethodName          = "/auth.v1.AuthService/SetupDeployment"
 	AuthService_GetInvitation_FullMethodName            = "/auth.v1.AuthService/GetInvitation"
 	AuthService_AcceptInvitation_FullMethodName         = "/auth.v1.AuthService/AcceptInvitation"
 	AuthService_SendPasswordReset_FullMethodName        = "/auth.v1.AuthService/SendPasswordReset"
@@ -69,6 +70,10 @@ type AuthServiceClient interface {
 	RotateCacheKeySeed(ctx context.Context, in *RotateCacheKeySeedRequest, opts ...grpc.CallOption) (*RotateCacheKeySeedResponse, error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(ctx context.Context, in *GetAuthConfigRequest, opts ...grpc.CallOption) (*GetAuthConfigResponse, error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(ctx context.Context, in *SetupDeploymentRequest, opts ...grpc.CallOption) (*SetupDeploymentResponse, error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -199,6 +204,16 @@ func (c *authServiceClient) GetAuthConfig(ctx context.Context, in *GetAuthConfig
 	return out, nil
 }
 
+func (c *authServiceClient) SetupDeployment(ctx context.Context, in *SetupDeploymentRequest, opts ...grpc.CallOption) (*SetupDeploymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetupDeploymentResponse)
+	err := c.cc.Invoke(ctx, AuthService_SetupDeployment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) GetInvitation(ctx context.Context, in *GetInvitationRequest, opts ...grpc.CallOption) (*GetInvitationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetInvitationResponse)
@@ -281,6 +296,10 @@ type AuthServiceServer interface {
 	RotateCacheKeySeed(context.Context, *RotateCacheKeySeedRequest) (*RotateCacheKeySeedResponse, error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *SetupDeploymentRequest) (*SetupDeploymentResponse, error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -333,6 +352,9 @@ func (UnimplementedAuthServiceServer) RotateCacheKeySeed(context.Context, *Rotat
 }
 func (UnimplementedAuthServiceServer) GetAuthConfig(context.Context, *GetAuthConfigRequest) (*GetAuthConfigResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAuthConfig not implemented")
+}
+func (UnimplementedAuthServiceServer) SetupDeployment(context.Context, *SetupDeploymentRequest) (*SetupDeploymentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetupDeployment not implemented")
 }
 func (UnimplementedAuthServiceServer) GetInvitation(context.Context, *GetInvitationRequest) (*GetInvitationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetInvitation not implemented")
@@ -568,6 +590,24 @@ func _AuthService_GetAuthConfig_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_SetupDeployment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetupDeploymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SetupDeployment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SetupDeployment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SetupDeployment(ctx, req.(*SetupDeploymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_GetInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetInvitationRequest)
 	if err := dec(in); err != nil {
@@ -708,6 +748,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAuthConfig",
 			Handler:    _AuthService_GetAuthConfig_Handler,
+		},
+		{
+			MethodName: "SetupDeployment",
+			Handler:    _AuthService_SetupDeployment_Handler,
 		},
 		{
 			MethodName: "GetInvitation",

@@ -71,6 +71,14 @@ class AuthenticationError(UNIFFYError):
         super().__init__(f"Authentication failed: {reason}")
 
 
+class InvitationSignInRequiredError(UNIFFYError):
+    """An account already holds the invited email, so the holder accepts while signed in."""
+
+
+class SetupAlreadyCompletedError(UNIFFYError):
+    """The deployment already has a user, so first-run setup is closed."""
+
+
 class BudgetExceededError(UNIFFYError):
     """Raised only when a governing budget row has ``hard_limit=True`` and usage exceeds the cap.
 

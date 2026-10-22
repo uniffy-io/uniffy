@@ -21,8 +21,15 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	OrganizationsService_ListMyOrganizations_FullMethodName        = "/organizations.v1.OrganizationsService/ListMyOrganizations"
 	OrganizationsService_ResolveContentOrganization_FullMethodName = "/organizations.v1.OrganizationsService/ResolveContentOrganization"
+	OrganizationsService_CreateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/CreateOrganization"
+	OrganizationsService_ListMyInvitations_FullMethodName          = "/organizations.v1.OrganizationsService/ListMyInvitations"
+	OrganizationsService_AcceptMyInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/AcceptMyInvitation"
+	OrganizationsService_DeclineMyInvitation_FullMethodName        = "/organizations.v1.OrganizationsService/DeclineMyInvitation"
 	OrganizationsService_GetOrganization_FullMethodName            = "/organizations.v1.OrganizationsService/GetOrganization"
 	OrganizationsService_UpdateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateOrganization"
+	OrganizationsService_LeaveOrganization_FullMethodName          = "/organizations.v1.OrganizationsService/LeaveOrganization"
+	OrganizationsService_TransferOwnership_FullMethodName          = "/organizations.v1.OrganizationsService/TransferOwnership"
+	OrganizationsService_DeleteOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/DeleteOrganization"
 	OrganizationsService_GetOrganizationOverview_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
 	OrganizationsService_ListMembers_FullMethodName                = "/organizations.v1.OrganizationsService/ListMembers"
 	OrganizationsService_AddMember_FullMethodName                  = "/organizations.v1.OrganizationsService/AddMember"
@@ -53,10 +60,23 @@ type OrganizationsServiceClient interface {
 	// URN. Unknown content, content the caller cannot view, and content outside
 	// the caller's memberships all return the same NOT_FOUND error.
 	ResolveContentOrganization(ctx context.Context, in *ResolveContentOrganizationRequest, opts ...grpc.CallOption) (*ResolveContentOrganizationResponse, error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(ctx context.Context, in *ListMyInvitationsRequest, opts ...grpc.CallOption) (*ListMyInvitationsResponse, error)
+	AcceptMyInvitation(ctx context.Context, in *AcceptMyInvitationRequest, opts ...grpc.CallOption) (*AcceptMyInvitationResponse, error)
+	DeclineMyInvitation(ctx context.Context, in *DeclineMyInvitationRequest, opts ...grpc.CallOption) (*DeclineMyInvitationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
 	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(ctx context.Context, in *LeaveOrganizationRequest, opts ...grpc.CallOption) (*LeaveOrganizationResponse, error)
+	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
+	DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
@@ -112,6 +132,46 @@ func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Cont
 	return out, nil
 }
 
+func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_CreateOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ListMyInvitations(ctx context.Context, in *ListMyInvitationsRequest, opts ...grpc.CallOption) (*ListMyInvitationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyInvitationsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ListMyInvitations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) AcceptMyInvitation(ctx context.Context, in *AcceptMyInvitationRequest, opts ...grpc.CallOption) (*AcceptMyInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptMyInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_AcceptMyInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) DeclineMyInvitation(ctx context.Context, in *DeclineMyInvitationRequest, opts ...grpc.CallOption) (*DeclineMyInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeclineMyInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_DeclineMyInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *organizationsServiceClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetOrganizationResponse)
@@ -126,6 +186,36 @@ func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateOrganizationResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdateOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) LeaveOrganization(ctx context.Context, in *LeaveOrganizationRequest, opts ...grpc.CallOption) (*LeaveOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaveOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_LeaveOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferOwnershipResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_TransferOwnership_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_DeleteOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -322,10 +412,23 @@ type OrganizationsServiceServer interface {
 	// URN. Unknown content, content the caller cannot view, and content outside
 	// the caller's memberships all return the same NOT_FOUND error.
 	ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(context.Context, *ListMyInvitationsRequest) (*ListMyInvitationsResponse, error)
+	AcceptMyInvitation(context.Context, *AcceptMyInvitationRequest) (*AcceptMyInvitationResponse, error)
+	DeclineMyInvitation(context.Context, *DeclineMyInvitationRequest) (*DeclineMyInvitationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
 	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(context.Context, *LeaveOrganizationRequest) (*LeaveOrganizationResponse, error)
+	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
+	DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
@@ -367,11 +470,32 @@ func (UnimplementedOrganizationsServiceServer) ListMyOrganizations(context.Conte
 func (UnimplementedOrganizationsServiceServer) ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResolveContentOrganization not implemented")
 }
+func (UnimplementedOrganizationsServiceServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ListMyInvitations(context.Context, *ListMyInvitationsRequest) (*ListMyInvitationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMyInvitations not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) AcceptMyInvitation(context.Context, *AcceptMyInvitationRequest) (*AcceptMyInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptMyInvitation not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) DeclineMyInvitation(context.Context, *DeclineMyInvitationRequest) (*DeclineMyInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeclineMyInvitation not implemented")
+}
 func (UnimplementedOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) LeaveOrganization(context.Context, *LeaveOrganizationRequest) (*LeaveOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LeaveOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferOwnership not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganizationOverview not implemented")
@@ -484,6 +608,78 @@ func _OrganizationsService_ResolveContentOrganization_Handler(srv interface{}, c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_CreateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).CreateOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_CreateOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).CreateOrganization(ctx, req.(*CreateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ListMyInvitations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyInvitationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ListMyInvitations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ListMyInvitations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ListMyInvitations(ctx, req.(*ListMyInvitationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_AcceptMyInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptMyInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).AcceptMyInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_AcceptMyInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).AcceptMyInvitation(ctx, req.(*AcceptMyInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_DeclineMyInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeclineMyInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).DeclineMyInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_DeclineMyInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).DeclineMyInvitation(ctx, req.(*DeclineMyInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrganizationsService_GetOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetOrganizationRequest)
 	if err := dec(in); err != nil {
@@ -516,6 +712,60 @@ func _OrganizationsService_UpdateOrganization_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OrganizationsServiceServer).UpdateOrganization(ctx, req.(*UpdateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_LeaveOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaveOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).LeaveOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_LeaveOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).LeaveOrganization(ctx, req.(*LeaveOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_TransferOwnership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferOwnershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).TransferOwnership(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_TransferOwnership_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).TransferOwnership(ctx, req.(*TransferOwnershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_DeleteOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).DeleteOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_DeleteOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).DeleteOrganization(ctx, req.(*DeleteOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -860,12 +1110,40 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OrganizationsService_ResolveContentOrganization_Handler,
 		},
 		{
+			MethodName: "CreateOrganization",
+			Handler:    _OrganizationsService_CreateOrganization_Handler,
+		},
+		{
+			MethodName: "ListMyInvitations",
+			Handler:    _OrganizationsService_ListMyInvitations_Handler,
+		},
+		{
+			MethodName: "AcceptMyInvitation",
+			Handler:    _OrganizationsService_AcceptMyInvitation_Handler,
+		},
+		{
+			MethodName: "DeclineMyInvitation",
+			Handler:    _OrganizationsService_DeclineMyInvitation_Handler,
+		},
+		{
 			MethodName: "GetOrganization",
 			Handler:    _OrganizationsService_GetOrganization_Handler,
 		},
 		{
 			MethodName: "UpdateOrganization",
 			Handler:    _OrganizationsService_UpdateOrganization_Handler,
+		},
+		{
+			MethodName: "LeaveOrganization",
+			Handler:    _OrganizationsService_LeaveOrganization_Handler,
+		},
+		{
+			MethodName: "TransferOwnership",
+			Handler:    _OrganizationsService_TransferOwnership_Handler,
+		},
+		{
+			MethodName: "DeleteOrganization",
+			Handler:    _OrganizationsService_DeleteOrganization_Handler,
 		},
 		{
 			MethodName: "GetOrganizationOverview",

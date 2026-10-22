@@ -39,12 +39,33 @@ const (
 	// OrganizationsServiceResolveContentOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's ResolveContentOrganization RPC.
 	OrganizationsServiceResolveContentOrganizationProcedure = "/organizations.v1.OrganizationsService/ResolveContentOrganization"
+	// OrganizationsServiceCreateOrganizationProcedure is the fully-qualified name of the
+	// OrganizationsService's CreateOrganization RPC.
+	OrganizationsServiceCreateOrganizationProcedure = "/organizations.v1.OrganizationsService/CreateOrganization"
+	// OrganizationsServiceListMyInvitationsProcedure is the fully-qualified name of the
+	// OrganizationsService's ListMyInvitations RPC.
+	OrganizationsServiceListMyInvitationsProcedure = "/organizations.v1.OrganizationsService/ListMyInvitations"
+	// OrganizationsServiceAcceptMyInvitationProcedure is the fully-qualified name of the
+	// OrganizationsService's AcceptMyInvitation RPC.
+	OrganizationsServiceAcceptMyInvitationProcedure = "/organizations.v1.OrganizationsService/AcceptMyInvitation"
+	// OrganizationsServiceDeclineMyInvitationProcedure is the fully-qualified name of the
+	// OrganizationsService's DeclineMyInvitation RPC.
+	OrganizationsServiceDeclineMyInvitationProcedure = "/organizations.v1.OrganizationsService/DeclineMyInvitation"
 	// OrganizationsServiceGetOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's GetOrganization RPC.
 	OrganizationsServiceGetOrganizationProcedure = "/organizations.v1.OrganizationsService/GetOrganization"
 	// OrganizationsServiceUpdateOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's UpdateOrganization RPC.
 	OrganizationsServiceUpdateOrganizationProcedure = "/organizations.v1.OrganizationsService/UpdateOrganization"
+	// OrganizationsServiceLeaveOrganizationProcedure is the fully-qualified name of the
+	// OrganizationsService's LeaveOrganization RPC.
+	OrganizationsServiceLeaveOrganizationProcedure = "/organizations.v1.OrganizationsService/LeaveOrganization"
+	// OrganizationsServiceTransferOwnershipProcedure is the fully-qualified name of the
+	// OrganizationsService's TransferOwnership RPC.
+	OrganizationsServiceTransferOwnershipProcedure = "/organizations.v1.OrganizationsService/TransferOwnership"
+	// OrganizationsServiceDeleteOrganizationProcedure is the fully-qualified name of the
+	// OrganizationsService's DeleteOrganization RPC.
+	OrganizationsServiceDeleteOrganizationProcedure = "/organizations.v1.OrganizationsService/DeleteOrganization"
 	// OrganizationsServiceGetOrganizationOverviewProcedure is the fully-qualified name of the
 	// OrganizationsService's GetOrganizationOverview RPC.
 	OrganizationsServiceGetOrganizationOverviewProcedure = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
@@ -109,10 +130,23 @@ type OrganizationsServiceClient interface {
 	// URN. Unknown content, content the caller cannot view, and content outside
 	// the caller's memberships all return the same NOT_FOUND error.
 	ResolveContentOrganization(context.Context, *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error)
+	AcceptMyInvitation(context.Context, *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error)
+	DeclineMyInvitation(context.Context, *connect.Request[v1.DeclineMyInvitationRequest]) (*connect.Response[v1.DeclineMyInvitationResponse], error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
+	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
+	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error)
 	// Member management (Org Admin)
@@ -163,6 +197,30 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(organizationsServiceMethods.ByName("ResolveContentOrganization")),
 			connect.WithClientOptions(opts...),
 		),
+		createOrganization: connect.NewClient[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceCreateOrganizationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		listMyInvitations: connect.NewClient[v1.ListMyInvitationsRequest, v1.ListMyInvitationsResponse](
+			httpClient,
+			baseURL+OrganizationsServiceListMyInvitationsProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("ListMyInvitations")),
+			connect.WithClientOptions(opts...),
+		),
+		acceptMyInvitation: connect.NewClient[v1.AcceptMyInvitationRequest, v1.AcceptMyInvitationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceAcceptMyInvitationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("AcceptMyInvitation")),
+			connect.WithClientOptions(opts...),
+		),
+		declineMyInvitation: connect.NewClient[v1.DeclineMyInvitationRequest, v1.DeclineMyInvitationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceDeclineMyInvitationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("DeclineMyInvitation")),
+			connect.WithClientOptions(opts...),
+		),
 		getOrganization: connect.NewClient[v1.GetOrganizationRequest, v1.GetOrganizationResponse](
 			httpClient,
 			baseURL+OrganizationsServiceGetOrganizationProcedure,
@@ -173,6 +231,24 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			httpClient,
 			baseURL+OrganizationsServiceUpdateOrganizationProcedure,
 			connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		leaveOrganization: connect.NewClient[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceLeaveOrganizationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("LeaveOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		transferOwnership: connect.NewClient[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse](
+			httpClient,
+			baseURL+OrganizationsServiceTransferOwnershipProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("TransferOwnership")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteOrganization: connect.NewClient[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse](
+			httpClient,
+			baseURL+OrganizationsServiceDeleteOrganizationProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("DeleteOrganization")),
 			connect.WithClientOptions(opts...),
 		),
 		getOrganizationOverview: connect.NewClient[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse](
@@ -290,8 +366,15 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 type organizationsServiceClient struct {
 	listMyOrganizations        *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
 	resolveContentOrganization *connect.Client[v1.ResolveContentOrganizationRequest, v1.ResolveContentOrganizationResponse]
+	createOrganization         *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
+	listMyInvitations          *connect.Client[v1.ListMyInvitationsRequest, v1.ListMyInvitationsResponse]
+	acceptMyInvitation         *connect.Client[v1.AcceptMyInvitationRequest, v1.AcceptMyInvitationResponse]
+	declineMyInvitation        *connect.Client[v1.DeclineMyInvitationRequest, v1.DeclineMyInvitationResponse]
 	getOrganization            *connect.Client[v1.GetOrganizationRequest, v1.GetOrganizationResponse]
 	updateOrganization         *connect.Client[v1.UpdateOrganizationRequest, v1.UpdateOrganizationResponse]
+	leaveOrganization          *connect.Client[v1.LeaveOrganizationRequest, v1.LeaveOrganizationResponse]
+	transferOwnership          *connect.Client[v1.TransferOwnershipRequest, v1.TransferOwnershipResponse]
+	deleteOrganization         *connect.Client[v1.DeleteOrganizationRequest, v1.DeleteOrganizationResponse]
 	getOrganizationOverview    *connect.Client[v1.GetOrganizationOverviewRequest, v1.GetOrganizationOverviewResponse]
 	listMembers                *connect.Client[v1.ListMembersRequest, v1.ListMembersResponse]
 	addMember                  *connect.Client[v1.AddMemberRequest, v1.AddMemberResponse]
@@ -323,6 +406,26 @@ func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Cont
 	return c.resolveContentOrganization.CallUnary(ctx, req)
 }
 
+// CreateOrganization calls organizations.v1.OrganizationsService.CreateOrganization.
+func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, req *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
+	return c.createOrganization.CallUnary(ctx, req)
+}
+
+// ListMyInvitations calls organizations.v1.OrganizationsService.ListMyInvitations.
+func (c *organizationsServiceClient) ListMyInvitations(ctx context.Context, req *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error) {
+	return c.listMyInvitations.CallUnary(ctx, req)
+}
+
+// AcceptMyInvitation calls organizations.v1.OrganizationsService.AcceptMyInvitation.
+func (c *organizationsServiceClient) AcceptMyInvitation(ctx context.Context, req *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error) {
+	return c.acceptMyInvitation.CallUnary(ctx, req)
+}
+
+// DeclineMyInvitation calls organizations.v1.OrganizationsService.DeclineMyInvitation.
+func (c *organizationsServiceClient) DeclineMyInvitation(ctx context.Context, req *connect.Request[v1.DeclineMyInvitationRequest]) (*connect.Response[v1.DeclineMyInvitationResponse], error) {
+	return c.declineMyInvitation.CallUnary(ctx, req)
+}
+
 // GetOrganization calls organizations.v1.OrganizationsService.GetOrganization.
 func (c *organizationsServiceClient) GetOrganization(ctx context.Context, req *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return c.getOrganization.CallUnary(ctx, req)
@@ -331,6 +434,21 @@ func (c *organizationsServiceClient) GetOrganization(ctx context.Context, req *c
 // UpdateOrganization calls organizations.v1.OrganizationsService.UpdateOrganization.
 func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, req *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
 	return c.updateOrganization.CallUnary(ctx, req)
+}
+
+// LeaveOrganization calls organizations.v1.OrganizationsService.LeaveOrganization.
+func (c *organizationsServiceClient) LeaveOrganization(ctx context.Context, req *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
+	return c.leaveOrganization.CallUnary(ctx, req)
+}
+
+// TransferOwnership calls organizations.v1.OrganizationsService.TransferOwnership.
+func (c *organizationsServiceClient) TransferOwnership(ctx context.Context, req *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error) {
+	return c.transferOwnership.CallUnary(ctx, req)
+}
+
+// DeleteOrganization calls organizations.v1.OrganizationsService.DeleteOrganization.
+func (c *organizationsServiceClient) DeleteOrganization(ctx context.Context, req *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
+	return c.deleteOrganization.CallUnary(ctx, req)
 }
 
 // GetOrganizationOverview calls organizations.v1.OrganizationsService.GetOrganizationOverview.
@@ -432,10 +550,23 @@ type OrganizationsServiceHandler interface {
 	// URN. Unknown content, content the caller cannot view, and content outside
 	// the caller's memberships all return the same NOT_FOUND error.
 	ResolveContentOrganization(context.Context, *connect.Request[v1.ResolveContentOrganizationRequest]) (*connect.Response[v1.ResolveContentOrganizationResponse], error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error)
+	AcceptMyInvitation(context.Context, *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error)
+	DeclineMyInvitation(context.Context, *connect.Request[v1.DeclineMyInvitationRequest]) (*connect.Response[v1.DeclineMyInvitationResponse], error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error)
 	UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error)
+	TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error)
+	DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error)
 	// Member management (Org Admin)
@@ -482,6 +613,30 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		connect.WithSchema(organizationsServiceMethods.ByName("ResolveContentOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
+	organizationsServiceCreateOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceCreateOrganizationProcedure,
+		svc.CreateOrganization,
+		connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceListMyInvitationsHandler := connect.NewUnaryHandler(
+		OrganizationsServiceListMyInvitationsProcedure,
+		svc.ListMyInvitations,
+		connect.WithSchema(organizationsServiceMethods.ByName("ListMyInvitations")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceAcceptMyInvitationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceAcceptMyInvitationProcedure,
+		svc.AcceptMyInvitation,
+		connect.WithSchema(organizationsServiceMethods.ByName("AcceptMyInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceDeclineMyInvitationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceDeclineMyInvitationProcedure,
+		svc.DeclineMyInvitation,
+		connect.WithSchema(organizationsServiceMethods.ByName("DeclineMyInvitation")),
+		connect.WithHandlerOptions(opts...),
+	)
 	organizationsServiceGetOrganizationHandler := connect.NewUnaryHandler(
 		OrganizationsServiceGetOrganizationProcedure,
 		svc.GetOrganization,
@@ -492,6 +647,24 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		OrganizationsServiceUpdateOrganizationProcedure,
 		svc.UpdateOrganization,
 		connect.WithSchema(organizationsServiceMethods.ByName("UpdateOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceLeaveOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceLeaveOrganizationProcedure,
+		svc.LeaveOrganization,
+		connect.WithSchema(organizationsServiceMethods.ByName("LeaveOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceTransferOwnershipHandler := connect.NewUnaryHandler(
+		OrganizationsServiceTransferOwnershipProcedure,
+		svc.TransferOwnership,
+		connect.WithSchema(organizationsServiceMethods.ByName("TransferOwnership")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceDeleteOrganizationHandler := connect.NewUnaryHandler(
+		OrganizationsServiceDeleteOrganizationProcedure,
+		svc.DeleteOrganization,
+		connect.WithSchema(organizationsServiceMethods.ByName("DeleteOrganization")),
 		connect.WithHandlerOptions(opts...),
 	)
 	organizationsServiceGetOrganizationOverviewHandler := connect.NewUnaryHandler(
@@ -608,10 +781,24 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 			organizationsServiceListMyOrganizationsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceResolveContentOrganizationProcedure:
 			organizationsServiceResolveContentOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceCreateOrganizationProcedure:
+			organizationsServiceCreateOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceListMyInvitationsProcedure:
+			organizationsServiceListMyInvitationsHandler.ServeHTTP(w, r)
+		case OrganizationsServiceAcceptMyInvitationProcedure:
+			organizationsServiceAcceptMyInvitationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceDeclineMyInvitationProcedure:
+			organizationsServiceDeclineMyInvitationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetOrganizationProcedure:
 			organizationsServiceGetOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceUpdateOrganizationProcedure:
 			organizationsServiceUpdateOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceLeaveOrganizationProcedure:
+			organizationsServiceLeaveOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceTransferOwnershipProcedure:
+			organizationsServiceTransferOwnershipHandler.ServeHTTP(w, r)
+		case OrganizationsServiceDeleteOrganizationProcedure:
+			organizationsServiceDeleteOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceGetOrganizationOverviewProcedure:
 			organizationsServiceGetOrganizationOverviewHandler.ServeHTTP(w, r)
 		case OrganizationsServiceListMembersProcedure:
@@ -665,12 +852,40 @@ func (UnimplementedOrganizationsServiceHandler) ResolveContentOrganization(conte
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ResolveContentOrganization is not implemented"))
 }
 
+func (UnimplementedOrganizationsServiceHandler) CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.CreateOrganization is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.ListMyInvitations is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) AcceptMyInvitation(context.Context, *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.AcceptMyInvitation is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) DeclineMyInvitation(context.Context, *connect.Request[v1.DeclineMyInvitationRequest]) (*connect.Response[v1.DeclineMyInvitationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.DeclineMyInvitation is not implemented"))
+}
+
 func (UnimplementedOrganizationsServiceHandler) GetOrganization(context.Context, *connect.Request[v1.GetOrganizationRequest]) (*connect.Response[v1.GetOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetOrganization is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) UpdateOrganization(context.Context, *connect.Request[v1.UpdateOrganizationRequest]) (*connect.Response[v1.UpdateOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.UpdateOrganization is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) LeaveOrganization(context.Context, *connect.Request[v1.LeaveOrganizationRequest]) (*connect.Response[v1.LeaveOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.LeaveOrganization is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) TransferOwnership(context.Context, *connect.Request[v1.TransferOwnershipRequest]) (*connect.Response[v1.TransferOwnershipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.TransferOwnership is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) DeleteOrganization(context.Context, *connect.Request[v1.DeleteOrganizationRequest]) (*connect.Response[v1.DeleteOrganizationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.DeleteOrganization is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) GetOrganizationOverview(context.Context, *connect.Request[v1.GetOrganizationOverviewRequest]) (*connect.Response[v1.GetOrganizationOverviewResponse], error) {

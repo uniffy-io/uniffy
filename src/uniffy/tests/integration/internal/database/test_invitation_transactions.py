@@ -12,6 +12,11 @@ import pytest_asyncio
 from sqlalchemy import delete, func, select, text
 
 from uniffy.core.audit.actions import Action
+from uniffy.core.errors import (
+    ConflictError,
+    InvitationSignInRequiredError,
+    PermissionDeniedError,
+)
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.files.folder import Folder
 from uniffy.core.models.login.invitation import Invitation
@@ -20,15 +25,16 @@ from uniffy.core.models.login.organization_member import OrganizationMember, Org
 from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import generate_id
-from uniffy.infrastructure.database import open_session
 from uniffy.domains.auth.types import AuthResult
-from uniffy.domains.organizations.invitations.errors import InvitationAlreadyUsedError
-from uniffy.domains.organizations.invitations.operations import (
-    InvitationOperations,
-    _hash_token,
-)
-from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.directory.projection import UserDirectoryProjection
+from uniffy.domains.organizations.invitations.errors import (
+    InvitationAlreadyUsedError,
+    InvitationNotFoundError,
+)
+from uniffy.domains.organizations.invitations.operations import InvitationOperations
+from uniffy.domains.organizations.invitations.reader import hash_token
+from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -64,7 +70,7 @@ async def invitation_env(session):
         email=invite_email,
         role=OrganizationRole.MEMBER,
         invited_by_user_id=admin.id,
-        token_hash=_hash_token(raw_token),
+        token_hash=hash_token(raw_token),
         expires_at=datetime.now(UTC) + timedelta(days=1),
     )
     session.add(invitation)
@@ -111,7 +117,7 @@ async def _action_count(session, org_id, action: Action) -> int:
 
 
 async def test_invitation_creation_is_committed_before_email_enqueue(
-    session, invitation_env, search_indexer, monkeypatch
+    session, invitation_env, monkeypatch
 ) -> None:
     email = f"new-{invitation_env.suffix}@test.local"
     observed: list[tuple[int, int]] = []
@@ -149,7 +155,6 @@ async def test_invitation_creation_is_committed_before_email_enqueue(
         email,
         OrganizationRole.MEMBER,
         invitation_env.admin_id,
-        search_indexer=search_indexer,
     )
 
     assert result.invitation is not None
@@ -157,7 +162,7 @@ async def test_invitation_creation_is_committed_before_email_enqueue(
 
 
 async def test_invitation_creation_rolls_back_when_audit_fails(
-    session, invitation_env, search_indexer, monkeypatch
+    session, invitation_env, monkeypatch
 ) -> None:
     email = f"rollback-{invitation_env.suffix}@test.local"
     monkeypatch.setattr(
@@ -171,7 +176,6 @@ async def test_invitation_creation_rolls_back_when_audit_fails(
             email,
             OrganizationRole.MEMBER,
             invitation_env.admin_id,
-            search_indexer=search_indexer,
         )
 
     invitation_count = (
@@ -256,12 +260,8 @@ async def test_acceptance_failure_rolls_back_every_authoritative_fact(
     assert session_count == 0
     assert folder_count == 0
     assert invitation.accepted_at is None
-    assert await _action_count(
-        session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_ADDED
-    ) == 0
-    assert await _action_count(
-        session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED
-    ) == 0
+    assert await _action_count(session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_ADDED) == 0
+    assert await _action_count(session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED) == 0
     assert await InvitationOperations(session)._load_by_token(invitation_env.raw_token)
 
 
@@ -319,9 +319,194 @@ async def test_concurrent_token_consumption_has_exactly_one_success(
     assert membership_count == 2
     assert auth_session_count == 1
     assert invitation.accepted_at is not None
-    assert await _action_count(
-        session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_ADDED
-    ) == 1
-    assert await _action_count(
-        session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED
-    ) == 1
+    assert await _action_count(session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_ADDED) == 1
+    assert await _action_count(session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED) == 1
+
+
+async def _member_count(session, org_id) -> int:
+    return int(
+        (
+            await session.execute(
+                select(func.count())
+                .select_from(OrganizationMember)
+                .where(OrganizationMember.organization_id == org_id)
+            )
+        ).scalar_one()
+    )
+
+
+async def _accept_anonymously(session, env, search_indexer):
+    return await InvitationOperations(session).accept(
+        raw_token=env.raw_token,
+        username=f"other-{env.suffix}",
+        password="Strong invitation password",
+        full_name="Someone Else",
+        user_agent="pytest",
+        search_indexer=search_indexer,
+    )
+
+
+@pytest.mark.parametrize("is_active", [True, False], ids=["active", "deactivated"])
+async def test_an_existing_account_is_sent_to_sign_in_and_nothing_is_written(
+    session, invitation_env, search_indexer, monkeypatch, is_active
+) -> None:
+    monkeypatch.setattr(
+        "uniffy.domains.organizations.invitations.operations.check_rate_limit",
+        AsyncMock(),
+    )
+    account = User(
+        email=invitation_env.invite_email,
+        username=f"held-{invitation_env.suffix}",
+        full_name="Held Name",
+        hashed_password="x",
+        is_active=is_active,
+    )
+    session.add(account)
+    await session.commit()
+    token_version = account.token_version
+
+    with pytest.raises(InvitationSignInRequiredError):
+        await _accept_anonymously(session, invitation_env, search_indexer)
+
+    await session.refresh(account)
+    invitation = await session.get(Invitation, invitation_env.invite_id)
+    await session.refresh(invitation)
+    account_sessions = (
+        await session.execute(
+            select(func.count()).select_from(UserSession).where(UserSession.user_id == account.id)
+        )
+    ).scalar_one()
+    # Only a platform operator reopens a deactivated account; the invitation leaves it untouched.
+    assert account.is_active is is_active
+    assert account.hashed_password == "x"
+    assert account.full_name == "Held Name"
+    assert account.email_verified is False
+    assert account.token_version == token_version
+    assert account_sessions == 0
+    assert invitation.accepted_at is None
+    assert await _member_count(session, invitation_env.org_id) == 1
+    assert await _action_count(session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED) == 0
+
+
+class OrganizationClosure(StrEnum):
+    DELETED = "deleted"
+    SUSPENDED = "suspended"
+
+
+_CLOSURE_ERRORS: dict[OrganizationClosure, type[Exception]] = {
+    OrganizationClosure.DELETED: InvitationNotFoundError,
+    OrganizationClosure.SUSPENDED: PermissionDeniedError,
+}
+
+
+async def _close_organization(session, org_id, closure: OrganizationClosure) -> None:
+    organization = await session.get(Organization, org_id)
+    if closure is OrganizationClosure.DELETED:
+        organization.deleted_at = datetime.now(UTC)
+    else:
+        organization.is_suspended = True
+    await session.commit()
+
+
+@pytest.mark.parametrize("closure", list(OrganizationClosure))
+async def test_a_closed_organization_refuses_preview_and_anonymous_accept(
+    session, invitation_env, search_indexer, monkeypatch, closure
+) -> None:
+    monkeypatch.setattr(
+        "uniffy.domains.organizations.invitations.operations.check_rate_limit",
+        AsyncMock(),
+    )
+    monkeypatch.setattr(
+        "uniffy.domains.organizations.invitations.reader.check_rate_limit",
+        AsyncMock(),
+    )
+    await _close_organization(session, invitation_env.org_id, closure)
+    error = _CLOSURE_ERRORS[closure]
+
+    with pytest.raises(error):
+        await InvitationOperations(session).get_for_token(invitation_env.raw_token)
+    with pytest.raises(error):
+        await _accept_anonymously(session, invitation_env, search_indexer)
+
+    user_count = (
+        await session.execute(
+            select(func.count()).select_from(User).where(User.email == invitation_env.invite_email)
+        )
+    ).scalar_one()
+    invitation = await session.get(Invitation, invitation_env.invite_id)
+    await session.refresh(invitation)
+    assert user_count == 0
+    assert invitation.accepted_at is None
+    assert invitation.revoked_at is None
+    assert await _member_count(session, invitation_env.org_id) == 1
+    assert await _action_count(session, invitation_env.org_id, Action.AUTH_INVITATION_ACCEPTED) == 0
+
+
+async def test_inviting_an_active_member_conflicts_and_keeps_earlier_invitations(
+    session, invitation_env, monkeypatch
+) -> None:
+    enqueue = AsyncMock()
+    monkeypatch.setattr("uniffy.domains.organizations.invitations.operations.enqueue_job", enqueue)
+    member_email = f"member-{invitation_env.suffix}@test.local"
+    member = User(
+        email=member_email,
+        username=f"member-{invitation_env.suffix}",
+        hashed_password="x",
+    )
+    session.add(member)
+    await session.flush()
+    member_id = member.id
+    session.add(
+        OrganizationMember(
+            user_id=member_id,
+            organization_id=invitation_env.org_id,
+            role=OrganizationRole.MEMBER,
+        )
+    )
+    # A pending invitation left over from before the person joined through another path.
+    earlier = Invitation(
+        organization_id=invitation_env.org_id,
+        email=member_email,
+        role=OrganizationRole.MEMBER,
+        invited_by_user_id=invitation_env.admin_id,
+        token_hash=hash_token(secrets.token_urlsafe(32)),
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    session.add(earlier)
+    await session.commit()
+
+    try:
+        with pytest.raises(ConflictError, match="already a member of the organization"):
+            await InvitationOperations(session).invite(
+                invitation_env.org_id,
+                member_email.upper(),
+                OrganizationRole.ADMIN,
+                invitation_env.admin_id,
+            )
+
+        await session.refresh(earlier)
+        invitations = (
+            await session.execute(
+                select(func.count())
+                .select_from(Invitation)
+                .where(
+                    Invitation.organization_id == invitation_env.org_id,
+                    Invitation.email == member_email,
+                )
+            )
+        ).scalar_one()
+        assert earlier.revoked_at is None
+        assert invitations == 1
+        assert (
+            await _action_count(session, invitation_env.org_id, Action.ORGANIZATION_MEMBER_INVITED)
+            == 0
+        )
+        enqueue.assert_not_awaited()
+    finally:
+        await session.rollback()
+        await session.execute(delete(Invitation).where(Invitation.email == member_email))
+        await session.execute(
+            delete(OrganizationMember).where(OrganizationMember.user_id == member_id)
+        )
+        await session.execute(delete(User).where(User.id == member_id))
+        await session.commit()

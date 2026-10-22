@@ -48,6 +48,11 @@ service AuthService {
   // Public auth configuration (e.g. whether registration is open).
   rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
 
+  // First run of an empty deployment: creates the platform operator, the first
+  // organization with that user as owner, and signs them in. Refuses once any
+  // user exists.
+  rpc SetupDeployment(SetupDeploymentRequest) returns (SetupDeploymentResponse);
+
   // Preview an invitation by token (un-authenticated).
   rpc GetInvitation(GetInvitationRequest) returns (GetInvitationResponse);
 
@@ -272,6 +277,21 @@ message GetAuthConfigRequest {}
 // Public auth configuration the login / register pages need
 message GetAuthConfigResponse {
   bool public_registration_enabled = 1;
+  // True while the deployment has no user at all; the client shows the setup screen.
+  bool setup_required = 2;
+}
+
+message SetupDeploymentRequest {
+  string email = 1;
+  string password = 2;
+  optional string full_name = 3;
+  string organization_name = 4;
+  // Derived from the organization name when empty.
+  optional string organization_slug = 5;
+}
+
+message SetupDeploymentResponse {
+  AuthResult auth_result = 1;
 }
 
 // Preview an invitation before showing the accept form
@@ -287,6 +307,8 @@ message GetInvitationResponse {
   optional string inviter_display_name = 5;
   common.v1.OrganizationRole role = 6;
   google.protobuf.Timestamp expires_at = 7;
+  // An account already holds this email; the holder signs in to accept.
+  bool account_exists = 8;
 }
 
 // Accept an invitation; this creates the user + membership and returns auth tokens.

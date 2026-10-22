@@ -11,6 +11,7 @@ from sqlalchemy import select
 logger = logger.bind(component="platform.bootstrap")
 
 BOOTSTRAP_LOCK_ID = 0x756E_6966_6679_5331  # "unifyS1"
+DEFAULT_ADMIN_EMAIL = "admin@uniffy.io"
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,108 +33,115 @@ async def _bootstrap_deployment_locked(
     search_indexer: SearchIndexer,
 ) -> None:
     # Lazy imports avoid the auth-module circular dependency.
-    from uniffy.core.auth.passwords.crypto import hash_password
-    from uniffy.core.models import Organization, User
-    from uniffy.core.models.login.organization_member import OrganizationMemberSource
+    from uniffy.core.models import Organization
     from uniffy.infrastructure.database.session import open_session
 
     logger.info("Checking deployment state...")
 
+    admin_email = os.getenv("INITIAL_ADMIN_EMAIL", DEFAULT_ADMIN_EMAIL)
+
     async with open_session() as session:
-        result = await session.execute(select(Organization).limit(1))
-        existing_org = result.scalar_one_or_none()
-
-        if existing_org:
-            logger.info("Deployment already initialized. Skipping bootstrap.")
-            return
-
-        logger.info("No organizations found. Bootstrapping deployment...")
-
         try:
-            # Bootstrap users. When INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL
-            # (case-insensitive) one user holds both roles - the self-hosted
-            # single-tenant default. Otherwise admin owns the org and a separate
-            # platform user is sysadmin-only with no org membership.
-            admin_password = os.getenv("INITIAL_ADMIN_PASSWORD")
-            if not admin_password:
-                logger.warning(
-                    "INITIAL_ADMIN_PASSWORD environment variable not set. "
-                    "Using default password: 'admin'"
-                )
-                admin_password = "admin"
-
-            admin_email = os.getenv("INITIAL_ADMIN_EMAIL", "admin@uniffy.io")
-            platform_email = os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
-            platform_password = (
-                os.getenv("INITIAL_PLATFORM_ADMIN_PASSWORD", "").strip() or admin_password
-            )
-
-            collapsed = admin_email.strip().lower() == platform_email.strip().lower()
-
-            admin_user = User(
-                email=admin_email,
-                username="admin",
-                full_name="System Administrator",
-                hashed_password=hash_password(admin_password),
-                is_active=True,
-                is_system_admin=collapsed,
-                email_verified=True,
-            )
-            session.add(admin_user)
-            await session.flush()
-            await session.refresh(admin_user)
-
-            if collapsed:
-                logger.info(f"Created combined admin + platform user: {admin_user.email}")
+            result = await session.execute(select(Organization.id).limit(1))
+            if result.scalar_one_or_none() is not None:
+                logger.info("Deployment already initialized. Skipping bootstrap.")
             else:
-                logger.info(f"Created org-owner user: {admin_user.email}")
-                platform_user = User(
-                    email=platform_email,
-                    username="platform",
-                    full_name="Platform Operator",
-                    hashed_password=hash_password(platform_password),
-                    is_active=True,
-                    is_system_admin=True,
-                    email_verified=True,
-                )
-                session.add(platform_user)
-                await session.flush()
-                await session.refresh(platform_user)
-                logger.info(f"Created platform-admin-only user: {platform_user.email}")
+                admin_password = (os.getenv("INITIAL_ADMIN_PASSWORD") or "").strip()
+                if admin_password:
+                    logger.info("No organizations found. Bootstrapping deployment...")
+                    await _seed_accounts(
+                        session,
+                        search_indexer,
+                        admin_email=admin_email,
+                        admin_password=admin_password,
+                    )
+                else:
+                    logger.info(
+                        "INITIAL_ADMIN_PASSWORD is not set, so no user is seeded. "
+                        "The deployment waits for first-run setup."
+                    )
 
-            from uniffy.domains.organizations.operations import OrganizationOperations
-
-            org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
-            org_slug = os.getenv("DEFAULT_ORG_SLUG")
-            if not org_slug:
-                from uniffy.core.types import slugify
-
-                org_slug = slugify(org_name)
-
-            org_ops = OrganizationOperations(session)
-            default_org = await org_ops.create(
-                name=org_name,
-                slug=org_slug,
-                owner_user_id=admin_user.id,
-                plan="enterprise",
-                search_indexer=search_indexer,
-                owner_source=OrganizationMemberSource.BOOTSTRAP,
-            )
-            logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
-
-            await _seed_vapid_keys(session, admin_email)
-
+            await seed_vapid_keys(session, admin_email)
             await session.commit()
-            logger.info("Deployment bootstrap completed successfully.")
-
         except Exception as e:
             await session.rollback()
             logger.error(f"Failed to bootstrap deployment: {e}")
             raise
 
 
-async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
-    """Generate a VAPID keypair and store it in deployment_settings, once."""
+async def _seed_accounts(
+    session: AsyncSession,
+    search_indexer: SearchIndexer,
+    *,
+    admin_email: str,
+    admin_password: str,
+) -> None:
+    from uniffy.core.auth.passwords.crypto import hash_password
+    from uniffy.core.models import User
+    from uniffy.core.models.login.organization_member import OrganizationMemberSource
+    from uniffy.domains.organizations.operations import OrganizationOperations
+
+    # When INITIAL_ADMIN_EMAIL == INITIAL_PLATFORM_ADMIN_EMAIL (case-insensitive)
+    # one user holds both roles - the self-hosted single-tenant default. Otherwise
+    # admin owns the org and a separate platform user is sysadmin-only with no
+    # org membership.
+    platform_email = os.getenv("INITIAL_PLATFORM_ADMIN_EMAIL", "").strip() or admin_email
+    platform_password = os.getenv("INITIAL_PLATFORM_ADMIN_PASSWORD", "").strip() or admin_password
+
+    collapsed = admin_email.strip().lower() == platform_email.strip().lower()
+
+    admin_user = User(
+        email=admin_email,
+        username="admin",
+        full_name="System Administrator",
+        hashed_password=hash_password(admin_password),
+        is_active=True,
+        is_system_admin=collapsed,
+        email_verified=True,
+    )
+    session.add(admin_user)
+    await session.flush()
+    await session.refresh(admin_user)
+
+    if collapsed:
+        logger.info(f"Created combined admin + platform user: {admin_user.email}")
+    else:
+        logger.info(f"Created org-owner user: {admin_user.email}")
+        platform_user = User(
+            email=platform_email,
+            username="platform",
+            full_name="Platform Operator",
+            hashed_password=hash_password(platform_password),
+            is_active=True,
+            is_system_admin=True,
+            email_verified=True,
+        )
+        session.add(platform_user)
+        await session.flush()
+        await session.refresh(platform_user)
+        logger.info(f"Created platform-admin-only user: {platform_user.email}")
+
+    org_name = os.getenv("DEFAULT_ORG_NAME", "Default")
+    org_slug = os.getenv("DEFAULT_ORG_SLUG")
+    if not org_slug:
+        from uniffy.core.types import slugify
+
+        org_slug = slugify(org_name)
+
+    org_ops = OrganizationOperations(session)
+    default_org = await org_ops.create(
+        name=org_name,
+        slug=org_slug,
+        owner_user_id=admin_user.id,
+        plan="enterprise",
+        search_indexer=search_indexer,
+        owner_source=OrganizationMemberSource.BOOTSTRAP,
+    )
+    logger.info(f"Created default organization: {default_org.name} ({default_org.slug})")
+
+
+async def seed_vapid_keys(session: AsyncSession, contact_email: str) -> None:
+    """Generate a VAPID keypair into deployment_settings unless one exists; the caller commits."""
     import base64
 
     from cryptography.hazmat.primitives.asymmetric import ec
@@ -175,7 +183,7 @@ async def _seed_vapid_keys(session: AsyncSession, admin_email: str) -> None:
     await settings.set(
         namespace=PUSH_SETTINGS_NAMESPACE,
         key=VAPID_CONTACT_EMAIL_KEY,
-        value=f"mailto:{admin_email}",
+        value=f"mailto:{contact_email}",
     )
     await session.flush()
     logger.info("Generated and stored VAPID keypair in deployment_settings")

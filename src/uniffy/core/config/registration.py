@@ -4,21 +4,18 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from enum import StrEnum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.config.settings import DeploymentSettingsOperations
+from uniffy.core.config.source import SettingSource
 
 PUBLIC_REGISTRATION_NAMESPACE = "system"
 PUBLIC_REGISTRATION_KEY = "public_registration"
 _PUBLIC_REGISTRATION_ENV = "ALLOW_PUBLIC_REGISTRATION"
 
 
-class RegistrationSource(StrEnum):
-    DEPLOYMENT = "deployment"
-    ENV = "env"
-    DEFAULT = "default"
+RegistrationSource = SettingSource
 
 
 @dataclass(frozen=True, slots=True)

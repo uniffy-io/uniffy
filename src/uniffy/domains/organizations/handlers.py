@@ -4,7 +4,6 @@ from connectrpc.code import Code
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
-from protobuf import Oneof
 from sqlalchemy import select
 from uniffy_proto.common.v1.common_pb import (
     PaginationResponse,
@@ -61,6 +60,7 @@ from uniffy_proto.organizations.v1.organizations_pb import (
 )
 
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
+from uniffy.core.config.org_creation import user_can_create_organization
 from uniffy.core.converters import (
     content_type_from_proto,
     datetime_to_timestamp,
@@ -76,7 +76,12 @@ from uniffy.core.converters.common_proto import (
     access_mode_from_proto,
     content_role_from_proto,
 )
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import (
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.models.login.organization_member import OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.domains.organizations.converters import (
@@ -89,9 +94,9 @@ from uniffy.domains.organizations.invitations import (
     InvitationAlreadyUsedError,
     InvitationOperations,
     InvitationRevokedError,
-    InviteOutcome,
 )
 from uniffy.domains.organizations.invitations.converters import invitation_to_proto
+from uniffy.domains.organizations.lifecycle_handlers import OrganizationLifecycleHandlers
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.organizations.resolve import resolve_content_organization
 from uniffy.domains.organizations.security import SecurityOperations
@@ -100,7 +105,7 @@ from uniffy.infrastructure.database import open_session
 logger = logger.bind(component="organizations.handlers")
 
 
-class OrganizationsHandlers:
+class OrganizationsHandlers(OrganizationLifecycleHandlers):
     async def list_my_organizations(
         self,
         request: ListMyOrganizationsRequest,
@@ -112,12 +117,17 @@ class OrganizationsHandlers:
             async with open_session() as session:
                 ops = OrganizationOperations(session)
                 orgs_with_memberships = await ops.get_user_organizations(user_id)
+                user = (
+                    await session.execute(select(User).where(User.id == user_id))
+                ).scalar_one_or_none()
+                can_create = user is not None and await user_can_create_organization(session, user)
 
                 return ListMyOrganizationsResponse(
                     organizations=[
                         my_organization_to_proto(org, membership)
                         for org, membership in orgs_with_memberships
-                    ]
+                    ],
+                    can_create_organization=can_create,
                 )
         except Exception as e:
             logger.exception(f"Error listing user organizations: {e}")
@@ -211,6 +221,8 @@ class OrganizationsHandlers:
                 )
 
                 return UpdateOrganizationResponse(organization=org_info_to_proto(org))
+        except ValidationError as e:
+            raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
@@ -710,29 +722,19 @@ class OrganizationsHandlers:
                     email=request.email,
                     role=role,
                     inviter_id=user_id,
-                    search_indexer=self.search_indexer,
                 )
-                if result.outcome == InviteOutcome.ADDED:
-                    assert result.member is not None and result.member_user is not None
-                    return InviteMemberResponse(
-                        result=Oneof(
-                            field="added_member",
-                            value=member_info_to_proto(result.member_user, result.member),
-                        )
-                    )
-                assert result.invitation is not None
                 inviter_row = (
                     await session.execute(select(User).where(User.id == user_id))
                 ).scalar_one_or_none()
                 return InviteMemberResponse(
-                    result=Oneof(
-                        field="invitation", value=invitation_to_proto(result.invitation, inviter_row)
-                    )
+                    invitation=invitation_to_proto(result.invitation, inviter_row)
                 )
         except PermissionDeniedError as e:
             raise ConnectError(Code.PERMISSION_DENIED, str(e))
         except NotFoundError as e:
             raise ConnectError(Code.NOT_FOUND, str(e))
+        except ConflictError as e:
+            raise ConnectError(Code.ALREADY_EXISTS, str(e))
         except ValueError as e:
             raise ConnectError(Code.INVALID_ARGUMENT, str(e))
         except Exception as e:

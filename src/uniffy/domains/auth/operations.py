@@ -544,7 +544,7 @@ class AuthOperations:
         rotated_at = session_record.previous_refresh_rotated_at
 
         if current is None:
-            # Legacy session from before rotation tracking existed.
+            # A row with no stored refresh hash has nothing to compare the token against.
             return
         if incoming_hash == current:
             return
@@ -799,6 +799,52 @@ class AuthOperations:
                 session_ids=[session_id],
             )
             logger.info(f"Logout: session {session_id} revoked for user {user_id}")
+
+    async def stage_organization_session(
+        self,
+        user: User,
+        organization: Organization,
+        *,
+        user_agent: str = "",
+    ) -> AuthResult:
+        """Mint an org-bound session in the caller's transaction, which commits it.
+
+        Runs no password, rate-limit or MFA step, so only a flow that just created the
+        credentials itself may call it.
+        """
+        (
+            organization_id,
+            organization_slug,
+            organization_role,
+            domain_admin_domains,
+        ) = await self._finalize_org_membership(user.id, organization)
+        session_record = await self._stage_session(
+            user.id, user_agent, organization_id=organization_id
+        )
+        access_token = create_access_token(
+            user.id,
+            organization_id,
+            token_version=user.token_version,
+            session_id=session_record.id,
+            full_name=user.full_name,
+            avatar_key=user.avatar_key,
+        )
+        refresh_token = create_refresh_token(
+            user.id,
+            token_version=user.token_version,
+            session_id=session_record.id,
+        )
+        session_record.refresh_token_hash = hash_refresh_token(refresh_token)
+        return AuthResult(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            user_id=user.id,
+            organization_id=organization_id,
+            organization_slug=organization_slug,
+            organization_role=organization_role,
+            session_id=session_record.id,
+            domain_admin_domains=domain_admin_domains,
+        )
 
     async def _audit_register_rejected(
         self,

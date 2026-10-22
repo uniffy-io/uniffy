@@ -61,6 +61,9 @@ class Action:
     ORGANIZATION_MEMBER_ADDED_VIA_INVITE = "organization.member_added_via_invite"
     ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
     ORGANIZATION_INVITATION_RESENT = "organization.invitation_resent"
+    ORGANIZATION_INVITATION_DECLINED = "organization.invitation_declined"
+    ORGANIZATION_MEMBER_LEFT = "organization.member_left"
+    ORGANIZATION_OWNERSHIP_TRANSFERRED = "organization.ownership_transferred"
     ORGANIZATION_SECURITY_SETTINGS_CHANGED = "organization.security_settings_changed"
     ORGANIZATION_SUSPENDED = "organization.suspended"
     ORGANIZATION_UNSUSPENDED = "organization.unsuspended"
@@ -229,9 +232,11 @@ class Action:
 
     # Deployment encryption
     DEPLOYMENT_ENCRYPTION_ROTATED = "deployment.encryption_rotated"
+    DEPLOYMENT_SETUP_COMPLETED = "deployment.setup_completed"
 
     # System config flags
     SYSTEM_PUBLIC_REGISTRATION_CHANGED = "system.public_registration_changed"
+    SYSTEM_ORG_CREATION_CHANGED = "system.org_creation_changed"
 
     # Support sessions (time-bound platform-operator grants into a tenant)
     SUPPORT_SESSION_REQUESTED = "support_session.requested"

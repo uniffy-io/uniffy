@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file superadmin/v1/system_config.proto.
  */
 export const file_superadmin_v1_system_config: GenFile = /*@__PURE__*/
-  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJGCgxTeXN0ZW1Db25maWcSNgoTcHVibGljX3JlZ2lzdHJhdGlvbhgBIAEoCzIZLnN1cGVyYWRtaW4udjEuU3lzdGVtRmxhZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIvCglNZmFQb2xpY3kSIgoacmVxdWlyZWRfZm9yX3N5c3RlbV9hZG1pbnMYASABKAgiFQoTR2V0TWZhUG9saWN5UmVxdWVzdCJAChRHZXRNZmFQb2xpY3lSZXNwb25zZRIoCgZwb2xpY3kYASABKAsyGC5zdXBlcmFkbWluLnYxLk1mYVBvbGljeSI5ChNTZXRNZmFQb2xpY3lSZXF1ZXN0EiIKGnJlcXVpcmVkX2Zvcl9zeXN0ZW1fYWRtaW5zGAEgASgIIkAKFFNldE1mYVBvbGljeVJlc3BvbnNlEigKBnBvbGljeRgBIAEoCzIYLnN1cGVyYWRtaW4udjEuTWZhUG9saWN5ItQCChdSZWFsdGltZUJ1ZmZlclByZWZsaWdodBIcCg9ldmljdGlvbl9wb2xpY3kYASABKAlIAIgBARIcCg9tYXhtZW1vcnlfYnl0ZXMYAiABKANIAYgBARIYCgthb2ZfZW5hYmxlZBgDIAEoCEgCiAEBEiUKGHJkYl9zbmFwc2hvdHNfY29uZmlndXJlZBgEIAEoCEgDiAEBEhMKC2xvc3Nfd2luZG93GAUgASgJEhYKDnZhbGtleV92ZXJzaW9uGAYgASgJEhwKFHZhbGtleV9ydW5faWRfcHJlZml4GAcgASgJEhwKFHBlbmRpbmdfYnVkZ2V0X2J5dGVzGAggASgDQhIKEF9ldmljdGlvbl9wb2xpY3lCEgoQX21heG1lbW9yeV9ieXRlc0IOCgxfYW9mX2VuYWJsZWRCGwoZX3JkYl9zbmFwc2hvdHNfY29uZmlndXJlZCKBAQoUUmVhbHRpbWVCdWZmZXJUb3RhbHMSFQoNcGVuZGluZ19ieXRlcxgBIAEoAxIXCg9wZW5kaW5nX3JlY29yZHMYAiABKAMSGQoRcGVuZGluZ19kb2N1bWVudHMYAyABKAMSHgoWb2xkZXN0X3BlbmRpbmdfc2Vjb25kcxgEIAEoASKOBAoUUmVhbHRpbWVCdWZmZXJTdGF0dXMSNQoHdmVyZGljdBgBIAEoDjIkLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJWZXJkaWN0EhYKDnByZWZsaWdodF9tb2RlGAIgASgJEh8KF3BlbmRpbmdfYnVkZ2V0X2Zyb21fZW52GAMgASgIEjkKCXByZWZsaWdodBgEIAEoCzImLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJQcmVmbGlnaHQSMwoGdG90YWxzGAUgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclRvdGFscxJKCgxlcG9jaF9yZXNldHMYBiADKAsyNC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLkVwb2NoUmVzZXRzRW50cnkSWgoUcG9pc29uZWRfY2hlY2twb2ludHMYByADKAsyPC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLlBvaXNvbmVkQ2hlY2twb2ludHNFbnRyeRoyChBFcG9jaFJlc2V0c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEaOgoYUG9pc29uZWRDaGVja3BvaW50c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEiIAoeR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXNSZXF1ZXN0IlYKH0dldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVzcG9uc2USMwoGc3RhdHVzGAEgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclN0YXR1cyrVAQoVUmVhbHRpbWVCdWZmZXJWZXJkaWN0EicKI1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOU1BFQ0lGSUVEEAASIwofUkVBTFRJTUVfQlVGRkVSX1ZFUkRJQ1RfTk9UX1JVThABEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX0VOQUJMRUQQAhIkCiBSRUFMVElNRV9CVUZGRVJfVkVSRElDVF9ESVNBQkxFRBADEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOS05PV04QBDKhBAoTU3lzdGVtQ29uZmlnU2VydmljZRJiCg9HZXRTeXN0ZW1Db25maWcSJS5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlIgASdAoVU2V0UHVibGljUmVnaXN0cmF0aW9uEisuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXF1ZXN0Giwuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZSIAElkKDEdldE1mYVBvbGljeRIiLnN1cGVyYWRtaW4udjEuR2V0TWZhUG9saWN5UmVxdWVzdBojLnN1cGVyYWRtaW4udjEuR2V0TWZhUG9saWN5UmVzcG9uc2UiABJZCgxTZXRNZmFQb2xpY3kSIi5zdXBlcmFkbWluLnYxLlNldE1mYVBvbGljeVJlcXVlc3QaIy5zdXBlcmFkbWluLnYxLlNldE1mYVBvbGljeVJlc3BvbnNlIgASegoXR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXMSLS5zdXBlcmFkbWluLnYxLkdldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVxdWVzdBouLnN1cGVyYWRtaW4udjEuR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXNSZXNwb25zZSIAQkFaP2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9zdXBlcmFkbWluL3YxO3N1cGVyYWRtaW52MWIGcHJvdG8z");
+  fileDesc("CiFzdXBlcmFkbWluL3YxL3N5c3RlbV9jb25maWcucHJvdG8SDXN1cGVyYWRtaW4udjEiLQoKU3lzdGVtRmxhZxIPCgdlbmFibGVkGAEgASgIEg4KBnNvdXJjZRgCIAEoCSJWChJPcmdDcmVhdGlvblNldHRpbmcSMAoGcG9saWN5GAEgASgOMiAuc3VwZXJhZG1pbi52MS5PcmdDcmVhdGlvblBvbGljeRIOCgZzb3VyY2UYAiABKAkifwoMU3lzdGVtQ29uZmlnEjYKE3B1YmxpY19yZWdpc3RyYXRpb24YASABKAsyGS5zdXBlcmFkbWluLnYxLlN5c3RlbUZsYWcSNwoMb3JnX2NyZWF0aW9uGAIgASgLMiEuc3VwZXJhZG1pbi52MS5PcmdDcmVhdGlvblNldHRpbmciTwobU2V0T3JnQ3JlYXRpb25Qb2xpY3lSZXF1ZXN0EjAKBnBvbGljeRgBIAEoDjIgLnN1cGVyYWRtaW4udjEuT3JnQ3JlYXRpb25Qb2xpY3kiSwocU2V0T3JnQ3JlYXRpb25Qb2xpY3lSZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIYChZHZXRTeXN0ZW1Db25maWdSZXF1ZXN0IkYKF0dldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlEisKBmNvbmZpZxgBIAEoCzIbLnN1cGVyYWRtaW4udjEuU3lzdGVtQ29uZmlnIi8KHFNldFB1YmxpY1JlZ2lzdHJhdGlvblJlcXVlc3QSDwoHZW5hYmxlZBgBIAEoCCJMCh1TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZRIrCgZjb25maWcYASABKAsyGy5zdXBlcmFkbWluLnYxLlN5c3RlbUNvbmZpZyIvCglNZmFQb2xpY3kSIgoacmVxdWlyZWRfZm9yX3N5c3RlbV9hZG1pbnMYASABKAgiFQoTR2V0TWZhUG9saWN5UmVxdWVzdCJAChRHZXRNZmFQb2xpY3lSZXNwb25zZRIoCgZwb2xpY3kYASABKAsyGC5zdXBlcmFkbWluLnYxLk1mYVBvbGljeSI5ChNTZXRNZmFQb2xpY3lSZXF1ZXN0EiIKGnJlcXVpcmVkX2Zvcl9zeXN0ZW1fYWRtaW5zGAEgASgIIkAKFFNldE1mYVBvbGljeVJlc3BvbnNlEigKBnBvbGljeRgBIAEoCzIYLnN1cGVyYWRtaW4udjEuTWZhUG9saWN5ItQCChdSZWFsdGltZUJ1ZmZlclByZWZsaWdodBIcCg9ldmljdGlvbl9wb2xpY3kYASABKAlIAIgBARIcCg9tYXhtZW1vcnlfYnl0ZXMYAiABKANIAYgBARIYCgthb2ZfZW5hYmxlZBgDIAEoCEgCiAEBEiUKGHJkYl9zbmFwc2hvdHNfY29uZmlndXJlZBgEIAEoCEgDiAEBEhMKC2xvc3Nfd2luZG93GAUgASgJEhYKDnZhbGtleV92ZXJzaW9uGAYgASgJEhwKFHZhbGtleV9ydW5faWRfcHJlZml4GAcgASgJEhwKFHBlbmRpbmdfYnVkZ2V0X2J5dGVzGAggASgDQhIKEF9ldmljdGlvbl9wb2xpY3lCEgoQX21heG1lbW9yeV9ieXRlc0IOCgxfYW9mX2VuYWJsZWRCGwoZX3JkYl9zbmFwc2hvdHNfY29uZmlndXJlZCKBAQoUUmVhbHRpbWVCdWZmZXJUb3RhbHMSFQoNcGVuZGluZ19ieXRlcxgBIAEoAxIXCg9wZW5kaW5nX3JlY29yZHMYAiABKAMSGQoRcGVuZGluZ19kb2N1bWVudHMYAyABKAMSHgoWb2xkZXN0X3BlbmRpbmdfc2Vjb25kcxgEIAEoASKOBAoUUmVhbHRpbWVCdWZmZXJTdGF0dXMSNQoHdmVyZGljdBgBIAEoDjIkLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJWZXJkaWN0EhYKDnByZWZsaWdodF9tb2RlGAIgASgJEh8KF3BlbmRpbmdfYnVkZ2V0X2Zyb21fZW52GAMgASgIEjkKCXByZWZsaWdodBgEIAEoCzImLnN1cGVyYWRtaW4udjEuUmVhbHRpbWVCdWZmZXJQcmVmbGlnaHQSMwoGdG90YWxzGAUgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclRvdGFscxJKCgxlcG9jaF9yZXNldHMYBiADKAsyNC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLkVwb2NoUmVzZXRzRW50cnkSWgoUcG9pc29uZWRfY2hlY2twb2ludHMYByADKAsyPC5zdXBlcmFkbWluLnYxLlJlYWx0aW1lQnVmZmVyU3RhdHVzLlBvaXNvbmVkQ2hlY2twb2ludHNFbnRyeRoyChBFcG9jaFJlc2V0c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEaOgoYUG9pc29uZWRDaGVja3BvaW50c0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAzoCOAEiIAoeR2V0UmVhbHRpbWVCdWZmZXJTdGF0dXNSZXF1ZXN0IlYKH0dldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVzcG9uc2USMwoGc3RhdHVzGAEgASgLMiMuc3VwZXJhZG1pbi52MS5SZWFsdGltZUJ1ZmZlclN0YXR1cyrPAQoRT3JnQ3JlYXRpb25Qb2xpY3kSIwofT1JHX0NSRUFUSU9OX1BPTElDWV9VTlNQRUNJRklFRBAAEiYKIk9SR19DUkVBVElPTl9QT0xJQ1lfT1BFUkFUT1JTX09OTFkQARIsCihPUkdfQ1JFQVRJT05fUE9MSUNZX09QRVJBVE9SU19BTkRfT1dORVJTEAISHwobT1JHX0NSRUFUSU9OX1BPTElDWV9NRU1CRVJTEAMSHgoaT1JHX0NSRUFUSU9OX1BPTElDWV9BTllPTkUQBCrVAQoVUmVhbHRpbWVCdWZmZXJWZXJkaWN0EicKI1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOU1BFQ0lGSUVEEAASIwofUkVBTFRJTUVfQlVGRkVSX1ZFUkRJQ1RfTk9UX1JVThABEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX0VOQUJMRUQQAhIkCiBSRUFMVElNRV9CVUZGRVJfVkVSRElDVF9ESVNBQkxFRBADEiMKH1JFQUxUSU1FX0JVRkZFUl9WRVJESUNUX1VOS05PV04QBDKUBQoTU3lzdGVtQ29uZmlnU2VydmljZRJiCg9HZXRTeXN0ZW1Db25maWcSJS5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1JlcXVlc3QaJi5zdXBlcmFkbWluLnYxLkdldFN5c3RlbUNvbmZpZ1Jlc3BvbnNlIgASdAoVU2V0UHVibGljUmVnaXN0cmF0aW9uEisuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXF1ZXN0Giwuc3VwZXJhZG1pbi52MS5TZXRQdWJsaWNSZWdpc3RyYXRpb25SZXNwb25zZSIAEnEKFFNldE9yZ0NyZWF0aW9uUG9saWN5Eiouc3VwZXJhZG1pbi52MS5TZXRPcmdDcmVhdGlvblBvbGljeVJlcXVlc3QaKy5zdXBlcmFkbWluLnYxLlNldE9yZ0NyZWF0aW9uUG9saWN5UmVzcG9uc2UiABJZCgxHZXRNZmFQb2xpY3kSIi5zdXBlcmFkbWluLnYxLkdldE1mYVBvbGljeVJlcXVlc3QaIy5zdXBlcmFkbWluLnYxLkdldE1mYVBvbGljeVJlc3BvbnNlIgASWQoMU2V0TWZhUG9saWN5EiIuc3VwZXJhZG1pbi52MS5TZXRNZmFQb2xpY3lSZXF1ZXN0GiMuc3VwZXJhZG1pbi52MS5TZXRNZmFQb2xpY3lSZXNwb25zZSIAEnoKF0dldFJlYWx0aW1lQnVmZmVyU3RhdHVzEi0uc3VwZXJhZG1pbi52MS5HZXRSZWFsdGltZUJ1ZmZlclN0YXR1c1JlcXVlc3QaLi5zdXBlcmFkbWluLnYxLkdldFJlYWx0aW1lQnVmZmVyU3RhdHVzUmVzcG9uc2UiAEJBWj9naXRodWIuY29tL3VuaWZmeS1pby91bmlmZnktcHJvdG8tZ28vc3VwZXJhZG1pbi92MTtzdXBlcmFkbWludjFiBnByb3RvMw");
 
 /**
  * One configuration flag's effective state.
@@ -39,6 +39,30 @@ export const SystemFlagSchema: GenMessage<SystemFlag> = /*@__PURE__*/
   messageDesc(file_superadmin_v1_system_config, 0);
 
 /**
+ * @generated from message superadmin.v1.OrgCreationSetting
+ */
+export type OrgCreationSetting = Message<"superadmin.v1.OrgCreationSetting"> & {
+  /**
+   * @generated from field: superadmin.v1.OrgCreationPolicy policy = 1;
+   */
+  policy: OrgCreationPolicy;
+
+  /**
+   * 'deployment' | 'env' | 'default'
+   *
+   * @generated from field: string source = 2;
+   */
+  source: string;
+};
+
+/**
+ * Describes the message superadmin.v1.OrgCreationSetting.
+ * Use `create(OrgCreationSettingSchema)` to create a new message.
+ */
+export const OrgCreationSettingSchema: GenMessage<OrgCreationSetting> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 1);
+
+/**
  * @generated from message superadmin.v1.SystemConfig
  */
 export type SystemConfig = Message<"superadmin.v1.SystemConfig"> & {
@@ -48,6 +72,11 @@ export type SystemConfig = Message<"superadmin.v1.SystemConfig"> & {
    * @generated from field: superadmin.v1.SystemFlag public_registration = 1;
    */
   publicRegistration?: SystemFlag | undefined;
+
+  /**
+   * @generated from field: superadmin.v1.OrgCreationSetting org_creation = 2;
+   */
+  orgCreation?: OrgCreationSetting | undefined;
 };
 
 /**
@@ -55,7 +84,41 @@ export type SystemConfig = Message<"superadmin.v1.SystemConfig"> & {
  * Use `create(SystemConfigSchema)` to create a new message.
  */
 export const SystemConfigSchema: GenMessage<SystemConfig> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 1);
+  messageDesc(file_superadmin_v1_system_config, 2);
+
+/**
+ * @generated from message superadmin.v1.SetOrgCreationPolicyRequest
+ */
+export type SetOrgCreationPolicyRequest = Message<"superadmin.v1.SetOrgCreationPolicyRequest"> & {
+  /**
+   * @generated from field: superadmin.v1.OrgCreationPolicy policy = 1;
+   */
+  policy: OrgCreationPolicy;
+};
+
+/**
+ * Describes the message superadmin.v1.SetOrgCreationPolicyRequest.
+ * Use `create(SetOrgCreationPolicyRequestSchema)` to create a new message.
+ */
+export const SetOrgCreationPolicyRequestSchema: GenMessage<SetOrgCreationPolicyRequest> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 3);
+
+/**
+ * @generated from message superadmin.v1.SetOrgCreationPolicyResponse
+ */
+export type SetOrgCreationPolicyResponse = Message<"superadmin.v1.SetOrgCreationPolicyResponse"> & {
+  /**
+   * @generated from field: superadmin.v1.SystemConfig config = 1;
+   */
+  config?: SystemConfig | undefined;
+};
+
+/**
+ * Describes the message superadmin.v1.SetOrgCreationPolicyResponse.
+ * Use `create(SetOrgCreationPolicyResponseSchema)` to create a new message.
+ */
+export const SetOrgCreationPolicyResponseSchema: GenMessage<SetOrgCreationPolicyResponse> = /*@__PURE__*/
+  messageDesc(file_superadmin_v1_system_config, 4);
 
 /**
  * @generated from message superadmin.v1.GetSystemConfigRequest
@@ -68,7 +131,7 @@ export type GetSystemConfigRequest = Message<"superadmin.v1.GetSystemConfigReque
  * Use `create(GetSystemConfigRequestSchema)` to create a new message.
  */
 export const GetSystemConfigRequestSchema: GenMessage<GetSystemConfigRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 2);
+  messageDesc(file_superadmin_v1_system_config, 5);
 
 /**
  * @generated from message superadmin.v1.GetSystemConfigResponse
@@ -85,7 +148,7 @@ export type GetSystemConfigResponse = Message<"superadmin.v1.GetSystemConfigResp
  * Use `create(GetSystemConfigResponseSchema)` to create a new message.
  */
 export const GetSystemConfigResponseSchema: GenMessage<GetSystemConfigResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 3);
+  messageDesc(file_superadmin_v1_system_config, 6);
 
 /**
  * @generated from message superadmin.v1.SetPublicRegistrationRequest
@@ -102,7 +165,7 @@ export type SetPublicRegistrationRequest = Message<"superadmin.v1.SetPublicRegis
  * Use `create(SetPublicRegistrationRequestSchema)` to create a new message.
  */
 export const SetPublicRegistrationRequestSchema: GenMessage<SetPublicRegistrationRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 4);
+  messageDesc(file_superadmin_v1_system_config, 7);
 
 /**
  * @generated from message superadmin.v1.SetPublicRegistrationResponse
@@ -119,7 +182,7 @@ export type SetPublicRegistrationResponse = Message<"superadmin.v1.SetPublicRegi
  * Use `create(SetPublicRegistrationResponseSchema)` to create a new message.
  */
 export const SetPublicRegistrationResponseSchema: GenMessage<SetPublicRegistrationResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 5);
+  messageDesc(file_superadmin_v1_system_config, 8);
 
 /**
  * Deployment-wide MFA policy snapshot. Mirrors the
@@ -140,7 +203,7 @@ export type MfaPolicy = Message<"superadmin.v1.MfaPolicy"> & {
  * Use `create(MfaPolicySchema)` to create a new message.
  */
 export const MfaPolicySchema: GenMessage<MfaPolicy> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 6);
+  messageDesc(file_superadmin_v1_system_config, 9);
 
 /**
  * @generated from message superadmin.v1.GetMfaPolicyRequest
@@ -153,7 +216,7 @@ export type GetMfaPolicyRequest = Message<"superadmin.v1.GetMfaPolicyRequest"> &
  * Use `create(GetMfaPolicyRequestSchema)` to create a new message.
  */
 export const GetMfaPolicyRequestSchema: GenMessage<GetMfaPolicyRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 7);
+  messageDesc(file_superadmin_v1_system_config, 10);
 
 /**
  * @generated from message superadmin.v1.GetMfaPolicyResponse
@@ -170,7 +233,7 @@ export type GetMfaPolicyResponse = Message<"superadmin.v1.GetMfaPolicyResponse">
  * Use `create(GetMfaPolicyResponseSchema)` to create a new message.
  */
 export const GetMfaPolicyResponseSchema: GenMessage<GetMfaPolicyResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 8);
+  messageDesc(file_superadmin_v1_system_config, 11);
 
 /**
  * @generated from message superadmin.v1.SetMfaPolicyRequest
@@ -187,7 +250,7 @@ export type SetMfaPolicyRequest = Message<"superadmin.v1.SetMfaPolicyRequest"> &
  * Use `create(SetMfaPolicyRequestSchema)` to create a new message.
  */
 export const SetMfaPolicyRequestSchema: GenMessage<SetMfaPolicyRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 9);
+  messageDesc(file_superadmin_v1_system_config, 12);
 
 /**
  * @generated from message superadmin.v1.SetMfaPolicyResponse
@@ -204,7 +267,7 @@ export type SetMfaPolicyResponse = Message<"superadmin.v1.SetMfaPolicyResponse">
  * Use `create(SetMfaPolicyResponseSchema)` to create a new message.
  */
 export const SetMfaPolicyResponseSchema: GenMessage<SetMfaPolicyResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 10);
+  messageDesc(file_superadmin_v1_system_config, 13);
 
 /**
  * Facts the deployment preflight read from the serving Valkey instance.
@@ -272,7 +335,7 @@ export type RealtimeBufferPreflight = Message<"superadmin.v1.RealtimeBufferPrefl
  * Use `create(RealtimeBufferPreflightSchema)` to create a new message.
  */
 export const RealtimeBufferPreflightSchema: GenMessage<RealtimeBufferPreflight> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 11);
+  messageDesc(file_superadmin_v1_system_config, 14);
 
 /**
  * Edits accepted across the deployment and not yet checkpointed.
@@ -311,7 +374,7 @@ export type RealtimeBufferTotals = Message<"superadmin.v1.RealtimeBufferTotals">
  * Use `create(RealtimeBufferTotalsSchema)` to create a new message.
  */
 export const RealtimeBufferTotalsSchema: GenMessage<RealtimeBufferTotals> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 12);
+  messageDesc(file_superadmin_v1_system_config, 15);
 
 /**
  * @generated from message superadmin.v1.RealtimeBufferStatus
@@ -372,7 +435,7 @@ export type RealtimeBufferStatus = Message<"superadmin.v1.RealtimeBufferStatus">
  * Use `create(RealtimeBufferStatusSchema)` to create a new message.
  */
 export const RealtimeBufferStatusSchema: GenMessage<RealtimeBufferStatus> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 13);
+  messageDesc(file_superadmin_v1_system_config, 16);
 
 /**
  * @generated from message superadmin.v1.GetRealtimeBufferStatusRequest
@@ -385,7 +448,7 @@ export type GetRealtimeBufferStatusRequest = Message<"superadmin.v1.GetRealtimeB
  * Use `create(GetRealtimeBufferStatusRequestSchema)` to create a new message.
  */
 export const GetRealtimeBufferStatusRequestSchema: GenMessage<GetRealtimeBufferStatusRequest> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 14);
+  messageDesc(file_superadmin_v1_system_config, 17);
 
 /**
  * @generated from message superadmin.v1.GetRealtimeBufferStatusResponse
@@ -402,7 +465,52 @@ export type GetRealtimeBufferStatusResponse = Message<"superadmin.v1.GetRealtime
  * Use `create(GetRealtimeBufferStatusResponseSchema)` to create a new message.
  */
 export const GetRealtimeBufferStatusResponseSchema: GenMessage<GetRealtimeBufferStatusResponse> = /*@__PURE__*/
-  messageDesc(file_superadmin_v1_system_config, 15);
+  messageDesc(file_superadmin_v1_system_config, 18);
+
+/**
+ * Who may create organizations through organizations.v1.CreateOrganization.
+ * Each level includes the ones before it; platform operators always may.
+ *
+ * @generated from enum superadmin.v1.OrgCreationPolicy
+ */
+export enum OrgCreationPolicy {
+  /**
+   * @generated from enum value: ORG_CREATION_POLICY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ORG_CREATION_POLICY_OPERATORS_ONLY = 1;
+   */
+  OPERATORS_ONLY = 1,
+
+  /**
+   * Plus owners of an existing organization. The coded default.
+   *
+   * @generated from enum value: ORG_CREATION_POLICY_OPERATORS_AND_OWNERS = 2;
+   */
+  OPERATORS_AND_OWNERS = 2,
+
+  /**
+   * Plus anyone holding an active membership somewhere.
+   *
+   * @generated from enum value: ORG_CREATION_POLICY_MEMBERS = 3;
+   */
+  MEMBERS = 3,
+
+  /**
+   * Plus signed-in users with no membership: register, then create.
+   *
+   * @generated from enum value: ORG_CREATION_POLICY_ANYONE = 4;
+   */
+  ANYONE = 4,
+}
+
+/**
+ * Describes the enum superadmin.v1.OrgCreationPolicy.
+ */
+export const OrgCreationPolicySchema: GenEnum<OrgCreationPolicy> = /*@__PURE__*/
+  enumDesc(file_superadmin_v1_system_config, 0);
 
 /**
  * Whether the serving Valkey instance may hold accepted realtime edits.
@@ -446,7 +554,7 @@ export enum RealtimeBufferVerdict {
  * Describes the enum superadmin.v1.RealtimeBufferVerdict.
  */
 export const RealtimeBufferVerdictSchema: GenEnum<RealtimeBufferVerdict> = /*@__PURE__*/
-  enumDesc(file_superadmin_v1_system_config, 0);
+  enumDesc(file_superadmin_v1_system_config, 1);
 
 /**
  * Deployment-wide configuration flags surfaced to the platform admin
@@ -481,6 +589,16 @@ export const SystemConfigService: GenService<{
     methodKind: "unary";
     input: typeof SetPublicRegistrationRequestSchema;
     output: typeof SetPublicRegistrationResponseSchema;
+  },
+  /**
+   * Set who may create organizations through the tenant surface.
+   *
+   * @generated from rpc superadmin.v1.SystemConfigService.SetOrgCreationPolicy
+   */
+  setOrgCreationPolicy: {
+    methodKind: "unary";
+    input: typeof SetOrgCreationPolicyRequestSchema;
+    output: typeof SetOrgCreationPolicyResponseSchema;
   },
   /**
    * Read the deployment-wide MFA policy: whether platform admins must
