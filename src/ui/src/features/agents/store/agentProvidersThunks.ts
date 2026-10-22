@@ -59,6 +59,7 @@ export const modelInfoToPlain = (model: ModelInfo) => ({
   parameterSchemaJson: model.parameterSchemaJson,
   imageParameterSchemaJson: model.imageParameterSchemaJson,
   imagePriceEstimatesJson: model.imagePriceEstimatesJson,
+  providerDefault: model.providerDefault,
 });
 
 export type SerializedModelInfo = ReturnType<typeof modelInfoToPlain>;

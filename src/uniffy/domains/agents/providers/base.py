@@ -65,6 +65,7 @@ class ModelInfo:
     output_per_1m: Decimal | None = None
     cache_read_per_1m: Decimal | None = None
     cache_write_per_1m: Decimal | None = None
+    provider_default: bool = False
 
 
 @dataclass
