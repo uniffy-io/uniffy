@@ -5,6 +5,8 @@ import { timeApi } from "../api/timeApi";
 import { weekRangeKey } from "../utils/timeWeek";
 import type {
   CreateWorklogInput,
+  ProjectReport,
+  ReportQuery,
   ReviewPage,
   ReviewQuery,
   StartTimerInput,
@@ -271,6 +273,19 @@ export const fetchReviewTimesheets = createAsyncThunk<ReviewPage, ReviewQuery, T
       return await timeApi.listReviewTimesheets(query, orgId);
     } catch (error) {
       return rejectWithValue(messageOf(error, "Failed to load the timesheets to review"));
+    }
+  },
+);
+
+export const fetchProjectReport = createAsyncThunk<ProjectReport, ReportQuery, ThunkConfig>(
+  "time/fetchProjectReport",
+  async (query, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.aggregateWorklogs(query, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to load the time report"));
     }
   },
 );

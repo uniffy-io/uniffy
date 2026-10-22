@@ -3171,6 +3171,42 @@ organization to send invitations. (both products)
 - [ ] In a project with slug `PROD`, the header search finds a task by `#12`, by `PROD-12` in any
       case, and still by words in its title or description.
 
+## Projects: time tracking
+
+Needs the time policy enabled (it is by default) and, for the approval steps, approvals on at
+`/admin/projects`. Reviewers are the person's manager (people directory) and the lead of each team
+they belong to; with neither, org admins review.
+
+- [ ] Task detail > Log time: `1.5h`, `1h 30m`, `45m` and `90` all save; the task's Spent equals
+      the sum of its entries after a reload and `Spent` is read-only on the task form. An entry on
+      a day that already holds 24h is refused with a plain message.
+- [ ] Start a timer on a task; the header pill counts up; pause, resume and stop write one entry
+      on the start day rounded per the policy; starting a timer on another task stops the first one
+      into an entry. (`(both products)`)
+- [ ] My time (`/projects/time`): the week grid shows the entries, each day total colors against
+      the required hours, holidays and weekends expect nothing; Copy last week brings the rows into
+      an empty week with no minutes; the previous and next week navigate.
+- [ ] Project header > Time report (`/projects/:id/time`): This week, 4 weeks and 12 weeks change
+      the range; grouping by person, task and day keeps the same total; the total matches the sum
+      of the task worklog lists in range. A member without access to the project lands on
+      `/projects`.
+- [ ] With approvals on, as a member: Submit locks the week (cells disabled with a hint); Recall
+      reopens it. As the reviewer, in Approvals: Reject needs a reason and the member sees it on
+      the banner; Approve locks the week; editing an approved week sends it back for review with a
+      `timesheet.submitted` audit row carrying cause `edit`.
+- [ ] Reviewer: Grace opens a locked week for the given hours and the banner counts down; the
+      member edits and resubmits. Admin: Close period locks every member's week, Reopen restores
+      it; both land in the audit log.
+- [ ] Notifications: submit reaches the reviewers (in app and email), approve and reject reach the
+      member; clicking a reviewer notification opens Approvals on that period, a member's opens
+      their week. (`(both products)`)
+- [ ] Agent: ask an agent with the Tasks tools to log `30m` on a task; the entry appears as the
+      asking user with source `agent`; asking it to log time for someone else is refused.
+- [ ] Demo data: after `./manage.py stack reset-data`, `SELECT count(*) FROM projects_tasks t WHERE
+      coalesce(time_spent_minutes,0) <> (SELECT coalesce(sum(duration_minutes),0) FROM
+      projects_worklogs w WHERE w.task_id=t.id AND NOT w.is_deleted)` is 0, one timer runs, and the
+      busiest team's lead sees a submitted and an approved week in Approvals.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

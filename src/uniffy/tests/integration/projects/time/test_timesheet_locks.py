@@ -16,7 +16,12 @@ from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.timer import Timer
-from uniffy.core.models.projects.timesheet import TimePeriod, Timesheet, TimesheetStatus
+from uniffy.core.models.projects.timesheet import (
+    TimePeriod,
+    TimePeriodStatus,
+    Timesheet,
+    TimesheetStatus,
+)
 from uniffy.core.models.projects.worklog import Worklog
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import AccessMode, ContentRole, generate_id
@@ -178,7 +183,7 @@ async def test_a_closed_period_blocks_everyone_with_no_sheet_until_it_is_reopene
     with pytest.raises(PermissionDeniedError):
         await PeriodOperations(session).close(world.worker, world.org, day)
     closed = await PeriodOperations(session).close(world.admin, world.org, day)
-    assert closed.status == "closed"
+    assert closed.status == TimePeriodStatus.CLOSED
 
     with pytest.raises(ValidationError, match="locked"):
         await _log(session, world, world.worker, day)

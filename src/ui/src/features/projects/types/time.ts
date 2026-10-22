@@ -97,6 +97,24 @@ export interface AggregateRow {
   entries: number;
 }
 
+export type AggregateGroupBy = "day" | "task" | "user";
+
+export interface ReportQuery {
+  projectId: string;
+  from: string;
+  to: string;
+  groupBy: AggregateGroupBy;
+}
+
+export interface ProjectReport {
+  rows: AggregateRow[];
+  totalMinutes: number;
+}
+
+export function reportKey(query: ReportQuery): string {
+  return `${query.projectId}:${query.from}:${query.to}:${query.groupBy}`;
+}
+
 export type TimesheetStatus = "open" | "submitted" | "approved" | "rejected";
 
 export type TimePeriodStatus = "open" | "closed";

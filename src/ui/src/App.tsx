@@ -209,6 +209,10 @@ const ReviewTimePage = lazyImport(
   () => import("@/features/projects/pages/ReviewTimePage"),
   "ReviewTimePage",
 );
+const ProjectTimePage = lazyImport(
+  () => import("@/features/projects/pages/ProjectTimePage"),
+  "ProjectTimePage",
+);
 const ProjectSettingsPage = lazyImport(
   () => import("@/features/projects/pages/ProjectSettingsPage"),
   "ProjectSettingsPage",
@@ -993,6 +997,17 @@ export function App() {
                       <ProtectedRoute>
                         <LazyRoute>
                           <TaskRedirectPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/projects/:projectId/time"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ProjectTimePage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }

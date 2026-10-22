@@ -3,6 +3,7 @@ import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
 import { ProjectsService } from "@uniffy/proto/projects/v1/projects_pb";
 import {
+  AggregateGroupBy as ProtoAggregateGroupBy,
   TimePeriodStatus as ProtoTimePeriodStatus,
   TimePeriodType as ProtoTimePeriodType,
   TimerPauseReason as ProtoTimerPauseReason,
@@ -16,7 +17,10 @@ import {
   type Worklog as ProtoWorklog,
 } from "@uniffy/proto/projects/v1/time_pb";
 import type {
+  AggregateGroupBy,
   CreateWorklogInput,
+  ProjectReport,
+  ReportQuery,
   ReviewPage,
   ReviewQuery,
   ReviewRow,
@@ -74,6 +78,12 @@ const PERIOD_STATUS_FROM_PROTO: Record<ProtoTimePeriodStatus, TimePeriodStatus> 
   [ProtoTimePeriodStatus.UNSPECIFIED]: "open",
   [ProtoTimePeriodStatus.OPEN]: "open",
   [ProtoTimePeriodStatus.CLOSED]: "closed",
+};
+
+const GROUP_BY_TO_PROTO: Record<AggregateGroupBy, ProtoAggregateGroupBy> = {
+  day: ProtoAggregateGroupBy.DAY,
+  task: ProtoAggregateGroupBy.TASK,
+  user: ProtoAggregateGroupBy.USER,
 };
 
 function isoOrEmpty(ts?: { seconds: bigint; nanos: number }): string {
@@ -254,6 +264,25 @@ export const timeApi = {
       toDate,
     });
     return response.worklogs.map(protoWorklogToFrontend);
+  },
+
+  aggregateWorklogs: async (query: ReportQuery, organizationId: string): Promise<ProjectReport> => {
+    const response = await timeClient.aggregateWorklogs({
+      organizationId,
+      scope: { case: "projectId", value: query.projectId },
+      fromDate: query.from,
+      toDate: query.to,
+      groupBy: GROUP_BY_TO_PROTO[query.groupBy],
+    });
+    return {
+      rows: response.rows.map((row) => ({
+        key: row.key,
+        label: row.label,
+        minutes: row.minutes,
+        entries: row.entries,
+      })),
+      totalMinutes: response.totalMinutes,
+    };
   },
 
   getActiveTimer: async (organizationId: string): Promise<Timer | null> => {

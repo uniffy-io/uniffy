@@ -1,6 +1,15 @@
 import { createSelector, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
-import type { ReviewRow, TimePeriod, TimePolicy, Timer, Timesheet, Worklog } from "../types/time";
+import {
+  reportKey,
+  type ProjectReport,
+  type ReviewRow,
+  type TimePeriod,
+  type TimePolicy,
+  type Timer,
+  type Timesheet,
+  type Worklog,
+} from "../types/time";
 import {
   approveTimesheet,
   closePeriod,
@@ -9,6 +18,7 @@ import {
   fetchActiveTimer,
   fetchPersonTimesheet,
   fetchPersonWorklogs,
+  fetchProjectReport,
   fetchReviewTimesheets,
   fetchTaskWorklogs,
   fetchTimePolicy,
@@ -55,6 +65,9 @@ export interface TimeState {
   /** Other people's entries, keyed "userId:from:to", and their sheets keyed "userId:periodStart". */
   personWeeks: Record<string, Worklog[]>;
   personSheets: Record<string, Timesheet>;
+  /** Project aggregates keyed by `reportKey`; a stale report stays while its refresh runs. */
+  reports: Record<string, ProjectReport>;
+  reportLoading: Record<string, boolean>;
 }
 
 export const initialTimeState: TimeState = {
@@ -79,6 +92,8 @@ export const initialTimeState: TimeState = {
   },
   personWeeks: {},
   personSheets: {},
+  reports: {},
+  reportLoading: {},
 };
 
 function storeSheet(state: TimeState, sheet: Timesheet, ownerId: string | null): void {
@@ -303,6 +318,17 @@ export const timeSlice = createSlice({
       .addCase(fetchReviewTimesheets.rejected, (state) => {
         state.review.loading = false;
       })
+      .addCase(fetchProjectReport.pending, (state, action) => {
+        state.reportLoading[reportKey(action.meta.arg)] = true;
+      })
+      .addCase(fetchProjectReport.fulfilled, (state, action) => {
+        const key = reportKey(action.meta.arg);
+        state.reports[key] = action.payload;
+        state.reportLoading[key] = false;
+      })
+      .addCase(fetchProjectReport.rejected, (state, action) => {
+        state.reportLoading[reportKey(action.meta.arg)] = false;
+      })
       .addCase(approveTimesheet.fulfilled, (state, action) => {
         storeSheet(state, action.payload, null);
       })
@@ -377,3 +403,9 @@ export const selectPersonWeek = (key: string) =>
 
 export const selectPersonSheet = (userId: string, periodStart: string) => (state: RootState) =>
   state.time.personSheets[`${userId}:${periodStart}`] ?? null;
+
+export const selectProjectReport = (key: string) => (state: RootState) =>
+  state.time.reports[key] ?? null;
+
+export const selectReportLoading = (key: string) => (state: RootState) =>
+  state.time.reportLoading[key] ?? false;

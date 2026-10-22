@@ -33,6 +33,16 @@ class SprintSpec:
 
 
 @dataclass(frozen=True)
+class WorklogSpec:
+    """One time entry on a task: whose, which day as an offset from the seeding day, how long."""
+
+    assignee: str
+    day_in_days: int
+    minutes: int
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class TaskSpec:
     """Day offsets count from the seeding day; `parent` and `blocked_by` name earlier task keys.
 
@@ -54,7 +64,7 @@ class TaskSpec:
     is_milestone: bool = False
     sprint: str | None = None
     estimated_minutes: int | None = None
-    time_spent_minutes: int | None = None
+    worklogs: tuple[WorklogSpec, ...] = ()
     tags: tuple[str, ...] = ()
     field_values: tuple[tuple[str, FieldValue], ...] = ()
     recurrence_rule: str | None = None
@@ -252,6 +262,21 @@ def validate_project(path: Path, project: ProjectSpec) -> None:
             seen.add(task.key)
 
 
+def _worklog_spec(path: Path, title: str, entry: dict) -> WorklogSpec:
+    minutes = int(entry.get("minutes", 0))
+    days_ago = int(entry.get("days_ago", 0))
+    if not entry.get("assignee") or minutes <= 0 or days_ago < 0:
+        raise ProjectContentError(
+            f"{path.name}: task {title!r} worklogs need an assignee, positive minutes and days_ago"
+        )
+    return WorklogSpec(
+        assignee=entry["assignee"],
+        day_in_days=-days_ago,
+        minutes=minutes,
+        description=entry.get("description", ""),
+    )
+
+
 def _task_spec(path: Path, entry: dict) -> TaskSpec:
     if not entry.get("title"):
         raise ProjectContentError(f"{path.name}: every task needs a 'title'")
@@ -271,7 +296,9 @@ def _task_spec(path: Path, entry: dict) -> TaskSpec:
         is_milestone=entry.get("milestone", False),
         sprint=entry.get("sprint"),
         estimated_minutes=entry.get("estimated_minutes"),
-        time_spent_minutes=entry.get("time_spent_minutes"),
+        worklogs=tuple(
+            _worklog_spec(path, entry["title"], item) for item in entry.get("worklogs", [])
+        ),
         tags=tuple(entry.get("tags", [])),
         field_values=tuple(
             (name, tuple(value) if isinstance(value, list) else value)
