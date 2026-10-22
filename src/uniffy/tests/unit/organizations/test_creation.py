@@ -288,7 +288,7 @@ class TestSlug:
 
 
 class TestCreate:
-    async def test_creator_becomes_the_owner_of_a_free_organization(
+    async def test_creator_becomes_the_owner_of_a_free_organization_and_starts_onboarding(
         self, collaborators: Collaborators
     ) -> None:
         user = _user()
@@ -306,6 +306,7 @@ class TestCreate:
             actor_user_id=user.id,
             search_indexer=collaborators.indexer,
             owner_source=OrganizationMemberSource.CREATED,
+            begin_onboarding=True,
         )
         assert membership.organization_id == org.id
         assert membership.user_id == user.id

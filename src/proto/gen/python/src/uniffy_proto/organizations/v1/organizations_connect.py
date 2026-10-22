@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import organizations_pb
-from .organizations_pb import AcceptMyInvitationRequest, AcceptMyInvitationResponse, AddMemberRequest, AddMemberResponse, CreateOrganizationRequest, CreateOrganizationResponse, DeclineMyInvitationRequest, DeclineMyInvitationResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyInvitationsRequest, ListMyInvitationsResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, ResolveContentOrganizationRequest, ResolveContentOrganizationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
+from .organizations_pb import AcceptMyInvitationRequest, AcceptMyInvitationResponse, AddMemberRequest, AddMemberResponse, CreateOrganizationRequest, CreateOrganizationResponse, DeclineMyInvitationRequest, DeclineMyInvitationResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, FinishOnboardingRequest, FinishOnboardingResponse, GetOnboardingRequest, GetOnboardingResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyInvitationsRequest, ListMyInvitationsResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RecordOnboardingStepRequest, RecordOnboardingStepResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, ResolveContentOrganizationRequest, ResolveContentOrganizationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -47,6 +47,20 @@ class OrganizationsService(Protocol):
         Self-service creation. Allowed when the deployment's org_creation policy
         admits the caller; the caller becomes OWNER. Rate limited per user and IP.
         """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_onboarding(self, request: GetOnboardingRequest, ctx: RequestContext[GetOnboardingRequest, GetOnboardingResponse], /) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def record_onboarding_step(self, request: RecordOnboardingStepRequest, ctx: RequestContext[RecordOnboardingStepRequest, RecordOnboardingStepResponse], /) -> RecordOnboardingStepResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def finish_onboarding(self, request: FinishOnboardingRequest, ctx: RequestContext[FinishOnboardingRequest, FinishOnboardingResponse], /) -> FinishOnboardingResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def list_my_invitations(self, request: ListMyInvitationsRequest, ctx: RequestContext[ListMyInvitationsRequest, ListMyInvitationsResponse], /) -> ListMyInvitationsResponse:
@@ -203,6 +217,36 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.create_organization,
+                ),
+                "/organizations.v1.OrganizationsService/GetOnboarding": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=GetOnboardingRequest,
+                        output=GetOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/RecordOnboardingStep": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecordOnboardingStep",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=RecordOnboardingStepRequest,
+                        output=RecordOnboardingStepResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.record_onboarding_step,
+                ),
+                "/organizations.v1.OrganizationsService/FinishOnboarding": Endpoint.unary(
+                    method=MethodInfo(
+                        name="FinishOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=FinishOnboardingRequest,
+                        output=FinishOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.finish_onboarding,
                 ),
                 "/organizations.v1.OrganizationsService/ListMyInvitations": Endpoint.unary(
                     method=MethodInfo(
@@ -544,6 +588,71 @@ class OrganizationsServiceClient(ConnectClient):
                 service_name="organizations.v1.OrganizationsService",
                 input=CreateOrganizationRequest,
                 output=CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_onboarding(
+        self,
+        request: GetOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=GetOnboardingRequest,
+                output=GetOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def record_onboarding_step(
+        self,
+        request: RecordOnboardingStepRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordOnboardingStepResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordOnboardingStep",
+                service_name="organizations.v1.OrganizationsService",
+                input=RecordOnboardingStepRequest,
+                output=RecordOnboardingStepResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def finish_onboarding(
+        self,
+        request: FinishOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> FinishOnboardingResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="FinishOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=FinishOnboardingRequest,
+                output=FinishOnboardingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -1121,6 +1230,20 @@ class OrganizationsServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def get_onboarding(self, request: GetOnboardingRequest, ctx: RequestContext[GetOnboardingRequest, GetOnboardingResponse], /) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def record_onboarding_step(self, request: RecordOnboardingStepRequest, ctx: RequestContext[RecordOnboardingStepRequest, RecordOnboardingStepResponse], /) -> RecordOnboardingStepResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def finish_onboarding(self, request: FinishOnboardingRequest, ctx: RequestContext[FinishOnboardingRequest, FinishOnboardingResponse], /) -> FinishOnboardingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def list_my_invitations(self, request: ListMyInvitationsRequest, ctx: RequestContext[ListMyInvitationsRequest, ListMyInvitationsResponse], /) -> ListMyInvitationsResponse:
         """
         Invitations addressed to the caller's email, and the signed-in way to act on them.
@@ -1273,6 +1396,36 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.create_organization,
+                ),
+                "/organizations.v1.OrganizationsService/GetOnboarding": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=GetOnboardingRequest,
+                        output=GetOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/RecordOnboardingStep": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecordOnboardingStep",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=RecordOnboardingStepRequest,
+                        output=RecordOnboardingStepResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.record_onboarding_step,
+                ),
+                "/organizations.v1.OrganizationsService/FinishOnboarding": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="FinishOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=FinishOnboardingRequest,
+                        output=FinishOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.finish_onboarding,
                 ),
                 "/organizations.v1.OrganizationsService/ListMyInvitations": EndpointSync.unary(
                     method=MethodInfo(
@@ -1612,6 +1765,68 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=CreateOrganizationRequest,
                 output=CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_onboarding(
+        self,
+        request: GetOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=GetOnboardingRequest,
+                output=GetOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def record_onboarding_step(
+        self,
+        request: RecordOnboardingStepRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordOnboardingStepResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordOnboardingStep",
+                service_name="organizations.v1.OrganizationsService",
+                input=RecordOnboardingStepRequest,
+                output=RecordOnboardingStepResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def finish_onboarding(
+        self,
+        request: FinishOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> FinishOnboardingResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="FinishOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=FinishOnboardingRequest,
+                output=FinishOnboardingResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

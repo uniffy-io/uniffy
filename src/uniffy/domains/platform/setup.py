@@ -104,6 +104,7 @@ async def setup_deployment(
                 plan="enterprise",
                 actor_user_id=user.id,
                 owner_source=OrganizationMemberSource.BOOTSTRAP,
+                begin_onboarding=True,
             )
             organization = staged.organization
             # The first session skips two-factor enrollment because the account was created in

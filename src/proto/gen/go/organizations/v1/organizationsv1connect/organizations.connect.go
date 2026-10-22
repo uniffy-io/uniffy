@@ -42,6 +42,15 @@ const (
 	// OrganizationsServiceCreateOrganizationProcedure is the fully-qualified name of the
 	// OrganizationsService's CreateOrganization RPC.
 	OrganizationsServiceCreateOrganizationProcedure = "/organizations.v1.OrganizationsService/CreateOrganization"
+	// OrganizationsServiceGetOnboardingProcedure is the fully-qualified name of the
+	// OrganizationsService's GetOnboarding RPC.
+	OrganizationsServiceGetOnboardingProcedure = "/organizations.v1.OrganizationsService/GetOnboarding"
+	// OrganizationsServiceRecordOnboardingStepProcedure is the fully-qualified name of the
+	// OrganizationsService's RecordOnboardingStep RPC.
+	OrganizationsServiceRecordOnboardingStepProcedure = "/organizations.v1.OrganizationsService/RecordOnboardingStep"
+	// OrganizationsServiceFinishOnboardingProcedure is the fully-qualified name of the
+	// OrganizationsService's FinishOnboarding RPC.
+	OrganizationsServiceFinishOnboardingProcedure = "/organizations.v1.OrganizationsService/FinishOnboarding"
 	// OrganizationsServiceListMyInvitationsProcedure is the fully-qualified name of the
 	// OrganizationsService's ListMyInvitations RPC.
 	OrganizationsServiceListMyInvitationsProcedure = "/organizations.v1.OrganizationsService/ListMyInvitations"
@@ -133,6 +142,12 @@ type OrganizationsServiceClient interface {
 	// Self-service creation. Allowed when the deployment's org_creation policy
 	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// First-run entry flow for the user who created the organization. Pending
+	// only while that user is still its active OWNER and has neither finished
+	// nor skipped it. Record and Finish are no-ops once the flow is over.
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	RecordOnboardingStep(context.Context, *connect.Request[v1.RecordOnboardingStepRequest]) (*connect.Response[v1.RecordOnboardingStepResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 	// Invitations addressed to the caller's email, and the signed-in way to act on them.
 	ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error)
 	AcceptMyInvitation(context.Context, *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error)
@@ -201,6 +216,24 @@ func NewOrganizationsServiceClient(httpClient connect.HTTPClient, baseURL string
 			httpClient,
 			baseURL+OrganizationsServiceCreateOrganizationProcedure,
 			connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
+			connect.WithClientOptions(opts...),
+		),
+		getOnboarding: connect.NewClient[v1.GetOnboardingRequest, v1.GetOnboardingResponse](
+			httpClient,
+			baseURL+OrganizationsServiceGetOnboardingProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("GetOnboarding")),
+			connect.WithClientOptions(opts...),
+		),
+		recordOnboardingStep: connect.NewClient[v1.RecordOnboardingStepRequest, v1.RecordOnboardingStepResponse](
+			httpClient,
+			baseURL+OrganizationsServiceRecordOnboardingStepProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("RecordOnboardingStep")),
+			connect.WithClientOptions(opts...),
+		),
+		finishOnboarding: connect.NewClient[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse](
+			httpClient,
+			baseURL+OrganizationsServiceFinishOnboardingProcedure,
+			connect.WithSchema(organizationsServiceMethods.ByName("FinishOnboarding")),
 			connect.WithClientOptions(opts...),
 		),
 		listMyInvitations: connect.NewClient[v1.ListMyInvitationsRequest, v1.ListMyInvitationsResponse](
@@ -367,6 +400,9 @@ type organizationsServiceClient struct {
 	listMyOrganizations        *connect.Client[v1.ListMyOrganizationsRequest, v1.ListMyOrganizationsResponse]
 	resolveContentOrganization *connect.Client[v1.ResolveContentOrganizationRequest, v1.ResolveContentOrganizationResponse]
 	createOrganization         *connect.Client[v1.CreateOrganizationRequest, v1.CreateOrganizationResponse]
+	getOnboarding              *connect.Client[v1.GetOnboardingRequest, v1.GetOnboardingResponse]
+	recordOnboardingStep       *connect.Client[v1.RecordOnboardingStepRequest, v1.RecordOnboardingStepResponse]
+	finishOnboarding           *connect.Client[v1.FinishOnboardingRequest, v1.FinishOnboardingResponse]
 	listMyInvitations          *connect.Client[v1.ListMyInvitationsRequest, v1.ListMyInvitationsResponse]
 	acceptMyInvitation         *connect.Client[v1.AcceptMyInvitationRequest, v1.AcceptMyInvitationResponse]
 	declineMyInvitation        *connect.Client[v1.DeclineMyInvitationRequest, v1.DeclineMyInvitationResponse]
@@ -409,6 +445,21 @@ func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Cont
 // CreateOrganization calls organizations.v1.OrganizationsService.CreateOrganization.
 func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, req *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
 	return c.createOrganization.CallUnary(ctx, req)
+}
+
+// GetOnboarding calls organizations.v1.OrganizationsService.GetOnboarding.
+func (c *organizationsServiceClient) GetOnboarding(ctx context.Context, req *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return c.getOnboarding.CallUnary(ctx, req)
+}
+
+// RecordOnboardingStep calls organizations.v1.OrganizationsService.RecordOnboardingStep.
+func (c *organizationsServiceClient) RecordOnboardingStep(ctx context.Context, req *connect.Request[v1.RecordOnboardingStepRequest]) (*connect.Response[v1.RecordOnboardingStepResponse], error) {
+	return c.recordOnboardingStep.CallUnary(ctx, req)
+}
+
+// FinishOnboarding calls organizations.v1.OrganizationsService.FinishOnboarding.
+func (c *organizationsServiceClient) FinishOnboarding(ctx context.Context, req *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return c.finishOnboarding.CallUnary(ctx, req)
 }
 
 // ListMyInvitations calls organizations.v1.OrganizationsService.ListMyInvitations.
@@ -553,6 +604,12 @@ type OrganizationsServiceHandler interface {
 	// Self-service creation. Allowed when the deployment's org_creation policy
 	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
 	CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error)
+	// First-run entry flow for the user who created the organization. Pending
+	// only while that user is still its active OWNER and has neither finished
+	// nor skipped it. Record and Finish are no-ops once the flow is over.
+	GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error)
+	RecordOnboardingStep(context.Context, *connect.Request[v1.RecordOnboardingStepRequest]) (*connect.Response[v1.RecordOnboardingStepResponse], error)
+	FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error)
 	// Invitations addressed to the caller's email, and the signed-in way to act on them.
 	ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error)
 	AcceptMyInvitation(context.Context, *connect.Request[v1.AcceptMyInvitationRequest]) (*connect.Response[v1.AcceptMyInvitationResponse], error)
@@ -617,6 +674,24 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 		OrganizationsServiceCreateOrganizationProcedure,
 		svc.CreateOrganization,
 		connect.WithSchema(organizationsServiceMethods.ByName("CreateOrganization")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceGetOnboardingHandler := connect.NewUnaryHandler(
+		OrganizationsServiceGetOnboardingProcedure,
+		svc.GetOnboarding,
+		connect.WithSchema(organizationsServiceMethods.ByName("GetOnboarding")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceRecordOnboardingStepHandler := connect.NewUnaryHandler(
+		OrganizationsServiceRecordOnboardingStepProcedure,
+		svc.RecordOnboardingStep,
+		connect.WithSchema(organizationsServiceMethods.ByName("RecordOnboardingStep")),
+		connect.WithHandlerOptions(opts...),
+	)
+	organizationsServiceFinishOnboardingHandler := connect.NewUnaryHandler(
+		OrganizationsServiceFinishOnboardingProcedure,
+		svc.FinishOnboarding,
+		connect.WithSchema(organizationsServiceMethods.ByName("FinishOnboarding")),
 		connect.WithHandlerOptions(opts...),
 	)
 	organizationsServiceListMyInvitationsHandler := connect.NewUnaryHandler(
@@ -783,6 +858,12 @@ func NewOrganizationsServiceHandler(svc OrganizationsServiceHandler, opts ...con
 			organizationsServiceResolveContentOrganizationHandler.ServeHTTP(w, r)
 		case OrganizationsServiceCreateOrganizationProcedure:
 			organizationsServiceCreateOrganizationHandler.ServeHTTP(w, r)
+		case OrganizationsServiceGetOnboardingProcedure:
+			organizationsServiceGetOnboardingHandler.ServeHTTP(w, r)
+		case OrganizationsServiceRecordOnboardingStepProcedure:
+			organizationsServiceRecordOnboardingStepHandler.ServeHTTP(w, r)
+		case OrganizationsServiceFinishOnboardingProcedure:
+			organizationsServiceFinishOnboardingHandler.ServeHTTP(w, r)
 		case OrganizationsServiceListMyInvitationsProcedure:
 			organizationsServiceListMyInvitationsHandler.ServeHTTP(w, r)
 		case OrganizationsServiceAcceptMyInvitationProcedure:
@@ -854,6 +935,18 @@ func (UnimplementedOrganizationsServiceHandler) ResolveContentOrganization(conte
 
 func (UnimplementedOrganizationsServiceHandler) CreateOrganization(context.Context, *connect.Request[v1.CreateOrganizationRequest]) (*connect.Response[v1.CreateOrganizationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.CreateOrganization is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) GetOnboarding(context.Context, *connect.Request[v1.GetOnboardingRequest]) (*connect.Response[v1.GetOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.GetOnboarding is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) RecordOnboardingStep(context.Context, *connect.Request[v1.RecordOnboardingStepRequest]) (*connect.Response[v1.RecordOnboardingStepResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.RecordOnboardingStep is not implemented"))
+}
+
+func (UnimplementedOrganizationsServiceHandler) FinishOnboarding(context.Context, *connect.Request[v1.FinishOnboardingRequest]) (*connect.Response[v1.FinishOnboardingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("organizations.v1.OrganizationsService.FinishOnboarding is not implemented"))
 }
 
 func (UnimplementedOrganizationsServiceHandler) ListMyInvitations(context.Context, *connect.Request[v1.ListMyInvitationsRequest]) (*connect.Response[v1.ListMyInvitationsResponse], error) {

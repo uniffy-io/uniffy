@@ -67,6 +67,7 @@ from uniffy.domains.organizations.naming import (
     normalize_org_name,
     normalize_slug,
 )
+from uniffy.domains.organizations.onboarding import stage_onboarding
 from uniffy.domains.permissions.jobs.contracts import REINDEX_ORG_CONTENT_FOR_DEFAULTS
 from uniffy.domains.tags.filters.presets import create_default_tag_filter_presets
 
@@ -119,6 +120,7 @@ class OrganizationOperations:
         *,
         search_indexer: SearchIndexer,
         owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
+        begin_onboarding: bool = False,
     ) -> Organization:
         try:
             staged = await self.stage_organization(
@@ -129,6 +131,7 @@ class OrganizationOperations:
                 plan=plan,
                 actor_user_id=actor_user_id,
                 owner_source=owner_source,
+                begin_onboarding=begin_onboarding,
             )
             await self._session.commit()
         except Exception:
@@ -153,7 +156,9 @@ class OrganizationOperations:
         actor_user_id: UUID | None = None,
         *,
         owner_source: OrganizationMemberSource = OrganizationMemberSource.CREATED,
+        begin_onboarding: bool = False,
     ) -> StagedOrganizationCreate:
+        """``begin_onboarding`` gives the owner the entry flow; seeded and scripted orgs skip it."""
         org = Organization(
             name=name,
             slug=slug,
@@ -217,6 +222,8 @@ class OrganizationOperations:
             resource_id=org.id,
             details={"name": name, "slug": slug, "plan": plan},
         )
+        if begin_onboarding:
+            await stage_onboarding(self._session, organization_id=org.id, user_id=owner_user_id)
         await self._session.flush()
         return StagedOrganizationCreate(org, owner, default_channel, default_agent)
 

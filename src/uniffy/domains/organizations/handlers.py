@@ -98,6 +98,7 @@ from uniffy.domains.organizations.invitations import (
 )
 from uniffy.domains.organizations.invitations.converters import invitation_to_proto
 from uniffy.domains.organizations.lifecycle_handlers import OrganizationLifecycleHandlers
+from uniffy.domains.organizations.onboarding.handlers import OrganizationOnboardingHandlers
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.organizations.resolve import resolve_content_organization
 from uniffy.domains.organizations.security import SecurityOperations
@@ -106,7 +107,7 @@ from uniffy.infrastructure.database import open_session
 logger = logger.bind(component="organizations.handlers")
 
 
-class OrganizationsHandlers(OrganizationLifecycleHandlers):
+class OrganizationsHandlers(OrganizationLifecycleHandlers, OrganizationOnboardingHandlers):
     async def list_my_organizations(
         self,
         request: ListMyOrganizationsRequest,

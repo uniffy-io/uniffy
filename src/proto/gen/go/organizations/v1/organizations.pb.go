@@ -79,6 +79,73 @@ func (InvitationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{0}
 }
 
+type OnboardingStep int32
+
+const (
+	OnboardingStep_ONBOARDING_STEP_UNSPECIFIED     OnboardingStep = 0
+	OnboardingStep_ONBOARDING_STEP_WELCOME         OnboardingStep = 1
+	OnboardingStep_ONBOARDING_STEP_MENTIONS        OnboardingStep = 2
+	OnboardingStep_ONBOARDING_STEP_SHARING         OnboardingStep = 3
+	OnboardingStep_ONBOARDING_STEP_APPEARANCE      OnboardingStep = 4
+	OnboardingStep_ONBOARDING_STEP_AGENTS          OnboardingStep = 5
+	OnboardingStep_ONBOARDING_STEP_TEAM            OnboardingStep = 6
+	OnboardingStep_ONBOARDING_STEP_LAUNCH          OnboardingStep = 7
+	OnboardingStep_ONBOARDING_STEP_MENTION_DISPLAY OnboardingStep = 8
+)
+
+// Enum value maps for OnboardingStep.
+var (
+	OnboardingStep_name = map[int32]string{
+		0: "ONBOARDING_STEP_UNSPECIFIED",
+		1: "ONBOARDING_STEP_WELCOME",
+		2: "ONBOARDING_STEP_MENTIONS",
+		3: "ONBOARDING_STEP_SHARING",
+		4: "ONBOARDING_STEP_APPEARANCE",
+		5: "ONBOARDING_STEP_AGENTS",
+		6: "ONBOARDING_STEP_TEAM",
+		7: "ONBOARDING_STEP_LAUNCH",
+		8: "ONBOARDING_STEP_MENTION_DISPLAY",
+	}
+	OnboardingStep_value = map[string]int32{
+		"ONBOARDING_STEP_UNSPECIFIED":     0,
+		"ONBOARDING_STEP_WELCOME":         1,
+		"ONBOARDING_STEP_MENTIONS":        2,
+		"ONBOARDING_STEP_SHARING":         3,
+		"ONBOARDING_STEP_APPEARANCE":      4,
+		"ONBOARDING_STEP_AGENTS":          5,
+		"ONBOARDING_STEP_TEAM":            6,
+		"ONBOARDING_STEP_LAUNCH":          7,
+		"ONBOARDING_STEP_MENTION_DISPLAY": 8,
+	}
+)
+
+func (x OnboardingStep) Enum() *OnboardingStep {
+	p := new(OnboardingStep)
+	*p = x
+	return p
+}
+
+func (x OnboardingStep) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (OnboardingStep) Descriptor() protoreflect.EnumDescriptor {
+	return file_organizations_v1_organizations_proto_enumTypes[1].Descriptor()
+}
+
+func (OnboardingStep) Type() protoreflect.EnumType {
+	return &file_organizations_v1_organizations_proto_enumTypes[1]
+}
+
+func (x OnboardingStep) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use OnboardingStep.Descriptor instead.
+func (OnboardingStep) EnumDescriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{1}
+}
+
 type ListMyOrganizationsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -3550,6 +3617,341 @@ func (x *UpdateSecuritySettingsResponse) GetSettings() *SecuritySettings {
 	return nil
 }
 
+type OnboardingState struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True while the caller still has the entry flow to go through here.
+	Pending bool `protobuf:"varint,1,opt,name=pending,proto3" json:"pending,omitempty"`
+	// The step the caller last reached, so a reload resumes there.
+	CurrentStep   OnboardingStep `protobuf:"varint,2,opt,name=current_step,json=currentStep,proto3,enum=organizations.v1.OnboardingStep" json:"current_step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OnboardingState) Reset() {
+	*x = OnboardingState{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OnboardingState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OnboardingState) ProtoMessage() {}
+
+func (x *OnboardingState) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OnboardingState.ProtoReflect.Descriptor instead.
+func (*OnboardingState) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *OnboardingState) GetPending() bool {
+	if x != nil {
+		return x.Pending
+	}
+	return false
+}
+
+func (x *OnboardingState) GetCurrentStep() OnboardingStep {
+	if x != nil {
+		return x.CurrentStep
+	}
+	return OnboardingStep_ONBOARDING_STEP_UNSPECIFIED
+}
+
+type GetOnboardingRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetOnboardingRequest) Reset() {
+	*x = GetOnboardingRequest{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOnboardingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOnboardingRequest) ProtoMessage() {}
+
+func (x *GetOnboardingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOnboardingRequest.ProtoReflect.Descriptor instead.
+func (*GetOnboardingRequest) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *GetOnboardingRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+type GetOnboardingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         *OnboardingState       `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOnboardingResponse) Reset() {
+	*x = GetOnboardingResponse{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOnboardingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOnboardingResponse) ProtoMessage() {}
+
+func (x *GetOnboardingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOnboardingResponse.ProtoReflect.Descriptor instead.
+func (*GetOnboardingResponse) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *GetOnboardingResponse) GetState() *OnboardingState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+type RecordOnboardingStepRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	Step           OnboardingStep         `protobuf:"varint,2,opt,name=step,proto3,enum=organizations.v1.OnboardingStep" json:"step,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RecordOnboardingStepRequest) Reset() {
+	*x = RecordOnboardingStepRequest{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordOnboardingStepRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordOnboardingStepRequest) ProtoMessage() {}
+
+func (x *RecordOnboardingStepRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordOnboardingStepRequest.ProtoReflect.Descriptor instead.
+func (*RecordOnboardingStepRequest) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *RecordOnboardingStepRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RecordOnboardingStepRequest) GetStep() OnboardingStep {
+	if x != nil {
+		return x.Step
+	}
+	return OnboardingStep_ONBOARDING_STEP_UNSPECIFIED
+}
+
+type RecordOnboardingStepResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         *OnboardingState       `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordOnboardingStepResponse) Reset() {
+	*x = RecordOnboardingStepResponse{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[70]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordOnboardingStepResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordOnboardingStepResponse) ProtoMessage() {}
+
+func (x *RecordOnboardingStepResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[70]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordOnboardingStepResponse.ProtoReflect.Descriptor instead.
+func (*RecordOnboardingStepResponse) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *RecordOnboardingStepResponse) GetState() *OnboardingState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+type FinishOnboardingRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// True when the owner skipped the rest of the flow instead of finishing it.
+	Dismissed     bool `protobuf:"varint,2,opt,name=dismissed,proto3" json:"dismissed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishOnboardingRequest) Reset() {
+	*x = FinishOnboardingRequest{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[71]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishOnboardingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishOnboardingRequest) ProtoMessage() {}
+
+func (x *FinishOnboardingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[71]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishOnboardingRequest.ProtoReflect.Descriptor instead.
+func (*FinishOnboardingRequest) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *FinishOnboardingRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *FinishOnboardingRequest) GetDismissed() bool {
+	if x != nil {
+		return x.Dismissed
+	}
+	return false
+}
+
+type FinishOnboardingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         *OnboardingState       `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinishOnboardingResponse) Reset() {
+	*x = FinishOnboardingResponse{}
+	mi := &file_organizations_v1_organizations_proto_msgTypes[72]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinishOnboardingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinishOnboardingResponse) ProtoMessage() {}
+
+func (x *FinishOnboardingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_organizations_v1_organizations_proto_msgTypes[72]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinishOnboardingResponse.ProtoReflect.Descriptor instead.
+func (*FinishOnboardingResponse) Descriptor() ([]byte, []int) {
+	return file_organizations_v1_organizations_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *FinishOnboardingResponse) GetState() *OnboardingState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
 var File_organizations_v1_organizations_proto protoreflect.FileDescriptor
 
 const file_organizations_v1_organizations_proto_rawDesc = "" +
@@ -3804,17 +4206,47 @@ const file_organizations_v1_organizations_proto_rawDesc = "" +
 	"\x19_mfa_required_for_membersB\x1a\n" +
 	"\x18_mfa_required_for_admins\"`\n" +
 	"\x1eUpdateSecuritySettingsResponse\x12>\n" +
-	"\bsettings\x18\x01 \x01(\v2\".organizations.v1.SecuritySettingsR\bsettings*\xb2\x01\n" +
+	"\bsettings\x18\x01 \x01(\v2\".organizations.v1.SecuritySettingsR\bsettings\"p\n" +
+	"\x0fOnboardingState\x12\x18\n" +
+	"\apending\x18\x01 \x01(\bR\apending\x12C\n" +
+	"\fcurrent_step\x18\x02 \x01(\x0e2 .organizations.v1.OnboardingStepR\vcurrentStep\"?\n" +
+	"\x14GetOnboardingRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"P\n" +
+	"\x15GetOnboardingResponse\x127\n" +
+	"\x05state\x18\x01 \x01(\v2!.organizations.v1.OnboardingStateR\x05state\"|\n" +
+	"\x1bRecordOnboardingStepRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x124\n" +
+	"\x04step\x18\x02 \x01(\x0e2 .organizations.v1.OnboardingStepR\x04step\"W\n" +
+	"\x1cRecordOnboardingStepResponse\x127\n" +
+	"\x05state\x18\x01 \x01(\v2!.organizations.v1.OnboardingStateR\x05state\"`\n" +
+	"\x17FinishOnboardingRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
+	"\tdismissed\x18\x02 \x01(\bR\tdismissed\"S\n" +
+	"\x18FinishOnboardingResponse\x127\n" +
+	"\x05state\x18\x01 \x01(\v2!.organizations.v1.OnboardingStateR\x05state*\xb2\x01\n" +
 	"\x10InvitationStatus\x12!\n" +
 	"\x1dINVITATION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19INVITATION_STATUS_PENDING\x10\x01\x12\x1e\n" +
 	"\x1aINVITATION_STATUS_ACCEPTED\x10\x02\x12\x1d\n" +
 	"\x19INVITATION_STATUS_REVOKED\x10\x03\x12\x1d\n" +
-	"\x19INVITATION_STATUS_EXPIRED\x10\x042\xb2\x19\n" +
+	"\x19INVITATION_STATUS_EXPIRED\x10\x04*\xa0\x02\n" +
+	"\x0eOnboardingStep\x12\x1f\n" +
+	"\x1bONBOARDING_STEP_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17ONBOARDING_STEP_WELCOME\x10\x01\x12\x1c\n" +
+	"\x18ONBOARDING_STEP_MENTIONS\x10\x02\x12\x1b\n" +
+	"\x17ONBOARDING_STEP_SHARING\x10\x03\x12\x1e\n" +
+	"\x1aONBOARDING_STEP_APPEARANCE\x10\x04\x12\x1a\n" +
+	"\x16ONBOARDING_STEP_AGENTS\x10\x05\x12\x18\n" +
+	"\x14ONBOARDING_STEP_TEAM\x10\x06\x12\x1a\n" +
+	"\x16ONBOARDING_STEP_LAUNCH\x10\a\x12#\n" +
+	"\x1fONBOARDING_STEP_MENTION_DISPLAY\x10\b2\xf6\x1b\n" +
 	"\x14OrganizationsService\x12r\n" +
 	"\x13ListMyOrganizations\x12,.organizations.v1.ListMyOrganizationsRequest\x1a-.organizations.v1.ListMyOrganizationsResponse\x12\x87\x01\n" +
 	"\x1aResolveContentOrganization\x123.organizations.v1.ResolveContentOrganizationRequest\x1a4.organizations.v1.ResolveContentOrganizationResponse\x12o\n" +
-	"\x12CreateOrganization\x12+.organizations.v1.CreateOrganizationRequest\x1a,.organizations.v1.CreateOrganizationResponse\x12l\n" +
+	"\x12CreateOrganization\x12+.organizations.v1.CreateOrganizationRequest\x1a,.organizations.v1.CreateOrganizationResponse\x12`\n" +
+	"\rGetOnboarding\x12&.organizations.v1.GetOnboardingRequest\x1a'.organizations.v1.GetOnboardingResponse\x12u\n" +
+	"\x14RecordOnboardingStep\x12-.organizations.v1.RecordOnboardingStepRequest\x1a..organizations.v1.RecordOnboardingStepResponse\x12i\n" +
+	"\x10FinishOnboarding\x12).organizations.v1.FinishOnboardingRequest\x1a*.organizations.v1.FinishOnboardingResponse\x12l\n" +
 	"\x11ListMyInvitations\x12*.organizations.v1.ListMyInvitationsRequest\x1a+.organizations.v1.ListMyInvitationsResponse\x12o\n" +
 	"\x12AcceptMyInvitation\x12+.organizations.v1.AcceptMyInvitationRequest\x1a,.organizations.v1.AcceptMyInvitationResponse\x12r\n" +
 	"\x13DeclineMyInvitation\x12,.organizations.v1.DeclineMyInvitationRequest\x1a-.organizations.v1.DeclineMyInvitationResponse\x12f\n" +
@@ -3854,215 +4286,234 @@ func file_organizations_v1_organizations_proto_rawDescGZIP() []byte {
 	return file_organizations_v1_organizations_proto_rawDescData
 }
 
-var file_organizations_v1_organizations_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_organizations_v1_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 66)
+var file_organizations_v1_organizations_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_organizations_v1_organizations_proto_msgTypes = make([]protoimpl.MessageInfo, 73)
 var file_organizations_v1_organizations_proto_goTypes = []any{
 	(InvitationStatus)(0),                      // 0: organizations.v1.InvitationStatus
-	(*ListMyOrganizationsRequest)(nil),         // 1: organizations.v1.ListMyOrganizationsRequest
-	(*ListMyOrganizationsResponse)(nil),        // 2: organizations.v1.ListMyOrganizationsResponse
-	(*MyOrganization)(nil),                     // 3: organizations.v1.MyOrganization
-	(*CreateOrganizationRequest)(nil),          // 4: organizations.v1.CreateOrganizationRequest
-	(*CreateOrganizationResponse)(nil),         // 5: organizations.v1.CreateOrganizationResponse
-	(*ListMyInvitationsRequest)(nil),           // 6: organizations.v1.ListMyInvitationsRequest
-	(*ListMyInvitationsResponse)(nil),          // 7: organizations.v1.ListMyInvitationsResponse
-	(*MyInvitation)(nil),                       // 8: organizations.v1.MyInvitation
-	(*AcceptMyInvitationRequest)(nil),          // 9: organizations.v1.AcceptMyInvitationRequest
-	(*AcceptMyInvitationResponse)(nil),         // 10: organizations.v1.AcceptMyInvitationResponse
-	(*DeclineMyInvitationRequest)(nil),         // 11: organizations.v1.DeclineMyInvitationRequest
-	(*DeclineMyInvitationResponse)(nil),        // 12: organizations.v1.DeclineMyInvitationResponse
-	(*LeaveOrganizationRequest)(nil),           // 13: organizations.v1.LeaveOrganizationRequest
-	(*LeaveOrganizationResponse)(nil),          // 14: organizations.v1.LeaveOrganizationResponse
-	(*TransferOwnershipRequest)(nil),           // 15: organizations.v1.TransferOwnershipRequest
-	(*TransferOwnershipResponse)(nil),          // 16: organizations.v1.TransferOwnershipResponse
-	(*DeleteOrganizationRequest)(nil),          // 17: organizations.v1.DeleteOrganizationRequest
-	(*DeleteOrganizationResponse)(nil),         // 18: organizations.v1.DeleteOrganizationResponse
-	(*ResolveContentOrganizationRequest)(nil),  // 19: organizations.v1.ResolveContentOrganizationRequest
-	(*ResolveContentOrganizationResponse)(nil), // 20: organizations.v1.ResolveContentOrganizationResponse
-	(*OrganizationDetail)(nil),                 // 21: organizations.v1.OrganizationDetail
-	(*GetOrganizationRequest)(nil),             // 22: organizations.v1.GetOrganizationRequest
-	(*GetOrganizationResponse)(nil),            // 23: organizations.v1.GetOrganizationResponse
-	(*UpdateOrganizationResponse)(nil),         // 24: organizations.v1.UpdateOrganizationResponse
-	(*UpdateOrganizationRequest)(nil),          // 25: organizations.v1.UpdateOrganizationRequest
-	(*GetOrganizationOverviewRequest)(nil),     // 26: organizations.v1.GetOrganizationOverviewRequest
-	(*GetOrganizationOverviewResponse)(nil),    // 27: organizations.v1.GetOrganizationOverviewResponse
-	(*OrganizationOverview)(nil),               // 28: organizations.v1.OrganizationOverview
-	(*ContentTypeCount)(nil),                   // 29: organizations.v1.ContentTypeCount
-	(*ListMembersRequest)(nil),                 // 30: organizations.v1.ListMembersRequest
-	(*ListMembersResponse)(nil),                // 31: organizations.v1.ListMembersResponse
-	(*AddMemberRequest)(nil),                   // 32: organizations.v1.AddMemberRequest
-	(*AddMemberResponse)(nil),                  // 33: organizations.v1.AddMemberResponse
-	(*UpdateMemberRoleRequest)(nil),            // 34: organizations.v1.UpdateMemberRoleRequest
-	(*UpdateMemberRoleResponse)(nil),           // 35: organizations.v1.UpdateMemberRoleResponse
-	(*RemoveMemberRequest)(nil),                // 36: organizations.v1.RemoveMemberRequest
-	(*RemoveMemberResponse)(nil),               // 37: organizations.v1.RemoveMemberResponse
-	(*GetPermissionDefaultsRequest)(nil),       // 38: organizations.v1.GetPermissionDefaultsRequest
-	(*GetPermissionDefaultsResponse)(nil),      // 39: organizations.v1.GetPermissionDefaultsResponse
-	(*UpdatePermissionDefaultsResponse)(nil),   // 40: organizations.v1.UpdatePermissionDefaultsResponse
-	(*UpdatePermissionDefaultsRequest)(nil),    // 41: organizations.v1.UpdatePermissionDefaultsRequest
-	(*ContentTypeDefaults)(nil),                // 42: organizations.v1.ContentTypeDefaults
-	(*GrantDomainAdminRequest)(nil),            // 43: organizations.v1.GrantDomainAdminRequest
-	(*GrantDomainAdminResponse)(nil),           // 44: organizations.v1.GrantDomainAdminResponse
-	(*RevokeDomainAdminRequest)(nil),           // 45: organizations.v1.RevokeDomainAdminRequest
-	(*RevokeDomainAdminResponse)(nil),          // 46: organizations.v1.RevokeDomainAdminResponse
-	(*ListDomainAdminsRequest)(nil),            // 47: organizations.v1.ListDomainAdminsRequest
-	(*ListDomainAdminsResponse)(nil),           // 48: organizations.v1.ListDomainAdminsResponse
-	(*GetUserDomainAdminsRequest)(nil),         // 49: organizations.v1.GetUserDomainAdminsRequest
-	(*GetUserDomainAdminsResponse)(nil),        // 50: organizations.v1.GetUserDomainAdminsResponse
-	(*RotateEncryptionKeyRequest)(nil),         // 51: organizations.v1.RotateEncryptionKeyRequest
-	(*RotateEncryptionKeyResponse)(nil),        // 52: organizations.v1.RotateEncryptionKeyResponse
-	(*Invitation)(nil),                         // 53: organizations.v1.Invitation
-	(*InviteMemberRequest)(nil),                // 54: organizations.v1.InviteMemberRequest
-	(*InviteMemberResponse)(nil),               // 55: organizations.v1.InviteMemberResponse
-	(*ListInvitationsRequest)(nil),             // 56: organizations.v1.ListInvitationsRequest
-	(*ListInvitationsResponse)(nil),            // 57: organizations.v1.ListInvitationsResponse
-	(*RevokeInvitationRequest)(nil),            // 58: organizations.v1.RevokeInvitationRequest
-	(*RevokeInvitationResponse)(nil),           // 59: organizations.v1.RevokeInvitationResponse
-	(*ResendInvitationRequest)(nil),            // 60: organizations.v1.ResendInvitationRequest
-	(*ResendInvitationResponse)(nil),           // 61: organizations.v1.ResendInvitationResponse
-	(*SecuritySettings)(nil),                   // 62: organizations.v1.SecuritySettings
-	(*GetSecuritySettingsRequest)(nil),         // 63: organizations.v1.GetSecuritySettingsRequest
-	(*GetSecuritySettingsResponse)(nil),        // 64: organizations.v1.GetSecuritySettingsResponse
-	(*UpdateSecuritySettingsRequest)(nil),      // 65: organizations.v1.UpdateSecuritySettingsRequest
-	(*UpdateSecuritySettingsResponse)(nil),     // 66: organizations.v1.UpdateSecuritySettingsResponse
-	(*v1.OrganizationInfo)(nil),                // 67: common.v1.OrganizationInfo
-	(v1.OrganizationRole)(0),                   // 68: common.v1.OrganizationRole
-	(*timestamppb.Timestamp)(nil),              // 69: google.protobuf.Timestamp
-	(*v1.MemberInfo)(nil),                      // 70: common.v1.MemberInfo
-	(v1.ContentType)(0),                        // 71: common.v1.ContentType
-	(*v1.PaginationRequest)(nil),               // 72: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),              // 73: common.v1.PaginationResponse
-	(v1.AccessMode)(0),                         // 74: common.v1.AccessMode
-	(v1.ContentRole)(0),                        // 75: common.v1.ContentRole
-	(v1.DomainType)(0),                         // 76: common.v1.DomainType
-	(*v1.DomainAdminInfo)(nil),                 // 77: common.v1.DomainAdminInfo
+	(OnboardingStep)(0),                        // 1: organizations.v1.OnboardingStep
+	(*ListMyOrganizationsRequest)(nil),         // 2: organizations.v1.ListMyOrganizationsRequest
+	(*ListMyOrganizationsResponse)(nil),        // 3: organizations.v1.ListMyOrganizationsResponse
+	(*MyOrganization)(nil),                     // 4: organizations.v1.MyOrganization
+	(*CreateOrganizationRequest)(nil),          // 5: organizations.v1.CreateOrganizationRequest
+	(*CreateOrganizationResponse)(nil),         // 6: organizations.v1.CreateOrganizationResponse
+	(*ListMyInvitationsRequest)(nil),           // 7: organizations.v1.ListMyInvitationsRequest
+	(*ListMyInvitationsResponse)(nil),          // 8: organizations.v1.ListMyInvitationsResponse
+	(*MyInvitation)(nil),                       // 9: organizations.v1.MyInvitation
+	(*AcceptMyInvitationRequest)(nil),          // 10: organizations.v1.AcceptMyInvitationRequest
+	(*AcceptMyInvitationResponse)(nil),         // 11: organizations.v1.AcceptMyInvitationResponse
+	(*DeclineMyInvitationRequest)(nil),         // 12: organizations.v1.DeclineMyInvitationRequest
+	(*DeclineMyInvitationResponse)(nil),        // 13: organizations.v1.DeclineMyInvitationResponse
+	(*LeaveOrganizationRequest)(nil),           // 14: organizations.v1.LeaveOrganizationRequest
+	(*LeaveOrganizationResponse)(nil),          // 15: organizations.v1.LeaveOrganizationResponse
+	(*TransferOwnershipRequest)(nil),           // 16: organizations.v1.TransferOwnershipRequest
+	(*TransferOwnershipResponse)(nil),          // 17: organizations.v1.TransferOwnershipResponse
+	(*DeleteOrganizationRequest)(nil),          // 18: organizations.v1.DeleteOrganizationRequest
+	(*DeleteOrganizationResponse)(nil),         // 19: organizations.v1.DeleteOrganizationResponse
+	(*ResolveContentOrganizationRequest)(nil),  // 20: organizations.v1.ResolveContentOrganizationRequest
+	(*ResolveContentOrganizationResponse)(nil), // 21: organizations.v1.ResolveContentOrganizationResponse
+	(*OrganizationDetail)(nil),                 // 22: organizations.v1.OrganizationDetail
+	(*GetOrganizationRequest)(nil),             // 23: organizations.v1.GetOrganizationRequest
+	(*GetOrganizationResponse)(nil),            // 24: organizations.v1.GetOrganizationResponse
+	(*UpdateOrganizationResponse)(nil),         // 25: organizations.v1.UpdateOrganizationResponse
+	(*UpdateOrganizationRequest)(nil),          // 26: organizations.v1.UpdateOrganizationRequest
+	(*GetOrganizationOverviewRequest)(nil),     // 27: organizations.v1.GetOrganizationOverviewRequest
+	(*GetOrganizationOverviewResponse)(nil),    // 28: organizations.v1.GetOrganizationOverviewResponse
+	(*OrganizationOverview)(nil),               // 29: organizations.v1.OrganizationOverview
+	(*ContentTypeCount)(nil),                   // 30: organizations.v1.ContentTypeCount
+	(*ListMembersRequest)(nil),                 // 31: organizations.v1.ListMembersRequest
+	(*ListMembersResponse)(nil),                // 32: organizations.v1.ListMembersResponse
+	(*AddMemberRequest)(nil),                   // 33: organizations.v1.AddMemberRequest
+	(*AddMemberResponse)(nil),                  // 34: organizations.v1.AddMemberResponse
+	(*UpdateMemberRoleRequest)(nil),            // 35: organizations.v1.UpdateMemberRoleRequest
+	(*UpdateMemberRoleResponse)(nil),           // 36: organizations.v1.UpdateMemberRoleResponse
+	(*RemoveMemberRequest)(nil),                // 37: organizations.v1.RemoveMemberRequest
+	(*RemoveMemberResponse)(nil),               // 38: organizations.v1.RemoveMemberResponse
+	(*GetPermissionDefaultsRequest)(nil),       // 39: organizations.v1.GetPermissionDefaultsRequest
+	(*GetPermissionDefaultsResponse)(nil),      // 40: organizations.v1.GetPermissionDefaultsResponse
+	(*UpdatePermissionDefaultsResponse)(nil),   // 41: organizations.v1.UpdatePermissionDefaultsResponse
+	(*UpdatePermissionDefaultsRequest)(nil),    // 42: organizations.v1.UpdatePermissionDefaultsRequest
+	(*ContentTypeDefaults)(nil),                // 43: organizations.v1.ContentTypeDefaults
+	(*GrantDomainAdminRequest)(nil),            // 44: organizations.v1.GrantDomainAdminRequest
+	(*GrantDomainAdminResponse)(nil),           // 45: organizations.v1.GrantDomainAdminResponse
+	(*RevokeDomainAdminRequest)(nil),           // 46: organizations.v1.RevokeDomainAdminRequest
+	(*RevokeDomainAdminResponse)(nil),          // 47: organizations.v1.RevokeDomainAdminResponse
+	(*ListDomainAdminsRequest)(nil),            // 48: organizations.v1.ListDomainAdminsRequest
+	(*ListDomainAdminsResponse)(nil),           // 49: organizations.v1.ListDomainAdminsResponse
+	(*GetUserDomainAdminsRequest)(nil),         // 50: organizations.v1.GetUserDomainAdminsRequest
+	(*GetUserDomainAdminsResponse)(nil),        // 51: organizations.v1.GetUserDomainAdminsResponse
+	(*RotateEncryptionKeyRequest)(nil),         // 52: organizations.v1.RotateEncryptionKeyRequest
+	(*RotateEncryptionKeyResponse)(nil),        // 53: organizations.v1.RotateEncryptionKeyResponse
+	(*Invitation)(nil),                         // 54: organizations.v1.Invitation
+	(*InviteMemberRequest)(nil),                // 55: organizations.v1.InviteMemberRequest
+	(*InviteMemberResponse)(nil),               // 56: organizations.v1.InviteMemberResponse
+	(*ListInvitationsRequest)(nil),             // 57: organizations.v1.ListInvitationsRequest
+	(*ListInvitationsResponse)(nil),            // 58: organizations.v1.ListInvitationsResponse
+	(*RevokeInvitationRequest)(nil),            // 59: organizations.v1.RevokeInvitationRequest
+	(*RevokeInvitationResponse)(nil),           // 60: organizations.v1.RevokeInvitationResponse
+	(*ResendInvitationRequest)(nil),            // 61: organizations.v1.ResendInvitationRequest
+	(*ResendInvitationResponse)(nil),           // 62: organizations.v1.ResendInvitationResponse
+	(*SecuritySettings)(nil),                   // 63: organizations.v1.SecuritySettings
+	(*GetSecuritySettingsRequest)(nil),         // 64: organizations.v1.GetSecuritySettingsRequest
+	(*GetSecuritySettingsResponse)(nil),        // 65: organizations.v1.GetSecuritySettingsResponse
+	(*UpdateSecuritySettingsRequest)(nil),      // 66: organizations.v1.UpdateSecuritySettingsRequest
+	(*UpdateSecuritySettingsResponse)(nil),     // 67: organizations.v1.UpdateSecuritySettingsResponse
+	(*OnboardingState)(nil),                    // 68: organizations.v1.OnboardingState
+	(*GetOnboardingRequest)(nil),               // 69: organizations.v1.GetOnboardingRequest
+	(*GetOnboardingResponse)(nil),              // 70: organizations.v1.GetOnboardingResponse
+	(*RecordOnboardingStepRequest)(nil),        // 71: organizations.v1.RecordOnboardingStepRequest
+	(*RecordOnboardingStepResponse)(nil),       // 72: organizations.v1.RecordOnboardingStepResponse
+	(*FinishOnboardingRequest)(nil),            // 73: organizations.v1.FinishOnboardingRequest
+	(*FinishOnboardingResponse)(nil),           // 74: organizations.v1.FinishOnboardingResponse
+	(*v1.OrganizationInfo)(nil),                // 75: common.v1.OrganizationInfo
+	(v1.OrganizationRole)(0),                   // 76: common.v1.OrganizationRole
+	(*timestamppb.Timestamp)(nil),              // 77: google.protobuf.Timestamp
+	(*v1.MemberInfo)(nil),                      // 78: common.v1.MemberInfo
+	(v1.ContentType)(0),                        // 79: common.v1.ContentType
+	(*v1.PaginationRequest)(nil),               // 80: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),              // 81: common.v1.PaginationResponse
+	(v1.AccessMode)(0),                         // 82: common.v1.AccessMode
+	(v1.ContentRole)(0),                        // 83: common.v1.ContentRole
+	(v1.DomainType)(0),                         // 84: common.v1.DomainType
+	(*v1.DomainAdminInfo)(nil),                 // 85: common.v1.DomainAdminInfo
 }
 var file_organizations_v1_organizations_proto_depIdxs = []int32{
-	3,  // 0: organizations.v1.ListMyOrganizationsResponse.organizations:type_name -> organizations.v1.MyOrganization
-	67, // 1: organizations.v1.MyOrganization.organization:type_name -> common.v1.OrganizationInfo
-	68, // 2: organizations.v1.MyOrganization.role:type_name -> common.v1.OrganizationRole
-	69, // 3: organizations.v1.MyOrganization.joined_at:type_name -> google.protobuf.Timestamp
-	3,  // 4: organizations.v1.CreateOrganizationResponse.organization:type_name -> organizations.v1.MyOrganization
-	8,  // 5: organizations.v1.ListMyInvitationsResponse.invitations:type_name -> organizations.v1.MyInvitation
-	67, // 6: organizations.v1.MyInvitation.organization:type_name -> common.v1.OrganizationInfo
-	68, // 7: organizations.v1.MyInvitation.role:type_name -> common.v1.OrganizationRole
-	69, // 8: organizations.v1.MyInvitation.expires_at:type_name -> google.protobuf.Timestamp
-	69, // 9: organizations.v1.MyInvitation.created_at:type_name -> google.protobuf.Timestamp
-	3,  // 10: organizations.v1.AcceptMyInvitationResponse.organization:type_name -> organizations.v1.MyOrganization
-	70, // 11: organizations.v1.TransferOwnershipResponse.new_owner:type_name -> common.v1.MemberInfo
-	70, // 12: organizations.v1.TransferOwnershipResponse.previous_owner:type_name -> common.v1.MemberInfo
-	69, // 13: organizations.v1.DeleteOrganizationResponse.purge_at:type_name -> google.protobuf.Timestamp
-	67, // 14: organizations.v1.ResolveContentOrganizationResponse.organization:type_name -> common.v1.OrganizationInfo
-	68, // 15: organizations.v1.ResolveContentOrganizationResponse.role:type_name -> common.v1.OrganizationRole
-	67, // 16: organizations.v1.OrganizationDetail.organization:type_name -> common.v1.OrganizationInfo
-	21, // 17: organizations.v1.GetOrganizationResponse.organization:type_name -> organizations.v1.OrganizationDetail
-	67, // 18: organizations.v1.UpdateOrganizationResponse.organization:type_name -> common.v1.OrganizationInfo
-	28, // 19: organizations.v1.GetOrganizationOverviewResponse.overview:type_name -> organizations.v1.OrganizationOverview
-	67, // 20: organizations.v1.OrganizationOverview.organization:type_name -> common.v1.OrganizationInfo
-	29, // 21: organizations.v1.OrganizationOverview.content_counts:type_name -> organizations.v1.ContentTypeCount
-	71, // 22: organizations.v1.ContentTypeCount.content_type:type_name -> common.v1.ContentType
-	72, // 23: organizations.v1.ListMembersRequest.pagination:type_name -> common.v1.PaginationRequest
-	68, // 24: organizations.v1.ListMembersRequest.role_filter:type_name -> common.v1.OrganizationRole
-	70, // 25: organizations.v1.ListMembersResponse.members:type_name -> common.v1.MemberInfo
-	73, // 26: organizations.v1.ListMembersResponse.pagination:type_name -> common.v1.PaginationResponse
-	68, // 27: organizations.v1.AddMemberRequest.role:type_name -> common.v1.OrganizationRole
-	70, // 28: organizations.v1.AddMemberResponse.member:type_name -> common.v1.MemberInfo
-	68, // 29: organizations.v1.UpdateMemberRoleRequest.role:type_name -> common.v1.OrganizationRole
-	70, // 30: organizations.v1.UpdateMemberRoleResponse.member:type_name -> common.v1.MemberInfo
-	42, // 31: organizations.v1.GetPermissionDefaultsResponse.defaults:type_name -> organizations.v1.ContentTypeDefaults
-	42, // 32: organizations.v1.UpdatePermissionDefaultsResponse.defaults:type_name -> organizations.v1.ContentTypeDefaults
-	71, // 33: organizations.v1.UpdatePermissionDefaultsRequest.content_type:type_name -> common.v1.ContentType
-	74, // 34: organizations.v1.UpdatePermissionDefaultsRequest.default_access_mode:type_name -> common.v1.AccessMode
-	75, // 35: organizations.v1.UpdatePermissionDefaultsRequest.default_baseline_role:type_name -> common.v1.ContentRole
-	71, // 36: organizations.v1.ContentTypeDefaults.content_type:type_name -> common.v1.ContentType
-	74, // 37: organizations.v1.ContentTypeDefaults.default_access_mode:type_name -> common.v1.AccessMode
-	69, // 38: organizations.v1.ContentTypeDefaults.updated_at:type_name -> google.protobuf.Timestamp
-	75, // 39: organizations.v1.ContentTypeDefaults.default_baseline_role:type_name -> common.v1.ContentRole
-	76, // 40: organizations.v1.GrantDomainAdminRequest.domain:type_name -> common.v1.DomainType
-	77, // 41: organizations.v1.GrantDomainAdminResponse.domain_admin:type_name -> common.v1.DomainAdminInfo
-	76, // 42: organizations.v1.RevokeDomainAdminRequest.domain:type_name -> common.v1.DomainType
-	76, // 43: organizations.v1.ListDomainAdminsRequest.domain_filter:type_name -> common.v1.DomainType
-	72, // 44: organizations.v1.ListDomainAdminsRequest.pagination:type_name -> common.v1.PaginationRequest
-	77, // 45: organizations.v1.ListDomainAdminsResponse.domain_admins:type_name -> common.v1.DomainAdminInfo
-	73, // 46: organizations.v1.ListDomainAdminsResponse.pagination:type_name -> common.v1.PaginationResponse
-	76, // 47: organizations.v1.GetUserDomainAdminsResponse.domains:type_name -> common.v1.DomainType
-	69, // 48: organizations.v1.RotateEncryptionKeyResponse.rotated_at:type_name -> google.protobuf.Timestamp
-	68, // 49: organizations.v1.Invitation.role:type_name -> common.v1.OrganizationRole
-	69, // 50: organizations.v1.Invitation.expires_at:type_name -> google.protobuf.Timestamp
-	69, // 51: organizations.v1.Invitation.created_at:type_name -> google.protobuf.Timestamp
-	69, // 52: organizations.v1.Invitation.accepted_at:type_name -> google.protobuf.Timestamp
-	69, // 53: organizations.v1.Invitation.revoked_at:type_name -> google.protobuf.Timestamp
-	0,  // 54: organizations.v1.Invitation.status:type_name -> organizations.v1.InvitationStatus
-	68, // 55: organizations.v1.InviteMemberRequest.role:type_name -> common.v1.OrganizationRole
-	53, // 56: organizations.v1.InviteMemberResponse.invitation:type_name -> organizations.v1.Invitation
-	0,  // 57: organizations.v1.ListInvitationsRequest.status:type_name -> organizations.v1.InvitationStatus
-	53, // 58: organizations.v1.ListInvitationsResponse.invitations:type_name -> organizations.v1.Invitation
-	53, // 59: organizations.v1.RevokeInvitationResponse.invitation:type_name -> organizations.v1.Invitation
-	53, // 60: organizations.v1.ResendInvitationResponse.invitation:type_name -> organizations.v1.Invitation
-	62, // 61: organizations.v1.GetSecuritySettingsResponse.settings:type_name -> organizations.v1.SecuritySettings
-	62, // 62: organizations.v1.UpdateSecuritySettingsResponse.settings:type_name -> organizations.v1.SecuritySettings
-	1,  // 63: organizations.v1.OrganizationsService.ListMyOrganizations:input_type -> organizations.v1.ListMyOrganizationsRequest
-	19, // 64: organizations.v1.OrganizationsService.ResolveContentOrganization:input_type -> organizations.v1.ResolveContentOrganizationRequest
-	4,  // 65: organizations.v1.OrganizationsService.CreateOrganization:input_type -> organizations.v1.CreateOrganizationRequest
-	6,  // 66: organizations.v1.OrganizationsService.ListMyInvitations:input_type -> organizations.v1.ListMyInvitationsRequest
-	9,  // 67: organizations.v1.OrganizationsService.AcceptMyInvitation:input_type -> organizations.v1.AcceptMyInvitationRequest
-	11, // 68: organizations.v1.OrganizationsService.DeclineMyInvitation:input_type -> organizations.v1.DeclineMyInvitationRequest
-	22, // 69: organizations.v1.OrganizationsService.GetOrganization:input_type -> organizations.v1.GetOrganizationRequest
-	25, // 70: organizations.v1.OrganizationsService.UpdateOrganization:input_type -> organizations.v1.UpdateOrganizationRequest
-	13, // 71: organizations.v1.OrganizationsService.LeaveOrganization:input_type -> organizations.v1.LeaveOrganizationRequest
-	15, // 72: organizations.v1.OrganizationsService.TransferOwnership:input_type -> organizations.v1.TransferOwnershipRequest
-	17, // 73: organizations.v1.OrganizationsService.DeleteOrganization:input_type -> organizations.v1.DeleteOrganizationRequest
-	26, // 74: organizations.v1.OrganizationsService.GetOrganizationOverview:input_type -> organizations.v1.GetOrganizationOverviewRequest
-	30, // 75: organizations.v1.OrganizationsService.ListMembers:input_type -> organizations.v1.ListMembersRequest
-	32, // 76: organizations.v1.OrganizationsService.AddMember:input_type -> organizations.v1.AddMemberRequest
-	34, // 77: organizations.v1.OrganizationsService.UpdateMemberRole:input_type -> organizations.v1.UpdateMemberRoleRequest
-	36, // 78: organizations.v1.OrganizationsService.RemoveMember:input_type -> organizations.v1.RemoveMemberRequest
-	54, // 79: organizations.v1.OrganizationsService.InviteMember:input_type -> organizations.v1.InviteMemberRequest
-	56, // 80: organizations.v1.OrganizationsService.ListInvitations:input_type -> organizations.v1.ListInvitationsRequest
-	58, // 81: organizations.v1.OrganizationsService.RevokeInvitation:input_type -> organizations.v1.RevokeInvitationRequest
-	60, // 82: organizations.v1.OrganizationsService.ResendInvitation:input_type -> organizations.v1.ResendInvitationRequest
-	63, // 83: organizations.v1.OrganizationsService.GetSecuritySettings:input_type -> organizations.v1.GetSecuritySettingsRequest
-	65, // 84: organizations.v1.OrganizationsService.UpdateSecuritySettings:input_type -> organizations.v1.UpdateSecuritySettingsRequest
-	38, // 85: organizations.v1.OrganizationsService.GetPermissionDefaults:input_type -> organizations.v1.GetPermissionDefaultsRequest
-	41, // 86: organizations.v1.OrganizationsService.UpdatePermissionDefaults:input_type -> organizations.v1.UpdatePermissionDefaultsRequest
-	43, // 87: organizations.v1.OrganizationsService.GrantDomainAdmin:input_type -> organizations.v1.GrantDomainAdminRequest
-	45, // 88: organizations.v1.OrganizationsService.RevokeDomainAdmin:input_type -> organizations.v1.RevokeDomainAdminRequest
-	47, // 89: organizations.v1.OrganizationsService.ListDomainAdmins:input_type -> organizations.v1.ListDomainAdminsRequest
-	49, // 90: organizations.v1.OrganizationsService.GetUserDomainAdmins:input_type -> organizations.v1.GetUserDomainAdminsRequest
-	51, // 91: organizations.v1.OrganizationsService.RotateEncryptionKey:input_type -> organizations.v1.RotateEncryptionKeyRequest
-	2,  // 92: organizations.v1.OrganizationsService.ListMyOrganizations:output_type -> organizations.v1.ListMyOrganizationsResponse
-	20, // 93: organizations.v1.OrganizationsService.ResolveContentOrganization:output_type -> organizations.v1.ResolveContentOrganizationResponse
-	5,  // 94: organizations.v1.OrganizationsService.CreateOrganization:output_type -> organizations.v1.CreateOrganizationResponse
-	7,  // 95: organizations.v1.OrganizationsService.ListMyInvitations:output_type -> organizations.v1.ListMyInvitationsResponse
-	10, // 96: organizations.v1.OrganizationsService.AcceptMyInvitation:output_type -> organizations.v1.AcceptMyInvitationResponse
-	12, // 97: organizations.v1.OrganizationsService.DeclineMyInvitation:output_type -> organizations.v1.DeclineMyInvitationResponse
-	23, // 98: organizations.v1.OrganizationsService.GetOrganization:output_type -> organizations.v1.GetOrganizationResponse
-	24, // 99: organizations.v1.OrganizationsService.UpdateOrganization:output_type -> organizations.v1.UpdateOrganizationResponse
-	14, // 100: organizations.v1.OrganizationsService.LeaveOrganization:output_type -> organizations.v1.LeaveOrganizationResponse
-	16, // 101: organizations.v1.OrganizationsService.TransferOwnership:output_type -> organizations.v1.TransferOwnershipResponse
-	18, // 102: organizations.v1.OrganizationsService.DeleteOrganization:output_type -> organizations.v1.DeleteOrganizationResponse
-	27, // 103: organizations.v1.OrganizationsService.GetOrganizationOverview:output_type -> organizations.v1.GetOrganizationOverviewResponse
-	31, // 104: organizations.v1.OrganizationsService.ListMembers:output_type -> organizations.v1.ListMembersResponse
-	33, // 105: organizations.v1.OrganizationsService.AddMember:output_type -> organizations.v1.AddMemberResponse
-	35, // 106: organizations.v1.OrganizationsService.UpdateMemberRole:output_type -> organizations.v1.UpdateMemberRoleResponse
-	37, // 107: organizations.v1.OrganizationsService.RemoveMember:output_type -> organizations.v1.RemoveMemberResponse
-	55, // 108: organizations.v1.OrganizationsService.InviteMember:output_type -> organizations.v1.InviteMemberResponse
-	57, // 109: organizations.v1.OrganizationsService.ListInvitations:output_type -> organizations.v1.ListInvitationsResponse
-	59, // 110: organizations.v1.OrganizationsService.RevokeInvitation:output_type -> organizations.v1.RevokeInvitationResponse
-	61, // 111: organizations.v1.OrganizationsService.ResendInvitation:output_type -> organizations.v1.ResendInvitationResponse
-	64, // 112: organizations.v1.OrganizationsService.GetSecuritySettings:output_type -> organizations.v1.GetSecuritySettingsResponse
-	66, // 113: organizations.v1.OrganizationsService.UpdateSecuritySettings:output_type -> organizations.v1.UpdateSecuritySettingsResponse
-	39, // 114: organizations.v1.OrganizationsService.GetPermissionDefaults:output_type -> organizations.v1.GetPermissionDefaultsResponse
-	40, // 115: organizations.v1.OrganizationsService.UpdatePermissionDefaults:output_type -> organizations.v1.UpdatePermissionDefaultsResponse
-	44, // 116: organizations.v1.OrganizationsService.GrantDomainAdmin:output_type -> organizations.v1.GrantDomainAdminResponse
-	46, // 117: organizations.v1.OrganizationsService.RevokeDomainAdmin:output_type -> organizations.v1.RevokeDomainAdminResponse
-	48, // 118: organizations.v1.OrganizationsService.ListDomainAdmins:output_type -> organizations.v1.ListDomainAdminsResponse
-	50, // 119: organizations.v1.OrganizationsService.GetUserDomainAdmins:output_type -> organizations.v1.GetUserDomainAdminsResponse
-	52, // 120: organizations.v1.OrganizationsService.RotateEncryptionKey:output_type -> organizations.v1.RotateEncryptionKeyResponse
-	92, // [92:121] is the sub-list for method output_type
-	63, // [63:92] is the sub-list for method input_type
-	63, // [63:63] is the sub-list for extension type_name
-	63, // [63:63] is the sub-list for extension extendee
-	0,  // [0:63] is the sub-list for field type_name
+	4,   // 0: organizations.v1.ListMyOrganizationsResponse.organizations:type_name -> organizations.v1.MyOrganization
+	75,  // 1: organizations.v1.MyOrganization.organization:type_name -> common.v1.OrganizationInfo
+	76,  // 2: organizations.v1.MyOrganization.role:type_name -> common.v1.OrganizationRole
+	77,  // 3: organizations.v1.MyOrganization.joined_at:type_name -> google.protobuf.Timestamp
+	4,   // 4: organizations.v1.CreateOrganizationResponse.organization:type_name -> organizations.v1.MyOrganization
+	9,   // 5: organizations.v1.ListMyInvitationsResponse.invitations:type_name -> organizations.v1.MyInvitation
+	75,  // 6: organizations.v1.MyInvitation.organization:type_name -> common.v1.OrganizationInfo
+	76,  // 7: organizations.v1.MyInvitation.role:type_name -> common.v1.OrganizationRole
+	77,  // 8: organizations.v1.MyInvitation.expires_at:type_name -> google.protobuf.Timestamp
+	77,  // 9: organizations.v1.MyInvitation.created_at:type_name -> google.protobuf.Timestamp
+	4,   // 10: organizations.v1.AcceptMyInvitationResponse.organization:type_name -> organizations.v1.MyOrganization
+	78,  // 11: organizations.v1.TransferOwnershipResponse.new_owner:type_name -> common.v1.MemberInfo
+	78,  // 12: organizations.v1.TransferOwnershipResponse.previous_owner:type_name -> common.v1.MemberInfo
+	77,  // 13: organizations.v1.DeleteOrganizationResponse.purge_at:type_name -> google.protobuf.Timestamp
+	75,  // 14: organizations.v1.ResolveContentOrganizationResponse.organization:type_name -> common.v1.OrganizationInfo
+	76,  // 15: organizations.v1.ResolveContentOrganizationResponse.role:type_name -> common.v1.OrganizationRole
+	75,  // 16: organizations.v1.OrganizationDetail.organization:type_name -> common.v1.OrganizationInfo
+	22,  // 17: organizations.v1.GetOrganizationResponse.organization:type_name -> organizations.v1.OrganizationDetail
+	75,  // 18: organizations.v1.UpdateOrganizationResponse.organization:type_name -> common.v1.OrganizationInfo
+	29,  // 19: organizations.v1.GetOrganizationOverviewResponse.overview:type_name -> organizations.v1.OrganizationOverview
+	75,  // 20: organizations.v1.OrganizationOverview.organization:type_name -> common.v1.OrganizationInfo
+	30,  // 21: organizations.v1.OrganizationOverview.content_counts:type_name -> organizations.v1.ContentTypeCount
+	79,  // 22: organizations.v1.ContentTypeCount.content_type:type_name -> common.v1.ContentType
+	80,  // 23: organizations.v1.ListMembersRequest.pagination:type_name -> common.v1.PaginationRequest
+	76,  // 24: organizations.v1.ListMembersRequest.role_filter:type_name -> common.v1.OrganizationRole
+	78,  // 25: organizations.v1.ListMembersResponse.members:type_name -> common.v1.MemberInfo
+	81,  // 26: organizations.v1.ListMembersResponse.pagination:type_name -> common.v1.PaginationResponse
+	76,  // 27: organizations.v1.AddMemberRequest.role:type_name -> common.v1.OrganizationRole
+	78,  // 28: organizations.v1.AddMemberResponse.member:type_name -> common.v1.MemberInfo
+	76,  // 29: organizations.v1.UpdateMemberRoleRequest.role:type_name -> common.v1.OrganizationRole
+	78,  // 30: organizations.v1.UpdateMemberRoleResponse.member:type_name -> common.v1.MemberInfo
+	43,  // 31: organizations.v1.GetPermissionDefaultsResponse.defaults:type_name -> organizations.v1.ContentTypeDefaults
+	43,  // 32: organizations.v1.UpdatePermissionDefaultsResponse.defaults:type_name -> organizations.v1.ContentTypeDefaults
+	79,  // 33: organizations.v1.UpdatePermissionDefaultsRequest.content_type:type_name -> common.v1.ContentType
+	82,  // 34: organizations.v1.UpdatePermissionDefaultsRequest.default_access_mode:type_name -> common.v1.AccessMode
+	83,  // 35: organizations.v1.UpdatePermissionDefaultsRequest.default_baseline_role:type_name -> common.v1.ContentRole
+	79,  // 36: organizations.v1.ContentTypeDefaults.content_type:type_name -> common.v1.ContentType
+	82,  // 37: organizations.v1.ContentTypeDefaults.default_access_mode:type_name -> common.v1.AccessMode
+	77,  // 38: organizations.v1.ContentTypeDefaults.updated_at:type_name -> google.protobuf.Timestamp
+	83,  // 39: organizations.v1.ContentTypeDefaults.default_baseline_role:type_name -> common.v1.ContentRole
+	84,  // 40: organizations.v1.GrantDomainAdminRequest.domain:type_name -> common.v1.DomainType
+	85,  // 41: organizations.v1.GrantDomainAdminResponse.domain_admin:type_name -> common.v1.DomainAdminInfo
+	84,  // 42: organizations.v1.RevokeDomainAdminRequest.domain:type_name -> common.v1.DomainType
+	84,  // 43: organizations.v1.ListDomainAdminsRequest.domain_filter:type_name -> common.v1.DomainType
+	80,  // 44: organizations.v1.ListDomainAdminsRequest.pagination:type_name -> common.v1.PaginationRequest
+	85,  // 45: organizations.v1.ListDomainAdminsResponse.domain_admins:type_name -> common.v1.DomainAdminInfo
+	81,  // 46: organizations.v1.ListDomainAdminsResponse.pagination:type_name -> common.v1.PaginationResponse
+	84,  // 47: organizations.v1.GetUserDomainAdminsResponse.domains:type_name -> common.v1.DomainType
+	77,  // 48: organizations.v1.RotateEncryptionKeyResponse.rotated_at:type_name -> google.protobuf.Timestamp
+	76,  // 49: organizations.v1.Invitation.role:type_name -> common.v1.OrganizationRole
+	77,  // 50: organizations.v1.Invitation.expires_at:type_name -> google.protobuf.Timestamp
+	77,  // 51: organizations.v1.Invitation.created_at:type_name -> google.protobuf.Timestamp
+	77,  // 52: organizations.v1.Invitation.accepted_at:type_name -> google.protobuf.Timestamp
+	77,  // 53: organizations.v1.Invitation.revoked_at:type_name -> google.protobuf.Timestamp
+	0,   // 54: organizations.v1.Invitation.status:type_name -> organizations.v1.InvitationStatus
+	76,  // 55: organizations.v1.InviteMemberRequest.role:type_name -> common.v1.OrganizationRole
+	54,  // 56: organizations.v1.InviteMemberResponse.invitation:type_name -> organizations.v1.Invitation
+	0,   // 57: organizations.v1.ListInvitationsRequest.status:type_name -> organizations.v1.InvitationStatus
+	54,  // 58: organizations.v1.ListInvitationsResponse.invitations:type_name -> organizations.v1.Invitation
+	54,  // 59: organizations.v1.RevokeInvitationResponse.invitation:type_name -> organizations.v1.Invitation
+	54,  // 60: organizations.v1.ResendInvitationResponse.invitation:type_name -> organizations.v1.Invitation
+	63,  // 61: organizations.v1.GetSecuritySettingsResponse.settings:type_name -> organizations.v1.SecuritySettings
+	63,  // 62: organizations.v1.UpdateSecuritySettingsResponse.settings:type_name -> organizations.v1.SecuritySettings
+	1,   // 63: organizations.v1.OnboardingState.current_step:type_name -> organizations.v1.OnboardingStep
+	68,  // 64: organizations.v1.GetOnboardingResponse.state:type_name -> organizations.v1.OnboardingState
+	1,   // 65: organizations.v1.RecordOnboardingStepRequest.step:type_name -> organizations.v1.OnboardingStep
+	68,  // 66: organizations.v1.RecordOnboardingStepResponse.state:type_name -> organizations.v1.OnboardingState
+	68,  // 67: organizations.v1.FinishOnboardingResponse.state:type_name -> organizations.v1.OnboardingState
+	2,   // 68: organizations.v1.OrganizationsService.ListMyOrganizations:input_type -> organizations.v1.ListMyOrganizationsRequest
+	20,  // 69: organizations.v1.OrganizationsService.ResolveContentOrganization:input_type -> organizations.v1.ResolveContentOrganizationRequest
+	5,   // 70: organizations.v1.OrganizationsService.CreateOrganization:input_type -> organizations.v1.CreateOrganizationRequest
+	69,  // 71: organizations.v1.OrganizationsService.GetOnboarding:input_type -> organizations.v1.GetOnboardingRequest
+	71,  // 72: organizations.v1.OrganizationsService.RecordOnboardingStep:input_type -> organizations.v1.RecordOnboardingStepRequest
+	73,  // 73: organizations.v1.OrganizationsService.FinishOnboarding:input_type -> organizations.v1.FinishOnboardingRequest
+	7,   // 74: organizations.v1.OrganizationsService.ListMyInvitations:input_type -> organizations.v1.ListMyInvitationsRequest
+	10,  // 75: organizations.v1.OrganizationsService.AcceptMyInvitation:input_type -> organizations.v1.AcceptMyInvitationRequest
+	12,  // 76: organizations.v1.OrganizationsService.DeclineMyInvitation:input_type -> organizations.v1.DeclineMyInvitationRequest
+	23,  // 77: organizations.v1.OrganizationsService.GetOrganization:input_type -> organizations.v1.GetOrganizationRequest
+	26,  // 78: organizations.v1.OrganizationsService.UpdateOrganization:input_type -> organizations.v1.UpdateOrganizationRequest
+	14,  // 79: organizations.v1.OrganizationsService.LeaveOrganization:input_type -> organizations.v1.LeaveOrganizationRequest
+	16,  // 80: organizations.v1.OrganizationsService.TransferOwnership:input_type -> organizations.v1.TransferOwnershipRequest
+	18,  // 81: organizations.v1.OrganizationsService.DeleteOrganization:input_type -> organizations.v1.DeleteOrganizationRequest
+	27,  // 82: organizations.v1.OrganizationsService.GetOrganizationOverview:input_type -> organizations.v1.GetOrganizationOverviewRequest
+	31,  // 83: organizations.v1.OrganizationsService.ListMembers:input_type -> organizations.v1.ListMembersRequest
+	33,  // 84: organizations.v1.OrganizationsService.AddMember:input_type -> organizations.v1.AddMemberRequest
+	35,  // 85: organizations.v1.OrganizationsService.UpdateMemberRole:input_type -> organizations.v1.UpdateMemberRoleRequest
+	37,  // 86: organizations.v1.OrganizationsService.RemoveMember:input_type -> organizations.v1.RemoveMemberRequest
+	55,  // 87: organizations.v1.OrganizationsService.InviteMember:input_type -> organizations.v1.InviteMemberRequest
+	57,  // 88: organizations.v1.OrganizationsService.ListInvitations:input_type -> organizations.v1.ListInvitationsRequest
+	59,  // 89: organizations.v1.OrganizationsService.RevokeInvitation:input_type -> organizations.v1.RevokeInvitationRequest
+	61,  // 90: organizations.v1.OrganizationsService.ResendInvitation:input_type -> organizations.v1.ResendInvitationRequest
+	64,  // 91: organizations.v1.OrganizationsService.GetSecuritySettings:input_type -> organizations.v1.GetSecuritySettingsRequest
+	66,  // 92: organizations.v1.OrganizationsService.UpdateSecuritySettings:input_type -> organizations.v1.UpdateSecuritySettingsRequest
+	39,  // 93: organizations.v1.OrganizationsService.GetPermissionDefaults:input_type -> organizations.v1.GetPermissionDefaultsRequest
+	42,  // 94: organizations.v1.OrganizationsService.UpdatePermissionDefaults:input_type -> organizations.v1.UpdatePermissionDefaultsRequest
+	44,  // 95: organizations.v1.OrganizationsService.GrantDomainAdmin:input_type -> organizations.v1.GrantDomainAdminRequest
+	46,  // 96: organizations.v1.OrganizationsService.RevokeDomainAdmin:input_type -> organizations.v1.RevokeDomainAdminRequest
+	48,  // 97: organizations.v1.OrganizationsService.ListDomainAdmins:input_type -> organizations.v1.ListDomainAdminsRequest
+	50,  // 98: organizations.v1.OrganizationsService.GetUserDomainAdmins:input_type -> organizations.v1.GetUserDomainAdminsRequest
+	52,  // 99: organizations.v1.OrganizationsService.RotateEncryptionKey:input_type -> organizations.v1.RotateEncryptionKeyRequest
+	3,   // 100: organizations.v1.OrganizationsService.ListMyOrganizations:output_type -> organizations.v1.ListMyOrganizationsResponse
+	21,  // 101: organizations.v1.OrganizationsService.ResolveContentOrganization:output_type -> organizations.v1.ResolveContentOrganizationResponse
+	6,   // 102: organizations.v1.OrganizationsService.CreateOrganization:output_type -> organizations.v1.CreateOrganizationResponse
+	70,  // 103: organizations.v1.OrganizationsService.GetOnboarding:output_type -> organizations.v1.GetOnboardingResponse
+	72,  // 104: organizations.v1.OrganizationsService.RecordOnboardingStep:output_type -> organizations.v1.RecordOnboardingStepResponse
+	74,  // 105: organizations.v1.OrganizationsService.FinishOnboarding:output_type -> organizations.v1.FinishOnboardingResponse
+	8,   // 106: organizations.v1.OrganizationsService.ListMyInvitations:output_type -> organizations.v1.ListMyInvitationsResponse
+	11,  // 107: organizations.v1.OrganizationsService.AcceptMyInvitation:output_type -> organizations.v1.AcceptMyInvitationResponse
+	13,  // 108: organizations.v1.OrganizationsService.DeclineMyInvitation:output_type -> organizations.v1.DeclineMyInvitationResponse
+	24,  // 109: organizations.v1.OrganizationsService.GetOrganization:output_type -> organizations.v1.GetOrganizationResponse
+	25,  // 110: organizations.v1.OrganizationsService.UpdateOrganization:output_type -> organizations.v1.UpdateOrganizationResponse
+	15,  // 111: organizations.v1.OrganizationsService.LeaveOrganization:output_type -> organizations.v1.LeaveOrganizationResponse
+	17,  // 112: organizations.v1.OrganizationsService.TransferOwnership:output_type -> organizations.v1.TransferOwnershipResponse
+	19,  // 113: organizations.v1.OrganizationsService.DeleteOrganization:output_type -> organizations.v1.DeleteOrganizationResponse
+	28,  // 114: organizations.v1.OrganizationsService.GetOrganizationOverview:output_type -> organizations.v1.GetOrganizationOverviewResponse
+	32,  // 115: organizations.v1.OrganizationsService.ListMembers:output_type -> organizations.v1.ListMembersResponse
+	34,  // 116: organizations.v1.OrganizationsService.AddMember:output_type -> organizations.v1.AddMemberResponse
+	36,  // 117: organizations.v1.OrganizationsService.UpdateMemberRole:output_type -> organizations.v1.UpdateMemberRoleResponse
+	38,  // 118: organizations.v1.OrganizationsService.RemoveMember:output_type -> organizations.v1.RemoveMemberResponse
+	56,  // 119: organizations.v1.OrganizationsService.InviteMember:output_type -> organizations.v1.InviteMemberResponse
+	58,  // 120: organizations.v1.OrganizationsService.ListInvitations:output_type -> organizations.v1.ListInvitationsResponse
+	60,  // 121: organizations.v1.OrganizationsService.RevokeInvitation:output_type -> organizations.v1.RevokeInvitationResponse
+	62,  // 122: organizations.v1.OrganizationsService.ResendInvitation:output_type -> organizations.v1.ResendInvitationResponse
+	65,  // 123: organizations.v1.OrganizationsService.GetSecuritySettings:output_type -> organizations.v1.GetSecuritySettingsResponse
+	67,  // 124: organizations.v1.OrganizationsService.UpdateSecuritySettings:output_type -> organizations.v1.UpdateSecuritySettingsResponse
+	40,  // 125: organizations.v1.OrganizationsService.GetPermissionDefaults:output_type -> organizations.v1.GetPermissionDefaultsResponse
+	41,  // 126: organizations.v1.OrganizationsService.UpdatePermissionDefaults:output_type -> organizations.v1.UpdatePermissionDefaultsResponse
+	45,  // 127: organizations.v1.OrganizationsService.GrantDomainAdmin:output_type -> organizations.v1.GrantDomainAdminResponse
+	47,  // 128: organizations.v1.OrganizationsService.RevokeDomainAdmin:output_type -> organizations.v1.RevokeDomainAdminResponse
+	49,  // 129: organizations.v1.OrganizationsService.ListDomainAdmins:output_type -> organizations.v1.ListDomainAdminsResponse
+	51,  // 130: organizations.v1.OrganizationsService.GetUserDomainAdmins:output_type -> organizations.v1.GetUserDomainAdminsResponse
+	53,  // 131: organizations.v1.OrganizationsService.RotateEncryptionKey:output_type -> organizations.v1.RotateEncryptionKeyResponse
+	100, // [100:132] is the sub-list for method output_type
+	68,  // [68:100] is the sub-list for method input_type
+	68,  // [68:68] is the sub-list for extension type_name
+	68,  // [68:68] is the sub-list for extension extendee
+	0,   // [0:68] is the sub-list for field type_name
 }
 
 func init() { file_organizations_v1_organizations_proto_init() }
@@ -4091,8 +4542,8 @@ func file_organizations_v1_organizations_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_organizations_v1_organizations_proto_rawDesc), len(file_organizations_v1_organizations_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   66,
+			NumEnums:      2,
+			NumMessages:   73,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

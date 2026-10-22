@@ -20,6 +20,13 @@ service OrganizationsService {
   // admits the caller; the caller becomes OWNER. Rate limited per user and IP.
   rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
 
+  // First-run entry flow for the user who created the organization. Pending
+  // only while that user is still its active OWNER and has neither finished
+  // nor skipped it. Record and Finish are no-ops once the flow is over.
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse);
+  rpc RecordOnboardingStep(RecordOnboardingStepRequest) returns (RecordOnboardingStepResponse);
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse);
+
   // Invitations addressed to the caller's email, and the signed-in way to act on them.
   rpc ListMyInvitations(ListMyInvitationsRequest) returns (ListMyInvitationsResponse);
   rpc AcceptMyInvitation(AcceptMyInvitationRequest) returns (AcceptMyInvitationResponse);
@@ -439,4 +446,50 @@ message UpdateSecuritySettingsRequest {
 
 message UpdateSecuritySettingsResponse {
   SecuritySettings settings = 1;
+}
+
+enum OnboardingStep {
+  ONBOARDING_STEP_UNSPECIFIED = 0;
+  ONBOARDING_STEP_WELCOME = 1;
+  ONBOARDING_STEP_MENTIONS = 2;
+  ONBOARDING_STEP_SHARING = 3;
+  ONBOARDING_STEP_APPEARANCE = 4;
+  ONBOARDING_STEP_AGENTS = 5;
+  ONBOARDING_STEP_TEAM = 6;
+  ONBOARDING_STEP_LAUNCH = 7;
+  ONBOARDING_STEP_MENTION_DISPLAY = 8;
+}
+
+message OnboardingState {
+  // True while the caller still has the entry flow to go through here.
+  bool pending = 1;
+  // The step the caller last reached, so a reload resumes there.
+  OnboardingStep current_step = 2;
+}
+
+message GetOnboardingRequest {
+  string organization_id = 1;
+}
+
+message GetOnboardingResponse {
+  OnboardingState state = 1;
+}
+
+message RecordOnboardingStepRequest {
+  string organization_id = 1;
+  OnboardingStep step = 2;
+}
+
+message RecordOnboardingStepResponse {
+  OnboardingState state = 1;
+}
+
+message FinishOnboardingRequest {
+  string organization_id = 1;
+  // True when the owner skipped the rest of the flow instead of finishing it.
+  bool dismissed = 2;
+}
+
+message FinishOnboardingResponse {
+  OnboardingState state = 1;
 }

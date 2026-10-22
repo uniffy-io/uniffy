@@ -239,6 +239,7 @@ class TestSetupDeployment:
             plan="enterprise",
             actor_user_id=user.id,
             owner_source=OrganizationMemberSource.BOOTSTRAP,
+            begin_onboarding=True,
         )
 
     async def test_commits_the_audit_row_with_the_organization_then_finishes(

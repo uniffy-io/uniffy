@@ -66,6 +66,7 @@ async def create_organization_for_user(
             actor_user_id=user_id,
             search_indexer=search_indexer,
             owner_source=OrganizationMemberSource.CREATED,
+            begin_onboarding=True,
         )
     except IntegrityError as exc:
         await session.rollback()
