@@ -14,6 +14,7 @@ import type { WidgetPreference, WidgetId } from "@/features/dashboard/hooks/useD
 const WIDGET_LABELS: Record<WidgetId, string> = {
   "today-agenda": "Today's Agenda",
   "my-tasks": "My Tasks",
+  "my-time": "My Time",
   "recent-activity": "Recent Activity",
   "quick-actions": "Quick Actions",
   "team-presence": "Team Online",

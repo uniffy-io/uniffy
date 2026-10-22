@@ -7,6 +7,7 @@ import {
   fetchActiveTimer,
   fetchTaskWorklogs,
   fetchTimePolicy,
+  fetchUserWorklogs,
   pauseTimer,
   resumeTimer,
   startTimer,
@@ -23,6 +24,9 @@ export interface TimeState {
   activeTimer: Timer | null;
   timerLoaded: boolean;
   timerBusy: boolean;
+  /** The person's own entries per inclusive day range, keyed "from:to". */
+  weeks: Record<string, Worklog[]>;
+  weekLoading: Record<string, boolean>;
 }
 
 export const initialTimeState: TimeState = {
@@ -33,7 +37,25 @@ export const initialTimeState: TimeState = {
   activeTimer: null,
   timerLoaded: false,
   timerBusy: false,
+  weeks: {},
+  weekLoading: {},
 };
+
+/** Every loaded range that covers the entry's day gets it; a range it left drops it. */
+function placeInWeeks(state: TimeState, worklog: Worklog): void {
+  for (const [key, entries] of Object.entries(state.weeks)) {
+    const [from, to] = key.split(":");
+    const inside = worklog.workDate >= from && worklog.workDate <= to;
+    const rest = entries.filter((entry) => entry.id !== worklog.id);
+    state.weeks[key] = inside ? sortEntries([worklog, ...rest]) : rest;
+  }
+}
+
+function dropFromWeeks(state: TimeState, worklogId: string): void {
+  for (const [key, entries] of Object.entries(state.weeks)) {
+    state.weeks[key] = entries.filter((entry) => entry.id !== worklogId);
+  }
+}
 
 function prependEntry(state: TimeState, worklog: Worklog): void {
   const current = state.worklogsByTask[worklog.taskId];
@@ -70,6 +92,8 @@ export const timeSlice = createSlice({
         const { worklog } = action.payload;
         const current = state.worklogsByTask[worklog.taskId] ?? [];
         state.worklogsByTask[worklog.taskId] = sortEntries([worklog, ...current]);
+        // An entry logged for someone else is theirs, not part of this person's week.
+        if (!action.meta.arg.userId) placeInWeeks(state, worklog);
       })
       .addCase(createWorklog.rejected, (state) => {
         state.saving = false;
@@ -84,6 +108,11 @@ export const timeSlice = createSlice({
         state.worklogsByTask[worklog.taskId] = sortEntries(
           current.map((entry) => (entry.id === worklog.id ? worklog : entry)),
         );
+        if (
+          Object.values(state.weeks).some((entries) => entries.some((e) => e.id === worklog.id))
+        ) {
+          placeInWeeks(state, worklog);
+        }
       })
       .addCase(updateWorklog.rejected, (state) => {
         state.saving = false;
@@ -94,6 +123,7 @@ export const timeSlice = createSlice({
         if (current) {
           state.worklogsByTask[taskId] = current.filter((entry) => entry.id !== worklogId);
         }
+        dropFromWeeks(state, worklogId);
       })
       .addCase(fetchTimePolicy.fulfilled, (state, action) => {
         state.policy = action.payload;
@@ -109,7 +139,10 @@ export const timeSlice = createSlice({
         state.timerBusy = false;
         state.activeTimer = action.payload.timer;
         state.timerLoaded = true;
-        if (action.payload.stoppedWorklog) prependEntry(state, action.payload.stoppedWorklog);
+        if (action.payload.stoppedWorklog) {
+          prependEntry(state, action.payload.stoppedWorklog);
+          placeInWeeks(state, action.payload.stoppedWorklog);
+        }
       })
       .addCase(startTimer.rejected, (state) => {
         state.timerBusy = false;
@@ -140,10 +173,25 @@ export const timeSlice = createSlice({
       .addCase(stopTimer.fulfilled, (state, action) => {
         state.timerBusy = false;
         state.activeTimer = null;
-        if (action.payload.worklog) prependEntry(state, action.payload.worklog);
+        if (action.payload.worklog) {
+          prependEntry(state, action.payload.worklog);
+          placeInWeeks(state, action.payload.worklog);
+        }
       })
       .addCase(stopTimer.rejected, (state) => {
         state.timerBusy = false;
+      })
+      .addCase(fetchUserWorklogs.pending, (state, action) => {
+        const { from, to } = action.meta.arg;
+        state.weekLoading[`${from}:${to}`] = true;
+      })
+      .addCase(fetchUserWorklogs.fulfilled, (state, action) => {
+        state.weekLoading[action.payload.key] = false;
+        state.weeks[action.payload.key] = sortEntries(action.payload.worklogs);
+      })
+      .addCase(fetchUserWorklogs.rejected, (state, action) => {
+        const { from, to } = action.meta.arg;
+        state.weekLoading[`${from}:${to}`] = false;
       });
   },
 });
@@ -163,6 +211,12 @@ export const selectWorklogsLoading = (taskId: string) => (state: RootState) =>
 export const selectTimePolicy = (state: RootState) => state.time.policy;
 
 export const selectTimeSaving = (state: RootState) => state.time.saving;
+
+export const selectWeekWorklogs = (key: string) =>
+  createSelector([selectTimeState], (state) => state.weeks[key] ?? EMPTY);
+
+export const selectWeekLoading = (key: string) => (state: RootState) =>
+  state.time.weekLoading[key] ?? false;
 
 export const selectActiveTimer = (state: RootState) => state.time.activeTimer;
 

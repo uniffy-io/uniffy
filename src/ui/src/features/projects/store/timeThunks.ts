@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch, RootState } from "@/app/store";
 import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import { timeApi } from "../api/timeApi";
+import { weekRangeKey } from "../utils/timeWeek";
 import type {
   CreateWorklogInput,
   StartTimerInput,
@@ -180,5 +181,21 @@ export const stopTimer = createAsyncThunk<
     return { taskId, ...result };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to stop the timer"));
+  }
+});
+
+/** The signed-in person's own entries over an inclusive day range, kept under the range key. */
+export const fetchUserWorklogs = createAsyncThunk<
+  { key: string; worklogs: Worklog[] },
+  { from: string; to: string },
+  ThunkConfig
+>("time/fetchUserWorklogs", async ({ from, to }, { getState, rejectWithValue }) => {
+  const orgId = organizationIdOf(getState());
+  if (!orgId) return rejectWithValue("No organization selected");
+  try {
+    const worklogs = await timeApi.listUserWorklogs(orgId, from, to);
+    return { key: weekRangeKey(from, to), worklogs };
+  } catch (error) {
+    return rejectWithValue(messageOf(error, "Failed to load your time"));
   }
 });

@@ -6,6 +6,7 @@ import {
   deleteWorklog,
   fetchActiveTimer,
   fetchTaskWorklogs,
+  fetchUserWorklogs,
   pauseTimer,
   startTimer,
   stopTimer,
@@ -200,5 +201,72 @@ describe("timeSlice timers", () => {
     );
     expect(state.activeTimer).toBeNull();
     expect(state.worklogsByTask).toEqual({});
+  });
+});
+
+describe("timeSlice weeks", () => {
+  const range = { from: "2026-10-19", to: "2026-10-25" };
+  const key = "2026-10-19:2026-10-25";
+
+  it("keeps a fetched range and files later writes into it by day", () => {
+    let state = timeReducer(initialTimeState, fetchUserWorklogs.pending("req", range));
+    expect(state.weekLoading[key]).toBe(true);
+    state = timeReducer(
+      state,
+      fetchUserWorklogs.fulfilled(
+        { key, worklogs: [entry("a", { workDate: "2026-10-20" })] },
+        "req",
+        range,
+      ),
+    );
+    expect(state.weekLoading[key]).toBe(false);
+
+    state = timeReducer(
+      state,
+      createWorklog.fulfilled(
+        { worklog: entry("b", { workDate: "2026-10-22" }), taskTimeSpentMinutes: 60 },
+        "req",
+        { taskId: "task-1", workDate: "2026-10-22", durationMinutes: 30 },
+      ),
+    );
+    expect(state.weeks[key].map((w) => w.id)).toEqual(["b", "a"]);
+
+    // Logged for someone else: their entry, not this person's week.
+    state = timeReducer(
+      state,
+      createWorklog.fulfilled(
+        {
+          worklog: entry("theirs", { workDate: "2026-10-22", userId: "other" }),
+          taskTimeSpentMinutes: 90,
+        },
+        "req",
+        { taskId: "task-1", workDate: "2026-10-22", durationMinutes: 30, userId: "other" },
+      ),
+    );
+    expect(state.weeks[key].map((w) => w.id)).toEqual(["b", "a"]);
+
+    // Moved out of the range: it leaves the week.
+    state = timeReducer(
+      state,
+      updateWorklog.fulfilled(
+        { worklog: entry("b", { workDate: "2026-11-02" }), taskTimeSpentMinutes: 60 },
+        "req",
+        { id: "b", taskId: "task-1", workDate: "2026-11-02" },
+      ),
+    );
+    expect(state.weeks[key].map((w) => w.id)).toEqual(["a"]);
+
+    state = timeReducer(
+      state,
+      deleteWorklog.fulfilled(
+        { taskId: "task-1", worklogId: "a", taskTimeSpentMinutes: 0 },
+        "req",
+        {
+          worklogId: "a",
+          taskId: "task-1",
+        },
+      ),
+    );
+    expect(state.weeks[key]).toEqual([]);
   });
 });

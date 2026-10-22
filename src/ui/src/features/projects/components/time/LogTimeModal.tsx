@@ -23,17 +23,27 @@ interface LogTimeModalProps {
   worklog?: Worklog;
   /** Stopping this timer: the rounded elapsed time is prefilled and Discard drops it. */
   timer?: Timer;
+  /** The day a new entry starts on; today in the person's zone when absent. */
+  workDate?: string;
   onClose: () => void;
 }
 
-export function LogTimeModal({ task, worklog, timer, onClose }: LogTimeModalProps) {
+export function LogTimeModal({
+  task,
+  worklog,
+  timer,
+  workDate: initialWorkDate,
+  onClose,
+}: LogTimeModalProps) {
   const dispatch = useAppDispatch();
   const policy = useAppSelector(selectTimePolicy);
   const savingEntry = useAppSelector(selectTimeSaving);
   const timerBusy = useAppSelector(selectTimerBusy);
   const saving = savingEntry || timerBusy;
   // The day is the person's own calendar day; the server never derives it from an instant.
-  const [workDate, setWorkDate] = useState(worklog?.workDate ?? effectiveDayKey(new Date()));
+  const [workDate, setWorkDate] = useState(
+    worklog?.workDate ?? initialWorkDate ?? effectiveDayKey(new Date()),
+  );
   const [minutes, setMinutes] = useState<number | null>(() => {
     if (timer) {
       const rounding = policy?.timerRoundingMinutes ?? 1;

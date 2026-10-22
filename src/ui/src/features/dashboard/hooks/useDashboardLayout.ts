@@ -4,6 +4,7 @@ import { useAppSelector } from "@/app/hooks";
 export type WidgetId =
   | "today-agenda"
   | "my-tasks"
+  | "my-time"
   | "recent-activity"
   | "quick-actions"
   | "team-presence"
@@ -26,6 +27,7 @@ export interface WidgetPreference {
 const DEFAULT_LAYOUT: WidgetPreference[] = [
   { id: "today-agenda", visible: true, size: "expanded" },
   { id: "my-tasks", visible: true, size: "expanded" },
+  { id: "my-time", visible: true, size: "compact" },
   { id: "recent-activity", visible: true, size: "expanded" },
   { id: "quick-actions", visible: true, size: "expanded" },
   { id: "team-presence", visible: true, size: "compact" },
@@ -50,7 +52,11 @@ function loadPreferences(userId: string): WidgetPreference[] | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return null;
-    return parsed;
+    // A widget added after the layout was saved joins at its default spot; retired ids drop.
+    const known = new Set(DEFAULT_LAYOUT.map((widget) => widget.id));
+    const stored = (parsed as WidgetPreference[]).filter((widget) => known.has(widget.id));
+    const present = new Set(stored.map((widget) => widget.id));
+    return [...stored, ...DEFAULT_LAYOUT.filter((widget) => !present.has(widget.id))];
   } catch {
     return null;
   }
