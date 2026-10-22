@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { friendlyErrorMessage } from "@/config/errorMessages";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
+import { ONBOARDING_PATH } from "@/features/onboarding/hooks/useOnboardingRedirect";
 import { createOrganization } from "@/features/auth/store/organizationsThunks";
 import { fieldErrorFor, MAX_ORGANIZATION_NAME_LENGTH } from "@/features/auth/utils/fieldErrors";
 import { MAX_SLUG_LENGTH, MIN_SLUG_LENGTH, toSlug, toSlugDraft } from "@/shared/utils/slug";
@@ -56,10 +57,10 @@ export function CreateOrganizationDialog({ onClose }: CreateOrganizationDialogPr
     setSubmitting(true);
     setErrors({});
     try {
-      const created = await dispatch(createOrganization({ name: name.trim(), slug }));
-      toast.success(`Welcome to ${created.name}`);
+      await dispatch(createOrganization({ name: name.trim(), slug }));
       onClose();
-      navigate("/", { replace: true });
+      // The entry flow greets the new owner; it hands off to the dashboard when not pending.
+      navigate(ONBOARDING_PATH, { replace: true });
     } catch (error) {
       setSubmitting(false);
       // The organization exists and is listed; only the switch into it failed, and it toasted.
@@ -140,20 +141,16 @@ export function CreateOrganizationDialog({ onClose }: CreateOrganizationDialogPr
                 className="font-mono"
                 disabled={busy}
                 aria-invalid={errors.slug ? "true" : undefined}
-                aria-describedby={errors.slug ? "create-org-slug-error" : "create-org-slug-hint"}
+                aria-describedby={errors.slug ? "create-org-slug-error" : undefined}
                 data-testid="create-organization-slug"
               />
-              {errors.slug ? (
+              {errors.slug && (
                 <p
                   id="create-org-slug-error"
                   className="text-xs text-destructive mt-1"
                   role="alert"
                 >
                   {errors.slug}
-                </p>
-              ) : (
-                <p id="create-org-slug-hint" className="text-xs text-subtle-foreground mt-1">
-                  Unique across the deployment. Lowercase letters, digits and hyphens.
                 </p>
               )}
             </div>

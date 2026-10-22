@@ -53,6 +53,7 @@ import {
   loadNotesPage,
   loadProjectsPage,
 } from "@/app/mainRouteLoaders";
+import { LaunchCurtain } from "@/components/orbit/launch/LaunchCurtain";
 
 // Expose toast on window in dev mode for testing
 if (import.meta.env.DEV) {
@@ -64,6 +65,10 @@ if (import.meta.env.DEV) {
 const AuthForms = lazyImport(() => import("@/features/auth/components/AuthForms"), "AuthForms");
 const WelcomePage = lazyImport(() => import("@/features/auth/pages/WelcomePage"), "WelcomePage");
 const SetupPage = lazyImport(() => import("@/features/auth/pages/SetupPage"), "SetupPage");
+const OnboardingPage = lazyImport(
+  () => import("@/features/onboarding/pages/OnboardingPage"),
+  "OnboardingPage",
+);
 const AcceptInvitePage = lazyImport(
   () => import("@/features/auth/pages/AcceptInvitePage"),
   "AcceptInvitePage",
@@ -423,6 +428,8 @@ export function App() {
           <StreamingProvider />
           {/* Global toast notifications */}
           <ThemedToaster />
+          {/* Onboarding hand-off: the portal from the entry flow into the app outlives the route change. */}
+          <LaunchCurtain />
           {/* Global upload engine boot (mirror + reload recovery) and the floating transfers tray.
                         Mounted outside Routes so uploads survive navigation across every domain. */}
           <UploadBoot />
@@ -513,6 +520,17 @@ export function App() {
                   />
 
                   <Route path="/select-org" element={<Navigate to="/welcome" replace />} />
+
+                  <Route
+                    path="/onboarding"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <OnboardingPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
 
                   <Route
                     path="/setup"

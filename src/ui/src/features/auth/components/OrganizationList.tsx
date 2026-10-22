@@ -1,7 +1,7 @@
-import { Check, CircleNotch } from "@phosphor-icons/react";
+import { ArrowRight, Check, CircleNotch } from "@phosphor-icons/react";
 import { getAvatarGradientStyle, getInitials } from "@/components/subject/utils";
 import type { OrganizationSummary } from "@/features/auth/store/organizationsSlice";
-import { getRoleBadgeClasses, getRoleLabel } from "@/features/auth/utils/organizationRoles";
+import { getRoleLabel } from "@/features/auth/utils/organizationRoles";
 import { cn } from "@/shared/utils/cn";
 
 interface OrganizationAvatarProps {
@@ -39,6 +39,9 @@ interface OrganizationListProps {
   /** Holds every row, as a switch in flight does, while other work is about to switch the tab. */
   disabled?: boolean;
   onSelect: (slug: string) => void;
+  /** Hover and focus report the row in view, so a page can light it up elsewhere. */
+  onHighlight?: (slug: string | null) => void;
+  /** Menu rows for app chrome; without it the rows are the welcome page's brand tiles. */
   compact?: boolean;
 }
 
@@ -48,9 +51,29 @@ export function OrganizationList({
   switchingSlug,
   disabled = false,
   onSelect,
+  onHighlight,
   compact = false,
 }: OrganizationListProps) {
   const isBusy = switchingSlug !== null || disabled;
+
+  if (!compact) {
+    return (
+      <ul className="flex flex-col gap-2">
+        {organizations.map((organization) => (
+          <li key={organization.id}>
+            <OrganizationTile
+              organization={organization}
+              isCurrent={organization.id === currentOrganizationId}
+              isSwitching={organization.slug === switchingSlug}
+              isBusy={isBusy}
+              onSelect={onSelect}
+              onHighlight={onHighlight}
+            />
+          </li>
+        ))}
+      </ul>
+    );
+  }
 
   return (
     <ul className="flex flex-col gap-0.5">
@@ -87,40 +110,17 @@ export function OrganizationList({
               <OrganizationAvatar
                 name={organization.name}
                 suspended={isSuspended}
-                className={
-                  compact ? "h-6 w-6 rounded-md text-[10px]" : "h-8 w-8 rounded-lg text-xs"
-                }
+                className="h-6 w-6 rounded-md text-[10px]"
               />
 
-              {compact ? (
-                <>
-                  <span className={cn("flex-1 min-w-0 truncate", isCurrent && "font-medium")}>
-                    {organization.name}
-                  </span>
-                  {isSuspended ? (
-                    <SuspendedBadge />
-                  ) : (
-                    <span className="shrink-0 text-[10px] font-medium text-subtle-foreground">
-                      {getRoleLabel(organization.role)}
-                    </span>
-                  )}
-                </>
+              <span className={cn("flex-1 min-w-0 truncate", isCurrent && "font-medium")}>
+                {organization.name}
+              </span>
+              {isSuspended ? (
+                <SuspendedBadge />
               ) : (
-                <span className="flex-1 min-w-0">
-                  <span className={cn("block truncate", isCurrent && "font-medium")}>
-                    {organization.name}
-                  </span>
-                  <span className="mt-0.5 flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "inline-flex items-center rounded-full px-1.5 py-px text-[10px] font-semibold",
-                        getRoleBadgeClasses(organization.role),
-                      )}
-                    >
-                      {getRoleLabel(organization.role)}
-                    </span>
-                    {isSuspended && <SuspendedBadge />}
-                  </span>
+                <span className="shrink-0 text-[10px] font-medium text-subtle-foreground">
+                  {getRoleLabel(organization.role)}
                 </span>
               )}
 
@@ -149,5 +149,95 @@ function SuspendedBadge() {
     <span className="inline-flex shrink-0 items-center rounded-full border border-border px-1.5 py-px text-[10px] font-semibold text-muted-foreground">
       Suspended
     </span>
+  );
+}
+
+interface OrganizationTileProps {
+  organization: OrganizationSummary;
+  isCurrent: boolean;
+  isSwitching: boolean;
+  isBusy: boolean;
+  onSelect: (slug: string) => void;
+  onHighlight?: (slug: string | null) => void;
+}
+
+/** A welcome page row: a raised surface tile that lifts its edge on hover and wears the accent when current. */
+function OrganizationTile({
+  organization,
+  isCurrent,
+  isSwitching,
+  isBusy,
+  onSelect,
+  onHighlight,
+}: OrganizationTileProps) {
+  const isSuspended = organization.suspended;
+  const highlight = isSuspended ? undefined : () => onHighlight?.(organization.slug);
+  const clear = isSuspended ? undefined : () => onHighlight?.(null);
+  return (
+    <button
+      type="button"
+      title={organization.name}
+      aria-current={isCurrent ? "true" : undefined}
+      aria-disabled={isSuspended ? "true" : undefined}
+      aria-busy={isSwitching ? "true" : undefined}
+      disabled={!isSuspended && isBusy}
+      onClick={isSuspended ? undefined : () => onSelect(organization.slug)}
+      onPointerEnter={highlight}
+      onPointerLeave={clear}
+      onFocus={highlight}
+      onBlur={clear}
+      className={cn(
+        "focus-ring group flex w-full min-h-14 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-shadow duration-150",
+        isCurrent ? "bg-primary/5 shadow-edge-primary" : "bg-surface shadow-edge",
+        !isSuspended && !isCurrent && "hover:shadow-edge-strong",
+        isSuspended && "cursor-not-allowed",
+        isBusy && !isSwitching && "opacity-60",
+      )}
+    >
+      <OrganizationAvatar
+        name={organization.name}
+        suspended={isSuspended}
+        className="h-9 w-9 rounded-lg text-xs"
+      />
+      <span className="min-w-0 flex-1">
+        <span
+          className={cn(
+            "block truncate text-sm font-medium",
+            isSuspended ? "text-muted-foreground" : "text-foreground",
+          )}
+        >
+          {organization.name}
+        </span>
+        <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="truncate">@{organization.slug}</span>
+          <span className="text-subtle-foreground" aria-hidden="true">
+            &middot;
+          </span>
+          <span className="shrink-0">{getRoleLabel(organization.role)}</span>
+          {isSuspended && <SuspendedBadge />}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center">
+        {isSwitching ? (
+          <CircleNotch
+            size={16}
+            weight="bold"
+            className="animate-spin text-primary"
+            aria-hidden="true"
+          />
+        ) : isCurrent ? (
+          <span className="flex items-center gap-1 text-xs font-medium text-primary">
+            <Check size={12} weight="bold" aria-hidden="true" />
+            Current
+          </span>
+        ) : isSuspended ? null : (
+          <ArrowRight
+            size={16}
+            className="-translate-x-1 text-subtle-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+            aria-hidden="true"
+          />
+        )}
+      </span>
+    </button>
   );
 }

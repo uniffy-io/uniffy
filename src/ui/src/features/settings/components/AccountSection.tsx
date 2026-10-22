@@ -1,7 +1,5 @@
-import { useCallback } from "react";
-import { useAppSelector, useAppDispatch } from "@/app/hooks";
-import { updateUser } from "@/features/auth/store/authSlice";
-import { usersApi } from "@/features/settings/api/usersApi";
+import { useAppSelector } from "@/app/hooks";
+import { useAvatarActions } from "@/features/settings/hooks/useAvatarActions";
 import { getInitials } from "@/components/subject/utils";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { Card } from "@/components/ui/card";
@@ -9,24 +7,8 @@ import { avatarUrlAtVariant } from "@/shared/utils/fileUrls";
 import { ProfileFieldsSection } from "@/features/settings/components/ProfileFieldsSection";
 
 export function AccountSection() {
-  const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
-
-  const handleUpload = useCallback(
-    async (file: File) => {
-      const buffer = await file.arrayBuffer();
-      const imageData = new Uint8Array(buffer);
-      const profile = await usersApi.uploadAvatar(imageData, file.name);
-      // hasAvatar gates every avatar consumer; flip it locally so they stop rendering initials before the next GetCurrentUser.
-      dispatch(updateUser({ avatarUrl: profile.avatarUrl, hasAvatar: true }));
-    },
-    [dispatch],
-  );
-
-  const handleDelete = useCallback(async () => {
-    await usersApi.deleteAvatar();
-    dispatch(updateUser({ avatarUrl: "", hasAvatar: false }));
-  }, [dispatch]);
+  const { uploadAvatar, deleteAvatar } = useAvatarActions();
 
   if (!user) {
     return (
@@ -56,8 +38,8 @@ export function AccountSection() {
           <AvatarUpload
             imageUrl={user.avatarUrl ? avatarUrlAtVariant(user.avatarUrl, "lg") : undefined}
             fallback={displayInitials}
-            onUpload={handleUpload}
-            onDelete={handleDelete}
+            onUpload={uploadAvatar}
+            onDelete={deleteAvatar}
           />
         </Card>
       </section>

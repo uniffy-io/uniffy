@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Buildings,
   CircleNotch,
-  PlusCircle,
+  Plus,
   ShieldWarning,
   SignOut,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { preloadDashboard } from "@/app/mainRouteLoaders";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { enterThroughPortal } from "@/components/orbit/launch/launchCurtain";
+import { OrbitPage } from "@/components/orbit/OrbitPage";
+import { stagger } from "@/components/orbit/stagger";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { UniffyLogo } from "@/components/ui/uniffy-logo";
 import { CreateOrganizationDialog } from "@/features/auth/components/CreateOrganizationDialog";
@@ -30,12 +33,10 @@ import {
   fetchMyOrganizations,
   refreshMyOrganizationsQuietly,
 } from "@/features/auth/store/organizationsThunks";
+import { buildWelcomeScene } from "@/features/auth/welcomeScene";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useRefreshOnReturn } from "@/shared/hooks/useRefreshOnReturn";
-
-function slideUp(delaySeconds: number, durationSeconds = 0.5) {
-  return { animation: `welcome-slide-up ${durationSeconds}s ease-out ${delaySeconds}s forwards` };
-}
+import { cn } from "@/shared/utils/cn";
 
 export function WelcomePage() {
   useDocumentTitle("Welcome");
@@ -54,6 +55,9 @@ export function WelcomePage() {
   const { requestSwitch, confirmDialog } = useSwitchOrganization();
   const [confirmingUnsynced, setConfirmingUnsynced] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const [launching, setLaunching] = useState(false);
+  const orbitRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isAuthenticated) void dispatch(fetchMyOrganizations());
@@ -64,6 +68,17 @@ export function WelcomePage() {
   );
   useRefreshOnReturn(reloadOrganizations, isAuthenticated);
 
+  const scene = useMemo(
+    () =>
+      buildWelcomeScene({
+        organizations,
+        currentOrganizationId: currentOrganizationId ?? null,
+        highlighted,
+        launching,
+      }),
+    [organizations, currentOrganizationId, highlighted, launching],
+  );
+
   if (!isAuthenticated) return <Navigate to="/auth" replace />;
 
   const hasOrganizations = organizations.length > 0;
@@ -71,19 +86,34 @@ export function WelcomePage() {
   const isLoading = !hasOrganizations && settled === null;
   const loadFailed = !hasOrganizations && settled === "error";
   // An accept switches this tab too, so no other switch starts while an invitation action runs.
-  const busy = switchingSlug !== null || invitationActingId !== null;
+  const busy = switchingSlug !== null || invitationActingId !== null || launching;
   const firstName = user?.fullName?.trim().split(/\s+/)[0];
-  const greetingName = firstName || user?.email || "";
+  const greetingName = firstName || user?.email?.split("@")[0] || "";
+
+  // The tab is already in the organization when this runs; the portal opens on the way in.
+  const stepInto = (slug: string) => {
+    preloadDashboard();
+    void requestSwitch(slug, undefined, async () => {
+      setLaunching(true);
+      await enterThroughPortal(orbitRef.current);
+    });
+  };
+
+  const lede = hasOrganizations
+    ? null
+    : isLoading || loadFailed
+      ? "One moment while we find your workspaces."
+      : canCreateOrganization
+        ? "You are not in an organization yet. Start one, or wait here for an invitation."
+        : "You are not in an organization yet. Ask an admin to invite this email address.";
+
+  const title = stagger(0);
+  const ledeEnter = stagger(1);
+  const body = stagger(2);
+  const footer = stagger(5);
 
   return (
     <>
-      <style>{`
-        @keyframes welcome-slide-up {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
       {confirmDialog}
 
       <ConfirmDialog
@@ -102,161 +132,158 @@ export function WelcomePage() {
 
       {creating && <CreateOrganizationDialog onClose={() => setCreating(false)} />}
 
-      <div className="flex min-h-dvh items-center justify-center px-6 py-12 bg-background">
-        <div className="w-full max-w-md">
-          <div
-            className="flex items-center justify-between gap-3 mb-8 opacity-0"
-            style={slideUp(0.1)}
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <UniffyLogo className="w-14 h-14 shrink-0" />
-              <div className="min-w-0">
-                <h1 className="text-lg font-bold tracking-tight text-foreground truncate">
-                  Welcome, {greetingName}
-                </h1>
-                <p className="text-xs text-muted-foreground">
-                  {hasOrganizations
-                    ? "Pick an organization to continue."
-                    : isLoading || loadFailed
-                      ? user?.email
-                      : "You are not in an organization yet."}
-                </p>
-              </div>
+      <OrbitPage
+        scene={scene}
+        orbitRef={orbitRef}
+        orbitCaption={hasOrganizations ? "Your organizations" : undefined}
+        launching={launching}
+        header={
+          <>
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <UniffyLogo className="h-6 w-6" />
+              <span className="text-sm font-semibold text-foreground">Uniffy</span>
             </div>
+            {user?.isSystemAdmin && (
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => navigate("/platform")}
+                title="Cross tenant operator view, outside any organization"
+              >
+                <ShieldWarning size={15} className="text-amber-700 dark:text-amber-300" />
+                Platform console
+              </Button>
+            )}
             <Button
               variant="ghost"
-              size="sm"
+              size="md"
               onClick={() => {
                 void handleLogout().then((signedOut) => {
                   if (!signedOut) setConfirmingUnsynced(true);
                 });
               }}
-              className="shrink-0 gap-1.5 text-muted-foreground"
+              className="text-muted-foreground"
             >
-              <SignOut className="h-4 w-4" />
+              <SignOut size={15} />
               Sign out
             </Button>
-          </div>
-
-          {isLoading ? (
-            <div
-              className="flex flex-col items-center justify-center py-16 opacity-0"
-              style={slideUp(0.2)}
-            >
-              <CircleNotch className="h-8 w-8 text-primary mb-4 animate-spin" weight="bold" />
-              <p className="text-sm text-muted-foreground">Loading organizations...</p>
-            </div>
-          ) : loadFailed ? (
-            <div
-              className="flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3.5 text-sm text-destructive"
-              style={slideUp(0, 0.3)}
-            >
-              <WarningCircle className="h-4 w-4 mt-0.5 flex-shrink-0" weight="fill" />
-              <span className="flex-1">Your organizations could not be loaded.</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                loading={status === "loading"}
-                onClick={() => void dispatch(fetchMyOrganizations())}
-                className="-my-1"
-              >
-                Retry
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <PendingInvitations />
-
-              {user?.isSystemAdmin && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/platform")}
-                  className="w-full text-left rounded-xl bg-surface shadow-edge hover:shadow-edge-strong transition-shadow duration-150 group cursor-pointer opacity-0 focus-ring"
-                  style={slideUp(0.1, 0.4)}
-                >
-                  <div className="flex items-center gap-4 p-4">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-                      <ShieldWarning
-                        className="h-5 w-5 text-amber-700 dark:text-amber-300"
-                        weight="duotone"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-foreground">Platform console</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Cross-tenant operator view (no organization context)
-                      </div>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground/0 group-hover:text-muted-foreground transition-all duration-200 -translate-x-1 group-hover:translate-x-0" />
-                  </div>
-                </button>
+          </>
+        }
+      >
+        <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center px-5 py-8 md:px-8 lg:mx-0 lg:max-w-2xl lg:px-12 lg:py-12 xl:pl-20">
+          <h1
+            className={cn(
+              "text-2xl font-semibold leading-tight tracking-tight text-foreground md:text-4xl",
+              title.className,
+            )}
+            style={title.style}
+          >
+            {hasOrganizations ? "Welcome back" : "Welcome"},{" "}
+            <span className="text-primary">{greetingName}</span>.
+          </h1>
+          {lede && (
+            <p
+              className={cn(
+                "mt-3 max-w-[34rem] text-[15px] leading-relaxed text-muted-foreground",
+                ledeEnter.className,
               )}
+              style={ledeEnter.style}
+            >
+              {lede}
+            </p>
+          )}
 
-              {hasOrganizations && (
-                <section className="opacity-0" style={slideUp(0.15, 0.4)}>
-                  <h2 className="px-1 pb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Your organizations
-                  </h2>
-                  <Card tone="surface" className="p-1.5">
+          <div className={cn("mt-8 space-y-7", body.className)} style={body.style}>
+            {isLoading ? (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <CircleNotch size={16} weight="bold" className="animate-spin text-primary" />
+                Loading organizations
+              </div>
+            ) : loadFailed ? (
+              <div className="flex items-center gap-3 rounded-xl bg-red-100 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                <WarningCircle size={16} weight="fill" className="shrink-0" />
+                <span className="flex-1">Your organizations could not be loaded.</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  loading={status === "loading"}
+                  onClick={() => void dispatch(fetchMyOrganizations())}
+                  className="-my-1"
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <>
+                <PendingInvitations />
+
+                {hasOrganizations && (
+                  <section aria-labelledby="welcome-organizations" className="space-y-2">
+                    <h2
+                      id="welcome-organizations"
+                      className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
+                      Your organizations
+                    </h2>
                     <OrganizationList
                       organizations={organizations}
                       currentOrganizationId={currentOrganizationId}
                       switchingSlug={switchingSlug}
                       disabled={busy}
-                      onSelect={(slug) => void requestSwitch(slug)}
+                      onSelect={stepInto}
+                      onHighlight={setHighlighted}
                     />
-                  </Card>
-                </section>
-              )}
+                  </section>
+                )}
 
-              {canCreateOrganization ? (
-                <Card tone="surface" className="p-5 opacity-0" style={slideUp(0.25)}>
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <PlusCircle className="h-5 w-5 text-primary" weight="duotone" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-foreground">
+                {canCreateOrganization ? (
+                  <button
+                    type="button"
+                    onClick={() => setCreating(true)}
+                    disabled={busy}
+                    className="focus-ring group flex w-full items-center gap-3 rounded-xl border border-dashed border-border-strong px-3 py-2.5 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50"
+                    data-testid="welcome-create-organization"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/55 bg-primary/10 text-primary">
+                      <Plus size={16} weight="bold" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-foreground">
                         Create an organization
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
                         Start a workspace for your team. You become its owner.
-                      </p>
-                      <Button
-                        className="mt-4"
-                        onClick={() => setCreating(true)}
-                        disabled={busy}
-                        data-testid="welcome-create-organization"
-                      >
-                        Create organization
-                      </Button>
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="-translate-x-1 text-subtle-foreground transition-all duration-200 group-hover:translate-x-0 group-hover:text-foreground"
+                    />
+                  </button>
+                ) : (
+                  !hasOrganizations && (
+                    <div className="flex items-center gap-3 rounded-xl bg-surface p-4 shadow-edge">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                        <Buildings size={18} />
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        Invitations land here as soon as an admin sends one.
+                      </span>
                     </div>
-                  </div>
-                </Card>
-              ) : (
-                !hasOrganizations && (
-                  <Card tone="surface" className="p-10 text-center opacity-0" style={slideUp(0.2)}>
-                    <div className="mx-auto w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                      <Buildings className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-foreground font-medium mb-1">No organizations yet</p>
-                    <p className="text-sm text-muted-foreground">
-                      Ask an organization admin to invite you.
-                    </p>
-                  </Card>
-                )
-              )}
-            </div>
-          )}
+                  )
+                )}
+              </>
+            )}
+          </div>
 
           <p
-            className="mt-8 text-center text-xs text-subtle-foreground opacity-0"
-            style={slideUp(0.6)}
+            className={cn("mt-8 text-xs text-subtle-foreground", footer.className)}
+            style={footer.style}
           >
             Signed in as {user?.email || user?.username}
           </p>
         </div>
-      </div>
+      </OrbitPage>
     </>
   );
 }

@@ -17,6 +17,7 @@ import { credentialMiddleware } from "@/features/auth/store/credentialMiddleware
 import { authReducer } from "@/features/auth/store/authSlice";
 import { organizationsReducer } from "@/features/auth/store/organizationsSlice";
 import { invitationsReducer } from "@/features/auth/store/invitationsSlice";
+import { onboardingReducer } from "@/features/onboarding/store/onboardingSlice";
 import { setPreferredTimeZone } from "@/shared/utils/timezone";
 import { setPreferredWeekStart } from "@/shared/utils/weekStart";
 import type { AuthState } from "@/features/auth/store/authSlice";
@@ -174,6 +175,7 @@ const rootReducer = combineReducers({
   auth: authReducer,
   organizations: organizationsReducer,
   invitations: invitationsReducer,
+  onboarding: onboardingReducer,
   bookmarks: bookmarksReducer,
   libraryGraph: libraryGraphReducer,
   theme: themeReducer,

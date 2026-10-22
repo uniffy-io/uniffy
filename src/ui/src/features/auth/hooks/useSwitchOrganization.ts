@@ -38,7 +38,12 @@ interface PendingSwitch {
 
 export interface OrganizationSwitchControls {
   /** Lands on `target` (default `/`) in the organization; the current one only navigates. */
-  requestSwitch: (slug: string, target?: string) => Promise<void>;
+  /** `beforeNavigate` runs once the tab is in the organization, so a page can play its exit first. */
+  requestSwitch: (
+    slug: string,
+    target?: string,
+    beforeNavigate?: () => Promise<void>,
+  ) => Promise<void>;
   /** Runs `work`, which moves this tab into another organization, once the same confirmation passes. */
   guardSwitch: (work: () => Promise<void>) => Promise<void>;
   isSwitching: boolean;
@@ -77,13 +82,14 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
   const [pending, setPending] = useState<PendingSwitch | null>(null);
 
   const performSwitch = useCallback(
-    async (slug: string, target?: string) => {
+    async (slug: string, target?: string, beforeNavigate?: () => Promise<void>) => {
       try {
         await dispatch(switchOrganization(slug));
       } catch {
         // The rejected switch already went through the global error toast.
         return;
       }
+      await beforeNavigate?.();
       // Reopening the page the user is already on must not stack a second history entry.
       const destination = target ?? "/";
       navigate(destination, { replace: destination === here });
@@ -112,14 +118,15 @@ export function useSwitchOrganization(): OrganizationSwitchControls {
   );
 
   const requestSwitch = useCallback(
-    async (slug: string, target?: string) => {
+    async (slug: string, target?: string, beforeNavigate?: () => Promise<void>) => {
       if (isSwitching) return;
       const current = { id: currentOrganizationId, slug: currentSlug };
       if (isCurrentOrganizationSlug(slug, organizations, current)) {
+        await beforeNavigate?.();
         navigate(target ?? "/");
         return;
       }
-      await guardSwitch(() => performSwitch(slug, target));
+      await guardSwitch(() => performSwitch(slug, target, beforeNavigate));
     },
     [
       currentOrganizationId,

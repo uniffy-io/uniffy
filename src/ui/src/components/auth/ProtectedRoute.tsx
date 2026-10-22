@@ -13,6 +13,10 @@ import {
   readTabOrganization,
 } from "@/features/auth/store/tabOrganizationStorage";
 import { useRealtimeDrain } from "@/features/realtime/hooks/useRealtimeDrain";
+import {
+  ONBOARDING_PATH,
+  useOnboardingRedirect,
+} from "@/features/onboarding/hooks/useOnboardingRedirect";
 import { fetchEffectiveSettings } from "@/features/settings";
 
 interface ProtectedRouteProps {
@@ -28,6 +32,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const refreshToken = useAppSelector((state) => state.auth?.refreshToken);
   const initialized = useAppSelector((state) => state.settings?.initialized ?? false);
   const location = useLocation();
+  // An owner who just created the organization meets the entry flow before anything else.
+  const redirectToOnboarding = useOnboardingRedirect(location.pathname);
   // Stranded offline edits replay from here, whichever page the user lands on. Its lost-grant
   // listener registers before the one below, so a replayed loss reaches both.
   useRealtimeDrain();
@@ -83,6 +89,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!currentOrganizationId) {
     return <Navigate to="/welcome" state={{ from: location }} replace />;
+  }
+
+  if (redirectToOnboarding) {
+    return <Navigate to={ONBOARDING_PATH} replace />;
   }
 
   return <>{children}</>;

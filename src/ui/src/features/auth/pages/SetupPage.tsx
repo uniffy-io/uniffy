@@ -15,6 +15,7 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 import { readSetupRequired, setUpDeployment } from "@/features/auth/store/setupThunks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { MIN_SLUG_LENGTH, toSlug, toSlugDraft } from "@/shared/utils/slug";
+import { ONBOARDING_PATH } from "@/features/onboarding/hooks/useOnboardingRedirect";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -71,7 +72,7 @@ export function SetupPage() {
       }),
     );
     if (outcome.status === "signed-in") {
-      navigate("/", { replace: true });
+      navigate(ONBOARDING_PATH, { replace: true });
       return;
     }
     setSubmitting(false);

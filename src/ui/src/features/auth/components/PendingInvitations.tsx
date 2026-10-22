@@ -4,7 +4,6 @@ import { ConnectError } from "@connectrpc/connect";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { friendlyErrorMessage } from "@/config/errorMessages";
 import { OrganizationAvatar } from "@/features/auth/components/OrganizationList";
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
@@ -94,60 +93,58 @@ export function PendingInvitations({ className }: { className?: string }) {
       {confirmDialog}
       <h2
         id="pending-invitations-title"
-        className="px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+        className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
       >
         Invitations
       </h2>
-      <Card tone="surface">
-        <ul className="divide-y divide-border/60">
-          {invitations.map((invitation) => {
-            const acting = actingId === invitation.id;
-            const declining = acting && decliningId === invitation.id;
-            return (
-              <li
-                key={invitation.id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4"
-              >
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <OrganizationAvatar
-                    name={invitation.organizationName}
-                    className="h-10 w-10 rounded-lg text-sm"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {invitation.organizationName}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {invitedAs(invitation)}
-                    </p>
-                  </div>
+      <ul className="flex flex-col gap-2">
+        {invitations.map((invitation) => {
+          const acting = actingId === invitation.id;
+          const declining = acting && decliningId === invitation.id;
+          return (
+            <li
+              key={invitation.id}
+              className="flex flex-col gap-3 rounded-xl bg-primary/5 p-3 shadow-edge-primary sm:flex-row sm:items-center sm:gap-4"
+            >
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <OrganizationAvatar
+                  name={invitation.organizationName}
+                  className="h-9 w-9 rounded-lg text-xs"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {invitation.organizationName}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {invitedAs(invitation)}
+                  </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="md"
-                    className="max-md:h-11 max-sm:flex-1"
-                    disabled={busy}
-                    loading={declining}
-                    onClick={() => void handleDecline(invitation)}
-                  >
-                    Decline
-                  </Button>
-                  <Button
-                    size="md"
-                    className="max-md:h-11 max-sm:flex-1"
-                    disabled={busy}
-                    loading={acting && !declining}
-                    onClick={() => void handleAccept(invitation)}
-                  >
-                    Accept
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="md"
+                  className="max-md:h-11 max-sm:flex-1"
+                  disabled={busy}
+                  loading={declining}
+                  onClick={() => void handleDecline(invitation)}
+                >
+                  Decline
+                </Button>
+                <Button
+                  size="md"
+                  className="max-md:h-11 max-sm:flex-1"
+                  disabled={busy}
+                  loading={acting && !declining}
+                  onClick={() => void handleAccept(invitation)}
+                >
+                  Accept
+                </Button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

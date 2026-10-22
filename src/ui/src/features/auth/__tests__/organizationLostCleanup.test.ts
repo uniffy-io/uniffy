@@ -52,6 +52,10 @@ vi.mock("@/config/api", () => ({
   unaryTransport: {},
 }));
 vi.mock("@/features/realtime/hooks/useRealtimeDrain", () => ({ useRealtimeDrain: () => {} }));
+vi.mock("@/features/onboarding/hooks/useOnboardingRedirect", () => ({
+  ONBOARDING_PATH: "/onboarding",
+  useOnboardingRedirect: () => false,
+}));
 vi.mock("@/features/settings", () => ({ fetchEffectiveSettings: vi.fn() }));
 vi.mock("@/features/realtime", () => ({}));
 vi.mock("@/features/recording/store/recordingThunks", () => ({}));
