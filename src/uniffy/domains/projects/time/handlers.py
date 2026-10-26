@@ -46,6 +46,7 @@ from uniffy_proto.projects.v1.time_pb import (
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.principal import current_user_id
+from uniffy.core.converters.proto import timestamp_to_datetime
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
@@ -119,6 +120,11 @@ class TimeHandlers:
                     work_date=work_date,
                     duration_minutes=request.duration_minutes,
                     description=request.description,
+                    started_at=(
+                        timestamp_to_datetime(request.started_at)
+                        if request.has_field("started_at")
+                        else None
+                    ),
                 )
                 return CreateWorklogResponse(
                     worklog=worklog_to_proto(row.worklog, row.project_id),
@@ -149,6 +155,12 @@ class TimeHandlers:
                         request.duration_minutes if request.has_field("duration_minutes") else None
                     ),
                     description=request.description if request.has_field("description") else None,
+                    started_at=(
+                        timestamp_to_datetime(request.started_at)
+                        if request.has_field("started_at")
+                        else None
+                    ),
+                    clear_started_at=request.clear_started_at,
                 )
                 return UpdateWorklogResponse(
                     worklog=worklog_to_proto(row.worklog, row.project_id),

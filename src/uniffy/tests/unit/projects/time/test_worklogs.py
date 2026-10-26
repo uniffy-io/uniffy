@@ -277,6 +277,7 @@ async def test_update_changes_the_entry_recomputes_and_logs_previous_and_new() -
         )
     assert row.worklog.duration_minutes == 90
     assert row.worklog.description == "Pairing"
+    assert row.worklog.started_at is None
     assert rollup == 90
     env.notifications.log_activity.assert_awaited_once_with(
         TASK_ID, ACTOR, "time_updated", previous_value="60", new_value="90"
@@ -416,3 +417,21 @@ async def test_cleanup_hard_deletes_timers_and_worklogs_without_committing() -> 
     assert any(s.startswith("delete from projects_timers") for s in sqls)
     assert any(s.startswith("delete from projects_worklogs") for s in sqls)
     assert session.events == []
+
+
+async def test_a_start_instant_is_kept_on_create_set_and_cleared_on_update() -> None:
+    started = datetime(2026, 10, 22, 9, 30, tzinfo=UTC)
+    with _env(rollup=45) as stack:
+        env = stack.env
+        row, _ = await env.ops.create(
+            ACTOR, ORG, TASK_ID, work_date=TODAY, duration_minutes=45, started_at=started
+        )
+    assert row.worklog.started_at == started
+
+    existing = _existing()
+    with _env(existing=existing, rollup=60) as stack:
+        env = stack.env
+        row, _ = await env.ops.update(ACTOR, ORG, existing[0].id, started_at=started)
+        assert row.worklog.started_at == started
+        row, _ = await env.ops.update(ACTOR, ORG, existing[0].id, clear_started_at=True)
+        assert row.worklog.started_at is None

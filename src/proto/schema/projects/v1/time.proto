@@ -65,6 +65,8 @@ message CreateWorklogRequest {
   string work_date = 4;
   int32 duration_minutes = 5;
   string description = 6;
+  // When the work began, for an entry placed on the day's timeline; the end is the start plus the duration.
+  optional google.protobuf.Timestamp started_at = 7;
 }
 
 message CreateWorklogResponse {
@@ -79,6 +81,9 @@ message UpdateWorklogRequest {
   optional string work_date = 3;
   optional int32 duration_minutes = 4;
   optional string description = 5;
+  optional google.protobuf.Timestamp started_at = 6;
+  // Drops the start so the entry leaves the timeline and keeps only its day.
+  bool clear_started_at = 7;
 }
 
 message UpdateWorklogResponse {

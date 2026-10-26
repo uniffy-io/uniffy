@@ -73,6 +73,21 @@ export const createWorklog = createAsyncThunk<
   }
 });
 
+/** One entry per day of a period; stops at the first refusal so the rest can be fixed. */
+export const createWorklogRange = createAsyncThunk<
+  { created: number; failed: string | null },
+  { days: string[] } & Omit<CreateWorklogInput, "workDate">,
+  ThunkConfig
+>("time/createWorklogRange", async ({ days, ...input }, { dispatch }) => {
+  let created = 0;
+  for (const day of days) {
+    const result = await dispatch(createWorklog({ ...input, workDate: day }));
+    if (!createWorklog.fulfilled.match(result)) return { created, failed: day };
+    created += 1;
+  }
+  return { created, failed: null };
+});
+
 export const updateWorklog = createAsyncThunk<
   { worklog: Worklog; taskTimeSpentMinutes: number },
   UpdateWorklogInput,

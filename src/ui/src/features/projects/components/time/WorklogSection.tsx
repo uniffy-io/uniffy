@@ -14,7 +14,17 @@ import {
   fetchTaskWorklogs,
   fetchTimePolicy,
 } from "@/features/projects/store/timeThunks";
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
+import { endOf, wallTimeOf } from "@/features/projects/utils/timeClock";
 import { LogTimeModal } from "./LogTimeModal";
+
+/** "09:30 to 10:15" when the entry sits on the day's timeline. */
+function clockOf(entry: Worklog): string | null {
+  if (!entry.startedAt) return null;
+  const placed = wallTimeOf(entry.startedAt, getEffectiveTimeZone());
+  if (placed.day !== entry.workDate) return null;
+  return `${placed.wall} to ${endOf(placed.wall, entry.durationMinutes)}`;
+}
 
 const SOURCE_LABEL: Record<Worklog["source"], string | null> = {
   manual: null,
@@ -94,7 +104,10 @@ export function WorklogSection({ task }: { task: Task }) {
                 <SubjectAvatarById userId={entry.userId} size="xs" className="mt-0.5" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">{formatDateShort(entry.workDate)}</span>
+                    <span className="text-muted-foreground">
+                      {formatDateShort(entry.workDate)}
+                      {clockOf(entry) && <span className="tabular-nums"> {clockOf(entry)}</span>}
+                    </span>
                     <span className="font-medium">{formatMinutes(entry.durationMinutes)}</span>
                     {sourceLabel && (
                       <span className="text-[10px] uppercase tracking-wide text-subtle-foreground">

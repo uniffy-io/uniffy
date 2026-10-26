@@ -18,6 +18,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DurationInput } from "@/components/ui/duration-input";
 import { PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { popoverShellClass } from "@/components/ui/popover";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   Table,
   TableBody,
@@ -75,10 +76,38 @@ import {
   type WeekRow,
   type WeekRowRef,
 } from "@/features/projects/utils/timeWeek";
-import { LogTimeModal } from "./LogTimeModal";
+import { LogTimeModal, type LogTimePrefill } from "./LogTimeModal";
 import { PeriodBanner } from "./PeriodBanner";
 import { SuggestionsRail } from "./SuggestionsRail";
+import { TimeCalendar, type EntryPatch } from "./TimeCalendar";
+import { TimeList } from "./TimeList";
 import { useTaskLabels } from "./useTaskLabels";
+
+type WeekView = "calendar" | "list" | "timesheet";
+
+const VIEW_OPTIONS: { value: WeekView; content: ReactNode }[] = [
+  {
+    value: "calendar",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Calendar</span>,
+  },
+  { value: "list", content: <span className="flex h-3.5 items-center px-1 text-xs">List</span> },
+  {
+    value: "timesheet",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Timesheet</span>,
+  },
+];
+const VIEW_KEY = "uniffy:time:view";
+
+function storedView(): WeekView {
+  try {
+    const raw = localStorage.getItem(VIEW_KEY);
+    return raw === "list" || raw === "timesheet" ? raw : "calendar";
+  } catch {
+    return "calendar";
+  }
+}
+
+const NO_TASKS: ReadonlySet<string> = new Set();
 
 const STATUS_COLOR: Record<DayStatus, string | undefined> = {
   none: undefined,
@@ -88,14 +117,11 @@ const STATUS_COLOR: Record<DayStatus, string | undefined> = {
   over: STATUS_HEX_COLORS.success,
 };
 
-interface CellEditor {
-  taskId: string;
-  title: string;
-  workDate: string;
+interface CellEditor extends LogTimePrefill {
+  /** Absent when the person picks the task inside the dialog. */
+  taskId?: string;
+  title?: string;
   worklog?: Worklog;
-  /** Prefill from a suggestion. */
-  durationMinutes?: number;
-  description?: string;
 }
 
 function EntriesPopover({
@@ -204,6 +230,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   const approvals = policy?.approvalsEnabled ?? false;
   // Empty rows added from the rail or copied from last week live only in this view of this week.
   const [extraRows, setExtraRows] = useState<Record<string, WeekRowRef[]>>({});
+  const [view, setView] = useState<WeekView>(storedView);
   const [editor, setEditor] = useState<CellEditor | null>(null);
   const [openCell, setOpenCell] = useState<{ taskId: string; day: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Worklog | null>(null);
@@ -228,6 +255,29 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
     (day: string) => sheets.find((sheet) => sheet.periodStart <= day && sheet.periodEnd >= day),
     [sheets],
   );
+  const lockHintFor = useCallback((day: string) => lockHint(sheetFor(day)), [sheetFor]);
+
+  const changeView = (next: WeekView) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // A blocked store only loses the preference for next time.
+    }
+  };
+
+  const patchEntry = (entry: Worklog, patch: EntryPatch) => {
+    void dispatch(updateWorklog({ id: entry.id, taskId: entry.taskId, ...patch }));
+  };
+
+  /** Opens the dialog on an entry's own task. */
+  const editEntry = (entry: Worklog) =>
+    setEditor({
+      taskId: entry.taskId,
+      title: labels[entry.taskId] || "Task",
+      workDate: entry.workDate,
+      worklog: entry,
+    });
 
   const rows = useMemo(
     () => buildWeekRows(worklogs, days, extraRows[rangeKey] ?? []),
@@ -325,6 +375,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
 
   const rangeLabel = `${formatDateShort(days[0])} to ${formatDateShort(days[6])}`;
   const isCurrentWeek = days.includes(today);
+  const defaultDay = isCurrentWeek ? today : days[0];
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="my-time-week">
@@ -378,6 +429,22 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               <span className="text-muted-foreground"> / {formatMinutes(weekRequired)}</span>
             )}
           </div>
+          <SegmentedControl
+            value={view}
+            onChange={changeView}
+            options={VIEW_OPTIONS}
+            ariaLabel="Week view"
+            className="h-7"
+          />
+          <Button
+            type="button"
+            size="xs"
+            onClick={() => setEditor({ workDate: defaultDay })}
+            data-testid="log-time-anywhere"
+          >
+            <Plus size={14} />
+            <span className="hidden md:inline">Log time</span>
+          </Button>
         </PaneHeaderBar>
       </PaneHeader>
       {approvals &&
@@ -394,163 +461,205 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
         ))}
 
       <div className="flex min-h-0 flex-1">
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-          <Table className="min-w-[720px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[30%] min-w-[220px]">Task</TableHead>
-                {days.map((day) => (
-                  <TableHead
-                    key={day}
-                    className={cn(
-                      "w-[76px] text-right tabular-nums",
-                      day === today && "text-primary",
-                      required[day] === 0 && "text-subtle-foreground",
-                    )}
-                  >
-                    <div>{weekdayShort(day)}</div>
-                    <div className="text-[10px] font-normal">{day.slice(5).replace("-", "/")}</div>
-                    {offLabel(required[day], requirements[day].off) && (
-                      <div
-                        className="whitespace-nowrap text-[9px] font-normal normal-case tracking-normal text-subtle-foreground"
-                        data-testid="week-day-off"
-                      >
-                        {offLabel(required[day], requirements[day].off)}
-                      </div>
-                    )}
-                  </TableHead>
-                ))}
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.length === 0 && (
+        {view === "calendar" && (
+          <TimeCalendar
+            days={days}
+            today={today}
+            worklogs={worklogs}
+            totals={totals}
+            requirements={requirements}
+            labels={labels}
+            lockHintFor={lockHintFor}
+            onCreate={(day, startTime, durationMinutes) =>
+              setEditor({ workDate: day, startTime, durationMinutes })
+            }
+            onEdit={editEntry}
+            onChange={patchEntry}
+          />
+        )}
+        {view === "list" && (
+          <TimeList
+            days={days}
+            today={today}
+            worklogs={worklogs}
+            totals={totals}
+            requirements={requirements}
+            labels={labels}
+            lockHintFor={lockHintFor}
+            onAdd={(day) => setEditor({ workDate: day })}
+            onEdit={editEntry}
+            onDelete={setPendingDelete}
+          />
+        )}
+        {view === "timesheet" && (
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto">
+            <Table className="min-w-[720px]" rounded={false}>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={days.length + 2}
-                    className="py-8 text-center text-xs text-subtle-foreground"
-                  >
-                    {loading
-                      ? "Loading your week"
-                      : "No time logged this week. Pick a task on the right, or copy last week."}
-                  </TableCell>
-                </TableRow>
-              )}
-              {rows.map((row) => {
-                const urn = taskUrn(row.taskId);
-                const title = labels[row.taskId] || "Task";
-                return (
-                  <TableRow key={row.taskId} data-testid="week-row">
-                    <TableCell className="py-1">
-                      <MentionChipCompact
-                        urn={urn}
-                        label={title}
-                        onClick={() => navigate(`/projects/${row.projectId}/tasks/${row.taskId}`)}
-                      />
-                    </TableCell>
-                    {days.map((day) => {
-                      const entries = row.cells[day] ?? [];
-                      const cellOpen = openCell?.taskId === row.taskId && openCell.day === day;
-                      const hint = lockHint(sheetFor(day));
-                      const locked = hint !== undefined;
-                      return (
-                        <TableCell
-                          key={day}
-                          className={cn("relative py-1 text-right", locked && "bg-muted/20")}
-                          data-locked={locked ? "true" : undefined}
+                  <TableHead className="w-[30%] min-w-[220px] first:rounded-none">Task</TableHead>
+                  {days.map((day) => (
+                    <TableHead
+                      key={day}
+                      className={cn(
+                        "w-[76px] text-right tabular-nums",
+                        day === today && "text-primary",
+                        required[day] === 0 && "text-subtle-foreground",
+                      )}
+                    >
+                      <div>{weekdayShort(day)}</div>
+                      <div className="text-[10px] font-normal">
+                        {day.slice(5).replace("-", "/")}
+                      </div>
+                      {offLabel(required[day], requirements[day].off) && (
+                        <div
+                          className="whitespace-nowrap text-[9px] font-normal normal-case tracking-normal text-subtle-foreground"
+                          data-testid="week-day-off"
                         >
-                          {entries.length > 1 ? (
-                            <button
-                              type="button"
-                              className="h-7 w-full rounded-md px-2 text-right text-xs tabular-nums hover:bg-muted"
-                              onClick={() => setOpenCell({ taskId: row.taskId, day })}
-                              title={hint ?? `${entries.length} entries`}
-                              data-testid="week-cell-multi"
-                            >
-                              {formatMinutes(sumMinutes(entries))}
-                              <span className="ml-1 text-[10px] text-muted-foreground">
-                                ×{entries.length}
-                              </span>
-                            </button>
-                          ) : (
-                            <DurationInput
-                              minutes={entries[0]?.durationMinutes ?? null}
-                              onChange={(minutes) => commitCell(row, day, minutes)}
-                              placeholder=""
-                              className="h-7 w-full min-w-[68px] text-right text-xs"
-                              aria-label={`${title} on ${day}`}
-                              disabled={locked}
-                              title={hint}
-                              data-testid="week-cell"
-                            />
-                          )}
-                          {cellOpen && (
-                            <EntriesPopover
-                              entries={entries}
-                              readOnly={locked}
-                              onClose={() => setOpenCell(null)}
-                              onAdd={() => {
-                                setOpenCell(null);
-                                setEditor({ taskId: row.taskId, title, workDate: day });
-                              }}
-                              onEdit={(entry) => {
-                                setOpenCell(null);
-                                setEditor({
-                                  taskId: row.taskId,
-                                  title,
-                                  workDate: day,
-                                  worklog: entry,
-                                });
-                              }}
-                              onDelete={(entry) => {
-                                setOpenCell(null);
-                                setPendingDelete(entry);
-                              }}
-                            />
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                    <TableCell className="py-1 text-right text-xs font-medium tabular-nums">
-                      {formatMinutes(rowMinutes(row, days))}
+                          {offLabel(required[day], requirements[day].off)}
+                        </div>
+                      )}
+                    </TableHead>
+                  ))}
+                  <TableHead className="text-right last:rounded-none">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={days.length + 2}
+                      className="py-8 text-center text-xs text-subtle-foreground"
+                    >
+                      {loading
+                        ? "Loading your week"
+                        : "No time logged this week. Pick a task on the right, or copy last week."}
                     </TableCell>
                   </TableRow>
-                );
-              })}
-              <TableRow className="bg-muted/30" data-testid="week-footer">
-                <TableCell className="text-xs text-muted-foreground">Total</TableCell>
-                {days.map((day) => {
-                  const status = dayStatus(totals[day], required[day]);
+                )}
+                {rows.map((row) => {
+                  const urn = taskUrn(row.taskId);
+                  const title = labels[row.taskId] || "Task";
                   return (
-                    <TableCell
-                      key={day}
-                      className="text-right text-xs font-medium tabular-nums"
-                      style={{ color: STATUS_COLOR[status] }}
-                      title={
-                        required[day] > 0 ? `${formatMinutes(required[day])} required` : undefined
-                      }
-                      data-testid="week-day-total"
-                      data-status={status}
-                    >
-                      {totals[day] > 0 ? formatMinutes(totals[day]) : required[day] > 0 ? "0m" : ""}
-                    </TableCell>
+                    <TableRow key={row.taskId} data-testid="week-row">
+                      <TableCell className="py-1">
+                        <MentionChipCompact
+                          urn={urn}
+                          label={title}
+                          onClick={() => navigate(`/projects/${row.projectId}/tasks/${row.taskId}`)}
+                        />
+                      </TableCell>
+                      {days.map((day) => {
+                        const entries = row.cells[day] ?? [];
+                        const cellOpen = openCell?.taskId === row.taskId && openCell.day === day;
+                        const hint = lockHint(sheetFor(day));
+                        const locked = hint !== undefined;
+                        return (
+                          <TableCell
+                            key={day}
+                            className={cn("relative py-1 text-right", locked && "bg-muted/20")}
+                            data-locked={locked ? "true" : undefined}
+                          >
+                            {entries.length > 1 ? (
+                              <button
+                                type="button"
+                                className="h-7 w-full rounded-md px-2 text-right text-xs tabular-nums hover:bg-muted"
+                                onClick={() => setOpenCell({ taskId: row.taskId, day })}
+                                title={hint ?? `${entries.length} entries`}
+                                data-testid="week-cell-multi"
+                              >
+                                {formatMinutes(sumMinutes(entries))}
+                                <span className="ml-1 text-[10px] text-muted-foreground">
+                                  ×{entries.length}
+                                </span>
+                              </button>
+                            ) : (
+                              <DurationInput
+                                minutes={entries[0]?.durationMinutes ?? null}
+                                onChange={(minutes) => commitCell(row, day, minutes)}
+                                placeholder=""
+                                className="h-7 w-full min-w-[68px] text-right text-xs"
+                                aria-label={`${title} on ${day}`}
+                                disabled={locked}
+                                title={hint}
+                                data-testid="week-cell"
+                              />
+                            )}
+                            {cellOpen && (
+                              <EntriesPopover
+                                entries={entries}
+                                readOnly={locked}
+                                onClose={() => setOpenCell(null)}
+                                onAdd={() => {
+                                  setOpenCell(null);
+                                  setEditor({ taskId: row.taskId, title, workDate: day });
+                                }}
+                                onEdit={(entry) => {
+                                  setOpenCell(null);
+                                  setEditor({
+                                    taskId: row.taskId,
+                                    title,
+                                    workDate: day,
+                                    worklog: entry,
+                                  });
+                                }}
+                                onDelete={(entry) => {
+                                  setOpenCell(null);
+                                  setPendingDelete(entry);
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                        );
+                      })}
+                      <TableCell className="py-1 text-right text-xs font-medium tabular-nums">
+                        {formatMinutes(rowMinutes(row, days))}
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
-                <TableCell className="text-right text-xs font-semibold tabular-nums">
-                  {formatMinutes(weekTotal)}
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+                <TableRow className="bg-muted/30" data-testid="week-footer">
+                  <TableCell className="text-xs text-muted-foreground">Total</TableCell>
+                  {days.map((day) => {
+                    const status = dayStatus(totals[day], required[day]);
+                    return (
+                      <TableCell
+                        key={day}
+                        className="text-right text-xs font-medium tabular-nums"
+                        style={{ color: STATUS_COLOR[status] }}
+                        title={
+                          required[day] > 0 ? `${formatMinutes(required[day])} required` : undefined
+                        }
+                        data-testid="week-day-total"
+                        data-status={status}
+                      >
+                        {totals[day] > 0
+                          ? formatMinutes(totals[day])
+                          : required[day] > 0
+                            ? "0m"
+                            : ""}
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell className="text-right text-xs font-semibold tabular-nums">
+                    {formatMinutes(weekTotal)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        )}
         {!isMobileOrTablet && (
           <div className="w-60 shrink-0">
             <SuggestionsRail
               days={days}
               pinnedProjectId={policy?.internalProjectId ?? null}
-              excludeTaskIds={excluded}
+              excludeTaskIds={view === "timesheet" ? excluded : NO_TASKS}
               worklogs={worklogs}
-              onPick={(ref) => addRows([ref])}
+              onPick={(ref) =>
+                view === "timesheet"
+                  ? addRows([ref])
+                  : setEditor({ taskId: ref.taskId, title: ref.title, workDate: defaultDay })
+              }
               onLog={(entry) => setEditor(entry)}
             />
           </div>
@@ -559,11 +668,12 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
 
       {editor && (
         <LogTimeModal
-          task={{ id: editor.taskId, title: editor.title }}
+          task={editor.taskId ? { id: editor.taskId, title: editor.title ?? "Task" } : undefined}
           worklog={editor.worklog}
           workDate={editor.workDate}
           durationMinutes={editor.durationMinutes}
           description={editor.description}
+          startTime={editor.startTime}
           onClose={() => setEditor(null)}
         />
       )}

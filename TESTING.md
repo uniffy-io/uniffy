@@ -3186,6 +3186,17 @@ they belong to; with neither, org admins review.
 - [ ] My time (`/projects/time`): the week grid shows the entries, each day total colors against
       the required hours, holidays and weekends expect nothing; Copy last week brings the rows into
       an empty week with no minutes; the previous and next week navigate.
+- [ ] Log time from anywhere: the Log time button on My time opens the dialog with a task search;
+      pick a task, a day, `2h`, then a start of `09:00` and the end reads `11:00`; picking an end of
+      `12:00` makes the duration `3h`; the X drops the times. Ctrl+Enter saves; with Log another on,
+      the dialog stays open with the task and day kept. Period mode from Monday to Sunday with
+      `8h` writes five entries, seven with Include days off; a range over 62 days is refused.
+- [ ] My time views: Calendar shows an entry with times as a block at its hour and one without
+      under the day's header; dragging a block to another slot moves it (`UpdateWorklog` with the
+      new start), stretching its bottom edge changes the length, a drag on free space opens the
+      dialog with the start and the length filled in; List shows the same entries with their
+      times; Timesheet is the grid; the choice survives a reload. Each view shows the day totals
+      against the required hours; a locked day takes no drags.
 - [ ] My time rail: a timed meeting on your calendar this week is listed under Meetings with its
       day and length (all-day, out of office, declined and cancelled events are not); with the
       internal project in place, clicking it opens Log time on the Meetings task with the day, the

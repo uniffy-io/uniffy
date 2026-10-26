@@ -10,7 +10,9 @@ Time in Uniffy is a record of what a person did, not a column someone types into
 
 ## Entries
 
-You log time on any task you can open. Type a duration the way you would say it: `1.5h`, `1h 30m`, `45m` or a plain number of minutes. Pick the day, add a line about what the time went on, and the task total moves right away.
+You log time on any task you can open, from the task itself or from the Log time button on My time, where you search for the task inside the dialog. Type a duration the way you would say it: `1.5h`, `1h 30m`, `45m` or a plain number of minutes. Pick the day, add a line about what the time went on, and the task total moves right away. Ctrl+Enter saves, and Log another keeps the dialog open for the next entry.
+
+A start and an end time are optional. Pick a start and the end follows from the duration, or pick both and the duration follows. An entry with times sits on the calendar; one without only belongs to its day. Switch the dialog to Period to write the same entry on every day of a range, a week of training or leave in one go, skipping days that expect no hours unless you say otherwise.
 
 An entry belongs to the person whose time it is. You can change and delete your own. A day holds at most 24 hours per person, and the organization decides how far back you may still edit and whether future days are allowed.
 
@@ -26,7 +28,9 @@ Start a timer on another task and the running one stops into an entry first. For
 
 ## My time
 
-My time is your week on one page: a row per task, a column per day, and the total at the bottom of each column against the hours your organization expects. Days under that number read as a warning, days that meet it read as done, and holidays and weekends expect nothing.
+My time is your week on one page, in three views. Calendar lays the days out hour by hour: entries with a time sit as blocks you can drag to another slot or stretch, a click on free space starts an entry at that time, and a drag across the hours sets its length. List reads the week day by day with every entry and its times. Timesheet is the grid: a row per task, a column per day, a number in each cell.
+
+Every view carries each day's total against the hours your organization expects. Days under that number read as a warning, days that meet it read as done, and holidays and weekends expect nothing.
 
 The rail beside the grid suggests what the week probably held. Meetings from your own calendar appear with their day and length; one click opens the entry on the internal project's Meetings task with the title as the note, and a meeting you logged stops being offered. Tasks you finished this week and tasks you worked on recently are one click from a row. Copy last week brings the same tasks into an empty week with no minutes, which is usually most of the typing.
 

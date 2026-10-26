@@ -477,8 +477,10 @@ type CreateWorklogRequest struct {
 	WorkDate        string  `protobuf:"bytes,4,opt,name=work_date,json=workDate,proto3" json:"work_date,omitempty"`
 	DurationMinutes int32   `protobuf:"varint,5,opt,name=duration_minutes,json=durationMinutes,proto3" json:"duration_minutes,omitempty"`
 	Description     string  `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// When the work began, for an entry placed on the day's timeline; the end is the start plus the duration.
+	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateWorklogRequest) Reset() {
@@ -553,6 +555,13 @@ func (x *CreateWorklogRequest) GetDescription() string {
 	return ""
 }
 
+func (x *CreateWorklogRequest) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
 type CreateWorklogResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Worklog *Worklog               `protobuf:"bytes,1,opt,name=worklog,proto3" json:"worklog,omitempty"`
@@ -613,8 +622,11 @@ type UpdateWorklogRequest struct {
 	WorkDate        *string                `protobuf:"bytes,3,opt,name=work_date,json=workDate,proto3,oneof" json:"work_date,omitempty"`
 	DurationMinutes *int32                 `protobuf:"varint,4,opt,name=duration_minutes,json=durationMinutes,proto3,oneof" json:"duration_minutes,omitempty"`
 	Description     *string                `protobuf:"bytes,5,opt,name=description,proto3,oneof" json:"description,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	// Drops the start so the entry leaves the timeline and keeps only its day.
+	ClearStartedAt bool `protobuf:"varint,7,opt,name=clear_started_at,json=clearStartedAt,proto3" json:"clear_started_at,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UpdateWorklogRequest) Reset() {
@@ -680,6 +692,20 @@ func (x *UpdateWorklogRequest) GetDescription() string {
 		return *x.Description
 	}
 	return ""
+}
+
+func (x *UpdateWorklogRequest) GetStartedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.StartedAt
+	}
+	return nil
+}
+
+func (x *UpdateWorklogRequest) GetClearStartedAt() bool {
+	if x != nil {
+		return x.ClearStartedAt
+	}
+	return false
 }
 
 type UpdateWorklogResponse struct {
@@ -4188,30 +4214,37 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
-	"\v_started_at\"\xec\x01\n" +
+	"\v_started_at\"\xbb\x02\n" +
 	"\x14CreateWorklogRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1c\n" +
 	"\auser_id\x18\x03 \x01(\tH\x00R\x06userId\x88\x01\x01\x12\x1b\n" +
 	"\twork_date\x18\x04 \x01(\tR\bworkDate\x12)\n" +
 	"\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12 \n" +
-	"\vdescription\x18\x06 \x01(\tR\vdescriptionB\n" +
+	"\vdescription\x18\x06 \x01(\tR\vdescription\x12>\n" +
 	"\n" +
-	"\b_user_id\"~\n" +
+	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartedAt\x88\x01\x01B\n" +
+	"\n" +
+	"\b_user_idB\r\n" +
+	"\v_started_at\"~\n" +
 	"\x15CreateWorklogResponse\x12.\n" +
 	"\aworklog\x18\x01 \x01(\v2\x14.projects.v1.WorklogR\aworklog\x125\n" +
-	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"\x8a\x02\n" +
+	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"\x83\x03\n" +
 	"\x14UpdateWorklogRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"worklog_id\x18\x02 \x01(\tR\tworklogId\x12 \n" +
 	"\twork_date\x18\x03 \x01(\tH\x00R\bworkDate\x88\x01\x01\x12.\n" +
 	"\x10duration_minutes\x18\x04 \x01(\x05H\x01R\x0fdurationMinutes\x88\x01\x01\x12%\n" +
-	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01B\f\n" +
+	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x12>\n" +
+	"\n" +
+	"started_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartedAt\x88\x01\x01\x12(\n" +
+	"\x10clear_started_at\x18\a \x01(\bR\x0eclearStartedAtB\f\n" +
 	"\n" +
 	"_work_dateB\x13\n" +
 	"\x11_duration_minutesB\x0e\n" +
-	"\f_description\"~\n" +
+	"\f_descriptionB\r\n" +
+	"\v_started_at\"~\n" +
 	"\x15UpdateWorklogResponse\x12.\n" +
 	"\aworklog\x18\x01 \x01(\v2\x14.projects.v1.WorklogR\aworklog\x125\n" +
 	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"^\n" +
@@ -4616,54 +4649,56 @@ var file_projects_v1_time_proto_depIdxs = []int32{
 	0,  // 1: projects.v1.Worklog.source:type_name -> projects.v1.WorklogSource
 	65, // 2: projects.v1.Worklog.created_at:type_name -> google.protobuf.Timestamp
 	65, // 3: projects.v1.Worklog.updated_at:type_name -> google.protobuf.Timestamp
-	6,  // 4: projects.v1.CreateWorklogResponse.worklog:type_name -> projects.v1.Worklog
-	6,  // 5: projects.v1.UpdateWorklogResponse.worklog:type_name -> projects.v1.Worklog
-	6,  // 6: projects.v1.ListTaskWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
-	6,  // 7: projects.v1.ListUserWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
-	37, // 8: projects.v1.ListUserWorklogsResponse.days:type_name -> projects.v1.DayTotal
-	65, // 9: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
-	65, // 10: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
-	1,  // 11: projects.v1.Timer.pause_reason:type_name -> projects.v1.TimerPauseReason
-	17, // 12: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
-	6,  // 13: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
-	17, // 14: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
-	17, // 15: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
-	6,  // 16: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
-	17, // 17: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
-	2,  // 18: projects.v1.TimePolicy.period_type:type_name -> projects.v1.TimePeriodType
-	28, // 19: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
-	28, // 20: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
-	28, // 21: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
-	3,  // 22: projects.v1.AggregateWorklogsRequest.group_by:type_name -> projects.v1.AggregateGroupBy
-	34, // 23: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
-	4,  // 24: projects.v1.Timesheet.status:type_name -> projects.v1.TimesheetStatus
-	65, // 25: projects.v1.Timesheet.submitted_at:type_name -> google.protobuf.Timestamp
-	65, // 26: projects.v1.Timesheet.reviewed_at:type_name -> google.protobuf.Timestamp
-	65, // 27: projects.v1.Timesheet.grace_until:type_name -> google.protobuf.Timestamp
-	5,  // 28: projects.v1.TimePeriod.status:type_name -> projects.v1.TimePeriodStatus
-	65, // 29: projects.v1.TimePeriod.closed_at:type_name -> google.protobuf.Timestamp
-	36, // 30: projects.v1.GetTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 31: projects.v1.SubmitTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 32: projects.v1.RecallTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	4,  // 33: projects.v1.ListReviewTimesheetsRequest.status:type_name -> projects.v1.TimesheetStatus
-	4,  // 34: projects.v1.ReviewTimesheetRow.status:type_name -> projects.v1.TimesheetStatus
-	37, // 35: projects.v1.ReviewTimesheetRow.days:type_name -> projects.v1.DayTotal
-	36, // 36: projects.v1.ReviewTimesheetRow.timesheet:type_name -> projects.v1.Timesheet
-	46, // 37: projects.v1.ListReviewTimesheetsResponse.rows:type_name -> projects.v1.ReviewTimesheetRow
-	38, // 38: projects.v1.ListReviewTimesheetsResponse.period:type_name -> projects.v1.TimePeriod
-	36, // 39: projects.v1.ApproveTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 40: projects.v1.RejectTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
-	36, // 41: projects.v1.GrantGraceResponse.timesheet:type_name -> projects.v1.Timesheet
-	38, // 42: projects.v1.ClosePeriodResponse.period:type_name -> projects.v1.TimePeriod
-	38, // 43: projects.v1.ReopenPeriodResponse.period:type_name -> projects.v1.TimePeriod
-	38, // 44: projects.v1.ListPeriodsResponse.periods:type_name -> projects.v1.TimePeriod
-	28, // 45: projects.v1.CreateInternalTimeProjectResponse.policy:type_name -> projects.v1.TimePolicy
-	63, // 46: projects.v1.GetSprintCapacityResponse.rows:type_name -> projects.v1.SprintCapacityRow
-	47, // [47:47] is the sub-list for method output_type
-	47, // [47:47] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	65, // 4: projects.v1.CreateWorklogRequest.started_at:type_name -> google.protobuf.Timestamp
+	6,  // 5: projects.v1.CreateWorklogResponse.worklog:type_name -> projects.v1.Worklog
+	65, // 6: projects.v1.UpdateWorklogRequest.started_at:type_name -> google.protobuf.Timestamp
+	6,  // 7: projects.v1.UpdateWorklogResponse.worklog:type_name -> projects.v1.Worklog
+	6,  // 8: projects.v1.ListTaskWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
+	6,  // 9: projects.v1.ListUserWorklogsResponse.worklogs:type_name -> projects.v1.Worklog
+	37, // 10: projects.v1.ListUserWorklogsResponse.days:type_name -> projects.v1.DayTotal
+	65, // 11: projects.v1.Timer.started_at:type_name -> google.protobuf.Timestamp
+	65, // 12: projects.v1.Timer.paused_at:type_name -> google.protobuf.Timestamp
+	1,  // 13: projects.v1.Timer.pause_reason:type_name -> projects.v1.TimerPauseReason
+	17, // 14: projects.v1.StartTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 15: projects.v1.StartTimerResponse.stopped_worklog:type_name -> projects.v1.Worklog
+	17, // 16: projects.v1.PauseTimerResponse.timer:type_name -> projects.v1.Timer
+	17, // 17: projects.v1.ResumeTimerResponse.timer:type_name -> projects.v1.Timer
+	6,  // 18: projects.v1.StopTimerResponse.worklog:type_name -> projects.v1.Worklog
+	17, // 19: projects.v1.GetActiveTimerResponse.timer:type_name -> projects.v1.Timer
+	2,  // 20: projects.v1.TimePolicy.period_type:type_name -> projects.v1.TimePeriodType
+	28, // 21: projects.v1.GetTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	28, // 22: projects.v1.UpdateTimePolicyRequest.policy:type_name -> projects.v1.TimePolicy
+	28, // 23: projects.v1.UpdateTimePolicyResponse.policy:type_name -> projects.v1.TimePolicy
+	3,  // 24: projects.v1.AggregateWorklogsRequest.group_by:type_name -> projects.v1.AggregateGroupBy
+	34, // 25: projects.v1.AggregateWorklogsResponse.rows:type_name -> projects.v1.AggregateRow
+	4,  // 26: projects.v1.Timesheet.status:type_name -> projects.v1.TimesheetStatus
+	65, // 27: projects.v1.Timesheet.submitted_at:type_name -> google.protobuf.Timestamp
+	65, // 28: projects.v1.Timesheet.reviewed_at:type_name -> google.protobuf.Timestamp
+	65, // 29: projects.v1.Timesheet.grace_until:type_name -> google.protobuf.Timestamp
+	5,  // 30: projects.v1.TimePeriod.status:type_name -> projects.v1.TimePeriodStatus
+	65, // 31: projects.v1.TimePeriod.closed_at:type_name -> google.protobuf.Timestamp
+	36, // 32: projects.v1.GetTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 33: projects.v1.SubmitTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 34: projects.v1.RecallTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	4,  // 35: projects.v1.ListReviewTimesheetsRequest.status:type_name -> projects.v1.TimesheetStatus
+	4,  // 36: projects.v1.ReviewTimesheetRow.status:type_name -> projects.v1.TimesheetStatus
+	37, // 37: projects.v1.ReviewTimesheetRow.days:type_name -> projects.v1.DayTotal
+	36, // 38: projects.v1.ReviewTimesheetRow.timesheet:type_name -> projects.v1.Timesheet
+	46, // 39: projects.v1.ListReviewTimesheetsResponse.rows:type_name -> projects.v1.ReviewTimesheetRow
+	38, // 40: projects.v1.ListReviewTimesheetsResponse.period:type_name -> projects.v1.TimePeriod
+	36, // 41: projects.v1.ApproveTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 42: projects.v1.RejectTimesheetResponse.timesheet:type_name -> projects.v1.Timesheet
+	36, // 43: projects.v1.GrantGraceResponse.timesheet:type_name -> projects.v1.Timesheet
+	38, // 44: projects.v1.ClosePeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 45: projects.v1.ReopenPeriodResponse.period:type_name -> projects.v1.TimePeriod
+	38, // 46: projects.v1.ListPeriodsResponse.periods:type_name -> projects.v1.TimePeriod
+	28, // 47: projects.v1.CreateInternalTimeProjectResponse.policy:type_name -> projects.v1.TimePolicy
+	63, // 48: projects.v1.GetSprintCapacityResponse.rows:type_name -> projects.v1.SprintCapacityRow
+	49, // [49:49] is the sub-list for method output_type
+	49, // [49:49] is the sub-list for method input_type
+	49, // [49:49] is the sub-list for extension type_name
+	49, // [49:49] is the sub-list for extension extendee
+	0,  // [0:49] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_time_proto_init() }

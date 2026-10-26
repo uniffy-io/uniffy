@@ -316,6 +316,8 @@ class WorklogOperations:
         work_date: date | None = None,
         duration_minutes: int | None = None,
         description: str | None = None,
+        started_at: datetime | None = None,
+        clear_started_at: bool = False,
     ) -> tuple[WorklogRow, int]:
         policy = await load_time_policy(self.session, organization_id)
         require_enabled(policy)
@@ -348,6 +350,10 @@ class WorklogOperations:
         worklog.duration_minutes = new_minutes
         if description is not None:
             worklog.description = description
+        if clear_started_at:
+            worklog.started_at = None
+        elif started_at is not None:
+            worklog.started_at = started_at
         await self.session.flush()
         rollup = await self.stage_task_rollup(worklog.task_id)
         await TaskNotifications(self.session).log_activity(

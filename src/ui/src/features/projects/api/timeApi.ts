@@ -245,6 +245,7 @@ export const timeApi = {
       workDate: input.workDate,
       durationMinutes: input.durationMinutes,
       description: input.description ?? "",
+      ...(input.startedAt ? { startedAt: timestampFromDate(new Date(input.startedAt)) } : {}),
     });
     return {
       worklog: protoWorklogToFrontend(response.worklog!),
@@ -259,6 +260,8 @@ export const timeApi = {
       ...(input.workDate !== undefined ? { workDate: input.workDate } : {}),
       ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.startedAt ? { startedAt: timestampFromDate(new Date(input.startedAt)) } : {}),
+      clearStartedAt: input.startedAt === null,
     });
     return {
       worklog: protoWorklogToFrontend(response.worklog!),

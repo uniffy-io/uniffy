@@ -47,6 +47,8 @@ export interface CreateWorklogInput {
   workDate: string;
   durationMinutes: number;
   description?: string;
+  /** ISO instant the work began, when the entry sits on the day's timeline. */
+  startedAt?: string;
   /** Log on behalf of someone else; reviewers and timekeeping admins only. */
   userId?: string;
 }
@@ -57,6 +59,8 @@ export interface UpdateWorklogInput {
   workDate?: string;
   durationMinutes?: number;
   description?: string;
+  /** A new start, or null to take the entry off the timeline. */
+  startedAt?: string | null;
 }
 
 export interface Timer {

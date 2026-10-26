@@ -37,7 +37,7 @@ interface SuggestionsRailProps {
   excludeTaskIds: ReadonlySet<string>;
   /** The week's entries, so a meeting already logged is not offered twice. */
   worklogs: readonly Worklog[];
-  onPick: (row: WeekRowRef) => void;
+  onPick: (row: WeekRowRef & { title: string }) => void;
   /** Opens the entry dialog prefilled from a suggestion. */
   onLog: (entry: SuggestedEntry) => void;
 }
@@ -176,7 +176,8 @@ export function SuggestionsRail({
   }, [taskList, userId, pinnedProjectId, excludeTaskIds, events, days, worklogs, meetingsTask]);
 
   const slugOf = (task: Task) => projects[task.projectId]?.slug ?? "";
-  const pick = (task: Task) => onPick({ taskId: task.id, projectId: task.projectId });
+  const pick = (task: Task) =>
+    onPick({ taskId: task.id, projectId: task.projectId, title: task.title });
 
   return (
     <aside
