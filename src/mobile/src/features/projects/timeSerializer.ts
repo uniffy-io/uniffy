@@ -5,6 +5,7 @@ import {
   TimesheetStatus,
   WorklogSource,
   type DayTotal,
+  type ReviewTimesheetRow,
   type TimePolicy,
   type Timer,
   type Timesheet,
@@ -155,15 +156,20 @@ const SHEET_STATUS: Record<TimesheetStatus, SerializedTimesheetStatus> = {
 };
 
 export interface SerializedTimesheet {
+  id: string;
+  userId: string;
   periodStart: string;
   periodEnd: string;
   status: SerializedTimesheetStatus;
   submittedAt: string | null;
+  submitComment: string;
   reviewComment: string;
   /** While in the future the period's days accept edits again; `locked` already accounts for it. */
   graceUntil: string | null;
   locked: boolean;
   periodClosed: boolean;
+  /** The caller reviews this person and is not the person. */
+  canReview: boolean;
   totalMinutes: number;
   requiredMinutes: number;
   submittedToUserId: string | null;
@@ -173,17 +179,40 @@ export interface SerializedTimesheet {
 
 export function timesheetToPlain(sheet: Timesheet): SerializedTimesheet {
   return {
+    id: sheet.id,
+    userId: sheet.userId,
     periodStart: sheet.periodStart,
     periodEnd: sheet.periodEnd,
     status: SHEET_STATUS[sheet.status] ?? "open",
     submittedAt: sheet.submittedAt ? timestampDate(sheet.submittedAt).toISOString() : null,
+    submitComment: sheet.submitComment,
     reviewComment: sheet.reviewComment,
     graceUntil: sheet.graceUntil ? timestampDate(sheet.graceUntil).toISOString() : null,
     locked: sheet.locked,
     periodClosed: sheet.periodClosed,
+    canReview: sheet.canReview,
     totalMinutes: sheet.totalMinutes,
     requiredMinutes: sheet.requiredMinutes,
     submittedToUserId: sheet.submittedToUserId ?? null,
     reviewerUserIds: [...sheet.reviewerUserIds],
+  };
+}
+
+export interface SerializedReviewRow {
+  userId: string;
+  status: SerializedTimesheetStatus;
+  periodMinutes: number;
+  requiredMinutes: number;
+  /** Absent while the person has no sheet for the period yet. */
+  sheet: SerializedTimesheet | null;
+}
+
+export function reviewRowToPlain(row: ReviewTimesheetRow): SerializedReviewRow {
+  return {
+    userId: row.userId,
+    status: SHEET_STATUS[row.status] ?? "open",
+    periodMinutes: row.periodMinutes,
+    requiredMinutes: row.requiredMinutes,
+    sheet: row.timesheet ? timesheetToPlain(row.timesheet) : null,
   };
 }

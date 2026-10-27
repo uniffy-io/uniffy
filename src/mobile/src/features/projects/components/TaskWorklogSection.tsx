@@ -77,7 +77,12 @@ export function TaskWorklogSection({ taskId, taskTitle }: { taskId: string; task
                 accessibilityLabel={`${formatMinutes(entry.durationMinutes)} by ${name} on ${formatDayLong(entry.workDate)}`}
                 testID="task-worklog"
               >
-                <Avatar name={name} avatarUrl={byId.get(entry.userId)?.avatarUrl} size={28} />
+                <Avatar
+                  name={name}
+                  avatarUrl={byId.get(entry.userId)?.avatarUrl}
+                  size={28}
+                  circle
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.name, { color: T.textBright }]} numberOfLines={1}>
                     {name}

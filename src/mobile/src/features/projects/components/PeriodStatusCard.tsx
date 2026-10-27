@@ -8,14 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  CheckCircle,
-  HourglassHigh,
-  Lock,
-  PaperPlaneTilt,
-  XCircle,
-  type IconProps,
-} from "phosphor-react-native";
+import { PaperPlaneTilt } from "phosphor-react-native";
 import { Avatar } from "@shared/components/Avatar";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetHeader } from "@shared/components/SheetHeader";
@@ -24,6 +17,7 @@ import { useDirectory } from "@shared/directory/useDirectory";
 import { useTheme } from "@shared/hooks/useTheme";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { FONT } from "@theme/typography";
+import { SheetStatusChip } from "@features/projects/components/SheetStatusChip";
 import { formatMinutes } from "@features/projects/timeFormatting";
 import type { SerializedTimesheet } from "@features/projects/timeSerializer";
 import {
@@ -31,19 +25,10 @@ import {
   canSubmit,
   periodLabel,
   sheetSummary,
-  type SheetTone,
 } from "@features/projects/timesheetStatus";
 
 // The keyboard lifts the sheet over a few frames; scrolling before it settles lands short.
 const KEYBOARD_SETTLE_MS = 250;
-
-function StatusIcon({ sheet, ...props }: IconProps & { sheet: SerializedTimesheet }) {
-  if (sheet.periodClosed || (sheet.locked && sheet.status === "open")) return <Lock {...props} />;
-  if (sheet.status === "approved") return <CheckCircle {...props} />;
-  if (sheet.status === "submitted") return <PaperPlaneTilt {...props} />;
-  if (sheet.status === "rejected") return <XCircle {...props} />;
-  return <HourglassHigh {...props} />;
-}
 
 /** Sends the period to one reviewer, picked when the person has several. */
 function SubmitTimesheetSheet({
@@ -111,7 +96,9 @@ function SubmitTimesheetSheet({
               return (
                 <SheetRow
                   key={id}
-                  leading={<Avatar name={nameOf(id)} avatarUrl={subject?.avatarUrl} size={28} />}
+                  leading={
+                    <Avatar name={nameOf(id)} avatarUrl={subject?.avatarUrl} size={28} circle />
+                  }
                   title={nameOf(id)}
                   selected={reviewerIds.length > 1 && id === reviewerId}
                   onPress={() => setReviewerId(id)}
@@ -164,14 +151,6 @@ export function PeriodStatusCard({
   const [submitOpen, setSubmitOpen] = useState(false);
   const sentTo = sheet.submittedToUserId ? byId.get(sheet.submittedToUserId)?.name : undefined;
   const { label, tone, detail } = sheetSummary(sheet, sentTo);
-  const toneColor: Record<SheetTone, string> = {
-    default: T.textDim,
-    info: T.accent,
-    success: T.green,
-    warning: T.yellow,
-    danger: T.red,
-  };
-  const color = toneColor[tone];
 
   const recall = () =>
     confirmDestructive({
@@ -187,10 +166,14 @@ export function PeriodStatusCard({
       testID="period-status"
     >
       <View style={styles.head}>
-        <View style={[styles.chip, { backgroundColor: color + "22" }]} testID="period-status-chip">
-          <StatusIcon sheet={sheet} size={13} color={color} weight="bold" />
-          <Text style={[styles.chipText, { color }]}>{label}</Text>
-        </View>
+        <SheetStatusChip
+          label={label}
+          tone={tone}
+          status={sheet.status}
+          locked={sheet.locked}
+          periodClosed={sheet.periodClosed}
+          testID="period-status-chip"
+        />
         <Text style={[styles.period, { color: T.textDim }]}>{periodLabel(sheet)}</Text>
         <View style={{ flex: 1 }} />
         {busy ? (
@@ -237,15 +220,6 @@ export function PeriodStatusCard({
 const styles = StyleSheet.create({
   card: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 8 },
   head: { flexDirection: "row", alignItems: "center", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: 999,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-  },
-  chipText: { fontSize: 12, fontFamily: FONT.semibold },
   period: { fontSize: 12, fontFamily: FONT.regular },
   action: {
     flexDirection: "row",

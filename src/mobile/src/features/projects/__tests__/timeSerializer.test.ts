@@ -4,6 +4,7 @@ import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import {
   DayTotalSchema,
   TimePeriodType,
+  ReviewTimesheetRowSchema,
   TimePolicySchema,
   TimesheetSchema,
   TimesheetStatus,
@@ -13,6 +14,7 @@ import {
 import {
   dayTotalToPlain,
   localDayKey,
+  reviewRowToPlain,
   timePolicyToPlain,
   timesheetToPlain,
   worklogToPlain,
@@ -167,5 +169,24 @@ describe("timesheetToPlain", () => {
 
   it("reads an unspecified status as open", () => {
     expect(timesheetToPlain(create(TimesheetSchema, {})).status).toBe("open");
+  });
+});
+
+describe("reviewRowToPlain", () => {
+  it("keeps the person's totals and their sheet when there is one", () => {
+    const row = reviewRowToPlain(
+      create(ReviewTimesheetRowSchema, {
+        userId: "bob",
+        status: TimesheetStatus.SUBMITTED,
+        periodMinutes: 2400,
+        requiredMinutes: 2400,
+        timesheet: create(TimesheetSchema, { id: "s1", canReview: true }),
+      }),
+    );
+    expect(row.status).toBe("submitted");
+    expect(row.periodMinutes).toBe(2400);
+    expect(row.sheet?.id).toBe("s1");
+    expect(row.sheet?.canReview).toBe(true);
+    expect(reviewRowToPlain(create(ReviewTimesheetRowSchema, { userId: "x" })).sheet).toBeNull();
   });
 });

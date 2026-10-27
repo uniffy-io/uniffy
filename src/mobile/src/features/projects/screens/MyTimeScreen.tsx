@@ -9,7 +9,16 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
-import { CaretLeft, CaretRight, Clock, Lock, Plus, Trash } from "phosphor-react-native";
+import { router } from "expo-router";
+import {
+  CaretLeft,
+  CaretRight,
+  CheckSquareOffset,
+  Clock,
+  Lock,
+  Plus,
+  Trash,
+} from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
@@ -42,6 +51,7 @@ import {
 } from "@features/projects/timeWeek";
 import { lockHint, sheetFor } from "@features/projects/timesheetStatus";
 import { useMyWeek, useTimePolicy, useTimesheet } from "@features/projects/useMyTime";
+import { useReviewInbox } from "@features/projects/useTimeReview";
 import { useProjectTasks } from "@features/projects/useProjects";
 import { useTaskLabels } from "@features/projects/useTaskLabels";
 import {
@@ -96,6 +106,12 @@ export function MyTimeScreen() {
     () => (approvals ? [firstSheet.data, lastSheet.data] : []),
     [approvals, firstSheet.data, lastSheet.data],
   );
+  // One probe of the inbox decides whether this person reviews anyone.
+  const inbox = useReviewInbox(today, { enabled: approvals });
+  const reviewRows = inbox.data?.rows ?? [];
+  const showApprovals =
+    approvals && (reviewRows.length > 0 || inbox.data?.viewerIsTimekeepingAdmin === true);
+  const waitingReviews = reviewRows.filter((row) => row.status === "submitted").length;
   const submitTimesheet = useSubmitTimesheet();
   const recallTimesheet = useRecallTimesheet();
 
@@ -253,6 +269,21 @@ export function MyTimeScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {showApprovals && (
+            <TouchableOpacity
+              style={[styles.reviewLink, { backgroundColor: T.surface, borderColor: T.border }]}
+              onPress={() => router.push("/projects/approvals" as any)}
+              testID="my-time-approvals"
+            >
+              <CheckSquareOffset size={18} color={T.accent} />
+              <Text style={[styles.reviewLabel, { color: T.textBright }]}>Approvals</Text>
+              <Text style={[styles.reviewCount, { color: waitingReviews ? T.accent : T.textDim }]}>
+                {waitingReviews > 0 ? `${waitingReviews} waiting` : "Nothing waiting"}
+              </Text>
+              <CaretRight size={14} color={T.textDim} weight="bold" />
+            </TouchableOpacity>
+          )}
 
           {visibleSheet && (
             <PeriodStatusCard
@@ -496,6 +527,17 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   addLabel: { fontSize: 13, fontFamily: FONT.medium },
+  reviewLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reviewLabel: { flex: 1, fontSize: 15, fontFamily: FONT.semibold },
+  reviewCount: { fontSize: 13, fontFamily: FONT.medium },
   lockRow: { paddingHorizontal: 16 },
   lockLabel: { flexShrink: 1, fontSize: 13, fontFamily: FONT.regular },
 });

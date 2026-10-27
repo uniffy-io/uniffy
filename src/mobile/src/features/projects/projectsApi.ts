@@ -29,15 +29,19 @@ import {
   DeleteViewRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import {
+  ApproveTimesheetRequestSchema,
   CreateWorklogRequestSchema,
   DeleteWorklogRequestSchema,
   GetActiveTimerRequestSchema,
   GetTimePolicyRequestSchema,
   GetTimesheetRequestSchema,
+  GrantGraceRequestSchema,
+  ListReviewTimesheetsRequestSchema,
   ListTaskWorklogsRequestSchema,
   ListUserWorklogsRequestSchema,
   PauseTimerRequestSchema,
   RecallTimesheetRequestSchema,
+  RejectTimesheetRequestSchema,
   ResumeTimerRequestSchema,
   StartTimerRequestSchema,
   StopTimerRequestSchema,
@@ -121,6 +125,18 @@ export const projectsApi = {
 
   recallTimesheet: (request: MessageInitShape<typeof RecallTimesheetRequestSchema>) =>
     client.recallTimesheet(request),
+
+  listReviewTimesheets: (request: MessageInitShape<typeof ListReviewTimesheetsRequestSchema>) =>
+    client.listReviewTimesheets(request),
+
+  approveTimesheet: (request: MessageInitShape<typeof ApproveTimesheetRequestSchema>) =>
+    client.approveTimesheet(request),
+
+  rejectTimesheet: (request: MessageInitShape<typeof RejectTimesheetRequestSchema>) =>
+    client.rejectTimesheet(request),
+
+  grantGrace: (request: MessageInitShape<typeof GrantGraceRequestSchema>) =>
+    client.grantGrace(request),
 
   moveTask: (request: MessageInitShape<typeof MoveTaskRequestSchema>) => client.moveTask(request),
 

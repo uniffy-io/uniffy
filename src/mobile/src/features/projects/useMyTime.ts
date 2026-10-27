@@ -51,14 +51,18 @@ export interface MyWeek {
   days: SerializedDayTotal[];
 }
 
-/** The person's own entries and what each day asks, over an inclusive day range. */
-export function useMyWeek(from: string, to: string) {
+/**
+ * A person's entries and what each day asks, over an inclusive day range; the caller's own
+ * unless `userId` names someone they review.
+ */
+export function useMyWeek(from: string, to: string, userId?: string) {
   const { organizationId } = useAuth();
   return useQuery({
-    queryKey: [...myWeekQueryKey(organizationId), from, to],
+    queryKey: [...myWeekQueryKey(organizationId), userId ?? "me", from, to],
     queryFn: async (): Promise<MyWeek> => {
       const response = await projectsApi.listUserWorklogs({
         organizationId: organizationId!,
+        userId,
         fromDate: from,
         toDate: to,
       });
@@ -71,14 +75,18 @@ export function useMyWeek(from: string, to: string) {
   });
 }
 
-/** The person's own sheet for the period holding `day`; only fetched when approvals are on. */
-export function useTimesheet(day: string, enabled: boolean) {
+/**
+ * The sheet for the period holding `day`, the caller's own unless `userId` names someone they
+ * review; only fetched when approvals are on.
+ */
+export function useTimesheet(day: string, enabled: boolean, userId?: string) {
   const { organizationId } = useAuth();
   return useQuery({
-    queryKey: [...timesheetQueryKey(organizationId), day],
+    queryKey: [...timesheetQueryKey(organizationId), userId ?? "me", day],
     queryFn: async (): Promise<SerializedTimesheet> => {
       const response = await projectsApi.getTimesheet({
         organizationId: organizationId!,
+        userId,
         periodStart: day,
       });
       return timesheetToPlain(response.timesheet!);

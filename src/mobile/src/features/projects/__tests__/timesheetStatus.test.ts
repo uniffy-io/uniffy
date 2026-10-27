@@ -3,23 +3,29 @@ import type { SerializedTimesheet } from "@features/projects/timeSerializer";
 import {
   canRecall,
   canSubmit,
+  graceLeft,
   lockHint,
   sheetFor,
   sheetSummary,
+  statusLook,
 } from "@features/projects/timesheetStatus";
 
 const NOW = Date.parse("2026-10-27T12:00:00Z");
 
 function sheet(overrides: Partial<SerializedTimesheet> = {}): SerializedTimesheet {
   return {
+    id: "sheet-1",
+    userId: "bob",
     periodStart: "2026-10-19",
     periodEnd: "2026-10-25",
     status: "open",
     submittedAt: null,
+    submitComment: "",
     reviewComment: "",
     graceUntil: null,
     locked: false,
     periodClosed: false,
+    canReview: false,
     totalMinutes: 2400,
     requiredMinutes: 2400,
     submittedToUserId: null,
@@ -94,5 +100,35 @@ describe("sheetFor", () => {
     const second = sheet({ periodStart: "2026-10-26", periodEnd: "2026-11-01" });
     expect(sheetFor([first, second], "2026-10-27")).toBe(second);
     expect(sheetFor([first, undefined], "2026-11-05")).toBeUndefined();
+  });
+});
+
+describe("rejected detail", () => {
+  it("ends the reviewer's reason before the grace sentence", () => {
+    const summary = sheetSummary(
+      sheet({
+        status: "rejected",
+        reviewComment: "Please add notes",
+        graceUntil: "2026-10-28T12:00:00Z",
+      }),
+      undefined,
+      NOW,
+    );
+    expect(summary.detail).toBe("Rejected: Please add notes. Open for edits for 24h more.");
+  });
+});
+
+describe("statusLook", () => {
+  it("reads a closed period and an open sheet past its lock as such", () => {
+    expect(statusLook("approved", true, true)).toEqual({ label: "Closed", tone: "default" });
+    expect(statusLook("open", true, false)).toEqual({ label: "Locked", tone: "warning" });
+    expect(statusLook("submitted", true, false)).toEqual({ label: "Submitted", tone: "info" });
+  });
+});
+
+describe("graceLeft", () => {
+  it("counts hours while grace runs and says nothing after", () => {
+    expect(graceLeft(sheet({ graceUntil: "2026-10-27T17:00:00Z" }), NOW)).toBe("for 5h more");
+    expect(graceLeft(sheet({ graceUntil: "2026-10-27T11:00:00Z" }), NOW)).toBeNull();
   });
 });
