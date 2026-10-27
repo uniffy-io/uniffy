@@ -6,7 +6,7 @@ import { searchApi } from "@/features/search/api/searchApi";
 import { parseUrn } from "@/shared/utils/urn";
 
 const DEBOUNCE_MS = 200;
-const LIMIT = 15;
+const LIMIT = 30;
 
 export interface TaskHit {
   id: string;
@@ -14,6 +14,9 @@ export interface TaskHit {
   /** "REL-12" when the index knows the project. */
   code: string | null;
   type: string;
+  projectId: string;
+  /** From the resolve, for a project the store has not loaded. */
+  projectName: string;
 }
 
 /** Tasks the person can open that match what they typed, debounced. */
@@ -65,6 +68,8 @@ export function useTaskSearch(query: string): { hits: TaskHit[]; loading: boolea
                   ? `${live.project_slug.toUpperCase()}-${live.task_number}`
                   : null,
               type: live.task_type || "task",
+              projectId: item.metadata.project_id ?? "",
+              projectName: live.project_name ?? "",
             };
           }),
         );

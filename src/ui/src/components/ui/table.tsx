@@ -16,6 +16,8 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
         className={cn(
           "w-full border-separate border-spacing-0 text-sm",
           tone === "surface" ? "[--table-tone:var(--surface)]" : "[--table-tone:var(--card)]",
+          // Without its own frame the header band has no rounded shell to follow.
+          !rounded && "[&_th]:rounded-none!",
           className,
         )}
         {...props}

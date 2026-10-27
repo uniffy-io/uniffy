@@ -18,6 +18,8 @@ import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import { formatMinutes } from "@/shared/utils/durationFormatting";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { useSchedulingSettings } from "@/features/settings/hooks/useSettings";
+import { useAssignedTasks } from "@/features/projects/hooks/useAssignedTasks";
+import { useRecentTaskPicks } from "@/features/projects/hooks/useRecentTaskPicks";
 import { useTaskSearch, type TaskHit } from "@/features/projects/hooks/useTaskSearch";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import type { Task } from "@/features/projects/types";
@@ -31,10 +33,12 @@ import {
 import {
   createWorklog,
   createWorklogRange,
+  deleteWorklog,
   stopTimer,
   updateWorklog,
 } from "@/features/projects/store/timeThunks";
 import {
+  DAY_MINUTES as MINUTES_PER_DAY,
   endOf,
   endSlots,
   instantOf,
@@ -48,6 +52,11 @@ import { requiredMinutesOn } from "@/features/projects/utils/timeWeek";
 import { roundTimerMinutes, timerElapsedSeconds } from "@/features/projects/utils/timerElapsed";
 
 type DateMode = "day" | "period";
+
+const withValue = (slots: string[], value: string): string[] =>
+  !value || slots.includes(value)
+    ? slots
+    : [...slots, value].sort((a, b) => minutesOfDay(a) - minutesOfDay(b));
 
 const MODE_OPTIONS: { value: DateMode; content: ReactNode }[] = [
   { value: "day", content: <span className="flex h-3.5 items-center px-1 text-xs">Day</span> },
@@ -75,10 +84,110 @@ interface LogTimeModalProps extends LogTimePrefill {
   onClose: () => void;
 }
 
+const ASSIGNED_LIMIT = 30;
+
+function HitRow({
+  hit,
+  active,
+  onHover,
+  onPick,
+}: {
+  hit: TaskHit;
+  active: boolean;
+  onHover: () => void;
+  onPick: () => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        role="option"
+        aria-selected={active}
+        className={cn(
+          "flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/60",
+          active && "bg-muted/60",
+        )}
+        // Keeps focus in the field, so the list does not close before the click lands.
+        onMouseDown={(event) => event.preventDefault()}
+        onMouseEnter={onHover}
+        onClick={onPick}
+      >
+        <TaskTypeIcon type={hit.type} className="text-muted-foreground" />
+        {hit.code && (
+          <span className="shrink-0 font-mono text-xs text-muted-foreground">{hit.code}</span>
+        )}
+        <span className="min-w-0 flex-1 truncate">{hit.title}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {getTaskTypeConfig(hit.type).label}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function ListHeading({ children }: { children: string }) {
+  return (
+    <li
+      className="px-3 pt-2 pb-0.5 text-[10px] font-medium uppercase tracking-wide text-subtle-foreground"
+      role="presentation"
+    >
+      {children}
+    </li>
+  );
+}
+
+/**
+ * The task field: typing searches every task the person can open; an empty field lists the
+ * tasks they picked lately, then their assigned tasks grouped by project.
+ */
 function TaskSearch({ onPick }: { onPick: (task: TaskHit) => void }) {
   const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
   const { hits, loading } = useTaskSearch(query);
+  const { recent, remember } = useRecentTaskPicks();
+  const assigned = useAssignedTasks();
   const [active, setActive] = useState(0);
+  const typed = query.trim().length > 0;
+
+  const groups = useMemo(() => {
+    const recentIds = new Set(recent.map((hit) => hit.id));
+    const byProject = new Map<string, { name: string; hits: TaskHit[] }>();
+    for (const hit of assigned.filter((task) => !recentIds.has(task.id)).slice(0, ASSIGNED_LIMIT)) {
+      const group = byProject.get(hit.projectId) ?? {
+        name: hit.projectName || "Project",
+        hits: [],
+      };
+      group.hits.push(hit);
+      byProject.set(hit.projectId, group);
+    }
+    return [...byProject.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [recent, assigned]);
+
+  // One flat order for the arrow keys, matching what is drawn.
+  const ordered = useMemo(
+    () => (typed ? hits : [...recent, ...groups.flatMap((group) => group.hits)]),
+    [typed, hits, recent, groups],
+  );
+
+  const pick = (hit: TaskHit) => {
+    remember(hit);
+    setOpen(false);
+    onPick(hit);
+  };
+
+  const row = (hit: TaskHit) => {
+    const index = ordered.indexOf(hit);
+    return (
+      <HitRow
+        key={hit.id}
+        hit={hit}
+        active={index === active}
+        onHover={() => setActive(index)}
+        onPick={() => pick(hit)}
+      />
+    );
+  };
+
   return (
     <div className="relative">
       <Input
@@ -87,69 +196,79 @@ function TaskSearch({ onPick }: { onPick: (task: TaskHit) => void }) {
         onChange={(event) => {
           setQuery(event.target.value);
           setActive(0);
+          setOpen(true);
         }}
+        onClick={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            setActive((index) => Math.min(hits.length - 1, index + 1));
+            if (!open) setOpen(true);
+            else setActive((index) => Math.min(ordered.length - 1, index + 1));
           } else if (event.key === "ArrowUp") {
             event.preventDefault();
             setActive((index) => Math.max(0, index - 1));
-          } else if (event.key === "Enter" && hits[active]) {
+          } else if (event.key === "Enter" && open && ordered[active]) {
             event.preventDefault();
-            onPick(hits[active]);
+            pick(ordered[active]);
+          } else if (event.key === "Escape" && open) {
+            // Closes the list, not the dialog under it.
+            event.stopPropagation();
+            event.nativeEvent.stopImmediatePropagation();
+            setOpen(false);
           }
         }}
         placeholder="Search tasks"
         className="pl-9"
         aria-label="Task"
+        aria-expanded={open}
         data-testid="log-time-task-search"
       />
       <MagnifyingGlass
         size={16}
         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle-foreground"
       />
-      {query.trim() && (
+      {open && (
         // Floats over the fields below so the dialog keeps its size while the person types.
         <ul
           className={cn(
             popoverShellClass,
-            "absolute inset-x-0 top-full z-20 mt-1 max-h-48 overflow-y-auto border border-border/60 py-1 text-sm",
+            "absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto border border-border/60 py-1 text-sm",
           )}
           role="listbox"
           data-testid="log-time-task-hits"
         >
-          {hits.length === 0 && (
+          {typed ? (
+            hits.length === 0 ? (
+              <li className="px-3 py-2 text-xs text-subtle-foreground">
+                {loading ? "Searching" : "No tasks match"}
+              </li>
+            ) : (
+              hits.map(row)
+            )
+          ) : ordered.length === 0 ? (
             <li className="px-3 py-2 text-xs text-subtle-foreground">
-              {loading ? "Searching" : "No tasks match"}
+              Type to search every task you can open.
             </li>
+          ) : (
+            <>
+              {recent.length > 0 && (
+                <>
+                  <ListHeading>Recent</ListHeading>
+                  {recent.map(row)}
+                </>
+              )}
+              {groups.length > 0 && <ListHeading>Assigned to me</ListHeading>}
+              {groups.map((group) => (
+                <li key={group.name} role="presentation" data-testid="log-time-task-group">
+                  <div className="truncate px-3 pt-1 pb-0.5 text-xs font-medium text-muted-foreground">
+                    {group.name}
+                  </div>
+                  <ul>{group.hits.map(row)}</ul>
+                </li>
+              ))}
+            </>
           )}
-          {hits.map((hit, index) => (
-            <li key={hit.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={index === active}
-                className={cn(
-                  "flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/60",
-                  index === active && "bg-muted/60",
-                )}
-                onMouseEnter={() => setActive(index)}
-                onClick={() => onPick(hit)}
-              >
-                <TaskTypeIcon type={hit.type} className="text-muted-foreground" />
-                {hit.code && (
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {hit.code}
-                  </span>
-                )}
-                <span className="min-w-0 flex-1 truncate">{hit.title}</span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {getTaskTypeConfig(hit.type).label}
-                </span>
-              </button>
-            </li>
-          ))}
         </ul>
       )}
     </div>
@@ -202,6 +321,7 @@ export function LogTimeModal({
   );
   const [logAnother, setLogAnother] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const end = start && minutes ? endOf(start, minutes) : "";
@@ -218,26 +338,32 @@ export function LogTimeModal({
     [mode, workDate, periodEnd, includeDaysOff, rule],
   );
   const periodInvalid = mode === "period" && days.length === 0;
+  // The server refuses later days; the pickers grey them out so the refusal never shows.
+  const latestDay = policy?.allowFutureDates === false ? effectiveDayKey(new Date()) : undefined;
   const dayRequired = requiredMinutesOn(workDate, rule);
   const dayExpectation =
     dayRequired > 0
       ? `This day expects ${formatMinutes(dayRequired)}`
       : "A day off, no hours expected";
+  const tooLong = minutes !== null && minutes > MINUTES_PER_DAY;
   const canSave =
     Boolean(task) &&
     Boolean(workDate) &&
     minutes !== null &&
     minutes > 0 &&
+    !tooLong &&
     !saving &&
     !periodInvalid;
 
+  // The lists step by half hours; a time between two steps (a 45m entry, a 15 minute drag)
+  // joins its list so the field still shows it.
   const startOptions = useMemo(
-    () => startSlots().map((slot) => ({ value: slot, label: slot })),
-    [],
+    () => withValue(startSlots(), start).map((slot) => ({ value: slot, label: slot })),
+    [start],
   );
   const endOptions = useMemo(
     () =>
-      endSlots()
+      withValue(endSlots(), end)
         .filter((slot) => !start || minutesOfDay(slot) > minutesOfDay(start))
         .map((slot) => ({
           value: slot,
@@ -245,7 +371,7 @@ export function LogTimeModal({
             ? `${slot}, ${formatMinutes(minutesOfDay(slot) - minutesOfDay(start))}`
             : slot,
         })),
-    [start],
+    [start, end],
   );
 
   const pickEnd = (slot: string) => {
@@ -275,6 +401,13 @@ export function LogTimeModal({
     setConfirmDiscard(false);
     const result = await dispatch(stopTimer({ discard: true }));
     if (stopTimer.fulfilled.match(result)) onClose();
+  };
+
+  const remove = async () => {
+    if (!worklog) return;
+    setConfirmDelete(false);
+    const result = await dispatch(deleteWorklog({ worklogId: worklog.id, taskId: worklog.taskId }));
+    if (deleteWorklog.fulfilled.match(result)) onClose();
   };
 
   const resetForAnother = () => {
@@ -315,7 +448,8 @@ export function LogTimeModal({
           days,
           durationMinutes: minutes,
           description,
-          ...(start ? { startedAt } : {}),
+          ...(start ? { startTime: start } : {}),
+          timeZone: zone,
         }),
       );
       if (!createWorklogRange.fulfilled.match(result)) return;
@@ -388,6 +522,7 @@ export function LogTimeModal({
                 <DatePicker
                   value={workDate}
                   onChange={setWorkDate}
+                  maxDate={latestDay}
                   size="sm"
                   triggerClassName="h-7"
                 />
@@ -398,6 +533,7 @@ export function LogTimeModal({
                   <DatePicker
                     value={periodEnd}
                     onChange={setPeriodEnd}
+                    maxDate={latestDay}
                     size="sm"
                     triggerClassName="h-7"
                   />
@@ -491,10 +627,21 @@ export function LogTimeModal({
                 <X size={14} />
               </Button>
             </div>
-            <p className="-mt-2 text-xs text-subtle-foreground">
-              Accepts 2h 30m, 1.5h or a plain number of minutes. Times are optional and place the
-              entry on the calendar.
-            </p>
+            {tooLong ? (
+              <p
+                className="-mt-2 text-xs text-red-500"
+                role="alert"
+                data-testid="log-time-too-long"
+              >
+                An entry can hold at most 24h, and {formatMinutes(minutes ?? 0)} is longer than a
+                day. Split it into one entry per day, or use Period to log a range of days.
+              </p>
+            ) : (
+              <p className="-mt-2 text-xs text-subtle-foreground">
+                Accepts 2h 30m, 1.5h or a plain number of minutes. Times are optional and place the
+                entry on the calendar.
+              </p>
+            )}
             <div>
               <label className="block text-sm text-muted-foreground mb-1" htmlFor="log-time-note">
                 Note (optional)
@@ -522,6 +669,18 @@ export function LogTimeModal({
               Discard
             </Button>
           )}
+          {worklog && !timer && (
+            <Button
+              type="button"
+              variant="ghost"
+              className="mr-auto text-red-500 hover:text-red-600"
+              onClick={() => setConfirmDelete(true)}
+              disabled={saving}
+              data-testid="log-time-delete"
+            >
+              Delete
+            </Button>
+          )}
           {!timer && !editing && (
             <Checkbox
               size="sm"
@@ -541,6 +700,15 @@ export function LogTimeModal({
           </Button>
         </ModalFooter>
       </form>
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={remove}
+        title="Delete time entry"
+        message={`Remove ${formatMinutes(worklog?.durationMinutes ?? 0)} logged on ${formatDateShort(worklog?.workDate ?? "")}?`}
+        confirmLabel="Delete"
+        loading={saving}
+      />
       <ConfirmDialog
         isOpen={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}

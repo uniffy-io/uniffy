@@ -1,3 +1,4 @@
+import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { createClient } from "@connectrpc/connect";
 import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
@@ -145,6 +146,8 @@ export function protoTimesheetToFrontend(proto: ProtoTimesheet): Timesheet {
     canReview: proto.canReview,
     totalMinutes: proto.totalMinutes,
     requiredMinutes: proto.requiredMinutes,
+    submittedToUserId: proto.submittedToUserId ?? null,
+    reviewerUserIds: [...proto.reviewerUserIds],
   };
 }
 
@@ -246,6 +249,7 @@ export const timeApi = {
       durationMinutes: input.durationMinutes,
       description: input.description ?? "",
       ...(input.startedAt ? { startedAt: timestampFromDate(new Date(input.startedAt)) } : {}),
+      timeZone: getEffectiveTimeZone(),
     });
     return {
       worklog: protoWorklogToFrontend(response.worklog!),
@@ -261,6 +265,7 @@ export const timeApi = {
       ...(input.durationMinutes !== undefined ? { durationMinutes: input.durationMinutes } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.startedAt ? { startedAt: timestampFromDate(new Date(input.startedAt)) } : {}),
+      timeZone: getEffectiveTimeZone(),
       clearStartedAt: input.startedAt === null,
     });
     return {
@@ -467,10 +472,12 @@ export const timeApi = {
     comment: string,
     organizationId: string,
     userId?: string,
+    reviewerUserId?: string,
   ): Promise<Timesheet> => {
     const response = await timeClient.submitTimesheet({
       organizationId,
       ...(userId ? { userId } : {}),
+      ...(reviewerUserId ? { reviewerUserId } : {}),
       periodStart: day,
       comment,
     });

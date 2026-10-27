@@ -14,7 +14,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { MentionChipCompact } from "@/components/mention";
 import { Card } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
-import { PaneHeader, PaneHeaderControls } from "@/components/ui/pane-header";
+import { PaneHeader } from "@/components/ui/pane-header";
 import { popoverShellClass } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
@@ -66,11 +66,16 @@ const ROW_HEIGHT = 32;
 interface TimeReportProps {
   projectId: string;
   /** The pane's title bar; the report adds its filter row underneath. */
-  headerBar: ReactNode;
+  /** The page's header bar, given the report's controls to place beside the title. */
+  renderHeader: (controls: ReactNode) => ReactNode;
 }
 
+const pill = (label: string) => (
+  <span className="flex h-3.5 items-center px-1 text-xs">{label}</span>
+);
+
 /** Logged time in one project over a date range, grouped by person, task or day. */
-export function TimeReport({ projectId, headerBar }: TimeReportProps) {
+export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
   const dispatch = useAppDispatch();
   const policy = useAppSelector(selectTimePolicy);
   const { weekStart: preferredWeekStart } = useAppearanceSettings();
@@ -122,36 +127,49 @@ export function TimeReport({ projectId, headerBar }: TimeReportProps) {
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="time-report">
       <PaneHeader>
-        {headerBar}
-        <PaneHeaderControls className="gap-x-3 gap-y-2">
-          <SegmentedControl
-            ariaLabel="Date range"
-            value={preset ?? "custom"}
-            onChange={(value) => {
-              if (value !== "custom") choosePreset(value);
-            }}
-            options={[
-              ...PRESETS.map((value) => ({ value, content: PRESET_LABEL[value] })),
-              ...(preset === null ? [{ value: "custom" as const, content: "Custom" }] : []),
-            ]}
-          />
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span data-testid="report-from">
-              <DatePicker size="sm" value={range.from} onChange={(v) => chooseDate("from", v)} />
-            </span>
-            <span>to</span>
-            <span data-testid="report-to">
-              <DatePicker size="sm" value={range.to} onChange={(v) => chooseDate("to", v)} />
-            </span>
-          </div>
-          <SegmentedControl
-            ariaLabel="Group by"
-            className="md:ml-auto"
-            value={groupBy}
-            onChange={setGroupBy}
-            options={GROUPS.map((value) => ({ value, content: GROUP_LABEL[value] }))}
-          />
-        </PaneHeaderControls>
+        {renderHeader(
+          <>
+            <SegmentedControl
+              ariaLabel="Date range"
+              className="h-7"
+              value={preset ?? "custom"}
+              onChange={(value) => {
+                if (value !== "custom") choosePreset(value);
+              }}
+              options={[
+                ...PRESETS.map((value) => ({ value, content: pill(PRESET_LABEL[value]) })),
+                ...(preset === null ? [{ value: "custom" as const, content: pill("Custom") }] : []),
+              ]}
+            />
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span data-testid="report-from">
+                <DatePicker
+                  size="sm"
+                  triggerClassName="h-7"
+                  value={range.from}
+                  onChange={(v) => chooseDate("from", v)}
+                />
+              </span>
+              <span>to</span>
+              <span data-testid="report-to">
+                <DatePicker
+                  size="sm"
+                  triggerClassName="h-7"
+                  value={range.to}
+                  onChange={(v) => chooseDate("to", v)}
+                />
+              </span>
+            </div>
+            <div className="hidden h-5 w-px shrink-0 bg-border lg:block" aria-hidden />
+            <SegmentedControl
+              ariaLabel="Group by"
+              className="h-7"
+              value={groupBy}
+              onChange={setGroupBy}
+              options={GROUPS.map((value) => ({ value, content: pill(GROUP_LABEL[value]) }))}
+            />
+          </>,
+        )}
       </PaneHeader>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-4">

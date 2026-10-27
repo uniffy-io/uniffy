@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatDateShort } from "@/shared/utils/dateFormatting";
@@ -40,6 +41,19 @@ export function WorklogSection({ task }: { task: Task }) {
   const loading = useAppSelector((state) => state.time.loadingByTask[task.id] ?? false);
   const policy = useAppSelector(selectTimePolicy);
   const userId = useAppSelector((state) => state.auth.user?.id);
+  const authorIds = useMemo(() => [...new Set(worklogs.map((entry) => entry.userId))], [worklogs]);
+  const { subjects: authors } = useSubjectResolver(authorIds);
+  const authorNames = useMemo(
+    // An id the directory has not loaded resolves to a placeholder name; leave those out so the
+    // avatar keeps its own fallback rather than drawing initials from the placeholder.
+    () =>
+      Object.fromEntries(
+        authors
+          .filter((subject) => subject.name !== subject.id.slice(-6))
+          .map((subject) => [subject.id, subject.name]),
+      ),
+    [authors],
+  );
   const [editor, setEditor] = useState<{ worklog?: Worklog } | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Worklog | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -101,7 +115,12 @@ export function WorklogSection({ task }: { task: Task }) {
                 className="group flex items-start gap-2 text-sm"
                 data-testid="worklog-row"
               >
-                <SubjectAvatarById userId={entry.userId} size="xs" className="mt-0.5" />
+                <SubjectAvatarById
+                  userId={entry.userId}
+                  displayName={authorNames[entry.userId]}
+                  size="xs"
+                  className="mt-0.5"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-muted-foreground">

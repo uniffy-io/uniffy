@@ -72,7 +72,7 @@ export function ProjectTimePage() {
         {project ? (
           <TimeReport
             projectId={project.id}
-            headerBar={
+            renderHeader={(controls) => (
               <PaneHeaderBar
                 divided
                 icon={<ClockCountdown size={16} />}
@@ -84,8 +84,10 @@ export function ProjectTimePage() {
                     {project.name}
                   </PaneBackLink>
                 }
-              />
-            }
+              >
+                {controls}
+              </PaneHeaderBar>
+            )}
           />
         ) : (
           <PaneHeader>

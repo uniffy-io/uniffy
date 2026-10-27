@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -13,9 +13,12 @@ import { fetchReviewTimesheets } from "@/features/projects/store/timeThunks";
 
 type Tab = "week" | "approvals";
 
-const TAB_OPTIONS: { value: Tab; content: string }[] = [
-  { value: "week", content: "My week" },
-  { value: "approvals", content: "Approvals" },
+const TAB_OPTIONS: { value: Tab; content: ReactNode }[] = [
+  { value: "week", content: <span className="flex h-3.5 items-center px-1 text-xs">My week</span> },
+  {
+    value: "approvals",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Approvals</span>,
+  },
 ];
 
 export function MyTimePage() {
@@ -49,7 +52,7 @@ export function MyTimePage() {
       onChange={setTab}
       options={TAB_OPTIONS}
       ariaLabel="My time section"
-      className="mr-2"
+      className="h-7"
     />
   ) : null;
 

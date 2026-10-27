@@ -144,6 +144,10 @@ export interface Timesheet {
   canReview: boolean;
   totalMinutes: number;
   requiredMinutes: number;
+  /** The reviewer the person sent the sheet to; null means every reviewer was told. */
+  submittedToUserId: string | null;
+  /** Who may review the sheet, manager first; only on the person's own sheet. */
+  reviewerUserIds: string[];
 }
 
 export interface DayTotal {

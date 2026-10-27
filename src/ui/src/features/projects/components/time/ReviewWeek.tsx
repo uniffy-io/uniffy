@@ -80,6 +80,10 @@ interface ReviewWeekProps {
 }
 
 /** One person's week as their reviewer sees it: read-only cells and the sheet's review bar. */
+function HeaderDivider() {
+  return <div className="hidden h-5 w-px shrink-0 bg-border lg:block" aria-hidden />;
+}
+
 export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -136,6 +140,9 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   const rangeLabel = `${formatDateShort(days[0])} to ${formatDateShort(days[6])}`;
   const canReview = sheet?.canReview ?? false;
   const pending = canReview && sheet?.status === "submitted" && !sheet.periodClosed;
+  // Back to the inbox on the period being looked at, not on today's.
+  const backToInbox = () =>
+    navigate(`/projects/time?tab=approvals&period=${sheet?.periodStart ?? days[0]}`);
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="review-week">
@@ -145,12 +152,13 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
           title={person?.name ?? "Member"}
           subtitle={rangeLabel}
           eyebrow={
-            <PaneBackLink onClick={() => navigate("/projects/time?tab=approvals")}>
+            <PaneBackLink onClick={backToInbox}>
               <CaretLeft size={12} />
               Approvals
             </PaneBackLink>
           }
         >
+          {/* Left to right: which week, where it stands, what the reviewer can do with it. */}
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -158,6 +166,7 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
               size="xs"
               onClick={() => setAnchor(addDays(days[0], -7))}
               aria-label="Previous week"
+              title="Previous week"
             >
               <CaretLeft size={14} />
             </Button>
@@ -167,43 +176,69 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
               size="xs"
               onClick={() => setAnchor(addDays(days[0], 7))}
               aria-label="Next week"
+              title="Next week"
             >
               <CaretRight size={14} />
             </Button>
           </div>
-          <div className="text-xs tabular-nums">
-            <span className="font-semibold text-foreground">{formatMinutes(weekTotal)}</span>
-          </div>
-        </PaneHeaderBar>
-      </PaneHeader>
-
-      {sheet && (
-        <div
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border-strong px-4 py-2 text-xs"
-          data-testid="review-bar"
-          data-status={sheet.status}
-        >
-          <StatusPill status={sheet.status} locked={sheet.locked} />
-          <span className="font-medium text-foreground">{periodLabel(sheet)}</span>
-          <span className="min-w-0 flex-1 text-muted-foreground">
-            {formatMinutes(sheet.totalMinutes)}
-            {sheet.requiredMinutes > 0 && ` of ${formatMinutes(sheet.requiredMinutes)}`}
-            {sheet.submitComment && ` · ${sheet.submitComment}`}
-            {sheet.reviewComment && ` · ${sheet.reviewComment}`}
-            {graceActive(sheet) && " · grace active"}
-          </span>
+          <HeaderDivider />
+          {sheet ? (
+            <div
+              className="flex min-w-0 items-center gap-2 text-xs"
+              data-testid="review-bar"
+              data-status={sheet.status}
+            >
+              <span title={periodLabel(sheet)}>
+                <StatusPill status={sheet.status} locked={sheet.locked} />
+              </span>
+              <span className="tabular-nums" title={`Logged in ${periodLabel(sheet)}`}>
+                <span className="font-semibold text-foreground">
+                  {formatMinutes(sheet.totalMinutes)}
+                </span>
+                {sheet.requiredMinutes > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    / {formatMinutes(sheet.requiredMinutes)}
+                  </span>
+                )}
+              </span>
+              {(sheet.submitComment || sheet.reviewComment) && (
+                <span
+                  className="hidden max-w-56 truncate text-muted-foreground italic xl:inline"
+                  title={sheet.reviewComment || sheet.submitComment}
+                  data-testid="review-note"
+                >
+                  {sheet.reviewComment || sheet.submitComment}
+                </span>
+              )}
+              {graceActive(sheet) && (
+                <span className="text-muted-foreground" title="Grace is active">
+                  <HourglassHigh size={12} />
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="text-xs tabular-nums">
+              <span className="font-semibold text-foreground">{formatMinutes(weekTotal)}</span>
+            </div>
+          )}
+          {sheet && (pending || (canReview && !sheet.periodClosed)) && <HeaderDivider />}
+          {sheet && canReview && !sheet.periodClosed && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setGraceOpen(true)}
+              disabled={busy}
+              title={`Let them edit this period for ${GRACE_HOURS} hours`}
+              data-testid="review-grace"
+            >
+              <HourglassHigh size={12} />
+              <span className="hidden lg:inline">Grace {GRACE_HOURS}h</span>
+            </Button>
+          )}
           {pending && (
             <>
-              <Button
-                type="button"
-                size="xs"
-                onClick={() => setApproveOpen(true)}
-                disabled={busy}
-                data-testid="review-approve"
-              >
-                <Check size={12} />
-                Approve
-              </Button>
               <Button
                 type="button"
                 variant="ghost"
@@ -215,26 +250,23 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
                 <X size={12} />
                 Reject
               </Button>
+              <Button
+                type="button"
+                size="xs"
+                onClick={() => setApproveOpen(true)}
+                disabled={busy}
+                data-testid="review-approve"
+              >
+                <Check size={12} />
+                Approve
+              </Button>
             </>
           )}
-          {canReview && !sheet.periodClosed && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              onClick={() => setGraceOpen(true)}
-              disabled={busy}
-              data-testid="review-grace"
-            >
-              <HourglassHigh size={12} />
-              Grace {GRACE_HOURS}h
-            </Button>
-          )}
-        </div>
-      )}
+        </PaneHeaderBar>
+      </PaneHeader>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <Table className="min-w-[720px]">
+        <Table className="min-w-[720px]" rounded={false}>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[30%] min-w-[220px]">Task</TableHead>

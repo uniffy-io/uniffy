@@ -30,6 +30,7 @@ import {
   clearRecentItemsForUser,
 } from "@/features/search/utils/recentItems";
 import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
+import { clearRequestedTaskPages } from "@/features/projects/hooks/useAssignedTasks";
 
 /**
  * The boundary that ends this tab's caches. A switch moves only this tab, so only its memory goes;
@@ -57,6 +58,7 @@ export async function clearSessionCaches(
   if (boundary.reason !== "lost-grant" || !boundary.preserveCurrentScope) {
     clearLibraryScope(dispatch);
     clearBlobCache();
+    clearRequestedTaskPages();
   }
   const work: Promise<unknown>[] = [];
   if (boundary.reason === "switch") {

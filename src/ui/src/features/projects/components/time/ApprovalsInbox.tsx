@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowSquareOut,
   CaretLeft,
@@ -35,7 +35,7 @@ import {
 import { STATUS_HEX_COLORS } from "@/config/theme/statusColors";
 import { GroupKind } from "@uniffy/proto/common/v1/common_pb";
 import { cn } from "@/shared/utils/cn";
-import { formatDateShort } from "@/shared/utils/dateFormatting";
+import { effectiveDayKey, formatDateShort } from "@/shared/utils/dateFormatting";
 import { formatMinutes } from "@/shared/utils/durationFormatting";
 import type { SerializedGroupInfo } from "@/features/admin/store/adminSlice";
 import type { ReviewRow, TimesheetStatus } from "@/features/projects/types/time";
@@ -55,12 +55,36 @@ import { StatusPill } from "./PeriodBanner";
 type StatusFilter = "all" | TimesheetStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; content: ReactNode; title: string }[] = [
-  { value: "all", content: "All", title: "Everyone" },
-  { value: "open", content: "Open", title: "Not submitted yet" },
-  { value: "submitted", content: "Submitted", title: "Waiting for review" },
-  { value: "approved", content: "Approved", title: "Approved" },
-  { value: "rejected", content: "Rejected", title: "Sent back" },
+  {
+    value: "all",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">All</span>,
+    title: "Everyone",
+  },
+  {
+    value: "open",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Open</span>,
+    title: "Not submitted yet",
+  },
+  {
+    value: "submitted",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Submitted</span>,
+    title: "Waiting for review",
+  },
+  {
+    value: "approved",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Approved</span>,
+    title: "Approved",
+  },
+  {
+    value: "rejected",
+    content: <span className="flex h-3.5 items-center px-1 text-xs">Rejected</span>,
+    title: "Sent back",
+  },
 ];
+
+function HeaderDivider() {
+  return <div className="hidden h-5 w-px shrink-0 bg-border lg:block" aria-hidden />;
+}
 
 const GRACE_HOURS_DEFAULT = 24;
 const GRACE_HOURS_MAX = 336;
@@ -110,6 +134,8 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
   const review = useAppSelector(selectReview);
   const groups = useAppSelector((state) => state.admin.groups) as SerializedGroupInfo[];
   const [anchor, setAnchor] = useState(initialDay);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const today = effectiveDayKey(new Date());
   const [status, setStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [teamId, setTeamId] = useState("");
@@ -134,7 +160,20 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
     return () => window.clearTimeout(handle);
   }, [dispatch, anchor, status, query, teamId]);
 
-  const userIds = useMemo(() => review.rows.map((row) => row.userId), [review.rows]);
+  const viewerId = useAppSelector((state) => state.auth.user?.id ?? "");
+  // The people in the rows and whoever their sheets were sent to.
+  const userIds = useMemo(
+    () => [
+      ...new Set(
+        review.rows.flatMap((row) =>
+          row.timesheet.submittedToUserId
+            ? [row.userId, row.timesheet.submittedToUserId]
+            : [row.userId],
+        ),
+      ),
+    ],
+    [review.rows],
+  );
   const { subjects } = useSubjectResolver(userIds);
   const subjectMap = useMemo(() => {
     const map: Record<string, Subject> = {};
@@ -152,6 +191,16 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
   );
 
   const period = review.period;
+  // The period in view lives in the address, so leaving for someone's week and coming back
+  // (by the back link or the browser) lands on the same period.
+  const periodStart = period?.startDate;
+  useEffect(() => {
+    if (!periodStart || searchParams.get("period") === periodStart) return;
+    const params = new URLSearchParams(searchParams);
+    params.set("period", periodStart);
+    setSearchParams(params, { replace: true });
+  }, [periodStart, searchParams, setSearchParams]);
+  const isCurrentPeriod = Boolean(period && period.startDate <= today && today <= period.endDate);
   const periodClosed = period?.status === "closed";
   const rangeLabel = period
     ? `${formatDateShort(period.startDate)} to ${formatDateShort(period.endDate)}`
@@ -204,8 +253,10 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
   return (
     <div className="flex h-full min-h-0 flex-col" data-testid="approvals-inbox">
       <PaneHeader>
-        <PaneHeaderBar icon={ListChecks} title="Approvals" subtitle={rangeLabel} divided>
+        <PaneHeaderBar icon={ListChecks} title="Approvals" subtitle={rangeLabel}>
+          {/* Left to right: which page, which period, who to show, what to do with the period. */}
           {headerExtra}
+          {headerExtra && <HeaderDivider />}
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -213,9 +264,20 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
               size="xs"
               onClick={() => period && setAnchor(addDays(period.startDate, -1))}
               aria-label="Previous period"
+              title="Previous period"
               data-testid="period-previous"
             >
               <CaretLeft size={14} />
+            </Button>
+            <Button
+              type="button"
+              variant={isCurrentPeriod ? "secondary" : "ghost"}
+              size="xs"
+              onClick={() => setAnchor(today)}
+              title="The period that holds today"
+              data-testid="period-today"
+            >
+              Today
             </Button>
             <Button
               type="button"
@@ -223,13 +285,41 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
               size="xs"
               onClick={() => period && setAnchor(addDays(period.endDate, 1))}
               aria-label="Next period"
+              title="Next period"
               data-testid="period-next"
             >
               <CaretRight size={14} />
             </Button>
           </div>
+          <HeaderDivider />
+          <SegmentedControl
+            value={status}
+            onChange={setStatus}
+            options={STATUS_OPTIONS}
+            ariaLabel="Timesheet status"
+            className="h-7"
+          />
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Search people"
+            size="sm"
+            className="h-7"
+            containerClassName="w-40 xl:w-48"
+            data-testid="review-search"
+          />
+          {teamOptions.length > 1 && (
+            <Select
+              value={teamId}
+              onChange={setTeamId}
+              options={teamOptions}
+              size="sm"
+              triggerClassName="h-7 w-40 text-xs"
+            />
+          )}
+          {(periodClosed || (review.viewerIsTimekeepingAdmin && period)) && <HeaderDivider />}
           {periodClosed && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+            <span className="inline-flex h-6 items-center gap-1 rounded-full bg-muted px-2 text-[11px] font-medium text-muted-foreground">
               <Lock size={10} />
               Closed
             </span>
@@ -243,40 +333,16 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
               data-testid={periodClosed ? "period-reopen" : "period-close"}
             >
               {periodClosed ? <LockOpen size={14} /> : <Lock size={14} />}
-              <span className="hidden md:inline">
+              <span className="hidden xl:inline">
                 {periodClosed ? "Reopen period" : "Close period"}
               </span>
             </Button>
           )}
         </PaneHeaderBar>
-        <div className="flex flex-wrap items-center gap-2 px-3 py-2 md:px-4">
-          <SegmentedControl
-            value={status}
-            onChange={setStatus}
-            options={STATUS_OPTIONS}
-            ariaLabel="Timesheet status"
-          />
-          <SearchField
-            value={query}
-            onChange={setQuery}
-            placeholder="Search people"
-            size="sm"
-            containerClassName="w-48"
-            data-testid="review-search"
-          />
-          {teamOptions.length > 1 && (
-            <Select
-              value={teamId}
-              onChange={setTeamId}
-              options={teamOptions}
-              triggerClassName="h-8 w-44 text-xs"
-            />
-          )}
-        </div>
       </PaneHeader>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        <Table className="min-w-[640px]">
+        <Table className="min-w-[640px]" rounded={false}>
           <TableHeader>
             <TableRow>
               <TableHead>Person</TableHead>
@@ -331,6 +397,16 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-1">
                       <StatusPill status={sheet.status} locked={sheet.locked} />
+                      {sheet.status === "submitted" && sheet.submittedToUserId && (
+                        <span
+                          className="text-[11px] text-muted-foreground"
+                          data-testid="review-sent-to"
+                        >
+                          {sheet.submittedToUserId === viewerId
+                            ? "to you"
+                            : `to ${subjectMap[sheet.submittedToUserId]?.name ?? "another reviewer"}`}
+                        </span>
+                      )}
                       {grace && (
                         <span
                           className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"

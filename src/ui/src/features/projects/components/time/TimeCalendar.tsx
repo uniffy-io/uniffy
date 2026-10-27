@@ -342,16 +342,28 @@ export function TimeCalendar({
                     }}
                   />
                 </div>
-                {away && required > 0 && (
-                  <div className="mt-0.5 text-[10px] text-subtle-foreground">{away}</div>
-                )}
-                {hint && (
+                {/* One fixed slot right under the meter, so the row of plus buttons lines up
+                    across the week whatever each day lists below it. */}
+                {hint ? (
                   <div
-                    className="mt-0.5 flex items-center gap-1 text-[10px] text-subtle-foreground"
+                    className="mt-1 flex h-6 w-full items-center justify-center gap-1 rounded-md bg-muted/20 text-[10px] text-subtle-foreground"
                     title={hint}
                   >
                     <Lock size={9} /> locked
                   </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="mt-1 flex h-6 w-full items-center justify-center rounded-md bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    onClick={() => onCreate(day, wallOf(9 * 60))}
+                    aria-label={`Log time on ${day}`}
+                    data-testid="calendar-day-add"
+                  >
+                    <Plus size={12} />
+                  </button>
+                )}
+                {away && required > 0 && (
+                  <div className="mt-0.5 text-[10px] text-subtle-foreground">{away}</div>
                 )}
                 {timelines[day].unplaced.length > 0 && (
                   <ul className="mt-1 space-y-0.5" data-testid="calendar-unplaced">
@@ -373,17 +385,6 @@ export function TimeCalendar({
                       </li>
                     ))}
                   </ul>
-                )}
-                {!hint && (
-                  <button
-                    type="button"
-                    className="mt-1 flex h-6 w-full items-center justify-center rounded-md bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    onClick={() => onCreate(day, wallOf(9 * 60))}
-                    aria-label={`Log time on ${day}`}
-                    data-testid="calendar-day-add"
-                  >
-                    <Plus size={12} />
-                  </button>
                 )}
               </div>
             );

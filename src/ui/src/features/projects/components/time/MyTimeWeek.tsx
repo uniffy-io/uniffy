@@ -77,13 +77,26 @@ import {
   type WeekRowRef,
 } from "@/features/projects/utils/timeWeek";
 import { LogTimeModal, type LogTimePrefill } from "./LogTimeModal";
-import { PeriodBanner } from "./PeriodBanner";
-import { SuggestionsRail } from "./SuggestionsRail";
+import { PeriodStatus } from "./PeriodBanner";
+import { TaskRail, type RailTask } from "./TaskRail";
+import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
+import { setCurrentProject } from "@/features/projects/store/projectsSlice";
+import {
+  closeDetailPanel,
+  openDetailPanel,
+  selectIsDetailPanelOpen,
+  selectSelectedTaskId,
+  selectTask,
+} from "@/features/projects/store/projectsUiSlice";
 import { TimeCalendar, type EntryPatch } from "./TimeCalendar";
 import { TimeList } from "./TimeList";
 import { useTaskLabels } from "./useTaskLabels";
 
 type WeekView = "calendar" | "list" | "timesheet";
+
+function HeaderDivider() {
+  return <div className="hidden h-5 w-px shrink-0 bg-border lg:block" aria-hidden />;
+}
 
 const VIEW_OPTIONS: { value: WeekView; content: ReactNode }[] = [
   {
@@ -106,8 +119,6 @@ function storedView(): WeekView {
     return "calendar";
   }
 }
-
-const NO_TASKS: ReadonlySet<string> = new Set();
 
 const STATUS_COLOR: Record<DayStatus, string | undefined> = {
   none: undefined,
@@ -285,7 +296,23 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   );
   const rowTaskIds = useMemo(() => rows.map((row) => row.taskId), [rows]);
   const labels = useTaskLabels(rowTaskIds);
-  const excluded = useMemo(() => new Set(rowTaskIds), [rowTaskIds]);
+  const selectedTaskId = useAppSelector(selectSelectedTaskId);
+  const detailOpen = useAppSelector(selectIsDetailPanelOpen);
+  // Only a task opened from this page shows here, never one left open on a project page.
+  const [railTaskId, setRailTaskId] = useState<string | null>(null);
+  const openTaskId = detailOpen && selectedTaskId === railTaskId ? railTaskId : null;
+  // The same full task view a project opens, as a dialog over the week.
+  const openTask = (task: RailTask) => {
+    setRailTaskId(task.taskId);
+    dispatch(setCurrentProject(task.projectId));
+    dispatch(selectTask(task.taskId));
+    dispatch(openDetailPanel());
+  };
+  const closeTask = () => {
+    setRailTaskId(null);
+    dispatch(closeDetailPanel());
+    dispatch(selectTask(null));
+  };
   const rule = useMemo(
     () => ({
       requiredMinutesPerDay: policy?.requiredMinutesPerDay ?? 0,
@@ -381,7 +408,9 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
     <div className="flex h-full min-h-0 flex-col" data-testid="my-time-week">
       <PaneHeader>
         <PaneHeaderBar icon={Clock} title="My time" subtitle={rangeLabel}>
+          {/* Left to right: which page, which week, where that week stands, how to see it, add. */}
           {headerExtra}
+          {headerExtra && <HeaderDivider />}
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -413,22 +442,30 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               <CaretRight size={14} />
             </Button>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => void copyLastWeek()}
-            data-testid="copy-last-week"
-          >
-            <Copy size={14} />
-            <span className="hidden md:inline">Copy last week</span>
-          </Button>
-          <div className="text-xs tabular-nums" data-testid="week-total">
-            <span className="font-semibold text-foreground">{formatMinutes(weekTotal)}</span>
-            {weekRequired > 0 && (
-              <span className="text-muted-foreground"> / {formatMinutes(weekRequired)}</span>
-            )}
-          </div>
+          <HeaderDivider />
+          {approvals && sheets.length > 0 ? (
+            sheets.map((sheet) => (
+              <PeriodStatus
+                key={sheet.periodStart}
+                sheet={sheet}
+                busy={sheetBusy}
+                onSubmit={(comment, reviewerUserId) =>
+                  void dispatch(
+                    submitTimesheet({ day: sheet.periodStart, comment, reviewerUserId }),
+                  )
+                }
+                onRecall={() => void dispatch(recallTimesheet({ day: sheet.periodStart }))}
+              />
+            ))
+          ) : (
+            <div className="text-xs tabular-nums" data-testid="week-total">
+              <span className="font-semibold text-foreground">{formatMinutes(weekTotal)}</span>
+              {weekRequired > 0 && (
+                <span className="text-muted-foreground"> / {formatMinutes(weekRequired)}</span>
+              )}
+            </div>
+          )}
+          <HeaderDivider />
           <SegmentedControl
             value={view}
             onChange={changeView}
@@ -436,6 +473,17 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
             ariaLabel="Week view"
             className="h-7"
           />
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            onClick={() => void copyLastWeek()}
+            title="Copy last week's tasks into this week"
+            data-testid="copy-last-week"
+          >
+            <Copy size={14} />
+            <span className="hidden xl:inline">Copy last week</span>
+          </Button>
           <Button
             type="button"
             size="xs"
@@ -447,18 +495,6 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
           </Button>
         </PaneHeaderBar>
       </PaneHeader>
-      {approvals &&
-        sheets.map((sheet) => (
-          <PeriodBanner
-            key={sheet.periodStart}
-            sheet={sheet}
-            busy={sheetBusy}
-            onSubmit={(comment) =>
-              void dispatch(submitTimesheet({ day: sheet.periodStart, comment }))
-            }
-            onRecall={() => void dispatch(recallTimesheet({ day: sheet.periodStart }))}
-          />
-        ))}
 
       <div className="flex min-h-0 flex-1">
         {view === "calendar" && (
@@ -496,7 +532,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
             <Table className="min-w-[720px]" rounded={false}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%] min-w-[220px] first:rounded-none">Task</TableHead>
+                  <TableHead className="w-[30%] min-w-[220px]">Task</TableHead>
                   {days.map((day) => (
                     <TableHead
                       key={day}
@@ -520,7 +556,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
                       )}
                     </TableHead>
                   ))}
-                  <TableHead className="text-right last:rounded-none">Total</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -649,22 +685,24 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
           </div>
         )}
         {!isMobileOrTablet && (
-          <div className="w-60 shrink-0">
-            <SuggestionsRail
+          <div className="w-72 shrink-0">
+            <TaskRail
               days={days}
               pinnedProjectId={policy?.internalProjectId ?? null}
-              excludeTaskIds={view === "timesheet" ? excluded : NO_TASKS}
               worklogs={worklogs}
-              onPick={(ref) =>
+              onOpen={openTask}
+              onLog={(ref) =>
                 view === "timesheet"
                   ? addRows([ref])
                   : setEditor({ taskId: ref.taskId, title: ref.title, workDate: defaultDay })
               }
-              onLog={(entry) => setEditor(entry)}
+              onLogMeeting={(entry) => setEditor(entry)}
             />
           </div>
         )}
       </div>
+
+      {openTaskId && <TaskDetailModal taskId={openTaskId} onClose={closeTask} />}
 
       {editor && (
         <LogTimeModal

@@ -2,6 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch, RootState } from "@/app/store";
 import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import { timeApi } from "../api/timeApi";
+import { instantOf } from "../utils/timeClock";
 import { weekRangeKey } from "../utils/timeWeek";
 import type {
   CreateWorklogInput,
@@ -76,12 +77,20 @@ export const createWorklog = createAsyncThunk<
 /** One entry per day of a period; stops at the first refusal so the rest can be fixed. */
 export const createWorklogRange = createAsyncThunk<
   { created: number; failed: string | null },
-  { days: string[] } & Omit<CreateWorklogInput, "workDate">,
+  {
+    days: string[];
+    /** "HH:mm" in `timeZone`; each day's entry starts at this time on its own day. */
+    startTime?: string;
+    timeZone: string;
+  } & Omit<CreateWorklogInput, "workDate" | "startedAt">,
   ThunkConfig
->("time/createWorklogRange", async ({ days, ...input }, { dispatch }) => {
+>("time/createWorklogRange", async ({ days, startTime, timeZone, ...input }, { dispatch }) => {
   let created = 0;
   for (const day of days) {
-    const result = await dispatch(createWorklog({ ...input, workDate: day }));
+    const startedAt = startTime ? instantOf(day, startTime, timeZone) : undefined;
+    const result = await dispatch(
+      createWorklog({ ...input, workDate: day, ...(startedAt ? { startedAt } : {}) }),
+    );
     if (!createWorklog.fulfilled.match(result)) return { created, failed: day };
     created += 1;
   }
@@ -269,21 +278,24 @@ export const fetchTimesheet = createAsyncThunk<Timesheet, { day: string }, Thunk
 
 export const submitTimesheet = createAsyncThunk<
   Timesheet,
-  { day: string; comment: string },
+  { day: string; comment: string; reviewerUserId?: string },
   ThunkConfig
->("time/submitTimesheet", async ({ day, comment }, { getState, dispatch, rejectWithValue }) => {
-  const orgId = organizationIdOf(getState());
-  if (!orgId) return rejectWithValue("No organization selected");
-  try {
-    const sheet = await timeApi.submitTimesheet(day, comment, orgId);
-    // Submitting stops a timer still running inside the period.
-    void dispatch(fetchActiveTimer());
-    void dispatch(fetchUserWorklogs({ from: sheet.periodStart, to: sheet.periodEnd }));
-    return sheet;
-  } catch (error) {
-    return rejectWithValue(messageOf(error, "Failed to submit the timesheet"));
-  }
-});
+>(
+  "time/submitTimesheet",
+  async ({ day, comment, reviewerUserId }, { getState, dispatch, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      const sheet = await timeApi.submitTimesheet(day, comment, orgId, undefined, reviewerUserId);
+      // Submitting stops a timer still running inside the period.
+      void dispatch(fetchActiveTimer());
+      void dispatch(fetchUserWorklogs({ from: sheet.periodStart, to: sheet.periodEnd }));
+      return sheet;
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to submit the timesheet"));
+    }
+  },
+);
 
 export const recallTimesheet = createAsyncThunk<Timesheet, { day: string }, ThunkConfig>(
   "time/recallTimesheet",
