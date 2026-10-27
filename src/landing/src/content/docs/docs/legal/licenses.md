@@ -26,7 +26,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | aiobotocore            | 2.25.1      | Apache-2.0                                          | https://github.com/aio-libs/aiobotocore                                            |
 | aiofiles               | 25.1.0      | Apache Software License                             | https://github.com/Tinche/aiofiles                                                 |
 | aiohappyeyeballs       | 2.6.1       | Python Software Foundation License                  | https://github.com/aio-libs/aiohappyeyeballs                                       |
-| aiohttp                | 3.14.3      | Apache-2.0 AND MIT                                  | https://github.com/aio-libs/aiohttp                                                |
+| aiohttp                | 3.14.5      | Apache-2.0 AND MIT                                  | https://github.com/aio-libs/aiohttp                                                |
 | aioitertools           | 0.13.0      | MIT                                                 | https://aioitertools.omnilib.dev/en/latest/changelog.html                          |
 | aiosignal              | 1.4.0       | Apache Software License                             | https://github.com/aio-libs/aiosignal                                              |
 | aiosmtplib             | 5.1.3       | MIT                                                 | https://github.com/cole/aiosmtplib/blob/main/CHANGELOG.rst                         |
@@ -44,7 +44,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | botocore               | 1.40.61     | Apache-2.0                                          | https://github.com/boto/botocore                                                   |
 | botocore-stubs         | 1.42.41     | MIT                                                 | https://github.com/youtype/botocore-stubs                                          |
 | camel-converter        | 5.0.0       | MIT License                                         | UNKNOWN                                                                            |
-| certifi                | 2026.2.25   | Mozilla Public License 2.0 (MPL 2.0)                | https://github.com/certifi/python-certifi                                          |
+| certifi                | 2026.10.19  | Mozilla Public License 2.0 (MPL 2.0)                | https://github.com/certifi/python-certifi                                          |
 | cffi                   | 2.0.0       | MIT                                                 | https://cffi.readthedocs.io/en/latest/whatsnew.html                                |
 | charset-normalizer     | 3.4.4       | MIT                                                 | https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md               |
 | click                  | 8.5.0       | BSD-3-Clause                                        | https://github.com/pallets/click/                                                  |
@@ -53,10 +53,11 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | croniter               | 6.2.4       | MIT                                                 | https://github.com/pallets-eco/croniter                                            |
 | cryptography           | 50.0.1      | Apache-2.0 OR BSD-3-Clause                          | https://github.com/pyca/cryptography                                               |
 | distro                 | 1.9.0       | Apache Software License                             | https://github.com/python-distro/distro                                            |
-| dnspython              | 2.8.0       | ISC License (ISCL)                                  | https://www.dnspython.org                                                          |
+| dnspython              | 2.9.0       | ISC                                                 | https://www.dnspython.org                                                          |
 | docstring_parser       | 0.17.0      | MIT License                                         | https://github.com/rr-/docstring_parser                                            |
 | email-validator        | 2.3.0       | The Unlicense (Unlicense)                           | https://github.com/JoshData/python-email-validator                                 |
 | et_xmlfile             | 2.0.0       | MIT License                                         | https://foss.heptapod.net/openpyxl/et_xmlfile                                      |
+| execnet                | 2.1.2       | MIT                                                 | https://execnet.readthedocs.io/en/latest/                                          |
 | fastapi                | 0.141.1     | MIT                                                 | https://github.com/fastapi/fastapi                                                 |
 | frozenlist             | 1.8.0       | Apache-2.0                                          | https://github.com/aio-libs/frozenlist                                             |
 | google-auth            | 2.58.0      | Apache Software License                             | https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth   |
@@ -93,7 +94,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | opentelemetry-api      | 1.39.1      | Apache-2.0                                          | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
 | orjson                 | 3.12.0      | MPL-2.0 AND (Apache-2.0 OR MIT)                     | https://github.com/ijl/orjson                                                      |
 | packaging              | 26.0        | Apache-2.0 OR BSD-2-Clause                          | https://github.com/pypa/packaging                                                  |
-| pillow                 | 12.3.0      | MIT-CMU                                             | https://python-pillow.github.io                                                    |
+| pillow                 | 13.0.0      | MIT-CMU                                             | https://python-pillow.org                                                          |
 | pluggy                 | 1.6.0       | MIT License                                         | UNKNOWN                                                                            |
 | prometheus_client      | 0.26.0      | Apache-2.0 AND BSD-2-Clause                         | https://github.com/prometheus/client_python                                        |
 | propcache              | 0.4.1       | Apache Software License                             | https://github.com/aio-libs/propcache                                              |
@@ -117,6 +118,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | pytest                 | 9.1.1       | MIT                                                 | https://docs.pytest.org/en/latest/                                                 |
 | pytest-asyncio         | 1.4.0       | Apache-2.0                                          | https://github.com/pytest-dev/pytest-asyncio                                       |
 | pytest-benchmark       | 5.3.0       | BSD-2-Clause                                        | https://pytest-benchmark.readthedocs.io/en/latest/changelog.html                   |
+| pytest-xdist           | 3.8.0       | MIT                                                 | https://github.com/pytest-dev/pytest-xdist                                         |
 | python-dateutil        | 2.9.0.post0 | Apache Software License; BSD License                | https://github.com/dateutil/dateutil                                               |
 | python-docx            | 1.2.0       | MIT License                                         | https://github.com/python-openxml/python-docx                                      |
 | python-dotenv          | 1.2.3       | BSD-3-Clause                                        | https://github.com/theskumar/python-dotenv                                         |
@@ -150,7 +152,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | websockets             | 16.0        | BSD-3-Clause                                        | https://github.com/python-websockets/websockets                                    |
 | wrapt                  | 1.17.3      | BSD License                                         | https://github.com/GrahamDumpleton/wrapt                                           |
 | xlsxwriter             | 3.2.9       | BSD License                                         | https://github.com/jmcnamara/XlsxWriter                                            |
-| yarl                   | 1.23.0      | Apache-2.0                                          | https://github.com/aio-libs/yarl                                                   |
+| yarl                   | 1.25.1      | Apache-2.0                                          | https://github.com/aio-libs/yarl                                                   |
 | zipp                   | 3.23.0      | MIT                                                 | https://github.com/jaraco/zipp                                                     |
 
 ## Node.js dependencies
@@ -654,6 +656,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | astro@7.0.5 | MIT | https://astro.build |
 | async-function@1.0.0 | MIT | https://github.com/ljharb/async-function#readme |
 | available-typed-arrays@1.0.7 | MIT | https://github.com/inspect-js/available-typed-arrays#readme |
+| await-lock@2.2.2 | MIT | https://github.com/ide/await-lock |
 | axobject-query@4.1.0 | Apache-2.0 | https://github.com/A11yance/axobject-query#readme |
 | babel-plugin-polyfill-corejs2@0.4.17 | MIT | https://github.com/babel/babel-polyfills#readme |
 | babel-plugin-polyfill-corejs3@0.13.0 | MIT | https://github.com/babel/babel-polyfills#readme |
@@ -870,6 +873,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | expo-blur@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/blur-view/ |
 | expo-clipboard@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/clipboard |
 | expo-constants@57.0.3 | MIT | https://docs.expo.dev/versions/latest/sdk/constants/ |
+| expo-crypto@57.0.3 | MIT | https://docs.expo.dev/versions/latest/sdk/crypto/ |
 | expo-document-picker@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/document-picker/ |
 | expo-file-system@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/filesystem/ |
 | expo-font@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/font/ |
@@ -890,6 +894,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | expo-server@57.0.0 | MIT | https://github.com/expo/expo/tree/main/packages/expo-server#readme |
 | expo-sharing@57.0.3 | MIT | https://docs.expo.dev/versions/latest/sdk/sharing/ |
 | expo-splash-screen@57.0.2 | MIT | https://docs.expo.dev/versions/latest/sdk/splash-screen/ |
+| expo-sqlite@57.0.4 | MIT | https://docs.expo.dev/versions/latest/sdk/sqlite/ |
 | expo-status-bar@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/status-bar/ |
 | expo-symbols@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/symbols/ |
 | expo-system-ui@57.0.0 | MIT | https://docs.expo.dev/versions/latest/sdk/system-ui |

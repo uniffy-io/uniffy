@@ -98,6 +98,7 @@ constraint-dependencies = [
   "aiohttp>=3.14.5",
   "anyio>=4.14.2",
   "certifi>=2026.10.19",
+  "dnspython>=2.9.0",
   "httpx2>=2.13.0",
   "lxml>=6.1.3",
   "mako>=1.4.1",
