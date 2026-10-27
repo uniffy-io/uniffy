@@ -28,7 +28,9 @@ In the mobile app, open You and tap Organization. Pending invitations sit at the
 
 ## Creating an organization
 
-Your deployment decides who may start a new organization. Depending on how it is set up, that is anyone with an account, anyone who already belongs to an organization, only people who own one, or only the people who run the deployment.
+Self service organization creation and public signup were developed for Uniffy's hosted SaaS. They are not intended for self hosted use. On a self hosted deployment, ask your platform operator to create an organization and invite you.
+
+On our SaaS, the creation policy decides who may start an organization: anyone with an account, anyone who already belongs to an organization, existing owners, or only platform operators. The flow below applies when that policy permits you to create one.
 
 When you are allowed, your welcome page offers a card to create one and your user menu has a Create organization entry. When you see neither, ask whoever runs your Uniffy.
 

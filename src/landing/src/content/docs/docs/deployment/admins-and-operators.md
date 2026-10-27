@@ -40,6 +40,8 @@ The first session skips two factor enrollment, because the account was created i
 
 With `INITIAL_ADMIN_PASSWORD` set, the admin and the default organization are seeded at first boot and the setup page never appears. [Configure Uniffy](/docs/deployment/configure/#initial-seed-and-registration) lists the seed settings.
 
+After setup, invite people into your organization. On self hosted deployments, keep public registration off and leave additional organization creation to platform operators. Public signup and self service organization creation were developed for our hosted SaaS and are not intended for self hosted use. [Configure Uniffy](/docs/deployment/configure/#initial-seed-and-registration) gives the exact values and explains stored overrides.
+
 ## One account or two
 
 The setup page always starts combined: one account that is both org owner and platform operator. When you seed instead, the bootstrap settings decide. Leave `INITIAL_PLATFORM_ADMIN_EMAIL` unset and the first admin is one combined account. Set it to a distinct address and the two jobs start as two accounts.

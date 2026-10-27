@@ -55,10 +55,16 @@ Store `APP_MASTER_KEY` in a secrets manager and back it up outside the deploymen
 
 These settings control the first database seed, whether registration is open, and who may create organizations.
 
+Public registration and self service organization creation were developed for Uniffy's hosted SaaS. They are not intended for self hosted use. The controls remain in the shared codebase and are documented here so operators can identify them.
+
+For self hosting, set `ALLOW_PUBLIC_REGISTRATION=false` and `ALLOW_ORG_CREATION=operators_only`. Create the first organization through setup or the initial seed, then invite people to join. Platform operators can create additional organizations when needed.
+
+Values saved in the platform's Server Settings override both environment variables. On an existing deployment, check those settings too: public registration should be off and organization creation restricted to platform operators.
+
 | Variable | Default | Purpose |
 |---|---|---|
-| `ALLOW_PUBLIC_REGISTRATION` | `false` | When `false`, accounts can only be created by invitation. The `Register` RPC returns `INVALID_ARGUMENT` and the `/auth/register` page hides its form. Set `true` for development or open self hosted deployments. While the deployment still waits for `/setup`, registration is refused whatever this says. |
-| `ALLOW_ORG_CREATION` | `operators_and_owners` | Who may create organizations from the app. Each value adds to the one before it. `operators_only` is platform operators. `operators_and_owners` adds anyone who owns an organization that is not suspended. `members` adds anyone with an active membership. `anyone` adds every signed in user, so someone who registers can go straight on to create their own. Platform operators can always create. A value set on the Server Settings platform page wins over this variable. An unknown value is ignored with a warning and the default applies. |
+| `ALLOW_PUBLIC_REGISTRATION` | `false` | SaaS public signup control. Keep `false` for self hosting so people join through invitations. While the deployment still waits for `/setup`, registration is refused regardless of this value. |
+| `ALLOW_ORG_CREATION` | `operators_and_owners` | SaaS organization creation policy. Use `operators_only` for self hosting. Each value adds to the one before it: `operators_only` permits platform operators; `operators_and_owners` adds owners of an organization that is not suspended; `members` adds anyone with an active membership; `anyone` adds every signed in user, including users with no organization. An unknown value is ignored with a warning and the built-in default applies. |
 | `INITIAL_ADMIN_EMAIL` | `admin@uniffy.io` | Email of the seeded admin user. Also the VAPID contact email for web push when the admin is seeded. The setup page uses the operator's address instead. |
 | `INITIAL_ADMIN_PASSWORD` | empty | This one decides whether anything is seeded. Leave it empty and nothing is seeded. The first visit opens `/setup`, which creates the platform operator and the first organization in one step. Every other `INITIAL_*` value and both `DEFAULT_ORG_*` values are then ignored, so setting only `INITIAL_PLATFORM_ADMIN_EMAIL` and `INITIAL_PLATFORM_ADMIN_PASSWORD` seeds nothing and still opens `/setup`. Set it to seed the admin and the default organization at first boot instead, with no setup page. Change a seeded password right after the first sign in. |
 | `INITIAL_PLATFORM_ADMIN_EMAIL` | same as `INITIAL_ADMIN_EMAIL` | Read only when `INITIAL_ADMIN_PASSWORD` is set. Leave it unset and the seeded admin is also the platform operator. Set a distinct address and the operator is seeded as a separate account with no organization membership. |
@@ -88,7 +94,9 @@ The backend and every worker read the eviction policy, `maxmemory` and the persi
 
 Some managed services hide `CONFIG`. The policy is then unknown. Uniffy logs the requirement at startup and carries on, so check the policy yourself. `GET /healthz` reports the outcome as `realtime_buffer`, one of `enabled`, `disabled`, `unknown` or `not_run`, and the `uniffy_realtime_valkey_preflight` metric carries the same verdict. Platform admins see it on the Realtime edit buffer card of the platform overview. The card also shows the persistence Valkey reports, the budget and where it came from, and how many edits are waiting across the deployment. It refreshes every 15 seconds. Persistence is never required. [Backups and Restore](/docs/deployment/backups/#valkey-and-edits-not-yet-saved) lists what each persistence setting can lose.
 
-The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. One organization may use at most half of that share, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up. On a deployment where anyone may sign up and create organizations, someone who creates several of them can still fill a bucket. Keep `ALLOW_PUBLIC_REGISTRATION` off, or `ALLOW_ORG_CREATION` below `anyone`, unless you watch `uniffy_realtime_buffer_pending_bytes`.
+The budget is a ceiling, not a reservation. It is split evenly across sixteen fixed buckets. One document may use at most a quarter of its bucket's share, up to 16 MiB, and 4096 waiting edits. One organization may use at most half of that share, so a single tenant cannot fill a bucket for everyone else. An edit over any of these limits is refused for now and kept on the device until saves catch up.
+
+On our SaaS, public signup and organization creation add another capacity concern: someone who creates several organizations can still fill a bucket. SaaS operators should watch `uniffy_realtime_buffer_pending_bytes`. Self hosted deployments should keep the invitation and operator controls described above.
 
 ## Realtime editing
 

@@ -173,7 +173,7 @@ postgres:
 
 config:                         # application settings, next section
   ALLOW_PUBLIC_REGISTRATION: "false"
-  ALLOW_ORG_CREATION: "operators_and_owners"
+  ALLOW_ORG_CREATION: "operators_only"
   S3_ENDPOINT_URL: "https://storage.internal:9000"
   S3_BUCKET_NAME: "uniffy-files"
   S3_REGION: "us-east-1"
@@ -230,12 +230,14 @@ Changing `config:` and running `helm upgrade` restarts affected chart workloads 
 
 Three blocks cover most deployments.
 
-Bootstrap policy for a company install. Invitation only registration, new organizations left to owners and operators, a named organization, and the operator role split from the daily admin account:
+Bootstrap policy for a company install. Invitation only registration, new organizations managed by platform operators, a named organization, and the operator role split from the daily admin account:
+
+Public signup and self service organization creation were developed for our hosted SaaS and are not intended for self hosted use. Use the values below. Existing Server Settings overrides take precedence, so check them against the [configuration guidance](/docs/deployment/configure/#initial-seed-and-registration) too.
 
 ```yaml
 config:
   ALLOW_PUBLIC_REGISTRATION: "false"
-  ALLOW_ORG_CREATION: "operators_and_owners"
+  ALLOW_ORG_CREATION: "operators_only"
   DEFAULT_ORG_NAME: "Acme"
   INITIAL_PLATFORM_ADMIN_EMAIL: "platform@acme.com"
 ```
