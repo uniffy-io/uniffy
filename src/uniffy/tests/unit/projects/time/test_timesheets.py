@@ -118,6 +118,8 @@ def _env(
     access.require_person_scope = AsyncMock()
     access.require_timekeeping_admin = AsyncMock()
     access.is_reviewer_of = AsyncMock(return_value=reviewer)
+    access.review_recipients = AsyncMock(return_value={REVIEWER})
+    access.ordered_review_recipients = AsyncMock(return_value=(REVIEWER,))
     stack.enter_context(patch(f"{MODULE}.TimeAccess", return_value=access))
     stack.enter_context(
         patch(f"{MODULE}.load_time_policy", new=AsyncMock(return_value=policy or _policy()))
@@ -152,6 +154,19 @@ async def test_submit_creates_the_row_audits_commits_and_notifies() -> None:
     assert view.status == TimesheetStatus.SUBMITTED
     assert view.locked is True
     assert view.required_minutes == 480
+
+
+async def test_submit_to_one_reviewer_records_them_and_refuses_anyone_else() -> None:
+    env = _env()
+    with env.stack:
+        view = await env.ops.submit(WORKER, ORG, None, PERIOD_START, reviewer_id=REVIEWER)
+    assert env.session.added[0].submitted_to_user_id == REVIEWER
+    assert view.reviewer_ids == (REVIEWER,)
+
+    env = _env()
+    with env.stack, pytest.raises(ValidationError) as exc_info:
+        await env.ops.submit(WORKER, ORG, None, PERIOD_START, reviewer_id=WORKER)
+    assert exc_info.value.field == "reviewer_user_id"
 
 
 async def test_submit_on_behalf_needs_a_reviewer_and_audits_the_subject() -> None:

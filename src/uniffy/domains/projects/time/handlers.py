@@ -125,6 +125,7 @@ class TimeHandlers:
                         if request.has_field("started_at")
                         else None
                     ),
+                    client_zone=request.time_zone if request.has_field("time_zone") else None,
                 )
                 return CreateWorklogResponse(
                     worklog=worklog_to_proto(row.worklog, row.project_id),
@@ -161,6 +162,7 @@ class TimeHandlers:
                         else None
                     ),
                     clear_started_at=request.clear_started_at,
+                    client_zone=request.time_zone if request.has_field("time_zone") else None,
                 )
                 return UpdateWorklogResponse(
                     worklog=worklog_to_proto(row.worklog, row.project_id),

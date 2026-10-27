@@ -235,9 +235,12 @@ def timesheet_to_proto(view: SheetView) -> ProtoTimesheet:
         can_review=view.can_review,
         total_minutes=view.total_minutes,
         required_minutes=view.required_minutes,
+        reviewer_user_ids=[str(user_id) for user_id in view.reviewer_ids],
     )
     if sheet is None:
         return proto
+    if sheet.submitted_to_user_id is not None:
+        proto.submitted_to_user_id = str(sheet.submitted_to_user_id)
     if sheet.submitted_at is not None:
         proto.submitted_at = datetime_to_timestamp(sheet.submitted_at)
     if sheet.submitted_by_user_id is not None:

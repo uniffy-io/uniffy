@@ -74,6 +74,8 @@ class Timesheet(SQLModel, table=True):
     # NULL on a submitted sheet means the period job submitted it.
     submitted_by_user_id: UUID | None = Field(default=None, foreign_key="login_users.id")
     submit_comment: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))
+    # The reviewer the person sent the sheet to; unset means every reviewer hears about it.
+    submitted_to_user_id: UUID | None = Field(default=None, foreign_key="login_users.id")
     reviewer_user_id: UUID | None = Field(default=None, foreign_key="login_users.id")
     reviewed_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
     review_comment: str = Field(default="", sa_column=Column(Text, nullable=False, default=""))

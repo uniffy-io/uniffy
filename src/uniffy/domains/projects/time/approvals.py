@@ -89,6 +89,11 @@ class TimesheetHandlers:
                     _optional_user(request),
                     day,
                     comment=request.comment,
+                    reviewer_id=(
+                        parse_uuid(request.reviewer_user_id, "reviewer_user_id")
+                        if request.has_field("reviewer_user_id")
+                        else None
+                    ),
                 )
                 return SubmitTimesheetResponse(timesheet=timesheet_to_proto(view))
         except ConnectError:

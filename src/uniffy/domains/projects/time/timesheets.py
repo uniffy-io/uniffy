@@ -55,6 +55,7 @@ class SheetView:
     can_review: bool
     total_minutes: int
     required_minutes: int
+    reviewer_ids: tuple[UUID, ...] = ()
 
 
 def _require_approvals(policy: ResolvedTimePolicy) -> None:
@@ -163,6 +164,11 @@ class TimesheetOperations:
         can_review = actor_id != user_id and await self.access.is_reviewer_of(
             actor_id, organization_id, user_id
         )
+        reviewer_ids = (
+            await self.access.ordered_review_recipients(organization_id, user_id)
+            if actor_id == user_id
+            else ()
+        )
         return SheetView(
             timesheet=sheet,
             user_id=user_id,
@@ -176,6 +182,7 @@ class TimesheetOperations:
             can_review=can_review,
             total_minutes=int(total.scalar_one()),
             required_minutes=sum(item.required_minutes for item in requirements[user_id]),
+            reviewer_ids=reviewer_ids,
         )
 
     async def get(
@@ -208,6 +215,7 @@ class TimesheetOperations:
         comment: str,
         policy: ResolvedTimePolicy,
         now: datetime | None = None,
+        submitted_to: UUID | None = None,
     ) -> Timesheet:
         """Move the sheet to SUBMITTED; a missing actor means the period job did it."""
         now = now or datetime.now(UTC)
@@ -225,6 +233,7 @@ class TimesheetOperations:
         sheet.submitted_at = now
         sheet.submitted_by_user_id = actor_id
         sheet.submit_comment = comment or ""
+        sheet.submitted_to_user_id = submitted_to
         sheet.reviewer_user_id = None
         sheet.reviewed_at = None
         sheet.review_comment = ""
@@ -241,6 +250,7 @@ class TimesheetOperations:
         *,
         comment: str = "",
         policy: ResolvedTimePolicy | None = None,
+        reviewer_id: UUID | None = None,
     ) -> SheetView:
         policy = policy or await load_time_policy(self.session, organization_id)
         _require_approvals(policy)
@@ -250,8 +260,18 @@ class TimesheetOperations:
         else:
             await self._require_reviewer(actor_id, organization_id, subject_id)
             await self.access.require_active_member(subject_id, organization_id)
+        if reviewer_id is not None and reviewer_id not in await self.access.review_recipients(
+            organization_id, subject_id
+        ):
+            raise ValidationError("reviewer_user_id", "Pick one of the people who review this time.")
         sheet = await self.stage_submit(
-            actor_id, organization_id, subject_id, day, comment=comment, policy=policy
+            actor_id,
+            organization_id,
+            subject_id,
+            day,
+            comment=comment,
+            policy=policy,
+            submitted_to=reviewer_id,
         )
         await self.session.commit()
         await notify_submitted(self.session, sheet, actor_id)
@@ -270,6 +290,7 @@ class TimesheetOperations:
         sheet.submitted_at = None
         sheet.submitted_by_user_id = None
         sheet.submit_comment = ""
+        sheet.submitted_to_user_id = None
         sheet.reviewer_user_id = None
         sheet.reviewed_at = None
         sheet.review_comment = ""

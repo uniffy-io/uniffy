@@ -478,7 +478,9 @@ type CreateWorklogRequest struct {
 	DurationMinutes int32   `protobuf:"varint,5,opt,name=duration_minutes,json=durationMinutes,proto3" json:"duration_minutes,omitempty"`
 	Description     string  `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	// When the work began, for an entry placed on the day's timeline; the end is the start plus the duration.
-	StartedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	StartedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
+	// The client's IANA zone, used for the future-day check when the person has none in their settings.
+	TimeZone      *string `protobuf:"bytes,8,opt,name=time_zone,json=timeZone,proto3,oneof" json:"time_zone,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -562,6 +564,13 @@ func (x *CreateWorklogRequest) GetStartedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CreateWorklogRequest) GetTimeZone() string {
+	if x != nil && x.TimeZone != nil {
+		return *x.TimeZone
+	}
+	return ""
+}
+
 type CreateWorklogResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Worklog *Worklog               `protobuf:"bytes,1,opt,name=worklog,proto3" json:"worklog,omitempty"`
@@ -625,8 +634,10 @@ type UpdateWorklogRequest struct {
 	StartedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=started_at,json=startedAt,proto3,oneof" json:"started_at,omitempty"`
 	// Drops the start so the entry leaves the timeline and keeps only its day.
 	ClearStartedAt bool `protobuf:"varint,7,opt,name=clear_started_at,json=clearStartedAt,proto3" json:"clear_started_at,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The client's IANA zone, used for the future-day check when the person has none in their settings.
+	TimeZone      *string `protobuf:"bytes,8,opt,name=time_zone,json=timeZone,proto3,oneof" json:"time_zone,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateWorklogRequest) Reset() {
@@ -706,6 +717,13 @@ func (x *UpdateWorklogRequest) GetClearStartedAt() bool {
 		return x.ClearStartedAt
 	}
 	return false
+}
+
+func (x *UpdateWorklogRequest) GetTimeZone() string {
+	if x != nil && x.TimeZone != nil {
+		return *x.TimeZone
+	}
+	return ""
 }
 
 type UpdateWorklogResponse struct {
@@ -2390,6 +2408,10 @@ type Timesheet struct {
 	CanReview       bool  `protobuf:"varint,15,opt,name=can_review,json=canReview,proto3" json:"can_review,omitempty"`
 	TotalMinutes    int32 `protobuf:"varint,16,opt,name=total_minutes,json=totalMinutes,proto3" json:"total_minutes,omitempty"`
 	RequiredMinutes int32 `protobuf:"varint,17,opt,name=required_minutes,json=requiredMinutes,proto3" json:"required_minutes,omitempty"`
+	// The reviewer the person picked when submitting; unset means every reviewer was told.
+	SubmittedToUserId *string `protobuf:"bytes,18,opt,name=submitted_to_user_id,json=submittedToUserId,proto3,oneof" json:"submitted_to_user_id,omitempty"`
+	// Who may review this sheet, manager first; filled only on the person's own sheet.
+	ReviewerUserIds []string `protobuf:"bytes,19,rep,name=reviewer_user_ids,json=reviewerUserIds,proto3" json:"reviewer_user_ids,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -2541,6 +2563,20 @@ func (x *Timesheet) GetRequiredMinutes() int32 {
 		return x.RequiredMinutes
 	}
 	return 0
+}
+
+func (x *Timesheet) GetSubmittedToUserId() string {
+	if x != nil && x.SubmittedToUserId != nil {
+		return *x.SubmittedToUserId
+	}
+	return ""
+}
+
+func (x *Timesheet) GetReviewerUserIds() []string {
+	if x != nil {
+		return x.ReviewerUserIds
+	}
+	return nil
 }
 
 type DayTotal struct {
@@ -2808,11 +2844,13 @@ type SubmitTimesheetRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	// Submit on behalf of someone else; reviewers and timekeeping admins only.
-	UserId        *string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
-	PeriodStart   string  `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
-	Comment       string  `protobuf:"bytes,4,opt,name=comment,proto3" json:"comment,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UserId      *string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
+	PeriodStart string  `protobuf:"bytes,3,opt,name=period_start,json=periodStart,proto3" json:"period_start,omitempty"`
+	Comment     string  `protobuf:"bytes,4,opt,name=comment,proto3" json:"comment,omitempty"`
+	// One of the person's reviewers; only they are notified. Unset notifies them all.
+	ReviewerUserId *string `protobuf:"bytes,5,opt,name=reviewer_user_id,json=reviewerUserId,proto3,oneof" json:"reviewer_user_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *SubmitTimesheetRequest) Reset() {
@@ -2869,6 +2907,13 @@ func (x *SubmitTimesheetRequest) GetPeriodStart() string {
 func (x *SubmitTimesheetRequest) GetComment() string {
 	if x != nil {
 		return x.Comment
+	}
+	return ""
+}
+
+func (x *SubmitTimesheetRequest) GetReviewerUserId() string {
+	if x != nil && x.ReviewerUserId != nil {
+		return *x.ReviewerUserId
 	}
 	return ""
 }
@@ -4214,7 +4259,7 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\r\n" +
-	"\v_started_at\"\xbb\x02\n" +
+	"\v_started_at\"\xeb\x02\n" +
 	"\x14CreateWorklogRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x1c\n" +
@@ -4223,13 +4268,16 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\x10duration_minutes\x18\x05 \x01(\x05R\x0fdurationMinutes\x12 \n" +
 	"\vdescription\x18\x06 \x01(\tR\vdescription\x12>\n" +
 	"\n" +
-	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartedAt\x88\x01\x01B\n" +
+	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampH\x01R\tstartedAt\x88\x01\x01\x12 \n" +
+	"\ttime_zone\x18\b \x01(\tH\x02R\btimeZone\x88\x01\x01B\n" +
 	"\n" +
 	"\b_user_idB\r\n" +
-	"\v_started_at\"~\n" +
+	"\v_started_atB\f\n" +
+	"\n" +
+	"_time_zone\"~\n" +
 	"\x15CreateWorklogResponse\x12.\n" +
 	"\aworklog\x18\x01 \x01(\v2\x14.projects.v1.WorklogR\aworklog\x125\n" +
-	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"\x83\x03\n" +
+	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"\xb3\x03\n" +
 	"\x14UpdateWorklogRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -4239,12 +4287,15 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tH\x02R\vdescription\x88\x01\x01\x12>\n" +
 	"\n" +
 	"started_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\tstartedAt\x88\x01\x01\x12(\n" +
-	"\x10clear_started_at\x18\a \x01(\bR\x0eclearStartedAtB\f\n" +
+	"\x10clear_started_at\x18\a \x01(\bR\x0eclearStartedAt\x12 \n" +
+	"\ttime_zone\x18\b \x01(\tH\x04R\btimeZone\x88\x01\x01B\f\n" +
 	"\n" +
 	"_work_dateB\x13\n" +
 	"\x11_duration_minutesB\x0e\n" +
 	"\f_descriptionB\r\n" +
-	"\v_started_at\"~\n" +
+	"\v_started_atB\f\n" +
+	"\n" +
+	"_time_zone\"~\n" +
 	"\x15UpdateWorklogResponse\x12.\n" +
 	"\aworklog\x18\x01 \x01(\v2\x14.projects.v1.WorklogR\aworklog\x125\n" +
 	"\x17task_time_spent_minutes\x18\x02 \x01(\x05R\x14taskTimeSpentMinutes\"^\n" +
@@ -4381,7 +4432,7 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\aentries\x18\x04 \x01(\x05R\aentries\"o\n" +
 	"\x19AggregateWorklogsResponse\x12-\n" +
 	"\x04rows\x18\x01 \x03(\v2\x19.projects.v1.AggregateRowR\x04rows\x12#\n" +
-	"\rtotal_minutes\x18\x02 \x01(\x05R\ftotalMinutes\"\xb2\x06\n" +
+	"\rtotal_minutes\x18\x02 \x01(\x05R\ftotalMinutes\"\xad\a\n" +
 	"\tTimesheet\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
@@ -4404,12 +4455,15 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\n" +
 	"can_review\x18\x0f \x01(\bR\tcanReview\x12#\n" +
 	"\rtotal_minutes\x18\x10 \x01(\x05R\ftotalMinutes\x12)\n" +
-	"\x10required_minutes\x18\x11 \x01(\x05R\x0frequiredMinutesB\x0f\n" +
+	"\x10required_minutes\x18\x11 \x01(\x05R\x0frequiredMinutes\x124\n" +
+	"\x14submitted_to_user_id\x18\x12 \x01(\tH\x05R\x11submittedToUserId\x88\x01\x01\x12*\n" +
+	"\x11reviewer_user_ids\x18\x13 \x03(\tR\x0freviewerUserIdsB\x0f\n" +
 	"\r_submitted_atB\x17\n" +
 	"\x15_submitted_by_user_idB\x13\n" +
 	"\x11_reviewer_user_idB\x0e\n" +
 	"\f_reviewed_atB\x0e\n" +
-	"\f_grace_until\"s\n" +
+	"\f_grace_untilB\x17\n" +
+	"\x15_submitted_to_user_id\"s\n" +
 	"\bDayTotal\x12\x10\n" +
 	"\x03day\x18\x01 \x01(\tR\x03day\x12\x18\n" +
 	"\aminutes\x18\x02 \x01(\x05R\aminutes\x12)\n" +
@@ -4434,14 +4488,16 @@ const file_projects_v1_time_proto_rawDesc = "" +
 	"\n" +
 	"\b_user_id\"L\n" +
 	"\x14GetTimesheetResponse\x124\n" +
-	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\xa8\x01\n" +
+	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\xec\x01\n" +
 	"\x16SubmitTimesheetRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1c\n" +
 	"\auser_id\x18\x02 \x01(\tH\x00R\x06userId\x88\x01\x01\x12!\n" +
 	"\fperiod_start\x18\x03 \x01(\tR\vperiodStart\x12\x18\n" +
-	"\acomment\x18\x04 \x01(\tR\acommentB\n" +
+	"\acomment\x18\x04 \x01(\tR\acomment\x12-\n" +
+	"\x10reviewer_user_id\x18\x05 \x01(\tH\x01R\x0ereviewerUserId\x88\x01\x01B\n" +
 	"\n" +
-	"\b_user_id\"O\n" +
+	"\b_user_idB\x13\n" +
+	"\x11_reviewer_user_id\"O\n" +
 	"\x17SubmitTimesheetResponse\x124\n" +
 	"\ttimesheet\x18\x01 \x01(\v2\x16.projects.v1.TimesheetR\ttimesheet\"\x8e\x01\n" +
 	"\x16RecallTimesheetRequest\x12'\n" +

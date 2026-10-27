@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from loguru import logger
 from sqlalchemy import func, select, update
@@ -23,6 +24,7 @@ from uniffy.core.models.projects.worklog import Worklog, WorklogSource
 from uniffy.core.types import ContentType
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.time.access import TimeAccess
+from uniffy.domains.projects.time.durations import format_minutes
 from uniffy.domains.projects.time.locks import SheetLocks
 from uniffy.domains.projects.time.policy import (
     MINUTES_PER_DAY,
@@ -31,6 +33,7 @@ from uniffy.domains.projects.time.policy import (
     require_enabled,
 )
 from uniffy.domains.projects.time.timesheets import TimesheetOperations
+from uniffy.domains.settings.preferences import get_user_timezone
 
 logger = logger.bind(component="projects.time.worklogs")
 
@@ -66,16 +69,29 @@ class WorklogRow:
 
 
 def _require_duration(duration_minutes: int) -> None:
-    if not 1 <= duration_minutes <= MINUTES_PER_DAY:
-        raise ValidationError("duration_minutes", f"must be between 1 and {MINUTES_PER_DAY}")
+    if duration_minutes < 1:
+        raise ValidationError("duration_minutes", "An entry needs at least 1 minute.")
+    if duration_minutes > MINUTES_PER_DAY:
+        raise ValidationError(
+            "duration_minutes",
+            f"An entry can hold at most {format_minutes(MINUTES_PER_DAY)}, and "
+            f"{format_minutes(duration_minutes)} is longer than a day. "
+            "Split it into one entry per day, or use Period to log a range of days.",
+        )
 
 
-def _require_window(work_date: date, policy: ResolvedTimePolicy) -> None:
-    today = datetime.now(UTC).date()
-    if not policy.allow_future_dates and work_date > today + ZONE_TOLERANCE:
-        raise ValidationError("work_date", "logging time on a future day is not allowed")
+def _require_window(
+    work_date: date, policy: ResolvedTimePolicy, today: date, tolerance: timedelta
+) -> None:
+    if not policy.allow_future_dates and work_date > today + tolerance:
+        latest = today + tolerance
+        raise ValidationError(
+            "work_date",
+            "Logging time on a future day is not allowed. The latest day you can log "
+            f"is {latest:%b} {latest.day}, {latest.year}.",
+        )
     if policy.max_days_back is not None:
-        earliest = today - timedelta(days=policy.max_days_back) - ZONE_TOLERANCE
+        earliest = today - timedelta(days=policy.max_days_back) - tolerance
         if work_date < earliest:
             raise ValidationError(
                 "work_date", f"entries older than {policy.max_days_back} days cannot be changed"
@@ -111,6 +127,23 @@ class WorklogOperations:
             raise NotFoundError("Worklog", worklog_id)
         return WorklogRow(worklog=row[0], project_id=row[1])
 
+    async def _today_of(
+        self, user_id: UUID, client_zone: str | None = None
+    ) -> tuple[date, timedelta]:
+        """The person's own date and the slack to allow around it.
+
+        Their saved zone wins, then the zone their own client reported; with neither the
+        server only knows UTC, so a day either side stays open for people ahead of or behind it.
+        """
+        for zone in (await get_user_timezone(self.session, user_id), client_zone):
+            if not zone:
+                continue
+            try:
+                return datetime.now(ZoneInfo(zone)).date(), timedelta(0)
+            except ZoneInfoNotFoundError, ValueError:
+                logger.warning("unknown time zone {!r} for user {}", zone, user_id)
+        return datetime.now(UTC).date(), ZONE_TOLERANCE
+
     async def _require_daily_capacity(
         self,
         organization_id: UUID,
@@ -132,8 +165,10 @@ class WorklogOperations:
         if logged + duration_minutes > MINUTES_PER_DAY:
             raise ValidationError(
                 "duration_minutes",
-                f"this would put the day at {logged + duration_minutes} minutes; "
-                f"a day holds at most {MINUTES_PER_DAY}",
+                f"This day already has {format_minutes(logged)} logged, so adding "
+                f"{format_minutes(duration_minutes)} would pass the "
+                f"{format_minutes(MINUTES_PER_DAY)} a day can hold. "
+                f"At most {format_minutes(MINUTES_PER_DAY - logged)} more fits on this day.",
             )
 
     async def _require_unlocked(
@@ -221,6 +256,7 @@ class WorklogOperations:
         description: str = "",
         started_at: datetime | None = None,
         source: WorklogSource = WorklogSource.MANUAL,
+        client_zone: str | None = None,
     ) -> tuple[WorklogRow, int]:
         row, rollup = await self.stage_create(
             actor_id,
@@ -232,6 +268,7 @@ class WorklogOperations:
             description=description,
             started_at=started_at,
             source=source,
+            client_zone=client_zone,
         )
         task_id = row.worklog.task_id
         await self.session.commit()
@@ -251,6 +288,7 @@ class WorklogOperations:
         started_at: datetime | None = None,
         source: WorklogSource = WorklogSource.MANUAL,
         policy: ResolvedTimePolicy | None = None,
+        client_zone: str | None = None,
     ) -> tuple[WorklogRow, int]:
         """Insert, rollup, activity and audit without the commit; the caller owns the transaction."""
         if policy is None:
@@ -270,7 +308,9 @@ class WorklogOperations:
             await self.access.require_active_member(subject_id, organization_id)
         if source in CAPPED_SOURCES:
             _require_duration(duration_minutes)
-            _require_window(work_date, policy)
+            # The client's zone describes the actor, so it only counts for their own time.
+            zone = None if on_behalf else client_zone
+            _require_window(work_date, policy, *await self._today_of(subject_id, zone))
             await self._require_daily_capacity(
                 organization_id, subject_id, work_date, duration_minutes
             )
@@ -318,6 +358,7 @@ class WorklogOperations:
         description: str | None = None,
         started_at: datetime | None = None,
         clear_started_at: bool = False,
+        client_zone: str | None = None,
     ) -> tuple[WorklogRow, int]:
         policy = await load_time_policy(self.session, organization_id)
         require_enabled(policy)
@@ -329,7 +370,8 @@ class WorklogOperations:
         if worklog.source in CAPPED_SOURCES:
             _require_duration(new_minutes)
             if work_date is not None:
-                _require_window(new_date, policy)
+                zone = None if on_behalf else client_zone
+                _require_window(new_date, policy, *await self._today_of(worklog.user_id, zone))
             await self._require_daily_capacity(
                 organization_id, worklog.user_id, new_date, new_minutes, exclude_id=worklog.id
             )

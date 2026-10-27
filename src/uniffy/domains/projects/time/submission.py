@@ -23,6 +23,7 @@ async def submit_timesheet(
     day: date,
     *,
     comment: str,
+    reviewer_id: UUID | None = None,
 ) -> SheetView:
     policy = await load_time_policy(session, organization_id)
     subject_id = user_id or actor_id
@@ -35,7 +36,13 @@ async def submit_timesheet(
                 actor_id, organization_id, policy, work_date=today
             )
     view = await TimesheetOperations(session).submit(
-        actor_id, organization_id, user_id, day, comment=comment, policy=policy
+        actor_id,
+        organization_id,
+        user_id,
+        day,
+        comment=comment,
+        policy=policy,
+        reviewer_id=reviewer_id,
     )
     if stopped is not None:
         await publish_notification(actor_id, timer_changed_payload(organization_id))

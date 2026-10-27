@@ -39,7 +39,11 @@ async def notify_submitted(session: AsyncSession, sheet: Timesheet, actor_id: UU
     """Reviewers hear about every submission; the worker only when someone else submitted."""
     name = await display_name(session, sheet.user_id)
     label = period_label(sheet)
-    recipients = await TimeAccess(session).review_recipients(sheet.organization_id, sheet.user_id)
+    recipients = (
+        {sheet.submitted_to_user_id}
+        if sheet.submitted_to_user_id is not None
+        else await TimeAccess(session).review_recipients(sheet.organization_id, sheet.user_id)
+    )
     if actor_id is not None:
         recipients.discard(actor_id)
     if recipients:

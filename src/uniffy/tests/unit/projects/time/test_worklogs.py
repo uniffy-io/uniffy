@@ -3,6 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import pytest
 
@@ -81,6 +82,7 @@ def _env(
     admin: bool = False,
     reviewer: bool = False,
     existing=None,  # noqa: ANN001
+    zone: str | None = None,
 ) -> ExitStack:
     stack = ExitStack()
     session = _Session(logged=logged, rollup=rollup, existing=existing)
@@ -108,6 +110,7 @@ def _env(
             new=AsyncMock(return_value=policy or ResolvedTimePolicy(organization_id=ORG)),
         )
     )
+    stack.enter_context(patch(f"{MODULE}.get_user_timezone", new=AsyncMock(return_value=zone)))
     stack.enter_context(patch(f"{MODULE}.TimeAccess", return_value=access))
     stack.enter_context(patch(f"{MODULE}.SheetLocks", return_value=locks))
     stack.enter_context(patch(f"{MODULE}.TimesheetOperations", return_value=timesheets))
@@ -176,10 +179,21 @@ async def test_create_rejects_durations_outside_one_to_1440(minutes: int) -> Non
     assert exc_info.value.field == "duration_minutes"
 
 
+async def test_an_entry_longer_than_a_day_says_so_in_words() -> None:
+    with _env() as stack, pytest.raises(ValidationError) as exc_info:
+        await stack.env.ops.create(ACTOR, ORG, TASK_ID, work_date=TODAY, duration_minutes=1500)
+    assert exc_info.value.message.startswith(
+        "An entry can hold at most 24h, and 25h is longer than a day."
+    )
+
+
 async def test_create_enforces_the_daily_cap_across_existing_entries() -> None:
     with _env(logged=1400) as stack, pytest.raises(ValidationError) as exc_info:
         await stack.env.ops.create(ACTOR, ORG, TASK_ID, work_date=TODAY, duration_minutes=41)
-    assert "1441" in exc_info.value.message
+    assert exc_info.value.message == (
+        "This day already has 23h 20m logged, so adding 41m would pass the 24h a day can hold. "
+        "At most 40m more fits on this day."
+    )
 
     with _env(logged=1400) as stack:
         await stack.env.ops.create(ACTOR, ORG, TASK_ID, work_date=TODAY, duration_minutes=40)
@@ -203,6 +217,39 @@ async def test_create_honours_future_and_back_windows_with_a_zone_tolerance() ->
     with _env(policy) as stack, pytest.raises(ValidationError):
         await stack.env.ops.create(
             ACTOR, ORG, TASK_ID, work_date=TODAY - timedelta(days=9), duration_minutes=10
+        )
+
+
+async def test_a_person_with_a_time_zone_cannot_log_tomorrow() -> None:
+    zone = "Pacific/Kiritimati"
+    today = datetime.now(ZoneInfo(zone)).date()
+    with _env(zone=zone) as stack:
+        await stack.env.ops.create(ACTOR, ORG, TASK_ID, work_date=today, duration_minutes=10)
+    with _env(zone=zone) as stack, pytest.raises(ValidationError) as exc_info:
+        await stack.env.ops.create(
+            ACTOR, ORG, TASK_ID, work_date=today + timedelta(days=1), duration_minutes=10
+        )
+    assert exc_info.value.message.startswith("Logging time on a future day is not allowed.")
+
+
+async def test_the_client_zone_applies_when_the_person_saved_none() -> None:
+    zone = "Pacific/Kiritimati"
+    today = datetime.now(ZoneInfo(zone)).date()
+    with _env() as stack, pytest.raises(ValidationError):
+        await stack.env.ops.create(
+            ACTOR,
+            ORG,
+            TASK_ID,
+            work_date=today + timedelta(days=1),
+            duration_minutes=10,
+            client_zone=zone,
+        )
+
+
+async def test_an_unknown_time_zone_falls_back_to_the_tolerance() -> None:
+    with _env(zone="Not/AZone") as stack:
+        await stack.env.ops.create(
+            ACTOR, ORG, TASK_ID, work_date=TODAY + timedelta(days=1), duration_minutes=10
         )
 
 

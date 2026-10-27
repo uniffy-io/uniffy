@@ -120,6 +120,19 @@ class TimeAccess:
             return reviewers
         return (await self.timekeeping_admins(organization_id)) - {subject_id}
 
+    async def ordered_review_recipients(
+        self, organization_id: UUID, subject_id: UUID
+    ) -> tuple[UUID, ...]:
+        """The review recipients with the person's manager first, then the rest by id."""
+        recipients = await self.review_recipients(organization_id, subject_id)
+        manager = await self.session.scalar(
+            select(PeopleProfile.manager_user_id).where(
+                PeopleProfile.organization_id == organization_id,
+                PeopleProfile.user_id == subject_id,
+            )
+        )
+        return tuple(sorted(recipients, key=lambda user_id: (user_id != manager, str(user_id))))
+
     async def is_reviewer_of(self, actor_id: UUID, organization_id: UUID, subject_id: UUID) -> bool:
         """True for a named reviewer; when nobody is named, timekeeping admins review."""
         reviewers = await self.reviewers_of(organization_id, subject_id)
