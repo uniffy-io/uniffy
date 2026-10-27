@@ -1,6 +1,6 @@
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { createClient } from "@connectrpc/connect";
-import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { timestampDate, timestampFromDate, type Timestamp } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
 import { calendarApi } from "@/features/calendar/api/calendarApi";
 import {
@@ -119,11 +119,11 @@ const GROUP_BY_TO_PROTO: Record<AggregateGroupBy, ProtoAggregateGroupBy> = {
   user: ProtoAggregateGroupBy.USER,
 };
 
-function isoOrEmpty(ts?: { seconds: bigint; nanos: number }): string {
+function isoOrEmpty(ts?: Timestamp): string {
   return ts ? timestampDate(ts).toISOString() : "";
 }
 
-function isoOrNull(ts?: { seconds: bigint; nanos: number }): string | null {
+function isoOrNull(ts?: Timestamp): string | null {
   return ts ? timestampDate(ts).toISOString() : null;
 }
 

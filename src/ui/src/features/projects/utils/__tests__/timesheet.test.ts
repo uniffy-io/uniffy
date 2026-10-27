@@ -20,6 +20,8 @@ const sheet: Timesheet = {
   canReview: false,
   totalMinutes: 0,
   requiredMinutes: 0,
+  submittedToUserId: null,
+  reviewerUserIds: [],
 };
 
 describe("timesheet helpers", () => {

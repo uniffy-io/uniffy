@@ -267,10 +267,7 @@ export function TimeCalendar({
     }
   };
 
-  const blockFor = (
-    day: string,
-    block: TimelineBlock,
-  ): { start: number; length: number; ghost: boolean } => {
+  const blockFor = (block: TimelineBlock): { start: number; length: number; ghost: boolean } => {
     if (drag && drag.kind !== "create" && drag.entry.id === block.entry.id) {
       if (drag.kind === "resize")
         return { start: drag.start, length: drag.length, ghost: drag.moved };
@@ -507,7 +504,7 @@ export function TimeCalendar({
                   data-day={day}
                 >
                   {blocks.map((block, index) => {
-                    const placed = blockFor(day, block);
+                    const placed = blockFor(block);
                     if (
                       drag?.kind === "move" &&
                       drag.entry.id === block.entry.id &&
