@@ -168,12 +168,14 @@ export function PlatformLayout() {
   const flatItems = platformGroups.flatMap((g) => g.items);
 
   return (
-    <div className="min-h-dvh bg-background text-foreground font-sans antialiased [--sticky-top:3rem]">
+    // The area under the app header and the banner scrolls on its own, so the scrollbar
+    // starts below them and sticky table headers pin to the top of that area.
+    <div className="flex h-dvh flex-col bg-background text-foreground font-sans antialiased [--sticky-top:0px]">
       <AppHeader />
 
       <div
         role="banner"
-        className="relative border-b border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+        className="relative shrink-0 border-b border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200"
       >
         <div className="absolute inset-x-0 top-0 h-0.5 bg-amber-500" />
         <div className="px-3 md:px-6 py-2 flex items-center justify-between gap-3 flex-wrap">
@@ -198,29 +200,31 @@ export function PlatformLayout() {
         </div>
       </div>
 
-      <div className="py-4 md:py-6 px-3 md:px-6 flex flex-col md:flex-row gap-4 md:gap-6">
-        <aside className="w-full md:w-56 lg:w-64 shrink-0">
-          <nav className="md:hidden flex gap-2 overflow-x-auto pb-2">
-            {flatItems.map((item) => (
-              <NavItemLink key={item.path} item={item} currentPath={location.pathname} />
-            ))}
-          </nav>
-          <nav className="hidden md:flex md:flex-col gap-4">
-            {platformGroups.map((g) => (
-              <DesktopGroup
-                key={g.id}
-                group={g}
-                currentPath={location.pathname}
-                collapsed={isGroupCollapsed(g.id)}
-                onToggle={() => toggleGroup(g.id)}
-              />
-            ))}
-          </nav>
-        </aside>
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="py-4 md:py-6 px-3 md:px-6 flex flex-col md:flex-row gap-4 md:gap-6">
+          <aside className="w-full md:w-56 lg:w-64 shrink-0">
+            <nav className="md:hidden flex gap-2 overflow-x-auto pb-2">
+              {flatItems.map((item) => (
+                <NavItemLink key={item.path} item={item} currentPath={location.pathname} />
+              ))}
+            </nav>
+            <nav className="hidden md:flex md:flex-col gap-4">
+              {platformGroups.map((g) => (
+                <DesktopGroup
+                  key={g.id}
+                  group={g}
+                  currentPath={location.pathname}
+                  collapsed={isGroupCollapsed(g.id)}
+                  onToggle={() => toggleGroup(g.id)}
+                />
+              ))}
+            </nav>
+          </aside>
 
-        <main className="flex-1 min-w-0">
-          <Outlet />
-        </main>
+          <main className="flex-1 min-w-0">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
