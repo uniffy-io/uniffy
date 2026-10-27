@@ -56,7 +56,7 @@ def resize_avatar(data: bytes, size: int) -> bytes:
         top = (height - min_dim) // 2
         img = img.crop((left, top, left + min_dim, top + min_dim))
 
-        img = img.resize((size, size), Image.LANCZOS)
+        img = img.resize((size, size), Image.Resampling.LANCZOS)
 
         output = io.BytesIO()
         img.save(output, format="WEBP", quality=85)
