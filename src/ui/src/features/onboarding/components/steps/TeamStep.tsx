@@ -93,8 +93,8 @@ export function TeamStep({
       }
       lede={
         <>
-          Invite the people you work with. Each address gets an invitation. Anyone who already uses
-          Uniffy sees it the next time they sign in, even if mail is not set up yet.
+          Invite the people you work with. Each address gets an invitation. People with verified
+          email addresses also see it when they sign in, even if mail is not set up yet.
         </>
       }
       actions={

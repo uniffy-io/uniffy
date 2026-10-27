@@ -287,13 +287,18 @@ async def delete_organization_by_owner(
     confirm_slug: str,
     call_lifecycle: CallRevocationLifecycle,
 ) -> datetime:
-    await OrganizationOperations(session).require_org_owner(user_id, org_id)
+    ops = OrganizationOperations(session)
+    await ops.require_org_owner(user_id, org_id)
     org = await lock_organization(session, org_id)
     # A concurrent delete won the row lock.
     if org.deleted_at is not None:
         return _purge_at(org)
     if confirm_slug.strip() != org.slug:
         raise ValidationError("confirm_slug", "Confirmation slug does not match")
+
+    # Ownership must stay valid through commit, even after waiting for the org lock.
+    await _lock_membership(session, user_id, org_id)
+    await ops.require_org_owner(user_id, org_id)
 
     member_ids = await stage_organization_deletion(
         session,

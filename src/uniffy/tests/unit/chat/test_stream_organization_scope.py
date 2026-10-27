@@ -1,6 +1,7 @@
 """The user chat stream passes on only the events of the organization it serves."""
 
 from collections.abc import AsyncIterator, Iterator
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID
@@ -135,3 +136,35 @@ async def test_stream_drops_events_of_other_organizations(
     assert received[0].payload.value.event_type == ChatEventType.CHANNEL_CREATED
     assert received[0].payload.value.channel_id == str(own_channel)
     assert received[1].payload.value.channel_id == str(own_channel)
+
+
+async def test_stream_heartbeats_during_foreign_organization_traffic(
+    monkeypatch: pytest.MonkeyPatch,
+    principal_org: UUID,
+) -> None:
+    other_channel = generate_id()
+    channels = _Channels({other_channel: generate_id()})
+    elapsed = 0.0
+
+    async def subscribe(*_channels: str) -> AsyncIterator[dict[str, Any]]:
+        nonlocal elapsed
+        for tick in range(1, 181):
+            elapsed = tick * 0.5
+            yield {"_type": evt.CHANNEL_CREATED, "channel_id": str(other_channel)}
+
+    monkeypatch.setattr(handlers_module, "time", SimpleNamespace(monotonic=lambda: elapsed))
+    monkeypatch.setattr(handlers_module, "subscribe_channels", subscribe)
+    monkeypatch.setattr(
+        handlers_module,
+        "ChannelOrganizationFilter",
+        lambda organization_id: ChannelOrganizationFilter(organization_id, lookup=channels.lookup),
+    )
+
+    received = [
+        event
+        async for event in ChatStreamHandlers().stream_user_chat_events(
+            StreamUserChatEventsRequest(organization_id=str(principal_org)), MagicMock()
+        )
+    ]
+
+    assert [event.event_type for event in received] == [UserChatEventType.HEARTBEAT] * 3

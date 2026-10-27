@@ -572,10 +572,7 @@ class NotificationsHandlers:
 
                     now = time.monotonic()
 
-                    # The stream outlives the gate above; member removal
-                    # publishes no realtime signal (see reauth.py), so the
-                    # cached membership decision is re-read on the realtime
-                    # cadence - Valkey-first, PG only on cache miss.
+                    # Recheck live membership throughout the stream.
                     if now - last_reauth >= REAUTH_INTERVAL_SECONDS:
                         last_reauth = now
                         if not await is_active_member(user_id, organization_id):
@@ -584,16 +581,14 @@ class NotificationsHandlers:
                                 "Not a member of this organization",
                             )
 
+                    if now - last_send >= heartbeat_interval:
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EventType.HEARTBEAT,
+                            timestamp=datetime_to_timestamp(datetime.now(UTC)),
+                        )
+                        last_send = now
+
                     if payload is None:
-                        # Poll timeout tick - send heartbeat if interval elapsed.
-                        if now - last_send >= heartbeat_interval:
-                            ts = Timestamp()
-                            ts = datetime_to_timestamp(datetime.now(UTC))
-                            yield StreamNotificationsResponse(
-                                event_type=StreamNotificationsResponse.EventType.HEARTBEAT,
-                                timestamp=ts,
-                            )
-                            last_send = now
                         continue
 
                     if not organization_scope.admits(payload):

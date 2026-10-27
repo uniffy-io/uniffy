@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 import pytest_asyncio
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit.actions import Action
 from uniffy.core.config.org_creation import (
@@ -34,6 +35,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentitySource
 from uniffy.core.models.tags.saved_filter import SavedTagFilter
 from uniffy.domains.calls.channels import CallsLifecycle
+from uniffy.domains.organizations import lifecycle
 from uniffy.domains.organizations.creation import create_organization_for_user
 from uniffy.domains.organizations.lifecycle import (
     OWNER_DELETION_REASON,
@@ -241,6 +243,39 @@ class TestTransfer:
 
 
 class TestOwnerDelete:
+    async def test_ownership_transferred_before_delete_lock_refuses_former_owner(
+        self, session, access, monkeypatch
+    ) -> None:
+        slug = (await session.get(Organization, access.org_id)).slug
+
+        async def transfer_before_lock(deleting: AsyncSession, org_id: UUID) -> Organization:
+            async with open_session() as transferring:
+                await transfer_ownership(
+                    transferring,
+                    owner_user_id=access.owner_id,
+                    org_id=org_id,
+                    new_owner_user_id=access.member_id,
+                )
+            return await lock_organization(deleting, org_id)
+
+        monkeypatch.setattr(lifecycle, "lock_organization", transfer_before_lock)
+        with pytest.raises(PermissionDeniedError, match="owner privileges"):
+            await delete_organization_by_owner(
+                session,
+                user_id=access.owner_id,
+                org_id=access.org_id,
+                confirm_slug=slug,
+                call_lifecycle=CallsLifecycle(open_session),
+            )
+        await session.rollback()
+
+        org = await session.get(Organization, access.org_id, populate_existing=True)
+        assert org.deleted_at is None
+        previous_owner = await _membership(session, access.owner_id, access.org_id)
+        assert previous_owner.role is OrganizationRole.ADMIN
+        await OrganizationOperations(session).require_org_owner(access.member_id, access.org_id)
+        assert await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED) == 0
+
     async def test_every_member_loses_the_organization(self, session, access) -> None:
         members = [access.owner_id, access.admin_id, access.member_id, access.peer_id]
 
@@ -343,6 +378,5 @@ class TestOwnerDelete:
         assert org.deletion_reason == OWNER_DELETION_REASON
         assert await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED) == 1
         assert (
-            await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED_BY_PLATFORM)
-            == 0
+            await _audit_count(session, access.org_id, Action.ORGANIZATION_DELETED_BY_PLATFORM) == 0
         )

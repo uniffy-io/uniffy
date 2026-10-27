@@ -766,13 +766,14 @@ class ChatStreamHandlers:
 
                     now = time.monotonic()
 
+                    if now - last_send >= HEARTBEAT_INTERVAL:
+                        yield StreamUserChatEventsResponse(
+                            event_type=UserChatEventType.HEARTBEAT,
+                            timestamp=_now_ts(),
+                        )
+                        last_send = now
+
                     if payload is None:
-                        if now - last_send >= HEARTBEAT_INTERVAL:
-                            yield StreamUserChatEventsResponse(
-                                event_type=UserChatEventType.HEARTBEAT,
-                                timestamp=_now_ts(),
-                            )
-                            last_send = now
                         continue
 
                     if not await channel_scope.admits(payload):

@@ -1,4 +1,4 @@
-import { ContentRole, ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { AccessMode, ContentRole, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import type { RootState } from "@/app/store";
 
 export type SharingPreset = "edit" | "comment" | "view";
@@ -45,10 +45,18 @@ export function roleForPreset(preset: SharingPreset): ContentRole {
   return SHARING_OPTIONS.find((option) => option.id === preset)?.role ?? ContentRole.EDITOR;
 }
 
-/** The preset the org's stored note default matches, or null while unknown or custom. */
+/** A preset is current only when both shared content types use it. */
 export const selectStoredSharingPreset = (state: RootState): SharingPreset | null => {
-  const role = state.admin.permissionDefaults.find(
-    (entry) => entry.contentType === ContentType.NOTE,
-  )?.defaultBaselineRole;
-  return SHARING_OPTIONS.find((option) => option.role === role)?.id ?? null;
+  return (
+    SHARING_OPTIONS.find((option) =>
+      SHARING_CONTENT_TYPES.every((contentType) =>
+        state.admin.permissionDefaults.some(
+          (entry) =>
+            entry.contentType === contentType &&
+            entry.defaultAccessMode === AccessMode.OPEN_TO_ORG &&
+            entry.defaultBaselineRole === option.role,
+        ),
+      ),
+    )?.id ?? null
+  );
 };

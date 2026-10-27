@@ -54,10 +54,6 @@ export const onboardingSlice = createSlice({
         const entry = state.byOrganization[action.meta.arg.organizationId];
         if (entry && !action.payload.pending) entry.pending = false;
       })
-      .addCase(finishOnboarding.pending, (state, action) => {
-        const entry = state.byOrganization[action.meta.arg.organizationId];
-        if (entry) entry.pending = false;
-      })
       .addCase(finishOnboarding.fulfilled, (state, action) => {
         state.byOrganization[action.meta.arg.organizationId] = action.payload;
       });
@@ -73,11 +69,18 @@ export const selectOnboardingFor = (state: RootState, organizationId: string | n
 export const selectOnboardingSettled = (state: RootState, organizationId: string | null) =>
   organizationId ? (state.onboarding.settled[organizationId] ?? null) : null;
 
-/** The provider of the tab organization's first enabled key that passed its probe, if any. */
-export const selectUsableProvider = (state: RootState): string | null => {
+export const selectOnboardingProviderKey = (state: RootState) => {
   if (state.agentProviders.organizationId !== state.auth.currentOrganizationId) return null;
-  const key = Object.values(state.agentProviders.providerKeys).find(
-    (entry) => entry.isEnabled && entry.isValid,
-  );
-  return key?.provider ?? null;
+  const keys = state.agentProviders.providerKeys;
+  const configuredKey = keys[state.agentRuntimeSettings.settings?.defaultProviderKeyId ?? ""];
+  if (configuredKey?.isEnabled && configuredKey.isValid) return configuredKey;
+  return Object.values(keys).find((entry) => entry.isEnabled && entry.isValid) ?? null;
+};
+
+export const selectConfiguredProvider = (state: RootState): string | null => {
+  const key = selectOnboardingProviderKey(state);
+  const settings = state.agentRuntimeSettings.settings;
+  return key && settings?.defaultProviderKeyId === key.id && settings.defaultChatModel
+    ? key.provider
+    : null;
 };

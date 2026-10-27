@@ -242,13 +242,7 @@ export function switchOrganization(
     ).unwrap();
 }
 
-/**
- * Creates the organization and switches this tab into it. A refused create rejects with its
- * ConnectError and no toast, so the form can place the message; a failed switch afterwards rejects
- * with the message the switch already toasted. The membership belongs to the user rather than to
- * the tab's organization, so its outcome lands on the store itself: the session scope guard would
- * drop it when a scope ends while the call is out.
- */
+/** Create results belong to the account, so an org scope reset must not discard them. */
 export function createOrganization(request: {
   name: string;
   slug?: string;

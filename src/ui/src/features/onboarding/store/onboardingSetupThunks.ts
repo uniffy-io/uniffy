@@ -9,6 +9,7 @@ import {
 } from "@/features/admin/store/agentRuntimeSettingsThunks";
 import {
   addProviderKey,
+  fetchProviderKeys,
   fetchModelsForKey,
   removeProviderKey,
 } from "@/features/agents/store/agentProvidersThunks";
@@ -22,36 +23,52 @@ const thunk = createAsyncThunk.withTypes<{
 export type ProviderConnection =
   | { status: "connected"; keyId: string; modelName: string | null }
   | { status: "rejected"; keyId: string; error: string }
-  | { status: "failed" };
+  | { status: "no_models"; keyId: string }
+  | { status: "failed"; keyId: string | null };
 
-/**
- * Adds the owner's first provider key and, while the org has no default model, points the
- * default at the catalog's pick for that provider so NavigatorAgent can answer right away.
- * A key the provider rejected on the previous attempt is removed first, so retries leave no
- * dead rows behind. Every step is an existing thunk, so failures toast once, from that thunk.
- */
-export function connectProvider(args: {
-  provider: string;
-  label: string;
-  credential: string;
-  replaceKeyId: string | null;
-}): ThunkAction<Promise<ProviderConnection>, RootState, unknown, UnknownAction> {
-  return async (dispatch) => {
+type ProviderConnectionRequest =
+  | { keyId: string }
+  | { provider: string; label: string; credential: string; replaceKeyId: string | null };
+
+/** Retain a saved key across setup failures so retries never create duplicate keys. */
+export function connectProvider(
+  args: ProviderConnectionRequest,
+): ThunkAction<Promise<ProviderConnection>, RootState, unknown, UnknownAction> {
+  return async (dispatch, getState) => {
+    let keyId: string | null = "keyId" in args ? args.keyId : null;
     try {
-      if (args.replaceKeyId) await dispatch(removeProviderKey(args.replaceKeyId)).unwrap();
-      const key = await dispatch(
-        addProviderKey({ provider: args.provider, label: args.label, credential: args.credential }),
-      ).unwrap();
+      const state = getState();
+      if (
+        state.agentProviders.organizationId !== state.auth.currentOrganizationId ||
+        (keyId && !state.agentProviders.providerKeys[keyId])
+      )
+        await dispatch(fetchProviderKeys({ force: true })).unwrap();
+      if (!("keyId" in args) && args.replaceKeyId)
+        await dispatch(removeProviderKey(args.replaceKeyId)).unwrap();
+      const key =
+        "keyId" in args
+          ? getState().agentProviders.providerKeys[args.keyId]
+          : await dispatch(
+              addProviderKey({
+                provider: args.provider,
+                label: args.label,
+                credential: args.credential,
+              }),
+            ).unwrap();
+      if (!key || !key.isEnabled) return { status: "failed", keyId };
       if (!key.isValid) return { status: "rejected", keyId: key.id, error: key.lastError ?? "" };
+      keyId = key.id;
 
       const runtime = await dispatch(fetchRuntimeSettings()).unwrap();
-      if (runtime.settings.defaultProviderKeyId) {
-        return { status: "connected", keyId: key.id, modelName: null };
+      const configuredKey =
+        getState().agentProviders.providerKeys[runtime.settings.defaultProviderKeyId];
+      if (configuredKey?.isValid && configuredKey.isEnabled && runtime.settings.defaultChatModel) {
+        return { status: "connected", keyId: configuredKey.id, modelName: null };
       }
       const { models } = await dispatch(fetchModelsForKey({ keyId: key.id, force: true })).unwrap();
       const usable = models.filter((model) => model.supportsTools && !model.deprecated);
       const model = usable.find((entry) => entry.providerDefault) ?? usable[0];
-      if (!model) return { status: "connected", keyId: key.id, modelName: null };
+      if (!model) return { status: "no_models", keyId: key.id };
       await dispatch(
         saveRuntimeSettings({
           ...runtime.settings,
@@ -61,7 +78,7 @@ export function connectProvider(args: {
       ).unwrap();
       return { status: "connected", keyId: key.id, modelName: model.displayName };
     } catch {
-      return { status: "failed" };
+      return { status: "failed", keyId };
     }
   };
 }

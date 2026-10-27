@@ -28,7 +28,7 @@ import {
   onboardingStepShown,
   selectOnboardingFor,
   selectOnboardingSettled,
-  selectUsableProvider,
+  selectConfiguredProvider,
 } from "@/features/onboarding/store/onboardingSlice";
 import type { InviteOutcome } from "@/features/onboarding/store/onboardingSetupThunks";
 import {
@@ -54,7 +54,7 @@ export function OnboardingPage() {
   const onboarding = useAppSelector((state) => selectOnboardingFor(state, organizationId));
   const settled = useAppSelector((state) => selectOnboardingSettled(state, organizationId));
   const storedSharing = useAppSelector(selectStoredSharingPreset);
-  const provider = useAppSelector(selectUsableProvider);
+  const provider = useAppSelector(selectConfiguredProvider);
   const mentionDisplaySetting = useAppSelector(
     (state) => state.settings.effectiveSettings?.appearance.mentionDisplay,
   );
@@ -67,7 +67,7 @@ export function OnboardingPage() {
   const orbitRef = useRef<HTMLDivElement>(null);
 
   const organizationName = organization?.name ?? organizationSlug;
-  // Finishing clears pending at once; the launch animation still needs the last screen on stage.
+  // Keep the last screen mounted through the launch animation after completion.
   const step: OnboardingStepId | null =
     onboarding && (onboarding.pending || launching) ? onboarding.currentStep : null;
   const sharing = sharingPick ?? storedSharing ?? DEFAULT_SHARING_PRESET;
@@ -112,12 +112,18 @@ export function OnboardingPage() {
     if (target) goTo(target.id);
   };
 
-  const finish = (dismissed: boolean, destination: string) => {
+  const finish = async (dismissed: boolean, destination: string) => {
     if (!organizationId || launching) return;
     setLaunching(true);
-    void dispatch(finishOnboarding({ organizationId, dismissed }));
+    try {
+      await dispatch(finishOnboarding({ organizationId, dismissed })).unwrap();
+    } catch {
+      setLaunching(false);
+      return;
+    }
     preloadDestination(destination);
-    void enterThroughPortal(orbitRef.current).then(() => navigate(destination, { replace: true }));
+    await enterThroughPortal(orbitRef.current);
+    navigate(destination, { replace: true });
   };
 
   const recordOutcomes = (results: InviteOutcome[]) =>
@@ -194,7 +200,7 @@ export function OnboardingPage() {
         onClose={() => setConfirmSkip(false)}
         onConfirm={() => {
           setConfirmSkip(false);
-          finish(true, "/");
+          void finish(true, "/");
         }}
         title="Skip the rest of setup?"
         message="Everything you set so far stays. The rest lives in organization settings whenever you want it."

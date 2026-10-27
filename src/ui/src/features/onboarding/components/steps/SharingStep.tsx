@@ -44,6 +44,9 @@ function LevelMeter({ level }: { level: number }) {
 export function SharingStep({ preset, onPresetChange, onNext, onBack }: SharingStepProps) {
   const dispatch = useAppDispatch();
   const stored = useAppSelector(selectStoredSharingPreset);
+  const defaults = useAppSelector((state) => state.admin.permissionDefaults);
+  const loading = useAppSelector((state) => state.admin.permissionDefaultsLoading);
+  const error = useAppSelector((state) => state.admin.permissionDefaultsError);
   const [saving, setSaving] = useState(false);
   const list = stagger(3);
 
@@ -51,9 +54,15 @@ export function SharingStep({ preset, onPresetChange, onNext, onBack }: SharingS
     void dispatch(fetchPermissionDefaults());
   }, [dispatch]);
 
-  const changed = stored !== null && preset !== stored;
+  const loaded = SHARING_CONTENT_TYPES.every((contentType) =>
+    defaults.some((entry) => entry.contentType === contentType),
+  );
+  const changed = preset !== stored;
+  const continueLabel = changed ? "Save and continue" : "Continue";
+  const loadLabel = error ? "Retry settings" : "Loading settings";
 
   const save = async () => {
+    if (!loaded || loading || saving) return;
     if (!changed) {
       onNext();
       return;
@@ -61,6 +70,12 @@ export function SharingStep({ preset, onPresetChange, onNext, onBack }: SharingS
     setSaving(true);
     try {
       for (const contentType of SHARING_CONTENT_TYPES) {
+        const current = defaults.find((entry) => entry.contentType === contentType);
+        if (
+          current?.defaultAccessMode === AccessMode.OPEN_TO_ORG &&
+          current.defaultBaselineRole === roleForPreset(preset)
+        )
+          continue;
         await dispatch(
           updatePermissionDefaults({
             contentType,
@@ -95,8 +110,9 @@ export function SharingStep({ preset, onPresetChange, onNext, onBack }: SharingS
       actions={
         <StepActions
           index={8}
-          primaryLabel={changed ? "Save and continue" : "Continue"}
-          onPrimary={save}
+          primaryLabel={loaded ? continueLabel : loadLabel}
+          onPrimary={loaded ? save : () => dispatch(fetchPermissionDefaults())}
+          primaryDisabled={loading || (!loaded && !error)}
           busy={saving}
           onBack={onBack}
           onSkip={onNext}
@@ -117,6 +133,7 @@ export function SharingStep({ preset, onPresetChange, onNext, onBack }: SharingS
             label={option.title}
             description={option.id === stored ? `${option.body} Current setting.` : option.body}
             onSelect={() => onPresetChange(option.id)}
+            disabled={saving}
           />
         ))}
       </div>

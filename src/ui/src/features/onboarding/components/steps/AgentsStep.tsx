@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { ProviderPicker } from "@/features/agents/components/ProviderPicker";
 import { providerBrand } from "@/features/agents/config/providerBrands";
 import { fetchProviderKeys } from "@/features/agents/store/agentProvidersThunks";
+import { fetchRuntimeSettings } from "@/features/admin/store/agentRuntimeSettingsThunks";
 import { summarizeKeyError } from "@/features/agents/utils/providerKeyErrors";
 import { Eyebrow, StepActions, StepFrame } from "@/features/onboarding/components/StepFrame";
 import { stagger } from "@/components/orbit/stagger";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/utils/cn";
-import { selectUsableProvider } from "@/features/onboarding/store/onboardingSlice";
+import {
+  selectConfiguredProvider,
+  selectOnboardingProviderKey,
+} from "@/features/onboarding/store/onboardingSlice";
 import {
   connectProvider,
   type ProviderConnection,
@@ -29,39 +33,51 @@ const GUARANTEES = [
 
 export function AgentsStep({ onNext, onBack }: AgentsStepProps) {
   const dispatch = useAppDispatch();
-  const connectedProvider = useAppSelector(selectUsableProvider);
+  const connectedProvider = useAppSelector(selectConfiguredProvider);
+  const savedKey = useAppSelector(selectOnboardingProviderKey);
+  const loadingKeys = useAppSelector((state) => state.agentProviders.keysStatus === "loading");
   const [provider, setProvider] = useState("anthropic");
   const [credential, setCredential] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [result, setResult] = useState<ProviderConnection | null>(null);
   const body = stagger(3);
   const brand = providerBrand(provider);
+  const ready = connectedProvider !== null;
+  const pendingKeyId =
+    result?.status === "failed" || result?.status === "no_models"
+      ? (result.keyId ?? savedKey?.id)
+      : savedKey?.id;
 
   const connect = async () => {
-    if (!credential.trim() || connecting) return;
+    if ((!pendingKeyId && !credential.trim()) || connecting || loadingKeys) return;
     setConnecting(true);
     const outcome = await dispatch(
-      connectProvider({
-        provider,
-        label: `${brand?.label ?? provider} key`,
-        credential: credential.trim(),
-        replaceKeyId: result?.status === "rejected" ? result.keyId : null,
-      }),
+      connectProvider(
+        pendingKeyId
+          ? { keyId: pendingKeyId }
+          : {
+              provider,
+              label: `${brand?.label ?? provider} key`,
+              credential: credential.trim(),
+              replaceKeyId: result?.status === "rejected" ? result.keyId : null,
+            },
+      ),
     );
     setConnecting(false);
     setResult(outcome);
-    if (outcome.status === "connected") setCredential("");
+    if (outcome.status !== "rejected" && outcome.keyId) setCredential("");
+    return outcome;
   };
 
   useEffect(() => {
     void dispatch(fetchProviderKeys());
+    void dispatch(fetchRuntimeSettings());
   }, [dispatch]);
 
   const rejection =
     result?.status === "rejected"
       ? summarizeKeyError(result.error, brand?.label ?? provider)
       : null;
-  const ready = connectedProvider !== null || result?.status === "connected";
 
   return (
     <StepFrame
@@ -82,12 +98,14 @@ export function AgentsStep({ onNext, onBack }: AgentsStepProps) {
         <StepActions
           index={8}
           primaryLabel={
-            ready ? "Continue" : credential.trim() ? "Connect and continue" : "Continue"
+            !ready && (pendingKeyId || credential.trim()) ? "Connect and continue" : "Continue"
           }
           busy={connecting}
+          primaryDisabled={loadingKeys}
           onPrimary={async () => {
-            if (!ready && credential.trim()) {
-              await connect();
+            if (!ready && (pendingKeyId || credential.trim())) {
+              const outcome = await connect();
+              if (outcome?.status === "connected") onNext();
               return;
             }
             onNext();
@@ -129,7 +147,13 @@ export function AgentsStep({ onNext, onBack }: AgentsStepProps) {
           </div>
         ) : (
           <div className="space-y-4 rounded-xl bg-surface p-4 shadow-edge">
-            <ProviderPicker value={provider} onChange={setProvider} />
+            {pendingKeyId ? (
+              <p className="text-sm text-muted-foreground">
+                Your provider key is saved. Finish model setup to use NavigatorAgent.
+              </p>
+            ) : (
+              <ProviderPicker value={provider} onChange={setProvider} />
+            )}
             <form
               className="flex flex-col gap-2 sm:flex-row"
               onSubmit={(event) => {
@@ -137,27 +161,38 @@ export function AgentsStep({ onNext, onBack }: AgentsStepProps) {
                 void connect();
               }}
             >
-              <Input
-                type="password"
-                autoComplete="off"
-                value={credential}
-                onChange={(event) => setCredential(event.target.value)}
-                placeholder={brand?.credentialPlaceholder ?? "API key"}
-                aria-label={`${brand?.label ?? "Provider"} API key`}
-                className="font-mono"
-              />
+              {!pendingKeyId && (
+                <Input
+                  type="password"
+                  autoComplete="off"
+                  value={credential}
+                  onChange={(event) => setCredential(event.target.value)}
+                  placeholder={brand?.credentialPlaceholder ?? "API key"}
+                  aria-label={`${brand?.label ?? "Provider"} API key`}
+                  className="font-mono"
+                />
+              )}
               <Button
                 type="submit"
                 variant="outline"
                 size="lg"
-                disabled={!credential.trim()}
+                disabled={loadingKeys || (!pendingKeyId && !credential.trim())}
                 loading={connecting}
                 className="shrink-0"
               >
                 <Plugs size={16} />
-                Connect
+                {pendingKeyId ? "Finish setup" : "Connect"}
               </Button>
             </form>
+            {result?.status === "failed" && (
+              <p className="text-sm text-destructive">Setup could not finish. Try again.</p>
+            )}
+            {result?.status === "no_models" && (
+              <p className="text-sm text-destructive">
+                No compatible chat model is available for this key. Check provider access, then
+                retry.
+              </p>
+            )}
             {rejection && (
               <div className="flex items-start gap-2 rounded-lg bg-red-100 px-3 py-2.5 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-400">
                 <WarningCircle size={16} className="mt-0.5 shrink-0" />

@@ -1,6 +1,7 @@
 """The notification stream passes on only the payloads of the organization it serves."""
 
 from collections.abc import AsyncIterator, Iterator
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
@@ -153,3 +154,28 @@ async def test_stream_drops_payloads_of_other_organizations(principal_org: UUID)
     ]
     assert received[0].notification.title == "own"
     assert received[0].notification.organization_id == str(principal_org)
+
+
+async def test_stream_heartbeats_during_foreign_organization_traffic(principal_org: UUID) -> None:
+    other_org = generate_id()
+    elapsed = 0.0
+
+    async def subscribe(*_channels: str) -> AsyncIterator[dict[str, Any]]:
+        nonlocal elapsed
+        for tick in range(1, 181):
+            elapsed = tick * 0.5
+            yield _notification(other_org, "other")
+
+    with (
+        patch(f"{_HANDLERS}.time", SimpleNamespace(monotonic=lambda: elapsed)),
+        patch(f"{_HANDLERS}.is_active_member", AsyncMock(return_value=True)),
+        patch(f"{_HANDLERS}.subscribe_channels", subscribe),
+    ):
+        received = [
+            event
+            async for event in NotificationsHandlers().stream_notifications(
+                StreamNotificationsRequest(organization_id=str(principal_org)), MagicMock()
+            )
+        ]
+
+    assert [event.event_type for event in received] == [EventType.HEARTBEAT] * 3
