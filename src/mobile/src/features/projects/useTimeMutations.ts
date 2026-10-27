@@ -1,11 +1,31 @@
 import { Alert } from "react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { timestampFromDate } from "@bufbuild/protobuf/wkt";
+import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { getEffectiveTimeZone } from "@core/datetimePrefs";
 import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
 import { localDayKey, timerToPlain, worklogToPlain } from "@features/projects/timeSerializer";
 import { timerQueryKey } from "@features/projects/useActiveTimer";
-import { myWeekQueryKey } from "@features/projects/useMyTime";
+import {
+  myWeekQueryKey,
+  taskWorklogsQueryKey,
+  timesheetQueryKey,
+} from "@features/projects/useMyTime";
 import { serverMessage } from "@features/projects/useProjectMutations";
+
+/** A write can move the period's sheet (an edit sends an approved sheet back for review). */
+function refreshAfterWrite(
+  queryClient: QueryClient,
+  organizationId: string | null,
+  taskId: string,
+  projectId: string,
+) {
+  queryClient.invalidateQueries({ queryKey: ["task", organizationId, taskId] });
+  queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, projectId] });
+  queryClient.invalidateQueries({ queryKey: taskWorklogsQueryKey(organizationId, taskId) });
+  queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
+  queryClient.invalidateQueries({ queryKey: timesheetQueryKey(organizationId) });
+}
 
 export function useCreateWorklog() {
   const { organizationId } = useAuth();
@@ -17,6 +37,8 @@ export function useCreateWorklog() {
       workDate: string;
       durationMinutes: number;
       description?: string;
+      /** ISO instant the work began; absent for a day-only entry. */
+      startedAt?: string | null;
     }) => {
       const response = await projectsApi.createWorklog({
         organizationId: organizationId!,
@@ -24,19 +46,16 @@ export function useCreateWorklog() {
         workDate: args.workDate,
         durationMinutes: args.durationMinutes,
         description: args.description ?? "",
+        startedAt: args.startedAt ? timestampFromDate(new Date(args.startedAt)) : undefined,
+        timeZone: getEffectiveTimeZone(),
       });
       return {
         worklog: worklogToPlain(response.worklog!),
         taskTimeSpentMinutes: response.taskTimeSpentMinutes,
       };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.worklog.taskId] });
-      queryClient.invalidateQueries({
-        queryKey: ["tasks", organizationId, data.worklog.projectId],
-      });
-      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
-    },
+    onSuccess: (data) =>
+      refreshAfterWrite(queryClient, organizationId, data.worklog.taskId, data.worklog.projectId),
     onError: (error) => {
       Alert.alert("Could not log time", timeErrorMessage(error, "The time entry was not saved"));
     },
@@ -53,6 +72,8 @@ export function useUpdateWorklog() {
       workDate?: string;
       durationMinutes?: number;
       description?: string;
+      /** An ISO instant moves the entry on the clock; null takes it off the clock. */
+      startedAt?: string | null;
     }) => {
       const response = await projectsApi.updateWorklog({
         organizationId: organizationId!,
@@ -60,19 +81,17 @@ export function useUpdateWorklog() {
         workDate: args.workDate,
         durationMinutes: args.durationMinutes,
         description: args.description,
+        startedAt: args.startedAt ? timestampFromDate(new Date(args.startedAt)) : undefined,
+        clearStartedAt: args.startedAt === null,
+        timeZone: getEffectiveTimeZone(),
       });
       return {
         worklog: worklogToPlain(response.worklog!),
         taskTimeSpentMinutes: response.taskTimeSpentMinutes,
       };
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.worklog.taskId] });
-      queryClient.invalidateQueries({
-        queryKey: ["tasks", organizationId, data.worklog.projectId],
-      });
-      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
-    },
+    onSuccess: (data) =>
+      refreshAfterWrite(queryClient, organizationId, data.worklog.taskId, data.worklog.projectId),
     onError: (error) => {
       Alert.alert("Could not save the entry", timeErrorMessage(error, "The entry was not changed"));
     },
@@ -91,11 +110,8 @@ export function useDeleteWorklog() {
       });
       return { taskId: response.taskId, taskTimeSpentMinutes: response.taskTimeSpentMinutes };
     },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["task", organizationId, data.taskId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
-      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
-    },
+    onSuccess: (data, variables) =>
+      refreshAfterWrite(queryClient, organizationId, data.taskId, variables.projectId),
     onError: (error) => {
       Alert.alert(
         "Could not delete the entry",
@@ -126,12 +142,12 @@ export function useStartTimer() {
     onSuccess: (data, variables) => {
       queryClient.setQueryData(timerQueryKey(organizationId), data.timer);
       if (data.stoppedWorklog) {
-        queryClient.invalidateQueries({
-          queryKey: ["task", organizationId, data.stoppedWorklog.taskId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["tasks", organizationId, data.stoppedWorklog.projectId],
-        });
+        refreshAfterWrite(
+          queryClient,
+          organizationId,
+          data.stoppedWorklog.taskId,
+          data.stoppedWorklog.projectId,
+        );
       }
       queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
     },
@@ -192,15 +208,52 @@ export function useStopTimer() {
     },
     onSuccess: (_data, variables) => {
       queryClient.setQueryData(timerQueryKey(organizationId), null);
-      queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
-      queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
-      queryClient.invalidateQueries({ queryKey: myWeekQueryKey(organizationId) });
+      refreshAfterWrite(queryClient, organizationId, variables.taskId, variables.projectId);
     },
     onError: (error) => {
       Alert.alert(
         "Could not stop the timer",
         timeErrorMessage(error, "The timer is still running"),
       );
+    },
+  });
+}
+
+/** Sends the period holding `day` to one reviewer, or to all of them when none is picked. */
+export function useSubmitTimesheet() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: { day: string; comment: string; reviewerUserId?: string }) => {
+      await projectsApi.submitTimesheet({
+        organizationId: organizationId!,
+        periodStart: args.day,
+        comment: args.comment,
+        reviewerUserId: args.reviewerUserId,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: timesheetQueryKey(organizationId) }),
+    onError: (error) => {
+      Alert.alert("Could not submit", serverMessage(error, "The timesheet was not submitted"));
+    },
+  });
+}
+
+export function useRecallTimesheet() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: { day: string }) => {
+      await projectsApi.recallTimesheet({
+        organizationId: organizationId!,
+        periodStart: args.day,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: timesheetQueryKey(organizationId) }),
+    onError: (error) => {
+      Alert.alert("Could not recall", serverMessage(error, "The timesheet is still in review"));
     },
   });
 }

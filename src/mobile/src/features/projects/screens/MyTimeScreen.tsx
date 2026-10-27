@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
-import { CaretLeft, CaretRight, Clock, Plus, Trash } from "phosphor-react-native";
+import { CaretLeft, CaretRight, Clock, Lock, Plus, Trash } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
@@ -17,6 +17,7 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { LogTimeSheet } from "@features/projects/components/LogTimeSheet";
+import { PeriodStatusCard } from "@features/projects/components/PeriodStatusCard";
 import {
   WeekTaskPickerSheet,
   type PickedTask,
@@ -39,12 +40,15 @@ import {
   weekStartOf,
   type DayStatus,
 } from "@features/projects/timeWeek";
-import { useMyWeek, useTimePolicy } from "@features/projects/useMyTime";
+import { lockHint, sheetFor } from "@features/projects/timesheetStatus";
+import { useMyWeek, useTimePolicy, useTimesheet } from "@features/projects/useMyTime";
 import { useProjectTasks } from "@features/projects/useProjects";
 import { useTaskLabels } from "@features/projects/useTaskLabels";
 import {
   useCreateWorklog,
   useDeleteWorklog,
+  useRecallTimesheet,
+  useSubmitTimesheet,
   useUpdateWorklog,
 } from "@features/projects/useTimeMutations";
 
@@ -84,6 +88,17 @@ export function MyTimeScreen() {
   const internalTasksQuery = useProjectTasks(policy?.internalProjectId ?? undefined);
   const labels = useTaskLabels(worklogs.map((entry) => entry.taskId));
 
+  const approvals = policy?.approvalsEnabled === true;
+  const firstSheet = useTimesheet(days[0], approvals);
+  // A monthly period can change inside the week; weekly periods share the week's bounds.
+  const lastSheet = useTimesheet(days[6], approvals && policy?.periodType === "monthly");
+  const sheets = useMemo(
+    () => (approvals ? [firstSheet.data, lastSheet.data] : []),
+    [approvals, firstSheet.data, lastSheet.data],
+  );
+  const submitTimesheet = useSubmitTimesheet();
+  const recallTimesheet = useRecallTimesheet();
+
   const createWorklog = useCreateWorklog();
   const updateWorklog = useUpdateWorklog();
   const deleteWorklog = useDeleteWorklog();
@@ -97,6 +112,8 @@ export function MyTimeScreen() {
   const dayEntries = byDay[visibleDay] ?? [];
   const requirement = requirements[visibleDay];
   const isCurrentWeek = days.includes(today);
+  const visibleSheet = sheetFor(sheets, visibleDay);
+  const dayLock = lockHint(visibleSheet);
 
   const weekTasks = useMemo(() => {
     const seen = new Map<string, PickedTask>();
@@ -237,6 +254,17 @@ export function MyTimeScreen() {
             )}
           </View>
 
+          {visibleSheet && (
+            <PeriodStatusCard
+              sheet={visibleSheet}
+              busy={submitTimesheet.isPending || recallTimesheet.isPending}
+              onSubmit={(comment, reviewerUserId) =>
+                submitTimesheet.mutate({ day: visibleSheet.periodStart, comment, reviewerUserId })
+              }
+              onRecall={() => recallTimesheet.mutate({ day: visibleSheet.periodStart })}
+            />
+          )}
+
           <View style={[styles.strip, { backgroundColor: T.surface, borderColor: T.border }]}>
             {days.map((day) => {
               const { required, off } = requirements[day];
@@ -304,6 +332,7 @@ export function MyTimeScreen() {
                     key={entry.id}
                     style={[styles.entry, { borderTopColor: T.border }]}
                     onPress={() => setSheet({ kind: "edit", entry })}
+                    disabled={dayLock !== undefined}
                     accessibilityLabel={`Edit ${formatMinutes(entry.durationMinutes)} on ${label?.title ?? "task"}`}
                     testID="day-entry"
                   >
@@ -323,28 +352,40 @@ export function MyTimeScreen() {
                     <Text style={[styles.entryMinutes, { color: T.text }]}>
                       {formatMinutes(entry.durationMinutes)}
                     </Text>
-                    <TouchableOpacity
-                      hitSlop={HIT_SLOP}
-                      onPress={() => removeEntry(entry)}
-                      accessibilityLabel="Delete entry"
-                      testID="day-entry-delete"
-                    >
-                      <Trash size={16} color={T.textDim} />
-                    </TouchableOpacity>
+                    {dayLock === undefined && (
+                      <TouchableOpacity
+                        hitSlop={HIT_SLOP}
+                        onPress={() => removeEntry(entry)}
+                        accessibilityLabel="Delete entry"
+                        testID="day-entry-delete"
+                      >
+                        <Trash size={16} color={T.textDim} />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 );
               })
             )}
 
-            {policy?.enabled !== false && (
-              <TouchableOpacity
-                style={[styles.addRow, { borderTopColor: T.border }]}
-                onPress={() => setSheet({ kind: "pick" })}
-                testID="day-add"
+            {dayLock !== undefined ? (
+              <View
+                style={[styles.addRow, styles.lockRow, { borderTopColor: T.border }]}
+                testID="day-locked"
               >
-                <Plus size={14} color={T.accent} weight="bold" />
-                <Text style={[styles.addLabel, { color: T.accent }]}>Add entry</Text>
-              </TouchableOpacity>
+                <Lock size={14} color={T.textDim} />
+                <Text style={[styles.lockLabel, { color: T.textDim }]}>{dayLock}</Text>
+              </View>
+            ) : (
+              policy?.enabled !== false && (
+                <TouchableOpacity
+                  style={[styles.addRow, { borderTopColor: T.border }]}
+                  onPress={() => setSheet({ kind: "pick" })}
+                  testID="day-add"
+                >
+                  <Plus size={14} color={T.accent} weight="bold" />
+                  <Text style={[styles.addLabel, { color: T.accent }]}>Add entry</Text>
+                </TouchableOpacity>
+              )
             )}
           </View>
         </ScrollView>
@@ -386,6 +427,7 @@ export function MyTimeScreen() {
                 workDate: editing.workDate,
                 durationMinutes: editing.durationMinutes,
                 description: editing.description,
+                startedAt: editing.startedAt,
               }
             : undefined
         }
@@ -454,4 +496,6 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   addLabel: { fontSize: 13, fontFamily: FONT.medium },
+  lockRow: { paddingHorizontal: 16 },
+  lockLabel: { flexShrink: 1, fontSize: 13, fontFamily: FONT.regular },
 });

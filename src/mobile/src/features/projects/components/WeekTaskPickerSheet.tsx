@@ -7,7 +7,8 @@ import { SheetRow } from "@shared/components/SheetRow";
 import { useDebouncedValue } from "@shared/hooks/useDebouncedValue";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-import { useTaskSearch } from "@features/projects/useMyTime";
+import { getTaskTypeConfig } from "@features/projects/taskTypes";
+import { useTaskSearch, type TaskHit } from "@features/projects/useMyTime";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -62,6 +63,24 @@ export function WeekTaskPickerSheet({
 
   const choose = (task: PickedTask) => onPick(task);
 
+  // The code, type and project tell apart tasks that share a title.
+  const hitRow = (hit: TaskHit) => {
+    const type = getTaskTypeConfig(hit.type);
+    const subtitle = [hit.code, type.label, hit.projectName].filter(Boolean).join(" · ");
+    return (
+      <SheetRow
+        key={hit.id}
+        leading={<type.Icon size={18} color={T.textDim} />}
+        title={hit.title}
+        subtitle={subtitle}
+        accentColor={accent}
+        onPress={() =>
+          choose({ id: hit.id, title: hit.title, projectId: null, subtitle: hit.code ?? undefined })
+        }
+      />
+    );
+  };
+
   const row = (task: PickedTask) => (
     <SheetRow
       key={task.id}
@@ -83,7 +102,7 @@ export function WeekTaskPickerSheet({
           ) : (search.data ?? []).length === 0 ? (
             <Text style={[styles.empty, { color: T.textDim }]}>No matching tasks</Text>
           ) : (
-            (search.data ?? []).map((hit) => row({ ...hit, projectId: null }))
+            (search.data ?? []).map(hitRow)
           )
         ) : (
           <>

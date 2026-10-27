@@ -40,6 +40,7 @@ import { SprintPickerSheet } from "@features/projects/components/SprintPickerShe
 import { TaskPickerSheet } from "@features/projects/components/TaskPickerSheet";
 import { TimeInputSheet } from "@features/projects/components/TimeInputSheet";
 import { LogTimeSheet } from "@features/projects/components/LogTimeSheet";
+import { TaskWorklogSection } from "@features/projects/components/TaskWorklogSection";
 import { useCreateWorklog } from "@features/projects/useTimeMutations";
 import { TimerHeaderControl } from "@features/projects/components/TimerHeaderControl";
 import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBadge";
@@ -543,6 +544,8 @@ export function TaskDetailScreen() {
             <MarkdownRenderer content={task.description} />
           </View>
         ) : null}
+
+        <TaskWorklogSection taskId={task.id} taskTitle={task.title} />
 
         <View style={{ gap: 10 }}>
           <View style={styles.sectionHeader}>

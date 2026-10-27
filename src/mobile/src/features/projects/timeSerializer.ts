@@ -1,10 +1,13 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import {
+  TimePeriodType,
   TimerPauseReason,
+  TimesheetStatus,
   WorklogSource,
   type DayTotal,
   type TimePolicy,
   type Timer,
+  type Timesheet,
   type Worklog,
 } from "@uniffy/proto/projects/v1/time_pb";
 
@@ -18,6 +21,8 @@ export interface SerializedWorklog {
   createdByUserId: string;
   /** YYYY-MM-DD in the worker's own zone. */
   workDate: string;
+  /** When the work began, for an entry placed on the day's clock; null for a day-only entry. */
+  startedAt: string | null;
   durationMinutes: number;
   description: string;
   source: SerializedWorklogSource;
@@ -40,6 +45,7 @@ export function worklogToPlain(worklog: Worklog): SerializedWorklog {
     userId: worklog.userId,
     createdByUserId: worklog.createdByUserId,
     workDate: worklog.workDate,
+    startedAt: worklog.startedAt ? timestampDate(worklog.startedAt).toISOString() : null,
     durationMinutes: worklog.durationMinutes,
     description: worklog.description,
     source: SOURCE[worklog.source] ?? "manual",
@@ -120,6 +126,7 @@ export function dayTotalToPlain(total: DayTotal): SerializedDayTotal {
 
 export interface SerializedTimePolicy {
   enabled: boolean;
+  periodType: "weekly" | "monthly";
   weekStart: string;
   approvalsEnabled: boolean;
   requiredMinutesPerDay: number;
@@ -129,9 +136,54 @@ export interface SerializedTimePolicy {
 export function timePolicyToPlain(policy: TimePolicy): SerializedTimePolicy {
   return {
     enabled: policy.enabled,
+    periodType: policy.periodType === TimePeriodType.MONTHLY ? "monthly" : "weekly",
     weekStart: policy.weekStart,
     approvalsEnabled: policy.approvalsEnabled,
     requiredMinutesPerDay: policy.requiredMinutesPerDay,
     internalProjectId: policy.internalProjectId ?? null,
+  };
+}
+
+export type SerializedTimesheetStatus = "open" | "submitted" | "approved" | "rejected";
+
+const SHEET_STATUS: Record<TimesheetStatus, SerializedTimesheetStatus> = {
+  [TimesheetStatus.UNSPECIFIED]: "open",
+  [TimesheetStatus.OPEN]: "open",
+  [TimesheetStatus.SUBMITTED]: "submitted",
+  [TimesheetStatus.APPROVED]: "approved",
+  [TimesheetStatus.REJECTED]: "rejected",
+};
+
+export interface SerializedTimesheet {
+  periodStart: string;
+  periodEnd: string;
+  status: SerializedTimesheetStatus;
+  submittedAt: string | null;
+  reviewComment: string;
+  /** While in the future the period's days accept edits again; `locked` already accounts for it. */
+  graceUntil: string | null;
+  locked: boolean;
+  periodClosed: boolean;
+  totalMinutes: number;
+  requiredMinutes: number;
+  submittedToUserId: string | null;
+  /** Who may review the sheet, manager first. */
+  reviewerUserIds: string[];
+}
+
+export function timesheetToPlain(sheet: Timesheet): SerializedTimesheet {
+  return {
+    periodStart: sheet.periodStart,
+    periodEnd: sheet.periodEnd,
+    status: SHEET_STATUS[sheet.status] ?? "open",
+    submittedAt: sheet.submittedAt ? timestampDate(sheet.submittedAt).toISOString() : null,
+    reviewComment: sheet.reviewComment,
+    graceUntil: sheet.graceUntil ? timestampDate(sheet.graceUntil).toISOString() : null,
+    locked: sheet.locked,
+    periodClosed: sheet.periodClosed,
+    totalMinutes: sheet.totalMinutes,
+    requiredMinutes: sheet.requiredMinutes,
+    submittedToUserId: sheet.submittedToUserId ?? null,
+    reviewerUserIds: [...sheet.reviewerUserIds],
   };
 }

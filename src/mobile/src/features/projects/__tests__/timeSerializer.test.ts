@@ -3,7 +3,10 @@ import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import {
   DayTotalSchema,
+  TimePeriodType,
   TimePolicySchema,
+  TimesheetSchema,
+  TimesheetStatus,
   WorklogSchema,
   WorklogSource,
 } from "@uniffy/proto/projects/v1/time_pb";
@@ -11,6 +14,7 @@ import {
   dayTotalToPlain,
   localDayKey,
   timePolicyToPlain,
+  timesheetToPlain,
   worklogToPlain,
 } from "@features/projects/timeSerializer";
 import { parseTimeInput } from "@features/projects/timeFormatting";
@@ -26,6 +30,7 @@ describe("worklogToPlain", () => {
         userId: "u1",
         createdByUserId: "u2",
         workDate: "2026-10-22",
+        startedAt: timestampFromDate(new Date("2026-10-22T07:00:00.000Z")),
         durationMinutes: 95,
         description: "Review",
         source: WorklogSource.TIMER,
@@ -40,6 +45,7 @@ describe("worklogToPlain", () => {
       userId: "u1",
       createdByUserId: "u2",
       workDate: "2026-10-22",
+      startedAt: "2026-10-22T07:00:00.000Z",
       durationMinutes: 95,
       description: "Review",
       source: "timer",
@@ -51,6 +57,7 @@ describe("worklogToPlain", () => {
     const plain = worklogToPlain(create(WorklogSchema, { id: "w2" }));
     expect(plain.source).toBe("manual");
     expect(plain.createdAt).toBe("");
+    expect(plain.startedAt).toBeNull();
   });
 });
 
@@ -119,6 +126,7 @@ describe("week serializers", () => {
     );
     expect(policy).toEqual({
       enabled: true,
+      periodType: "weekly",
       weekStart: "sunday",
       approvalsEnabled: true,
       requiredMinutesPerDay: 420,
@@ -127,5 +135,37 @@ describe("week serializers", () => {
     expect(
       timePolicyToPlain(create(TimePolicySchema, { internalProjectId: "p-int" })).internalProjectId,
     ).toBe("p-int");
+    expect(
+      timePolicyToPlain(create(TimePolicySchema, { periodType: TimePeriodType.MONTHLY }))
+        .periodType,
+    ).toBe("monthly");
+  });
+});
+
+describe("timesheetToPlain", () => {
+  it("maps the status, the lock and the reviewers", () => {
+    const plain = timesheetToPlain(
+      create(TimesheetSchema, {
+        periodStart: "2026-10-19",
+        periodEnd: "2026-10-25",
+        status: TimesheetStatus.SUBMITTED,
+        locked: true,
+        totalMinutes: 2400,
+        requiredMinutes: 2400,
+        submittedToUserId: "alice",
+        reviewerUserIds: ["alice", "anton"],
+        graceUntil: timestampFromDate(new Date("2026-10-28T12:00:00.000Z")),
+      }),
+    );
+    expect(plain.status).toBe("submitted");
+    expect(plain.locked).toBe(true);
+    expect(plain.submittedToUserId).toBe("alice");
+    expect(plain.reviewerUserIds).toEqual(["alice", "anton"]);
+    expect(plain.graceUntil).toBe("2026-10-28T12:00:00.000Z");
+    expect(plain.submittedAt).toBeNull();
+  });
+
+  it("reads an unspecified status as open", () => {
+    expect(timesheetToPlain(create(TimesheetSchema, {})).status).toBe("open");
   });
 });

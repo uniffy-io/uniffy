@@ -5,10 +5,13 @@ import { projectsApi } from "@features/projects/projectsApi";
 import {
   dayTotalToPlain,
   timePolicyToPlain,
+  timesheetToPlain,
   worklogToPlain,
   type SerializedDayTotal,
+  type SerializedTimesheet,
   type SerializedWorklog,
 } from "@features/projects/timeSerializer";
+import { taskUrn } from "@features/projects/useTaskLabels";
 import { searchApi } from "@features/search/searchApi";
 import { idFromUrn } from "@features/search/searchSerializer";
 
@@ -20,6 +23,14 @@ export function timePolicyQueryKey(organizationId: string | null) {
 
 export function myWeekQueryKey(organizationId: string | null) {
   return ["my-week", organizationId] as const;
+}
+
+export function timesheetQueryKey(organizationId: string | null) {
+  return ["timesheet", organizationId] as const;
+}
+
+export function taskWorklogsQueryKey(organizationId: string | null, taskId: string) {
+  return ["task-worklogs", organizationId, taskId] as const;
 }
 
 export function useTimePolicy() {
@@ -60,10 +71,50 @@ export function useMyWeek(from: string, to: string) {
   });
 }
 
+/** The person's own sheet for the period holding `day`; only fetched when approvals are on. */
+export function useTimesheet(day: string, enabled: boolean) {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: [...timesheetQueryKey(organizationId), day],
+    queryFn: async (): Promise<SerializedTimesheet> => {
+      const response = await projectsApi.getTimesheet({
+        organizationId: organizationId!,
+        periodStart: day,
+      });
+      return timesheetToPlain(response.timesheet!);
+    },
+    enabled: !!organizationId && enabled,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Everyone's entries on one task, newest day first; readable by whoever can view the task. */
+export function useTaskWorklogs(taskId: string) {
+  const { organizationId } = useAuth();
+  return useQuery({
+    queryKey: taskWorklogsQueryKey(organizationId, taskId),
+    queryFn: async (): Promise<SerializedWorklog[]> => {
+      const response = await projectsApi.listTaskWorklogs({
+        organizationId: organizationId!,
+        taskId,
+      });
+      return response.worklogs
+        .map(worklogToPlain)
+        .sort(
+          (a, b) => b.workDate.localeCompare(a.workDate) || b.createdAt.localeCompare(a.createdAt),
+        );
+    },
+    enabled: !!organizationId && !!taskId,
+  });
+}
+
 export interface TaskHit {
   id: string;
   title: string;
-  subtitle?: string;
+  /** "REL-12" when the resolver names the project. */
+  code: string | null;
+  type: string;
+  projectName: string;
 }
 
 /** Tasks matching a typed query, for picking one the week does not show yet. */
@@ -79,11 +130,27 @@ export function useTaskSearch(query: string) {
         typeFilters: [SearchResultType.TASK],
         limit: SEARCH_LIMIT,
       });
-      return response.items.map((item) => ({
-        id: idFromUrn(item.urn),
-        title: item.title,
-        subtitle: item.description || undefined,
-      }));
+      // The index carries only the title; the resolver adds the code, type and project
+      // so tasks with the same title can be told apart.
+      const urns = response.items.map((item) => item.urn);
+      const resolved =
+        urns.length > 0
+          ? (await searchApi.resolveUrns({ organizationId: organizationId!, urns })).resolved
+          : {};
+      return response.items.map((item) => {
+        const id = idFromUrn(item.urn);
+        const meta = resolved[taskUrn(id)];
+        return {
+          id,
+          title: meta?.title || item.title,
+          code:
+            meta?.projectSlug && meta.taskNumber
+              ? `${meta.projectSlug.toUpperCase()}-${meta.taskNumber}`
+              : null,
+          type: meta?.taskType || "task",
+          projectName: meta?.projectName ?? "",
+        };
+      });
     },
     enabled: !!organizationId && trimmed.length > 0,
     placeholderData: keepPreviousData,

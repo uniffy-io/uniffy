@@ -24,6 +24,7 @@ function entry(id: string, overrides: Partial<SerializedWorklog> = {}): Serializ
     userId: "me",
     createdByUserId: "me",
     workDate: "2026-10-22",
+    startedAt: null,
     durationMinutes: 60,
     description: "",
     source: "manual",
