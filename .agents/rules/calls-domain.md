@@ -46,6 +46,18 @@ guarded (the domain session runs `expire_on_commit=False`, so an in-memory `ende
 stale across concurrent handlers); tab-close sends a keepalive leave beacon with the `participant_left`
 webhook as the fallback. Never treat a single webhook or stream event as authoritative on its own.
 
+Admission locks the user within the organization before locking the call, and holds both through
+the participant commit. The user lock protects one-call-at-a-time across different channels; the call
+lock protects participant/device caps and termination. A rollback releases both locks, so retry paths
+must reacquire the admission gate. Departure updates compare the connected `session_jti` as well as
+`left_at`, so an event read before a concurrent rejoin cannot close the replacement connection.
+
+Lifecycle regression tests live in `tests/integration/access/test_call*.py`. Contention tests use
+independent PostgreSQL sessions and observe lock blockers before releasing a held lock. Test committed
+rows, audit entries and emitted events, including both orders of rejoin versus ghost retirement.
+Keep database operations real and stub only external media and publication boundaries. A passing test
+must fail when its relevant CAS, generation check, admission lock or authorization gate is removed.
+
 ## Webhooks are server-to-server, not from the browser
 
 LiveKit POSTs events to the backend at `/internal/webhooks/livekit` (`core/webhooks/router.py`,
@@ -53,6 +65,9 @@ processor in `domains/calls/webhook.py`), authenticated by a LiveKit-signed JWT 
 claim. The signature is the gate; network placement is defense-in-depth (the route is not proxied by the
 edge). Self-hosters MUST make the backend reachable from their LiveKit instance and keep the shared
 `api_key`/secret matched on both sides, or presence silently breaks.
+
+Every event matches the exact persisted room name, including its organization prefix, before changing
+call state. Parsing a call UUID from a room name alone does not establish tenant scope.
 
 ## Revocation reaches live calls
 

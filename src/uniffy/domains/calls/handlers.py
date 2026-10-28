@@ -281,11 +281,15 @@ class CallHandlers:
     async def decline_call(
         self, request: DeclineCallRequest, ctx: RequestContext
     ) -> DeclineCallResponse:
-        # Acknowledge-only until missed-call records land with the push flow;
-        # the caller's ring toast dismisses locally on timeout.
-        current_user_id()
-        _parse_uuid(request.organization_id, "organization_id")
-        _parse_uuid(request.call_id, "call_id")
+        user_id = current_user_id()
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        call_id = _parse_uuid(request.call_id, "call_id")
+        async with open_session() as session:
+            try:
+                await CallReader(session).get_state(user_id, organization_id, call_id)
+            except Exception as exc:
+                raise _map_domain_error("decline_call", exc) from exc
+        # Ring dismissal is local; this acknowledgement does not end the shared call.
         return DeclineCallResponse(success=True)
 
     async def kick_participant(

@@ -1,5 +1,3 @@
-import asyncio
-
 import jwt
 import pytest
 from sqlalchemy import select
@@ -11,6 +9,7 @@ from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.policy import ResolvedCallPolicy, save_call_policy
 from uniffy.infrastructure.database import open_session
+from uniffy.tests.integration.access.call_contention import contend
 from uniffy.tests.integration.access.calls import _call, _channel
 from uniffy.tests.integration.access.calls import livekit as livekit
 
@@ -66,48 +65,28 @@ async def test_concurrent_joins_cannot_take_same_last_slot(session, access, live
     channel.channel_type = ChannelType.PUBLIC
     await session.commit()
 
-    entered = asyncio.Event()
-    release = asyncio.Event()
-
-    async def join(user_id):
-        async with open_session() as other:
-            await entered.wait()
+    def join(user_id):
+        async def run(other):
             return await CallOperations(other).join_call(user_id, access.org_id, call.id, "browser")
 
-    async def hold_admission():
-        async with open_session() as other:
-            await other.execute(select(Call).where(Call.id == call.id).with_for_update())
-            entered.set()
-            await release.wait()
-            await other.commit()
+        return run
 
-    holder = asyncio.create_task(hold_admission())
-    joins = [asyncio.create_task(join(uid)) for uid in (access.admin_id, access.member_id)]
-    try:
-        await asyncio.wait_for(entered.wait(), timeout=5)
-        await asyncio.sleep(0.1)
-        assert all(not task.done() for task in joins)
-        release.set()
-        results = await asyncio.wait_for(asyncio.gather(*joins, return_exceptions=True), timeout=10)
-        assert sum(isinstance(result, tuple) for result in results) == 1
-        failures = [result for result in results if isinstance(result, ValidationError)]
-        assert len(failures) == 1
-        expected_message = "Call is full"
-        assert expected_message in str(failures[0])
-        rows = await CallOperations(session).list_active_participants(call.id)
-        assert len(rows) == 2
+    results = await contend(
+        select(Call).where(Call.id == call.id).with_for_update(),
+        [join(access.admin_id), join(access.member_id)],
+    )
+    assert sum(isinstance(result, tuple) for result in results) == 1
+    failures = [result for result in results if isinstance(result, ValidationError)]
+    assert len(failures) == 1
+    assert "Call is full" in str(failures[0])
+    rows = await CallOperations(session).list_active_participants(call.id)
+    assert len(rows) == 2
 
-        winner = next(row for row in rows if row.user_id != access.owner_id)
-        _, rows, _ = await CallOperations(session).join_call(
-            winner.user_id, access.org_id, call.id, "browser"
-        )
-        assert len(rows) == 2
-    finally:
-        release.set()
-        for task in [holder, *joins]:
-            if not task.done():
-                task.cancel()
-        await asyncio.gather(holder, *joins, return_exceptions=True)
+    winner = next(row for row in rows if row.user_id != access.owner_id)
+    _, rows, _ = await CallOperations(session).join_call(
+        winner.user_id, access.org_id, call.id, "browser"
+    )
+    assert len(rows) == 2
 
 
 async def test_room_failure_keeps_committed_admission_retryable(session, access, livekit) -> None:

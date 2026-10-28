@@ -436,6 +436,32 @@ Accessibility
       "<name>, camera off, muted", and the host actions are reachable without a long press.
 - [ ] The reconnecting and second-device banners are announced when they appear.
 
+## Calls: lifecycle and concurrency
+
+Use two members in one channel, a third member without access to a private channel, and a separate
+organization. Run against the configured LiveKit deployment. Repeat core flows on web and mobile.
+
+- Start from both members at once. Both join the same call, with one start message.
+- Join the same call on two devices. The second device starts muted; a third device is refused.
+- Try joining different channels at once as the same member. Only one call admits the member.
+- Leave as host while another participant leaves. The earliest remaining participant becomes host.
+- End from two host/moderator clients at once. Everyone leaves, with one end message and audit event.
+- Refresh or reconnect during a call. The roster has one active row per device. A delayed leave from
+  the replaced connection must not remove the replacement.
+- Close the last participant's tab. Webhook or reconciliation cleanup ends the abandoned call.
+- Briefly interrupt media service access. A single failed lookup must not evict active participants.
+  Restore access and confirm reconciliation converges; maximum duration still applies during outages.
+- Try list, read, join, refresh, media updates, mute, remove and end without channel access and from
+  another organization. No roster or credentials leak, and no other participant changes.
+- Remove channel or organization membership during a call. Reconnect and active-call resync must not
+  restore access. A leave request may still clean up the caller's own device and remains idempotent.
+
+Automated regressions live in `src/uniffy/tests/integration/access/test_call*.py`. They use independent
+PostgreSQL sessions and stub media transport. The contention helper observes `pg_blocking_pids` before
+releasing locks; timing sleeps alone are not evidence of contention. Assert committed rows, audit and
+fanout outcomes. Preserve coverage for both orders of rejoin versus ghost retirement, connected-token
+generation checks, and tenant-qualified webhook room names when changing lifecycle code.
+
 ## Calls: roster controls and recovery feedback
 
 Run with host A, ordinary participant B, and channel moderator C. Use a private test channel.

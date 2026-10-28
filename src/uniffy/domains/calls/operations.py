@@ -137,6 +137,9 @@ class CallOperations:
         except IntegrityError:
             # Lost the concurrent-start race; the winner's call is the call.
             await self.session.rollback()
+            await self._require_not_in_another_call(
+                user_id, organization_id, exclude_channel=channel_id
+            )
             existing = await self.get_active_call_row(channel_id)
             if existing is None:
                 raise
@@ -266,9 +269,7 @@ class CallOperations:
     async def list_active_calls_for_user(
         self, user_id: UUID, organization_id: UUID
     ) -> list[tuple[Call, list[CallParticipant]]]:
-        """Resync snapshot: active calls the user can see - channels they belong to, plus any call
-        they are an active participant of. A joiner in an unjoined PUBLIC channel (or an admin
-        moderating) has no member row, so a membership-only query would omit their own live call."""
+        """Resync subscribed and participating calls through current channel access."""
         # Channel-member and participant rows outlive the membership that justified
         # them, so without this the roster keeps answering someone the organization
         # has already removed or deactivated.
@@ -281,11 +282,23 @@ class CallOperations:
             CallParticipant.user_id == user_id,
             CallParticipant.left_at.is_(None),
         )
+        moderator = await self.access.is_org_admin(
+            user_id, organization_id
+        ) or await self.access.is_chat_domain_admin(user_id, organization_id)
         result = await self.session.execute(
             select(Call)
+            .join(ChatChannel, ChatChannel.id == Call.channel_id)
             .where(
                 Call.organization_id == organization_id,
                 Call.ended_at.is_(None),
+                ChatChannel.organization_id == organization_id,
+                ChatChannel.is_deleted.is_(False),
+                ChatChannel.is_self_dm.is_(False),
+                or_(
+                    ChatChannel.channel_type == ChannelType.PUBLIC,
+                    ChatChannel.id.in_(member_channels),
+                    moderator,
+                ),
                 or_(
                     Call.channel_id.in_(member_channels),
                     Call.id.in_(participant_calls),
@@ -389,9 +402,10 @@ class CallOperations:
         camera_enabled: bool,
         screen_sharing: bool,
     ) -> None:
-        """Client-reported media state is the roster's source of truth: LiveKit emits no mute
-        webhook, so a muted mic (track stays published) cannot be inferred server-side."""
+        """LiveKit emits no mute webhook, so roster state follows authorized client reports."""
         call = await self._get_call(call_id, organization_id)
+        channel = await self.access.get_channel(call.channel_id, organization_id)
+        await self.access.check_access(user_id, organization_id, channel)
         if call.ended_at is not None:
             return
         participant = await self.get_active_participant(
@@ -484,7 +498,10 @@ class CallOperations:
     ) -> bool:
         now = datetime.now(UTC)
         query = update(CallParticipant).where(
-            CallParticipant.id == participant.id, CallParticipant.left_at.is_(None)
+            CallParticipant.id == participant.id,
+            CallParticipant.left_at.is_(None),
+            # A rejoin can replace the connected generation after a webhook reads it.
+            CallParticipant.session_jti.is_not_distinct_from(participant.session_jti),
         )
         if session_ids is not None:
             query = query.where(CallParticipant.auth_session_id.in_(list(session_ids)))
@@ -1070,6 +1087,15 @@ class CallOperations:
     async def _require_not_in_another_call(
         self, user_id: UUID, organization_id: UUID, *, exclude_channel: UUID
     ) -> None:
+        # Different calls have different row locks. Hold the user's admission lock
+        # until the participant commits so simultaneous joins cannot both pass.
+        await self.session.execute(
+            select(
+                func.pg_advisory_xact_lock(
+                    func.hashtextextended(f"calls:admission:{organization_id}:{user_id}", 0)
+                )
+            )
+        )
         result = await self.session.execute(
             select(Call.channel_id)
             .join(CallParticipant, CallParticipant.call_id == Call.id)
