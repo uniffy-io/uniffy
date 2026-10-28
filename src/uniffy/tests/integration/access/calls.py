@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -18,8 +18,18 @@ from uniffy.domains.calls import config as calls_config
 from uniffy.domains.calls import operations as calls_operations
 from uniffy.domains.calls import webhook as calls_webhook
 from uniffy.domains.calls.jobs import jobs as calls_jobs
+from uniffy.domains.calls.livekit import MediaAvailability
 from uniffy.domains.calls.tokens import livekit_room_name
+from uniffy.domains.chat.calls import CallChat
 from uniffy.infrastructure.database import open_session
+
+
+@pytest.fixture
+def call_publication(monkeypatch):
+    publish = AsyncMock()
+    monkeypatch.setattr(CallChat, "publish", publish)
+    monkeypatch.setattr(CallChat, "post_system_message", AsyncMock())
+    return publish
 
 
 @pytest.fixture(autouse=True)
@@ -29,7 +39,9 @@ def livekit(monkeypatch):
     monkeypatch.setenv("LIVEKIT_API_KEY", "devkey")
     monkeypatch.setenv("LIVEKIT_API_SECRET", "e" * 48)
     client = MagicMock()
+    client.stop_after_unavailable.side_effect = lambda: nullcontext(MediaAvailability())
     client.remove_participant = AsyncMock()
+    client.mute_participant_microphone = AsyncMock(return_value=True)
     client.delete_room = AsyncMock()
     client.get_participant = AsyncMock()
     client.list_participants = AsyncMock(return_value=[])

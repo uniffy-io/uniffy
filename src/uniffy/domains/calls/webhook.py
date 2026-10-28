@@ -37,9 +37,9 @@ class LiveKitWebhookProvider:
         elif event_name in ("participant_left", "participant_connection_aborted"):
             # Aborted = signaling succeeded but media never connected; the
             # participant row exists and must be released like a leave.
-            await self._on_participant_left(call_id, event)
+            await self._on_participant_left(call_id, room_name, event)
         elif event_name == "room_finished":  # noqa: PLR2004
-            await self._on_room_finished(call_id)
+            await self._on_room_finished(call_id, room_name)
         # Track publish/mute events are ignored: LiveKit emits no mute webhook and
         # a muted mic stays published, so roster mic/camera/screen state is synced
         # by the client via ReportMediaState, not inferred from track events.
@@ -55,13 +55,15 @@ class LiveKitWebhookProvider:
                 call_id, room_name, identity
             )
 
-    async def _on_participant_left(self, call_id: UUID, event: dict[str, Any]) -> None:
+    async def _on_participant_left(
+        self, call_id: UUID, room_name: str, event: dict[str, Any]
+    ) -> None:
         participant_data = event.get("participant") or {}
         identity = participant_data.get("identity", "")
         if not identity:
             return
         async with open_session() as session:
-            call = await _load_call(session, call_id)
+            call = await _load_call(session, call_id, room_name)
             if call is None or call.ended_at is not None:
                 return
             ops = CallOperations(session)
@@ -74,15 +76,17 @@ class LiveKitWebhookProvider:
                 return
             await ops.mark_participant_left(call, participant)
 
-    async def _on_room_finished(self, call_id: UUID) -> None:
+    async def _on_room_finished(self, call_id: UUID, room_name: str) -> None:
         async with open_session() as session:
-            call = await _load_call(session, call_id)
+            call = await _load_call(session, call_id, room_name)
             if call is None or call.ended_at is not None:
                 return
             ops = CallOperations(session)
             await ops.end_call_internal(call, CallEndReason.ALL_LEFT)
 
 
-async def _load_call(session, call_id: UUID) -> Call | None:
-    result = await session.execute(select(Call).where(Call.id == call_id))
+async def _load_call(session, call_id: UUID, room_name: str) -> Call | None:
+    result = await session.execute(
+        select(Call).where(Call.id == call_id, Call.livekit_room_name == room_name)
+    )
     return result.scalar_one_or_none()
