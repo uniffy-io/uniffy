@@ -1,3 +1,5 @@
+import { useCall } from "@/features/calls/components/callContext";
+import { callAvailabilityMessage } from "@/features/calls/utils/callErrors";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import {
@@ -83,6 +85,8 @@ interface ChannelHeaderProps {
 }
 
 export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: ChannelHeaderProps) {
+  const { availability } = useCall();
+  const callUnavailable = callAvailabilityMessage(availability);
   const dispatch = useAppDispatch();
   const defaultActiveChannel = useAppSelector(selectActiveChannel);
   const channelFromId = useAppSelector((state) =>
@@ -357,10 +361,12 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
                 activeCall &&
                   "text-emerald-500 border-emerald-500/40 hover:text-emerald-500 hover:border-emerald-500/60",
               )}
-              aria-label={activeCall ? "Join live call" : "Start call"}
-              title={activeCall ? "Join live call" : "Start call"}
+              aria-label={
+                callUnavailable ? "Calls unavailable" : activeCall ? "Join live call" : "Start call"
+              }
+              title={callUnavailable ?? (activeCall ? "Join live call" : "Start call")}
               data-testid="chat-channel-call-button"
-              data-state={activeCall ? "live" : "idle"}
+              data-state={callUnavailable ? "unavailable" : activeCall ? "live" : "idle"}
             >
               <Phone size={16} weight={activeCall ? "fill" : "regular"} />
               {activeCall && (

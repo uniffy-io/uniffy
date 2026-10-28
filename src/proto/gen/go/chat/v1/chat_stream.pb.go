@@ -1600,6 +1600,7 @@ type CallParticipantEventPayload struct {
 	CallId                 string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
 	Participant            *v1.CallParticipant    `protobuf:"bytes,2,opt,name=participant,proto3" json:"participant,omitempty"`
 	ActiveParticipantCount int32                  `protobuf:"varint,3,opt,name=active_participant_count,json=activeParticipantCount,proto3" json:"active_participant_count,omitempty"`
+	ModeratorMuted         bool                   `protobuf:"varint,4,opt,name=moderator_muted,json=moderatorMuted,proto3" json:"moderator_muted,omitempty"`
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
@@ -1653,6 +1654,13 @@ func (x *CallParticipantEventPayload) GetActiveParticipantCount() int32 {
 		return x.ActiveParticipantCount
 	}
 	return 0
+}
+
+func (x *CallParticipantEventPayload) GetModeratorMuted() bool {
+	if x != nil {
+		return x.ModeratorMuted
+	}
+	return false
 }
 
 // CallRingPayload invites a specific callee. Fanned out only to users being
@@ -2464,11 +2472,12 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
 	"decided_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\":\n" +
 	"\x14CallLifecyclePayload\x12\"\n" +
-	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\"\xad\x01\n" +
+	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\"\xd6\x01\n" +
 	"\x1bCallParticipantEventPayload\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12;\n" +
 	"\vparticipant\x18\x02 \x01(\v2\x19.calls.v1.CallParticipantR\vparticipant\x128\n" +
-	"\x18active_participant_count\x18\x03 \x01(\x05R\x16activeParticipantCount\"\xc7\x02\n" +
+	"\x18active_participant_count\x18\x03 \x01(\x05R\x16activeParticipantCount\x12'\n" +
+	"\x0fmoderator_muted\x18\x04 \x01(\bR\x0emoderatorMuted\"\xc7\x02\n" +
 	"\x0fCallRingPayload\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12!\n" +
 	"\fchannel_name\x18\x02 \x01(\tR\vchannelName\x12/\n" +

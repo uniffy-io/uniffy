@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { popoverShellClass } from "@/components/ui/popover";
 import { useCall } from "@/features/calls/components/callContext";
+import { CallParticipants } from "@/features/calls/components/CallParticipants";
 import { ControlsBar } from "@/features/calls/components/ControlsBar";
 import { ParticipantTile } from "@/features/calls/components/ParticipantTile";
 import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
@@ -152,7 +153,10 @@ function ReconnectingChip() {
     return () => clearInterval(timer);
   }, []);
   return (
-    <span className="flex items-center gap-1 rounded bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 text-yellow-800 dark:text-yellow-400">
+    <span
+      role="status"
+      className="flex items-center gap-1 rounded bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 text-yellow-800 dark:text-yellow-400"
+    >
       <WifiSlash size={12} /> Reconnecting...{seconds > 2 ? ` ${seconds}s` : ""}
     </span>
   );
@@ -167,6 +171,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
   const persistedHeight = useAppSelector((s) => s.callPreferences.viewHeightPx ?? null);
   const { room } = useCall();
   const participants = useRoomParticipants(room);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showSoloPrompt, setShowSoloPrompt] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -251,7 +256,8 @@ function CallViewInner({ channelId }: { channelId: string }) {
       }
       data-testid="call-view"
     >
-      <div className="flex items-center justify-between px-3 py-1.5">
+      {participantsOpen && <CallParticipants onClose={() => setParticipantsOpen(false)} />}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -261,7 +267,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
           {session.status === "reconnecting" && <ReconnectingChip />}
         </div>
         <div className="flex items-center gap-2">
-          {!collapsed && <ControlsBar />}
+          {!collapsed && <ControlsBar onToggleParticipants={() => setParticipantsOpen(true)} />}
           {!collapsed && (
             <button
               type="button"
@@ -291,7 +297,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
         <div className="relative flex-1 min-h-0 px-3 pb-3">
           <CallGrid participants={participants} nameFor={(p) => rosterByIdentity.get(p.identity)} />
           {showSoloPrompt && (
-            <div className="absolute inset-x-0 bottom-6 flex justify-center">
+            <div role="status" className="absolute inset-x-0 bottom-6 flex justify-center">
               <div className={cn(popoverShellClass, "px-3 py-2 text-xs text-muted-foreground")}>
                 You are the only one here. The call ends automatically after 5 minutes alone.
                 <button

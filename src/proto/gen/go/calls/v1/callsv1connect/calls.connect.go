@@ -33,6 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// CallServiceGetCallAvailabilityProcedure is the fully-qualified name of the CallService's
+	// GetCallAvailability RPC.
+	CallServiceGetCallAvailabilityProcedure = "/calls.v1.CallService/GetCallAvailability"
+	// CallServiceGetCallStateProcedure is the fully-qualified name of the CallService's GetCallState
+	// RPC.
+	CallServiceGetCallStateProcedure = "/calls.v1.CallService/GetCallState"
 	// CallServiceInitiateCallProcedure is the fully-qualified name of the CallService's InitiateCall
 	// RPC.
 	CallServiceInitiateCallProcedure = "/calls.v1.CallService/InitiateCall"
@@ -72,6 +78,8 @@ const (
 
 // CallServiceClient is a client for the calls.v1.CallService service.
 type CallServiceClient interface {
+	GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error)
+	GetCallState(context.Context, *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error)
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.
 	InitiateCall(context.Context, *connect.Request[v1.InitiateCallRequest]) (*connect.Response[v1.InitiateCallResponse], error)
@@ -112,6 +120,18 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	callServiceMethods := v1.File_calls_v1_calls_proto.Services().ByName("CallService").Methods()
 	return &callServiceClient{
+		getCallAvailability: connect.NewClient[v1.GetCallAvailabilityRequest, v1.GetCallAvailabilityResponse](
+			httpClient,
+			baseURL+CallServiceGetCallAvailabilityProcedure,
+			connect.WithSchema(callServiceMethods.ByName("GetCallAvailability")),
+			connect.WithClientOptions(opts...),
+		),
+		getCallState: connect.NewClient[v1.GetCallStateRequest, v1.GetCallStateResponse](
+			httpClient,
+			baseURL+CallServiceGetCallStateProcedure,
+			connect.WithSchema(callServiceMethods.ByName("GetCallState")),
+			connect.WithClientOptions(opts...),
+		),
 		initiateCall: connect.NewClient[v1.InitiateCallRequest, v1.InitiateCallResponse](
 			httpClient,
 			baseURL+CallServiceInitiateCallProcedure,
@@ -195,6 +215,8 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // callServiceClient implements CallServiceClient.
 type callServiceClient struct {
+	getCallAvailability *connect.Client[v1.GetCallAvailabilityRequest, v1.GetCallAvailabilityResponse]
+	getCallState        *connect.Client[v1.GetCallStateRequest, v1.GetCallStateResponse]
 	initiateCall        *connect.Client[v1.InitiateCallRequest, v1.InitiateCallResponse]
 	joinCall            *connect.Client[v1.JoinCallRequest, v1.JoinCallResponse]
 	leaveCall           *connect.Client[v1.LeaveCallRequest, v1.LeaveCallResponse]
@@ -208,6 +230,16 @@ type callServiceClient struct {
 	getOrgCallPolicy    *connect.Client[v1.GetOrgCallPolicyRequest, v1.GetOrgCallPolicyResponse]
 	updateOrgCallPolicy *connect.Client[v1.UpdateOrgCallPolicyRequest, v1.UpdateOrgCallPolicyResponse]
 	reportMediaState    *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
+}
+
+// GetCallAvailability calls calls.v1.CallService.GetCallAvailability.
+func (c *callServiceClient) GetCallAvailability(ctx context.Context, req *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error) {
+	return c.getCallAvailability.CallUnary(ctx, req)
+}
+
+// GetCallState calls calls.v1.CallService.GetCallState.
+func (c *callServiceClient) GetCallState(ctx context.Context, req *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error) {
+	return c.getCallState.CallUnary(ctx, req)
 }
 
 // InitiateCall calls calls.v1.CallService.InitiateCall.
@@ -277,6 +309,8 @@ func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.R
 
 // CallServiceHandler is an implementation of the calls.v1.CallService service.
 type CallServiceHandler interface {
+	GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error)
+	GetCallState(context.Context, *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error)
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.
 	InitiateCall(context.Context, *connect.Request[v1.InitiateCallRequest]) (*connect.Response[v1.InitiateCallResponse], error)
@@ -313,6 +347,18 @@ type CallServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	callServiceMethods := v1.File_calls_v1_calls_proto.Services().ByName("CallService").Methods()
+	callServiceGetCallAvailabilityHandler := connect.NewUnaryHandler(
+		CallServiceGetCallAvailabilityProcedure,
+		svc.GetCallAvailability,
+		connect.WithSchema(callServiceMethods.ByName("GetCallAvailability")),
+		connect.WithHandlerOptions(opts...),
+	)
+	callServiceGetCallStateHandler := connect.NewUnaryHandler(
+		CallServiceGetCallStateProcedure,
+		svc.GetCallState,
+		connect.WithSchema(callServiceMethods.ByName("GetCallState")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceInitiateCallHandler := connect.NewUnaryHandler(
 		CallServiceInitiateCallProcedure,
 		svc.InitiateCall,
@@ -393,6 +439,10 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/calls.v1.CallService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case CallServiceGetCallAvailabilityProcedure:
+			callServiceGetCallAvailabilityHandler.ServeHTTP(w, r)
+		case CallServiceGetCallStateProcedure:
+			callServiceGetCallStateHandler.ServeHTTP(w, r)
 		case CallServiceInitiateCallProcedure:
 			callServiceInitiateCallHandler.ServeHTTP(w, r)
 		case CallServiceJoinCallProcedure:
@@ -427,6 +477,14 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedCallServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCallServiceHandler struct{}
+
+func (UnimplementedCallServiceHandler) GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.GetCallAvailability is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) GetCallState(context.Context, *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.GetCallState is not implemented"))
+}
 
 func (UnimplementedCallServiceHandler) InitiateCall(context.Context, *connect.Request[v1.InitiateCallRequest]) (*connect.Response[v1.InitiateCallResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.InitiateCall is not implemented"))

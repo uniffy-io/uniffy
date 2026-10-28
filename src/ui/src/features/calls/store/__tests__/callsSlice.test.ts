@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   callsReducer,
+  sessionTerminated,
+  feedbackChanged,
   callUpserted,
   callCleared,
   activeCallsSynced,
@@ -257,5 +259,75 @@ describe("callsSlice", () => {
     expect(state.prejoin).toBeNull();
     expect(state.session.status).toBe("idle");
     expect(state.session.callId).toBeNull();
+  });
+});
+
+describe("terminal event ordering", () => {
+  const connected = () =>
+    callsReducer(
+      callsReducer(
+        undefined,
+        sessionConnecting({
+          callId: "call-1",
+          channelId: "chan-1",
+          screenShareQualityCap: ScreenShareQuality.BALANCED,
+        }),
+      ),
+      sessionConnected(),
+    );
+  it("fills a room-deletion reason even after SDK reset", () => {
+    const disconnected = callsReducer(
+      connected(),
+      sessionTerminated({ callId: "call-1", channelId: "chan-1", reason: null }),
+    );
+    const ended = callsReducer(
+      disconnected,
+      callEnded({ callId: "call-1", channelId: "chan-1", reason: "MAX_DURATION" }),
+    );
+    expect(ended.endedInfo?.reason).toBe("MAX_DURATION");
+    expect(ended.session.status).toBe("idle");
+  });
+  it("preserves an end reason received before the SDK disconnect", () => {
+    const ended = callsReducer(
+      connected(),
+      callEnded({ callId: "call-1", channelId: "chan-1", reason: "HOST_ENDED" }),
+    );
+    expect(
+      callsReducer(
+        ended,
+        sessionTerminated({ callId: "call-1", channelId: "chan-1", reason: null }),
+      ).endedInfo?.reason,
+    ).toBe("HOST_ENDED");
+  });
+  it("does not replace removal or displacement with a later all-left event", () => {
+    for (const reason of ["KICKED", "DISPLACED"] as const) {
+      const disconnected = callsReducer(
+        connected(),
+        sessionTerminated({ callId: "call-1", channelId: "chan-1", reason }),
+      );
+      expect(
+        callsReducer(
+          disconnected,
+          callEnded({ callId: "call-1", channelId: "chan-1", reason: "ALL_LEFT" }),
+        ).endedInfo?.reason,
+      ).toBe(reason);
+    }
+  });
+  it("ignores another call's disconnect and clears feedback on sign-out", () => {
+    expect(
+      callsReducer(
+        connected(),
+        sessionTerminated({ callId: "other", channelId: "other", reason: "KICKED" }),
+      ).session.status,
+    ).toBe("connected");
+    const withFeedback = callsReducer(connected(), feedbackChanged("Muted"));
+    expect(callsReducer(withFeedback, clearCalls()).feedback).toBeNull();
+    expect(callsReducer(withFeedback, sessionReset()).feedback).toBeNull();
+    expect(
+      callsReducer(
+        withFeedback,
+        sessionTerminated({ callId: "call-1", channelId: "chan-1", reason: "KICKED" }),
+      ).feedback,
+    ).toBeNull();
   });
 });

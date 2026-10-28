@@ -25,11 +25,11 @@ function tick() {
 
 export function CallControls({
   T,
-  isHost,
+  canModerate,
   compact = false,
 }: {
   T: ThemeColors;
-  isHost: boolean;
+  canModerate: boolean;
   compact?: boolean;
 }) {
   const {
@@ -155,7 +155,7 @@ export function CallControls({
             tick();
             // Hosts choose between leaving and ending for everyone (web parity);
             // everyone else leaves immediately.
-            if (isHost && !compact) {
+            if (canModerate && !compact) {
               Alert.alert("End call", undefined, [
                 { text: "Leave call", onPress: () => void leaveCall() },
                 {

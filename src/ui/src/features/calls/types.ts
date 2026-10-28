@@ -62,5 +62,5 @@ export type CallSessionStatus =
 export interface CallEndedInfo {
   callId: string;
   channelId: string;
-  reason: CallEndReason | null;
+  reason: CallEndReason | "KICKED" | "DISPLACED" | null;
 }

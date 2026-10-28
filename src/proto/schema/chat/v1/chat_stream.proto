@@ -259,6 +259,7 @@ message CallParticipantEventPayload {
   string call_id = 1;
   calls.v1.CallParticipant participant = 2;
   int32 active_participant_count = 3;
+  bool moderator_muted = 4;
 }
 
 // CallRingPayload invites a specific callee. Fanned out only to users being

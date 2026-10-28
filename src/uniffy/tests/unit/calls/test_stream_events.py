@@ -128,3 +128,12 @@ def test_call_host_changed():
     event = _payload_to_channel_event(_wire(evt.CALL_HOST_CHANGED, payload))
     assert event.event_type == ChatEventType.CALL_HOST_CHANGED
     assert event.payload.value.new_host_user_id == str(new_host)
+
+
+def test_moderator_mute_is_distinct_from_self_mute():
+    for muted_by_moderator in (False, True):
+        payload = evt.build_call_participant_payload(
+            generate_id(), _participant_dict(), 2, moderator_muted=muted_by_moderator
+        )
+        event = _payload_to_channel_event(_wire(evt.CALL_PARTICIPANT_STATE, payload))
+        assert event.payload.value.moderator_muted is muted_by_moderator

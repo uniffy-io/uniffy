@@ -35,6 +35,7 @@ import {
   setCallHost,
   pushRingInvite,
   recordEndedCall,
+  moderatorMuteKey,
   syncActiveCalls,
 } from "@features/calls/useCallsState";
 import { useAuth } from "@core/providers/AuthContext";
@@ -494,6 +495,12 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
     case "callParticipant": {
       const p = ce.payload.value;
       if (!p.participant) break;
+      if (p.moderatorMuted)
+        queryClient.setQueryData(moderatorMuteKey(orgId), {
+          callId: p.callId,
+          identity: p.participant.identity,
+          atMs: Date.now(),
+        });
       const kind = ce.eventType === ChatEventType.CALL_PARTICIPANT_LEFT ? "left" : "joined";
       applyParticipantEvent(
         queryClient,

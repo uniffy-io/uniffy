@@ -7,8 +7,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState, Platform } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
+import { AccessibilityInfo, AppState, Platform } from "react-native";
+import { onlineManager, useQuery, useQueryClient } from "@tanstack/react-query";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { ConnectError, Code } from "@connectrpc/connect";
 import type { ConnectionState, DisconnectReason, Room } from "livekit-client";
@@ -26,8 +26,13 @@ import {
   selectAudioOutput,
   presentScreenSharePicker,
 } from "@features/calls/livekit";
-import { callToPlain, type CallEndReason } from "@features/calls/callsSerializer";
-import { callErrorMessage } from "@features/calls/callErrors";
+import { callToPlain, endReasonToPlain, type CallEndReason } from "@features/calls/callsSerializer";
+import { useChatStream } from "@features/chat/useChatStream";
+import { createCameraContinuity } from "@features/calls/cameraContinuity";
+import { useRoomParticipants } from "@features/calls/useRoomParticipants";
+import { useCallAvailability } from "@features/calls/useCallAvailability";
+import { CallFeedback } from "@features/calls/components/CallFeedback";
+import { callErrorMessage, MODERATOR_MUTED_COPY } from "@features/calls/callErrors";
 import { getPreferredAudioOutput, getScreenShareQuality } from "@features/calls/callPrefs";
 import { clampQuality, screenShareConfig } from "@features/calls/screenShareQuality";
 import {
@@ -45,6 +50,8 @@ import { ScreenShareQuality, type IceTransportPolicy } from "@uniffy/proto/calls
 import {
   upsertActiveCall,
   lastEndedCallKey,
+  moderatorMuteKey,
+  type ModeratorMute,
   type LastEndedCall,
 } from "@features/calls/useCallsState";
 import { useAuth } from "@core/providers/AuthContext";
@@ -62,7 +69,12 @@ const ENDED_REASON_FRESH_MS = 15 * 1000;
 
 export type CallStatus = "idle" | "connecting" | "connected" | "reconnecting" | "disconnected";
 
-export type CallEndCause = CallEndReason | "KICKED" | "CONNECTION_LOST";
+export type CallEndCause =
+  | CallEndReason
+  | "KICKED"
+  | "DISPLACED"
+  | "CONNECTION_LOST"
+  | "NETWORK_LOST";
 
 export interface CallSession {
   status: CallStatus;
@@ -107,6 +119,8 @@ export interface PrejoinTarget {
 interface CallContextValue {
   available: boolean;
   callsDisabledMessage: string | null;
+  retryAvailability: () => void;
+  showFeedback: (message: string) => void;
   session: CallSession;
   room: Room | null;
   endedInfo: CallEndedInfo | null;
@@ -173,13 +187,36 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const [session, setSession] = useState<CallSession>(IDLE_SESSION);
   const [room, setRoom] = useState<Room | null>(null);
+  const participantCount = useRoomParticipants(room).length;
   const [endedInfo, setEndedInfo] = useState<CallEndedInfo | null>(null);
   const [minimized, setMinimized] = useState(false);
-  const [callsDisabledMessage, setCallsDisabledMessage] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const [restorable, setRestorable] = useState<CallSessionMarker | null>(null);
   const [prejoinTarget, setPrejoinTarget] = useState<PrejoinTarget | null>(null);
 
+  useChatStream();
+  const availability = useCallAvailability(prejoinTarget !== null);
+  const callsDisabledMessage = availability.message;
+  const { retry: retryAvailabilityQuery } = availability;
+  const retryAvailability = useCallback(() => {
+    void retryAvailabilityQuery();
+  }, [retryAvailabilityQuery]);
+  const endedEvent = useQuery<LastEndedCall>({
+    queryKey: lastEndedCallKey(organizationId ?? ""),
+    enabled: false,
+    queryFn: async () => {
+      throw new Error("Stream owned");
+    },
+  }).data;
+  const muteEvent = useQuery<ModeratorMute>({
+    queryKey: moderatorMuteKey(organizationId ?? ""),
+    enabled: false,
+    queryFn: async () => {
+      throw new Error("Stream owned");
+    },
+  }).data;
   const roomRef = useRef<Room | null>(null);
+  const cameraContinuityRef = useRef<ReturnType<typeof createCameraContinuity> | null>(null);
   const sessionRef = useRef<CallSession>(IDLE_SESSION);
   const orgRef = useRef<string | null>(organizationId);
   const deliberateDisconnectRef = useRef(false);
@@ -231,6 +268,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     rejoinCancelledRef.current = true;
     deliberateDisconnectRef.current = true;
     clearTimers();
+    setFeedback(null);
     await teardownRoom();
     await stopCallAudio().catch(() => {});
     setSession(IDLE_SESSION);
@@ -384,7 +422,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setMinimized(false);
     } else {
       setSession((prev) => ({ ...prev, status: "disconnected" }));
-      setEndedInfo({ cause: "CONNECTION_LOST", callId, channelId });
+      setEndedInfo({
+        cause: onlineManager.isOnline() ? "CONNECTION_LOST" : "NETWORK_LOST",
+        callId,
+        channelId,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clearTimers, teardownRoom]);
@@ -412,6 +454,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const s = sessionRef.current;
       if (!s.callId || !s.channelId) return;
       const finish = (cause: CallEndCause | null) => {
+        setFeedback(null);
         clearTimers();
         void teardownRoom();
         void stopCallAudio().catch(() => {});
@@ -430,7 +473,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           finish(lookupEndCause(s.callId));
           break;
         case livekit.DisconnectReason.DUPLICATE_IDENTITY:
-          finish(null);
+          finish("DISPLACED");
           break;
         default:
           void attemptRejoin();
@@ -494,6 +537,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         }));
         scheduleMediaReport();
       };
+      r.on(livekit.RoomEvent.MediaDevicesError, (error, kind) => {
+        if (roomRef.current === r)
+          setFeedback(callErrorMessage(error, kind === "videoinput" ? "camera" : "microphone"));
+      });
       r.on(livekit.RoomEvent.TrackMuted, (_publication, participant) => {
         if (participant.isLocal) syncLocalMedia();
       });
@@ -509,6 +556,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         scheduleMediaReport();
       };
       r.on(livekit.RoomEvent.LocalTrackPublished, (publication) => {
+        if (
+          publication.source === livekit.Track.Source.Camera ||
+          publication.source === livekit.Track.Source.Microphone
+        ) {
+          const device =
+            publication.source === livekit.Track.Source.Camera ? "camera" : "microphone";
+          publication.track?.once(livekit.TrackEvent.Ended, () => {
+            if (roomRef.current === r && AppState.currentState === "active")
+              setFeedback(callErrorMessage(null, device));
+          });
+        }
         if (publication.source === livekit.Track.Source.ScreenShare) syncScreenShare(true);
       });
       r.on(livekit.RoomEvent.LocalTrackUnpublished, (publication) => {
@@ -529,9 +587,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const facing = media.facing ?? "user";
       try {
         if (effectiveMic) await r.localParticipant.setMicrophoneEnabled(true);
+      } catch (error) {
+        setFeedback(callErrorMessage(error, "microphone"));
+      }
+      try {
         if (media.camera) await r.localParticipant.setCameraEnabled(true, { facingMode: facing });
-      } catch {
-        // Permission or device failure: stay in the call listen-only.
+      } catch (error) {
+        setFeedback(callErrorMessage(error, "camera"));
       }
       facingModeRef.current = facing;
 
@@ -600,7 +662,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           error instanceof ConnectError &&
           (error.code === Code.Unavailable || error.code === Code.PermissionDenied)
         ) {
-          setCallsDisabledMessage(callErrorMessage(error));
+          setFeedback(callErrorMessage(error));
         }
         throw error;
       }
@@ -694,17 +756,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [resetToIdle]);
 
   const endCallForAll = useCallback(async () => {
-    const s = sessionRef.current;
+    const { callId } = sessionRef.current;
     const org = orgRef.current;
-    const callId = s.callId;
-    void clearCallMarker();
-    await resetToIdle();
-    if (callId && org) {
-      try {
-        await callsApi.endCall({ organizationId: org, callId });
-      } catch {
-        // Permission errors surface via the roster staying live.
-      }
+    if (!callId || !org) return;
+    try {
+      await callsApi.endCall({ organizationId: org, callId });
+      void clearCallMarker();
+      await resetToIdle();
+    } catch (error) {
+      setFeedback(callErrorMessage(error));
     }
   }, [resetToIdle]);
 
@@ -725,8 +785,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         camera: cameraEnabled,
         facing: cameraFacing,
       });
-    } catch {
-      // startJoin already resets to idle and surfaces any disabled-call message.
+    } catch (error) {
+      setFeedback(callErrorMessage(error));
     }
   }, [endedInfo, joinCallById]);
 
@@ -736,8 +796,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const next = !r.localParticipant.isMicrophoneEnabled;
     try {
       await r.localParticipant.setMicrophoneEnabled(next);
-    } catch {
-      // Device/permission failure: leave the mic state untouched.
+    } catch (error) {
+      setFeedback(callErrorMessage(error, "microphone"));
       return;
     }
     // A call joined listen-only has no microphone service yet; unmuting is the
@@ -749,13 +809,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [scheduleMediaReport]);
 
   const toggleCamera = useCallback(async () => {
+    cameraContinuityRef.current?.cancelRestore();
     const r = roomRef.current;
     if (!r) return;
     const next = !r.localParticipant.isCameraEnabled;
     try {
       await r.localParticipant.setCameraEnabled(next);
-    } catch {
-      // Device/permission failure: leave the camera state untouched.
+    } catch (error) {
+      setFeedback(callErrorMessage(error, "camera"));
       return;
     }
     setSession((prev) => ({ ...prev, cameraEnabled: next }));
@@ -777,8 +838,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // so publishing before that point would send a track that never gets a frame.
       try {
         await presentScreenSharePicker();
-      } catch {
-        // Picker dismissed, or the broadcast never started.
+      } catch (error) {
+        setFeedback(callErrorMessage(error, "screen"));
         return;
       }
     }
@@ -790,8 +851,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         screenShareEncoding: config.encoding,
         screenShareSimulcastLayers: config.simulcastLayers,
       });
-    } catch {
-      // The user declined the system capture consent dialog.
+    } catch (error) {
+      setFeedback(callErrorMessage(error, "screen"));
       return;
     }
     setSession((prev) => ({ ...prev, screenSharing: next }));
@@ -814,7 +875,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // track. The remote side updates on its own from the republished track.
     try {
       await track.restartTrack({ facingMode: next });
-    } catch {
+    } catch (error) {
+      setFeedback(callErrorMessage(error, "camera"));
       return;
     }
     facingModeRef.current = next;
@@ -834,7 +896,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       // Mic and camera stay off: the user is coming back cold and has not said
       // what they want published, only that they want to be in the call again.
       await joinCallById(marker.callId, marker.channelId, { mic: false, camera: false });
-    } catch {
+    } catch (error) {
+      setFeedback(callErrorMessage(error));
       await clearCallMarker();
     }
   }, [restorable, joinCallById]);
@@ -867,6 +930,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         void resetToIdle();
         setEndedInfo(null);
       }
+      setFeedback(null);
+      setEndedInfo(null);
       setPrejoinTarget(null);
     }
     wasAuthedRef.current = isAuthenticated;
@@ -882,13 +947,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       void resetToIdle();
       setEndedInfo(null);
     }
+    if (prevOrgForTeardownRef.current !== organizationId) setEndedInfo(null);
     prevOrgForTeardownRef.current = organizationId;
     // The banner records why THIS org refused a call, and a pre-join names a
     // channel in it, so switching orgs has to drop both. The provider
     // deliberately never unmounts, so a remount key is not available here and
     // the reset has to be explicit.
-    // eslint-disable-next-line react/react-compiler
-    setCallsDisabledMessage(null);
+    // eslint-disable-next-line react/react-compiler -- clear feedback across organization boundaries
+    setFeedback(null);
     // eslint-disable-next-line react/react-compiler
     setPrejoinTarget(null);
   }, [organizationId, resetToIdle]);
@@ -931,8 +997,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state !== "background") return;
       const r = roomRef.current;
+      if (state !== "background") return;
       const s = sessionRef.current;
       const org = orgRef.current;
       // Backgrounding is the moment before the OS may kill the process, and it is
@@ -947,18 +1013,32 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           ts: Date.now(),
         });
       }
-      if (r && sessionRef.current.status === "connected" && r.localParticipant.isCameraEnabled) {
-        void r.localParticipant
-          .setCameraEnabled(false)
-          .then(() => {
-            setSession((prev) => ({ ...prev, cameraEnabled: false }));
-            scheduleMediaReport();
-          })
-          .catch(() => {});
-      }
     });
     return () => subscription.remove();
   }, [scheduleMediaReport]);
+
+  useEffect(() => {
+    if (!room) return;
+    const continuity = createCameraContinuity(
+      room.localParticipant,
+      (enabled) => {
+        if (roomRef.current !== room) return;
+        setSession((prev) => ({ ...prev, cameraEnabled: enabled }));
+        scheduleMediaReport();
+      },
+      (error) => setFeedback(callErrorMessage(error, "camera")),
+    );
+    cameraContinuityRef.current = continuity;
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active" || state === "background") void continuity.update(state === "active");
+    });
+    void continuity.update(AppState.currentState === "active");
+    return () => {
+      continuity.dispose();
+      subscription.remove();
+      cameraContinuityRef.current = null;
+    };
+  }, [room, scheduleMediaReport]);
 
   useEffect(() => {
     if (session.status === "connected") {
@@ -985,10 +1065,75 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       session.status === "reconnecting");
   const prejoinOpen = prejoinTarget !== null && !callTakesShell;
 
+  useEffect(() => {
+    if (!endedEvent) return;
+    const s = sessionRef.current;
+    if (s.callId === endedEvent.callId && s.status !== "idle") {
+      setEndedInfo({
+        cause: endedEvent.reason,
+        callId: endedEvent.callId,
+        channelId: endedEvent.channelId,
+      });
+      void resetToIdle();
+      void clearCallMarker();
+    } else {
+      setEndedInfo((previous) =>
+        previous?.callId === endedEvent.callId && previous.cause === "UNKNOWN"
+          ? { ...previous, cause: endedEvent.reason }
+          : previous,
+      );
+    }
+  }, [endedEvent, resetToIdle]);
+
+  useEffect(() => {
+    if (!endedInfo || endedInfo.cause !== "UNKNOWN" || !organizationId) return;
+    let cancelled = false;
+    void callsApi
+      .getCallState({ organizationId, callId: endedInfo.callId })
+      .then(({ call }) => {
+        if (!cancelled && call?.endedAt)
+          setEndedInfo((previous) =>
+            previous?.callId === call.id && previous.cause === "UNKNOWN"
+              ? { ...previous, cause: endReasonToPlain(call.endReason) }
+              : previous,
+          );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [endedInfo, organizationId]);
+
+  useEffect(() => {
+    if (!muteEvent || muteEvent.callId !== sessionRef.current.callId) return;
+    let cancelled = false;
+    void getDeviceId().then((deviceId) => {
+      if (
+        !cancelled &&
+        orgRef.current === organizationId &&
+        sessionRef.current.callId === muteEvent.callId &&
+        muteEvent.identity === `${user?.id}:${deviceId}`
+      )
+        setFeedback(MODERATOR_MUTED_COPY);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [muteEvent, user?.id, organizationId]);
+
+  useEffect(() => {
+    if (session.status === "reconnecting")
+      AccessibilityInfo.announceForAccessibility("Reconnecting to the call.");
+    if (session.status === "connected" && participantCount === 1)
+      AccessibilityInfo.announceForAccessibility("You are the only person in the call.");
+  }, [session.status, participantCount]);
+
   const value = useMemo<CallContextValue>(
     () => ({
-      available: callsSupported && !callsDisabledMessage,
+      available: availability.available,
       callsDisabledMessage,
+      retryAvailability,
+      showFeedback: setFeedback,
       session,
       room,
       endedInfo,
@@ -1013,6 +1158,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       flipCamera,
     }),
     [
+      availability.available,
+      retryAvailability,
       callsDisabledMessage,
       session,
       room,
@@ -1038,7 +1185,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
+  return (
+    <CallContext.Provider value={value}>
+      {children}
+      <CallFeedback message={feedback} onDismiss={() => setFeedback(null)} />
+    </CallContext.Provider>
+  );
 }
 
 export function useCall(): CallContextValue {

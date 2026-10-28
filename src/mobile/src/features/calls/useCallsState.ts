@@ -130,3 +130,13 @@ export function useRingInvites(): RingInvite[] {
   });
   return query.data ?? [];
 }
+
+export interface ModeratorMute {
+  callId: string;
+  identity: string;
+  atMs: number;
+}
+
+export function moderatorMuteKey(orgId: string) {
+  return ["calls", "moderatorMute", orgId];
+}

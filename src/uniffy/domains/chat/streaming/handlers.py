@@ -446,6 +446,7 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
                     call_id=payload.get("call_id", ""),
                     participant=_build_call_participant_proto(payload.get("participant") or {}),
                     active_participant_count=int(payload.get("active_participant_count", 0)),
+                    moderator_muted=bool(payload.get("moderator_muted", False)),
                 ),
             ),
         )

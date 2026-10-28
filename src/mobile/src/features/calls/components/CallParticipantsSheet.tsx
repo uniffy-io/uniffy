@@ -1,10 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, Alert } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { MicrophoneSlash, VideoCamera, MonitorArrowUp } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
-import { useCall } from "@features/calls/CallContext";
-import { useAuth } from "@core/providers/AuthContext";
-import { callsApi } from "@features/calls/callsApi";
+import { useParticipantActions } from "@features/calls/useParticipantActions";
 import { participantLabel } from "@features/calls/components/ParticipantTile";
 import { loadLivekitClient } from "@features/calls/livekit";
 import { Avatar } from "@shared/components/Avatar";
@@ -25,44 +23,18 @@ export function CallParticipantsSheet({
   visible,
   onClose,
   participants,
-  isHost,
+  canModerate,
 }: {
   visible: boolean;
   onClose: () => void;
   participants: Participant[];
-  isHost: boolean;
+  canModerate: boolean;
 }) {
   // Reads mutable livekit state (mute flags, publications) during render; opt
   // out of React Compiler memoization or a row never follows a mute or a share.
   "use no memo";
   const T = useTheme();
-  const { organizationId } = useAuth();
-  const { session } = useCall();
-
-  const promptHostActions = (participant: Participant) => {
-    if (!organizationId || !session.callId) return;
-    const callId = session.callId;
-    Alert.alert(participantLabel(participant), undefined, [
-      {
-        text: "Mute microphone",
-        onPress: () => {
-          callsApi
-            .muteParticipant({ organizationId, callId, identity: participant.identity })
-            .catch(() => {});
-        },
-      },
-      {
-        text: "Remove from call",
-        style: "destructive",
-        onPress: () => {
-          callsApi
-            .kickParticipant({ organizationId, callId, identity: participant.identity })
-            .catch(() => {});
-        },
-      },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  };
+  const { prompt: promptHostActions, pending } = useParticipantActions(canModerate);
 
   return (
     <BottomSheet visible={visible} onClose={onClose}>
@@ -72,8 +44,12 @@ export function CallParticipantsSheet({
         const muted = participant.isMicrophoneEnabled === false;
         const sharing =
           !!livekit && !!participant.getTrackPublication(livekit.Track.Source.ScreenShare)?.track;
-        const actionable = isHost && !participant.isLocal;
-        const state = [muted ? "muted" : null, sharing ? "sharing screen" : null]
+        const actionable = canModerate && !participant.isLocal && pending === null;
+        const state = [
+          muted ? "muted" : "microphone on",
+          participant.isSpeaking ? "speaking" : null,
+          sharing ? "sharing screen" : null,
+        ]
           .filter(Boolean)
           .join(", ");
         return (

@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
 import { create } from "@bufbuild/protobuf";
+import { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
 import { ChatChannelSchema, ChannelType } from "@uniffy/proto/chat/v1/chat_pb";
 import { describe, expect, it, vi } from "vitest";
 import { channelToPlain } from "@/features/chat/api/chatConverters";
@@ -13,6 +14,9 @@ import {
 } from "@/features/chat/store/chatChannelsSlice";
 import { chatUiReducer } from "@/features/chat/store/chatUiSlice";
 import { ChannelHeader } from "@/features/chat/components/channel/ChannelHeader";
+
+const calls = vi.hoisted(() => ({ availability: 1 }));
+vi.mock("@/features/calls/components/callContext", () => ({ useCall: () => calls }));
 
 vi.mock("@/components/subject", () => ({
   SubjectAvatarById: ({ userId }: { userId: string }) => `avatar:${userId}`,
@@ -99,4 +103,19 @@ describe("ChannelHeader", () => {
     expect(html).toContain("status:grace");
     expect(html).toContain('data-testid="chat-channel-call-button"');
   });
+});
+
+it.each([
+  [CallAvailability.DISABLED, "Calls are disabled"],
+  [CallAvailability.NOT_CONFIGURED, "Calls are not configured"],
+  [CallAvailability.UNREACHABLE, "call service is unavailable"],
+])("explains unavailable calls in the header (%s)", (availability, message) => {
+  calls.availability = availability;
+  try {
+    const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
+    expect(html).toContain('data-state="unavailable"');
+    expect(html).toContain(message);
+  } finally {
+    calls.availability = CallAvailability.READY;
+  }
 });

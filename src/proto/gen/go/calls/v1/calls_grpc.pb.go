@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	CallService_GetCallAvailability_FullMethodName = "/calls.v1.CallService/GetCallAvailability"
+	CallService_GetCallState_FullMethodName        = "/calls.v1.CallService/GetCallState"
 	CallService_InitiateCall_FullMethodName        = "/calls.v1.CallService/InitiateCall"
 	CallService_JoinCall_FullMethodName            = "/calls.v1.CallService/JoinCall"
 	CallService_LeaveCall_FullMethodName           = "/calls.v1.CallService/LeaveCall"
@@ -46,6 +48,8 @@ const (
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceClient interface {
+	GetCallAvailability(ctx context.Context, in *GetCallAvailabilityRequest, opts ...grpc.CallOption) (*GetCallAvailabilityResponse, error)
+	GetCallState(ctx context.Context, in *GetCallStateRequest, opts ...grpc.CallOption) (*GetCallStateResponse, error)
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.
 	InitiateCall(ctx context.Context, in *InitiateCallRequest, opts ...grpc.CallOption) (*InitiateCallResponse, error)
@@ -81,6 +85,26 @@ type callServiceClient struct {
 
 func NewCallServiceClient(cc grpc.ClientConnInterface) CallServiceClient {
 	return &callServiceClient{cc}
+}
+
+func (c *callServiceClient) GetCallAvailability(ctx context.Context, in *GetCallAvailabilityRequest, opts ...grpc.CallOption) (*GetCallAvailabilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCallAvailabilityResponse)
+	err := c.cc.Invoke(ctx, CallService_GetCallAvailability_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *callServiceClient) GetCallState(ctx context.Context, in *GetCallStateRequest, opts ...grpc.CallOption) (*GetCallStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCallStateResponse)
+	err := c.cc.Invoke(ctx, CallService_GetCallState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *callServiceClient) InitiateCall(ctx context.Context, in *InitiateCallRequest, opts ...grpc.CallOption) (*InitiateCallResponse, error) {
@@ -225,6 +249,8 @@ func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMedi
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceServer interface {
+	GetCallAvailability(context.Context, *GetCallAvailabilityRequest) (*GetCallAvailabilityResponse, error)
+	GetCallState(context.Context, *GetCallStateRequest) (*GetCallStateResponse, error)
 	// Idempotent per channel: if the channel already has an active call the
 	// caller is joined to it instead of a second call being created.
 	InitiateCall(context.Context, *InitiateCallRequest) (*InitiateCallResponse, error)
@@ -262,6 +288,12 @@ type CallServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCallServiceServer struct{}
 
+func (UnimplementedCallServiceServer) GetCallAvailability(context.Context, *GetCallAvailabilityRequest) (*GetCallAvailabilityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCallAvailability not implemented")
+}
+func (UnimplementedCallServiceServer) GetCallState(context.Context, *GetCallStateRequest) (*GetCallStateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCallState not implemented")
+}
 func (UnimplementedCallServiceServer) InitiateCall(context.Context, *InitiateCallRequest) (*InitiateCallResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method InitiateCall not implemented")
 }
@@ -320,6 +352,42 @@ func RegisterCallServiceServer(s grpc.ServiceRegistrar, srv CallServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&CallService_ServiceDesc, srv)
+}
+
+func _CallService_GetCallAvailability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCallAvailabilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).GetCallAvailability(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_GetCallAvailability_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).GetCallAvailability(ctx, req.(*GetCallAvailabilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CallService_GetCallState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCallStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).GetCallState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_GetCallState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).GetCallState(ctx, req.(*GetCallStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CallService_InitiateCall_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -563,6 +631,14 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "calls.v1.CallService",
 	HandlerType: (*CallServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCallAvailability",
+			Handler:    _CallService_GetCallAvailability_Handler,
+		},
+		{
+			MethodName: "GetCallState",
+			Handler:    _CallService_GetCallState_Handler,
+		},
 		{
 			MethodName: "InitiateCall",
 			Handler:    _CallService_InitiateCall_Handler,

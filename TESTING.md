@@ -420,7 +420,7 @@ Recovery and state
 - [ ] Force-stop the app mid-call and reopen it: a prompt offers to rejoin, and Rejoin puts you
       back in the call muted with the camera off.
 - [ ] Dismissing that prompt does not offer it again on the next launch.
-- [ ] Lose the network mid-call until "Lost connection to the call" appears, restore it, and tap
+- [ ] Lose the network mid-call until the network-loss notice appears, restore it, and tap
       Rejoin: the call reconnects with the lens you had before.
 - [ ] Open a channel with a call already running, straight from a cold start: the live pill is
       there on first paint rather than after the chat stream reconnects.
@@ -435,6 +435,68 @@ Accessibility
 - [ ] With TalkBack or VoiceOver on, every in-call control is named, participant tiles read as
       "<name>, camera off, muted", and the host actions are reachable without a long press.
 - [ ] The reconnecting and second-device banners are announced when they appear.
+
+## Calls: roster controls and recovery feedback
+
+Run with host A, ordinary participant B, and channel moderator C. Use a private test channel.
+Repeat web checks with keyboard only. Repeat mobile checks on iOS and Android development builds
+with VoiceOver and TalkBack. Record platform, call id, observed result, and any skipped cases.
+
+Roster and moderation
+
+- [ ] Open Participants on web and mobile. All present devices appear with microphone state,
+      speaking indication, and screen-sharing state. Start and stop each state from B and confirm
+      A's roster updates without reopening it.
+- [ ] As A, mute B from the roster. B's microphone stops and B receives a moderator-mute notice.
+      B can choose to unmute. Repeat with C, who is a channel moderator but not call host.
+- [ ] As A or C, remove B from the roster and confirm removal. B sees "You were removed from the
+      call." A's roster drops B. Cancelling confirmation leaves B connected.
+- [ ] B has no moderator actions or End for all control. Calling a moderation RPC directly as B
+      is denied. Removing or deactivating org membership also denies call state and moderation.
+- [ ] Open web sidebar's participant count with Enter or Space and with a touch tap. Roster
+      stays readable without hover. Close receives focus and Escape dismisses it.
+- [ ] Reach mobile host actions from Participants without a long press. Screen reader names each
+      person and reads microphone, speaking, and sharing state before the action.
+- [ ] Simulate a failed mute/remove request. Error is visible and announced, pending action clears,
+      and retry works. No successful removal is implied while B remains connected.
+
+Availability and devices
+
+- [ ] Disable calls in org settings. Call control explains why before joining, and Join stays
+      disabled. Repeat with missing LiveKit configuration and an unreachable media service.
+- [ ] Restore configuration or service, then select Check again. Join becomes available.
+      Returning browser focus must not clear a known media-service failure without probing it.
+- [ ] Repeat through channel header, sidebar join, ring acceptance, and calendar meeting entry.
+      All routes use the same prejoin availability gate.
+- [ ] Deny microphone and camera permission before joining. Each denied device has recovery
+      guidance; listen-only joining still works. Grant permission and retry each toggle.
+- [ ] Deny or revoke access during a call, or unplug the selected capture device. Call stays open
+      and explains how to recover. Retry after restoring permission or reconnecting the device.
+- [ ] Cancel screen capture, then separately block it in system settings. Explicit cancellation
+      and system blocking receive different messages where the platform exposes that distinction.
+      Ambiguous browser refusal must not claim to know whether permission or cancellation caused it.
+- [ ] Disconnect the network until reconnect attempts expire. Notice advises reconnecting internet.
+      Separately break media connectivity while API remains reachable. Notice advises retrying and
+      checking call service/relay. Restore connectivity and rejoin.
+
+Outcomes and continuity
+
+- [ ] End for all while B is in chat, then repeat while B is on Home or another domain. Both
+      clients show the host-ended reason. Repeat removal and moderator mute outside chat.
+- [ ] Trigger maximum-duration and solo-timeout endings in a test org. Correct reason appears
+      even if room-disconnect arrives before the chat stream event. Delayed end events do not
+      replace a prior removal or device-displacement notice.
+- [ ] Connect another client with the same user/device identity. Displaced client explains that
+      call moved to another device and does not start reconnecting over the replacement.
+- [ ] Mobile: join with camera on, background, then foreground. Audio continues in background;
+      camera resumes on return. Repeat with camera initially off. It must remain off.
+- [ ] Mobile: foreground before camera shutdown finishes, leave while backgrounded, and revoke
+      camera permission before returning. No camera starts after leaving; failed restoration
+      explains permission recovery without repeatedly prompting.
+- [ ] Ringing, reconnecting, solo-participant state, and moderator feedback are announced without
+      moving focus away from the active control. Ending or leaving clears stale in-call feedback.
+- [ ] Switch organizations or log out during teardown. No previous-org call notice or media leaks
+      into the next session.
 
 ## Calendar inline event editing
 

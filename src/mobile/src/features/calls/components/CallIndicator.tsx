@@ -69,7 +69,7 @@ export function CallIndicator() {
       <Text style={[styles.status, { color: T.green }]}>{status}</Text>
       {/* Mute, camera and hang up without expanding - the moment you most want a
           mute button is the moment the call is out of the way. */}
-      <CallControls T={T} isHost={false} compact />
+      <CallControls T={T} canModerate={false} compact />
       <CaretUp size={14} color={T.textDim} weight="bold" />
     </Pressable>
   );

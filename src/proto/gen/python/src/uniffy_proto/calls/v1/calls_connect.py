@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calls_pb
-from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
+from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -37,6 +37,12 @@ class CallService(Protocol):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    async def get_call_availability(self, request: GetCallAvailabilityRequest, ctx: RequestContext[GetCallAvailabilityRequest, GetCallAvailabilityResponse], /) -> GetCallAvailabilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_call_state(self, request: GetCallStateRequest, ctx: RequestContext[GetCallStateRequest, GetCallStateResponse], /) -> GetCallStateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     async def initiate_call(self, request: InitiateCallRequest, ctx: RequestContext[InitiateCallRequest, InitiateCallResponse], /) -> InitiateCallResponse:
         """
         Idempotent per channel: if the channel already has an active call the
@@ -122,6 +128,26 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
         super().__init__(
             service=service,
             endpoints=lambda svc: {
+                "/calls.v1.CallService/GetCallAvailability": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCallAvailability",
+                        service_name="calls.v1.CallService",
+                        input=GetCallAvailabilityRequest,
+                        output=GetCallAvailabilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_call_availability,
+                ),
+                "/calls.v1.CallService/GetCallState": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCallState",
+                        service_name="calls.v1.CallService",
+                        input=GetCallStateRequest,
+                        output=GetCallStateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_call_state,
+                ),
                 "/calls.v1.CallService/InitiateCall": Endpoint.unary(
                     method=MethodInfo(
                         name="InitiateCall",
@@ -275,6 +301,46 @@ class CallServiceClient(ConnectClient):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    async def get_call_availability(
+        self,
+        request: GetCallAvailabilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallAvailabilityResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallAvailability",
+                service_name="calls.v1.CallService",
+                input=GetCallAvailabilityRequest,
+                output=GetCallAvailabilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_call_state(
+        self,
+        request: GetCallStateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallStateResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallState",
+                service_name="calls.v1.CallService",
+                input=GetCallStateRequest,
+                output=GetCallStateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def initiate_call(
         self,
         request: InitiateCallRequest,
@@ -573,6 +639,12 @@ class CallServiceSync(Protocol):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    def get_call_availability(self, request: GetCallAvailabilityRequest, ctx: RequestContext[GetCallAvailabilityRequest, GetCallAvailabilityResponse], /) -> GetCallAvailabilityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_call_state(self, request: GetCallStateRequest, ctx: RequestContext[GetCallStateRequest, GetCallStateResponse], /) -> GetCallStateResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def initiate_call(self, request: InitiateCallRequest, ctx: RequestContext[InitiateCallRequest, InitiateCallResponse], /) -> InitiateCallResponse:
         """
         Idempotent per channel: if the channel already has an active call the
@@ -656,6 +728,26 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
     ) -> None:
         super().__init__(
             endpoints={
+                "/calls.v1.CallService/GetCallAvailability": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCallAvailability",
+                        service_name="calls.v1.CallService",
+                        input=GetCallAvailabilityRequest,
+                        output=GetCallAvailabilityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_call_availability,
+                ),
+                "/calls.v1.CallService/GetCallState": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCallState",
+                        service_name="calls.v1.CallService",
+                        input=GetCallStateRequest,
+                        output=GetCallStateResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_call_state,
+                ),
                 "/calls.v1.CallService/InitiateCall": EndpointSync.unary(
                     method=MethodInfo(
                         name="InitiateCall",
@@ -809,6 +901,44 @@ class CallServiceClientSync(ConnectClientSync):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    def get_call_availability(
+        self,
+        request: GetCallAvailabilityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallAvailabilityResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallAvailability",
+                service_name="calls.v1.CallService",
+                input=GetCallAvailabilityRequest,
+                output=GetCallAvailabilityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_call_state(
+        self,
+        request: GetCallStateRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallStateResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallState",
+                service_name="calls.v1.CallService",
+                input=GetCallStateRequest,
+                output=GetCallStateResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     def initiate_call(
         self,
         request: InitiateCallRequest,

@@ -5,12 +5,18 @@ import {
   Room,
   RoomEvent,
   Track,
-  createLocalAudioTrack,
+  TrackEvent,
 } from "livekit-client";
+import { callToPlain } from "@/features/calls/api/callsConverters";
+import { useCallAvailability } from "@/features/calls/hooks/useCallAvailability";
+import { callErrorMessage } from "@/features/calls/utils/callErrors";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   callUpserted,
+  callEnded,
+  feedbackChanged,
+  sessionTerminated,
   clearCalls,
   localMediaChanged,
   selectCallSession,
@@ -157,6 +163,7 @@ function useCallTabChannel(isInCall: () => boolean) {
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
+  const { availability, checkAvailability } = useCallAvailability();
   const session = useAppSelector(selectCallSession);
   const sessionCall = useAppSelector(selectSessionCall);
   const preferences = useAppSelector(selectCallPreferences);
@@ -306,21 +313,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             deviceId: prefs.audioInputId ?? undefined,
           });
           micEnabled = true;
-        } else {
-          // The participant row defaults to mic-on server-side; the initial
-          // reportMediaState below corrects the roster. Publishing a pre-muted
-          // track keeps the mic session warm; capture stops on mute, so nothing
-          // is transmitted.
-          const track = await createLocalAudioTrack({
-            deviceId: prefs.audioInputId ?? undefined,
-          });
-          await track.mute();
-          await r.localParticipant.publishTrack(track, {
-            source: Track.Source.Microphone,
-          });
         }
-      } catch {
-        // Mic permission denied: listen-only mode.
+      } catch (error) {
+        dispatch(feedbackChanged(callErrorMessage(error, "microphone")));
       }
       try {
         if (opts.cameraEnabled) {
@@ -329,8 +324,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           });
           cameraEnabled = true;
         }
-      } catch {
-        // Camera permission denied; keep the call audio-only.
+      } catch (error) {
+        dispatch(feedbackChanged(callErrorMessage(error, "camera")));
       }
       dispatch(localMediaChanged({ micEnabled, cameraEnabled, screenSharing: false }));
       reportMediaState();
@@ -393,12 +388,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           return;
         case DisconnectReason.PARTICIPANT_REMOVED:
         case DisconnectReason.ROOM_DELETED:
-        case DisconnectReason.DUPLICATE_IDENTITY:
-          // Kicked, call ended, or this device joined elsewhere: no rejoin.
-          // CALL_ENDED / kick handling over the stream owns the messaging.
+        case DisconnectReason.DUPLICATE_IDENTITY: {
+          const { callId, channelId } = sessionRef.current;
+          if (!callId || !channelId) return;
+          const cause =
+            reason === DisconnectReason.PARTICIPANT_REMOVED
+              ? "KICKED"
+              : reason === DisconnectReason.DUPLICATE_IDENTITY
+                ? "DISPLACED"
+                : null;
+          clearCallMarkers();
+          dispatch(sessionTerminated({ callId, channelId, reason: cause }));
           void teardown();
-          dispatch(sessionReset());
           return;
+        }
         default:
           // A join that never connected (e.g. ICE timeout) surfaces its error
           // to the caller; auto-rejoin is only for established calls.
@@ -434,8 +437,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         if (state === ConnectionState.Reconnecting) dispatch(sessionReconnecting());
         if (state === ConnectionState.Connected) dispatch(sessionConnected());
       });
+      r.on(RoomEvent.MediaDevicesError, (error, kind) => {
+        if (roomRef.current !== r) return;
+        dispatch(
+          feedbackChanged(callErrorMessage(error, kind === "videoinput" ? "camera" : "microphone")),
+        );
+      });
       r.on(RoomEvent.LocalTrackPublished, (pub) => {
         if (roomRef.current !== r) return;
+        if (pub.source === Track.Source.Microphone || pub.source === Track.Source.Camera) {
+          const device = pub.source === Track.Source.Camera ? "camera" : "microphone";
+          pub.track?.once(TrackEvent.Ended, () => {
+            if (roomRef.current === r) dispatch(feedbackChanged(callErrorMessage(null, device)));
+          });
+        }
         if (pub.source === Track.Source.ScreenShare) {
           dispatch(localMediaChanged({ screenSharing: true }));
           reportMediaState();
@@ -480,6 +495,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         roomRef.current = null;
         tokenRef.current = null;
+        await r.disconnect().catch(() => {});
         throw error;
       }
 
@@ -586,15 +602,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const endCurrentCall = useCallback(async () => {
     const { callId, channelId } = sessionRef.current;
-    clearCallMarkers();
-    dispatch(sessionReset());
-    await teardown();
-    if (callId && channelId) {
-      try {
-        await dispatch(endCallThunk({ callId, channelId })).unwrap();
-      } catch {
-        // Backend reconciler closes the room if this failed.
-      }
+    if (!callId || !channelId) return;
+    try {
+      await dispatch(endCallThunk({ callId, channelId })).unwrap();
+      clearCallMarkers();
+      dispatch(sessionReset());
+      await teardown();
+    } catch {
+      /* Rejected thunk surfaces the failure. */
     }
   }, [dispatch, teardown]);
 
@@ -606,18 +621,26 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const r = roomRef.current;
     if (!r) return;
     const enabled = r.localParticipant.isMicrophoneEnabled;
-    await r.localParticipant.setMicrophoneEnabled(!enabled);
-    dispatch(localMediaChanged({ micEnabled: !enabled }));
-    reportMediaState();
+    try {
+      await r.localParticipant.setMicrophoneEnabled(!enabled);
+      dispatch(localMediaChanged({ micEnabled: !enabled }));
+      reportMediaState();
+    } catch (error) {
+      dispatch(feedbackChanged(callErrorMessage(error, "microphone")));
+    }
   }, [dispatch, reportMediaState]);
 
   const toggleCamera = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
     const enabled = r.localParticipant.isCameraEnabled;
-    await r.localParticipant.setCameraEnabled(!enabled);
-    dispatch(localMediaChanged({ cameraEnabled: !enabled }));
-    reportMediaState();
+    try {
+      await r.localParticipant.setCameraEnabled(!enabled);
+      dispatch(localMediaChanged({ cameraEnabled: !enabled }));
+      reportMediaState();
+    } catch (error) {
+      dispatch(feedbackChanged(callErrorMessage(error, "camera")));
+    }
   }, [dispatch, reportMediaState]);
 
   const toggleScreenShare = useCallback(async () => {
@@ -637,16 +660,30 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       );
       dispatch(localMediaChanged({ screenSharing: !enabled }));
       reportMediaState();
-    } catch {
-      // User cancelled the browser share picker.
+    } catch (error) {
+      dispatch(feedbackChanged(callErrorMessage(error, "screen")));
     }
   }, [dispatch, reportMediaState]);
 
-  const switchDevice = useCallback(async (kind: MediaDeviceKind, deviceId: string) => {
-    const r = roomRef.current;
-    if (!r) return;
-    await r.switchActiveDevice(kind, deviceId);
-  }, []);
+  const switchDevice = useCallback(
+    async (kind: MediaDeviceKind, deviceId: string) => {
+      const r = roomRef.current;
+      if (!r) return;
+      try {
+        await r.switchActiveDevice(kind, deviceId);
+      } catch (error) {
+        dispatch(
+          feedbackChanged(
+            callErrorMessage(
+              error,
+              kind === "videoinput" ? "camera" : kind === "audiooutput" ? "speaker" : "microphone",
+            ),
+          ),
+        );
+      }
+    },
+    [dispatch],
+  );
 
   // Backend kicked this device (channel removal, tkv bump, host kick): the
   // roster row for this identity disappears from the session call.
@@ -663,8 +700,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     ) {
       // LiveKit will also fire Disconnected(PARTICIPANT_REMOVED); this is the
       // fast path so the UI reacts even if the SDK event lags.
+      const { callId, channelId } = sessionRef.current;
+      if (callId && channelId) dispatch(sessionTerminated({ callId, channelId, reason: "KICKED" }));
+      clearCallMarkers();
       void teardown();
-      dispatch(sessionReset());
     }
   }, [stillInRoster, teardown, dispatch]);
 
@@ -827,9 +866,32 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     };
   }, [teardown]);
 
+  useEffect(() => {
+    if (!endedInfo || endedInfo.reason !== null || !currentOrgId) return;
+    let cancelled = false;
+    void callsApi
+      .getCallState({ organizationId: currentOrgId, callId: endedInfo.callId })
+      .then(({ call }) => {
+        if (cancelled || !call?.endedAt) return;
+        dispatch(
+          callEnded({
+            callId: call.id,
+            channelId: call.channelId,
+            reason: callToPlain(call).endReason,
+          }),
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [endedInfo, currentOrgId, dispatch]);
+
   const value = useMemo<CallContextValue>(
     () => ({
       room,
+      availability,
+      checkAvailability,
       joinChannelCall,
       joinCallById,
       leaveCurrentCall,
@@ -843,6 +905,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       room,
+      availability,
+      checkAvailability,
       joinChannelCall,
       joinCallById,
       leaveCurrentCall,
