@@ -20,6 +20,7 @@ from uniffy.scripts.demo_company.project_specs import (
     SeriesTemplate,
     SprintSpec,
     TaskSpec,
+    WorklogSpec,
     recurrence_rule,
     series_template,
     validate_project,
@@ -38,6 +39,9 @@ ESTIMATES = {
 }
 SUBTASK_ESTIMATES = (30, 60, 90, 120, 240)
 STORY_DURATIONS = (2, 3, 5, 7, 10)
+WORKLOG_CHUNKS = (30, 60, 90, 120, 180, 240)
+WORKLOG_WINDOW_DAYS = 28
+MAX_MINUTES_PER_DAY = 1440
 
 TODO = DefaultTaskStatusId.TODO
 IN_PROGRESS = DefaultTaskStatusId.IN_PROGRESS
@@ -63,7 +67,7 @@ class _Draft:
     assignees: tuple[str, ...] = ()
     sprint: SprintSpec | None = None
     estimate: int | None = None
-    spent: int | None = None
+    worklogs: tuple[WorklogSpec, ...] = ()
     tags: tuple[str, ...] = ()
     field_values: tuple[tuple[str, FieldValue], ...] = ()
     description: str = ""
@@ -300,7 +304,7 @@ class SeriesBuilder:
             draft.created = max(
                 self.project_created + 1, min(draft.start - self.rng.randint(1, 14), 0)
             )
-        draft.spent = self._time_spent(draft)
+        draft.worklogs = self._worklogs(draft)
         draft.description = self._description(draft)
 
     def _schedule(self, draft: _Draft) -> None:
@@ -329,11 +333,34 @@ class SeriesBuilder:
                 return sprint
         return None
 
-    def _time_spent(self, draft: _Draft) -> int | None:
-        if draft.estimate is None or draft.status == TODO:
-            return None
+    def _worklogs(self, draft: _Draft) -> tuple[WorklogSpec, ...]:
+        """Spread the time a task consumed over its assignees' recent days, in realistic chunks."""
+        if draft.estimate is None or draft.status == TODO or not draft.assignees:
+            return ()
         low, high = (0.6, 1.5) if draft.status == DONE else (0.2, 0.8)
-        return max(15, round(draft.estimate * self.rng.uniform(low, high) / 15) * 15)
+        total = max(15, round(draft.estimate * self.rng.uniform(low, high) / 15) * 15)
+        last = min(draft.completed if draft.status == DONE else 0, 0)
+        first = max(draft.start, last - (WORKLOG_WINDOW_DAYS - 1))
+        days = list(range(min(first, last), last + 1))
+        logged: dict[tuple[str, int], int] = {}
+        remaining = total
+        while remaining > 0:
+            chunk = min(remaining, self.rng.choice(WORKLOG_CHUNKS))
+            slot = (self.rng.choice(draft.assignees), self.rng.choice(days))
+            if logged.get(slot, 0) + chunk > MAX_MINUTES_PER_DAY:
+                if all(
+                    logged.get((who, day), 0) + 15 > MAX_MINUTES_PER_DAY
+                    for who in draft.assignees
+                    for day in days
+                ):
+                    break
+                continue
+            logged[slot] = logged.get(slot, 0) + chunk
+            remaining -= chunk
+        return tuple(
+            WorklogSpec(assignee=who, day_in_days=day, minutes=minutes)
+            for (who, day), minutes in sorted(logged.items(), key=lambda item: item[0][1])
+        )
 
     def _priority(self, task_type: str) -> str:
         weights = BUG_PRIORITY_WEIGHTS if task_type == TaskType.BUG else PRIORITY_WEIGHTS
@@ -419,7 +446,7 @@ class SeriesBuilder:
             is_milestone=draft.is_milestone,
             sprint=draft.sprint.name if draft.sprint else None,
             estimated_minutes=draft.estimate,
-            time_spent_minutes=draft.spent,
+            worklogs=draft.worklogs,
             tags=draft.tags,
             field_values=draft.field_values,
             recurrence_rule=draft.recurrence,

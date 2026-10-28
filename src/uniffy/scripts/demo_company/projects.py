@@ -112,7 +112,6 @@ async def _seed_project(ctx: DemoContext, spec: ProjectSpec, tag_ids: dict[str, 
             recurrence_rule=task.recurrence_rule,
             sprint_id=sprint_ids[task.sprint] if task.sprint else None,
             estimated_minutes=task.estimated_minutes,
-            time_spent_minutes=task.time_spent_minutes,
             field_values=_field_values(ctx, task, fields, members) or None,
         )
         if task.key is not None:

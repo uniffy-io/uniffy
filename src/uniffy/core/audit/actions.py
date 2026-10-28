@@ -196,6 +196,22 @@ class Action:
     TASK_PERMANENTLY_DELETED = "task.permanently_deleted"
     TASK_MOVED = "task.moved"
 
+    # Time tracking (self-logged entries ride the task activity log; these
+    # cover writes on someone else's behalf, admin overrides and policy edits)
+    WORKLOG_CREATED = "worklog.created"
+    WORKLOG_UPDATED = "worklog.updated"
+    WORKLOG_DELETED = "worklog.deleted"
+    WORKLOG_OVERRIDE = "worklog.override"
+    TIME_POLICY_UPDATED = "time_policy.updated"
+    INTERNAL_TIME_PROJECT_CREATED = "time_policy.internal_project_created"
+    TIMESHEET_SUBMITTED = "timesheet.submitted"
+    TIMESHEET_RECALLED = "timesheet.recalled"
+    TIMESHEET_APPROVED = "timesheet.approved"
+    TIMESHEET_REJECTED = "timesheet.rejected"
+    TIMESHEET_GRACE_GRANTED = "timesheet.grace_granted"
+    TIME_PERIOD_CLOSED = "time_period.closed"
+    TIME_PERIOD_REOPENED = "time_period.reopened"
+
     # Chat
     CHAT_CHANNEL_CREATED = "chat_channel.created"
     CHAT_CHANNEL_UPDATED = "chat_channel.updated"

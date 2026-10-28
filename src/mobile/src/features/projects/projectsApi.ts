@@ -28,6 +28,26 @@ import {
   UpdateViewRequestSchema,
   DeleteViewRequestSchema,
 } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  ApproveTimesheetRequestSchema,
+  CreateWorklogRequestSchema,
+  DeleteWorklogRequestSchema,
+  GetActiveTimerRequestSchema,
+  GetTimePolicyRequestSchema,
+  GetTimesheetRequestSchema,
+  GrantGraceRequestSchema,
+  ListReviewTimesheetsRequestSchema,
+  ListTaskWorklogsRequestSchema,
+  ListUserWorklogsRequestSchema,
+  PauseTimerRequestSchema,
+  RecallTimesheetRequestSchema,
+  RejectTimesheetRequestSchema,
+  ResumeTimerRequestSchema,
+  StartTimerRequestSchema,
+  StopTimerRequestSchema,
+  SubmitTimesheetRequestSchema,
+  UpdateWorklogRequestSchema,
+} from "@uniffy/proto/projects/v1/time_pb";
 import { transport } from "@core/api/transport";
 
 const client = createClient(ProjectsService, transport);
@@ -63,6 +83,64 @@ export const projectsApi = {
 
   deleteTask: (request: MessageInitShape<typeof DeleteTaskRequestSchema>) =>
     client.deleteTask(request),
+
+  createWorklog: (request: MessageInitShape<typeof CreateWorklogRequestSchema>) =>
+    client.createWorklog(request),
+
+  listTaskWorklogs: (
+    request: MessageInitShape<typeof ListTaskWorklogsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listTaskWorklogs(request, { signal: options?.signal }),
+
+  updateWorklog: (request: MessageInitShape<typeof UpdateWorklogRequestSchema>) =>
+    client.updateWorklog(request),
+
+  deleteWorklog: (request: MessageInitShape<typeof DeleteWorklogRequestSchema>) =>
+    client.deleteWorklog(request),
+
+  listUserWorklogs: (request: MessageInitShape<typeof ListUserWorklogsRequestSchema>) =>
+    client.listUserWorklogs(request),
+
+  getTimePolicy: (request: MessageInitShape<typeof GetTimePolicyRequestSchema>) =>
+    client.getTimePolicy(request),
+
+  getActiveTimer: (request: MessageInitShape<typeof GetActiveTimerRequestSchema>) =>
+    client.getActiveTimer(request),
+
+  startTimer: (request: MessageInitShape<typeof StartTimerRequestSchema>) =>
+    client.startTimer(request),
+
+  pauseTimer: (request: MessageInitShape<typeof PauseTimerRequestSchema>) =>
+    client.pauseTimer(request),
+
+  resumeTimer: (request: MessageInitShape<typeof ResumeTimerRequestSchema>) =>
+    client.resumeTimer(request),
+
+  stopTimer: (request: MessageInitShape<typeof StopTimerRequestSchema>) =>
+    client.stopTimer(request),
+
+  getTimesheet: (request: MessageInitShape<typeof GetTimesheetRequestSchema>) =>
+    client.getTimesheet(request),
+
+  submitTimesheet: (request: MessageInitShape<typeof SubmitTimesheetRequestSchema>) =>
+    client.submitTimesheet(request),
+
+  recallTimesheet: (request: MessageInitShape<typeof RecallTimesheetRequestSchema>) =>
+    client.recallTimesheet(request),
+
+  listReviewTimesheets: (
+    request: MessageInitShape<typeof ListReviewTimesheetsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listReviewTimesheets(request, { signal: options?.signal }),
+
+  approveTimesheet: (request: MessageInitShape<typeof ApproveTimesheetRequestSchema>) =>
+    client.approveTimesheet(request),
+
+  rejectTimesheet: (request: MessageInitShape<typeof RejectTimesheetRequestSchema>) =>
+    client.rejectTimesheet(request),
+
+  grantGrace: (request: MessageInitShape<typeof GrantGraceRequestSchema>) =>
+    client.grantGrace(request),
 
   moveTask: (request: MessageInitShape<typeof MoveTaskRequestSchema>) => client.moveTask(request),
 

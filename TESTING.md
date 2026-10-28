@@ -3171,6 +3171,75 @@ organization to send invitations. (both products)
 - [ ] In a project with slug `PROD`, the header search finds a task by `#12`, by `PROD-12` in any
       case, and still by words in its title or description.
 
+## Projects: time tracking
+
+Needs the time policy enabled (it is by default) and, for the approval steps, approvals on at
+`/admin/projects`. Reviewers are the person's manager (people directory) and the lead of each team
+they belong to; with neither, org admins review.
+
+- [ ] Task detail > Log time: `1.5h`, `1h 30m`, `45m` and `90` all save; the task's Spent equals
+      the sum of its entries after a reload and `Spent` is read-only on the task form. An entry on
+      a day that already holds 24h is refused with a plain message.
+- [ ] Start a timer on a task; the header pill counts up; pause, resume and stop write one entry
+      on the start day rounded per the policy; starting a timer on another task stops the first one
+      into an entry. (`(both products)`)
+- [ ] My time (`/projects/time`): the week grid shows the entries, each day total colors against
+      the required hours, holidays and weekends expect nothing; Copy last week brings the rows into
+      an empty week with no minutes; the previous and next week navigate.
+- [ ] Log time from anywhere: the Log time button on My time opens the dialog with a task search;
+      pick a task, a day, `2h`, then a start of `09:00` and the end reads `11:00`; picking an end of
+      `12:00` makes the duration `3h`; the X drops the times. Ctrl+Enter saves; with Log another on,
+      the dialog stays open with the task and day kept. Period mode from Monday to Sunday with
+      `8h` writes five entries, seven with Include days off; a range over 62 days is refused.
+- [ ] My time views: Calendar shows an entry with times as a block at its hour and one without
+      under the day's header; dragging a block to another slot moves it (`UpdateWorklog` with the
+      new start), stretching its bottom edge changes the length, a drag on free space opens the
+      dialog with the start and the length filled in; List shows the same entries with their
+      times; Timesheet is the grid; the choice survives a reload. Each view shows the day totals
+      against the required hours; a locked day takes no drags.
+- [ ] My time rail: a timed meeting on your calendar this week is listed under Meetings with its
+      day and length (all-day, out of office, declined and cancelled events are not); with the
+      internal project in place, clicking it opens Log time on the Meetings task with the day, the
+      length and the title filled in, and the meeting leaves the rail once logged; without the
+      internal project the rail says so. A task of yours completed this week sits under Completed
+      this week and a click adds its row.
+- [ ] Mobile: Projects header > clock opens My time; the day strip totals match the web week and
+      mark days off; Add entry picks a task from this week, the internal project or a search and
+      logs it on the chosen day; tapping an entry edits it; the bin deletes it after a confirm; the
+      week refreshes after a timer stops. (`(both products)`)
+- [ ] Project header > Time report (`/projects/:id/time`): This week, 4 weeks and 12 weeks change
+      the range; grouping by person, task and day keeps the same total; the total matches the sum
+      of the task worklog lists in range. A member without access to the project lands on
+      `/projects`.
+- [ ] With approvals on, as a member: Submit locks the week (cells disabled with a hint); Recall
+      reopens it. As the reviewer, in Approvals: Reject needs a reason and the member sees it on
+      the banner; Approve locks the week; editing an approved week sends it back for review with a
+      `timesheet.submitted` audit row carrying cause `edit`.
+- [ ] Reviewer: Grace opens a locked week for the given hours and the banner counts down; the
+      member edits and resubmits. Admin: Close period locks every member's week, Reopen restores
+      it; both land in the audit log.
+- [ ] Notifications: submit reaches the reviewers (in app and email), approve and reject reach the
+      member; clicking a reviewer notification opens Approvals on that period, a member's opens
+      their week. (`(both products)`)
+- [ ] Days off: add an all-day out of office event on your calendar for a workday, and one
+      covering the morning only; My time shows `off` under the first and `half day` under the
+      second with half the required hours; the reviewer's inbox meters and the period total use
+      the same numbers. (`(both products)`)
+- [ ] `/admin/projects` > Internal time project: Create project makes an open `INT` project with
+      six tasks and the row turns into a link; a second visit shows the link, never a second
+      project; the Internal group sits first in the My time rail.
+- [ ] Backlog > sprint card with dates: the estimated and logged meters read against the team's
+      capacity (required hours over each assignee's workdays in the sprint, less days off); the
+      estimate turns red past capacity; the per member popover lists every assignee.
+- [ ] Agent: ask an agent with the Tasks tools to log `30m` on a task; the entry appears as the
+      asking user with source `agent`; asking it to log time for someone else is refused. Ask it
+      to summarize your week and the totals match My time; asking about a project you cannot open
+      is refused.
+- [ ] Demo data: after `./manage.py stack reset-data`, `SELECT count(*) FROM projects_tasks t WHERE
+      coalesce(time_spent_minutes,0) <> (SELECT coalesce(sum(duration_minutes),0) FROM
+      projects_worklogs w WHERE w.task_id=t.id AND NOT w.is_deleted)` is 0, one timer runs, and the
+      busiest team's lead sees a submitted and an approved week in Approvals.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.

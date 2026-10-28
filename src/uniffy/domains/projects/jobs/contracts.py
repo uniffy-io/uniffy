@@ -32,9 +32,31 @@ FLUSH_PROJECT_SEARCH_ACL_REFRESHES_SCHEDULE = JobRef(
         trigger="25-second core schedule",
     ),
 )
+PAUSE_OVERRUN_TIMERS_SCHEDULE = JobRef(
+    name="cron:pause_overrun_timers",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="projects_timers rows with started_at set",
+        trigger="five-minute core schedule",
+    ),
+)
+TIMESHEET_PERIODS_SCHEDULE = JobRef(
+    name="cron:timesheet_periods",
+    queue=QueueName.CORE,
+    workload=JobWorkload.DELIVERY,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="members with an ended period and no submitted projects_timesheets row",
+        trigger="hourly core schedule",
+    ),
+)
 
 PROJECT_JOB_REFS = (REFRESH_PROJECT_SEARCH_ACL,)
 PROJECT_SCHEDULED_JOB_REFS = (
     CHECK_TASK_DUE_DATES_SCHEDULE,
     FLUSH_PROJECT_SEARCH_ACL_REFRESHES_SCHEDULE,
+    PAUSE_OVERRUN_TIMERS_SCHEDULE,
+    TIMESHEET_PERIODS_SCHEDULE,
 )

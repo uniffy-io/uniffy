@@ -153,7 +153,6 @@ export interface CreateTaskRequest {
   parentId?: string | null;
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
-  timeSpentMinutes?: number | null;
   recurrenceRule?: string | null;
   tagIds?: string[];
 }
@@ -175,7 +174,6 @@ export interface UpdateTaskRequest {
   parentId?: string | null;
   blockedByTaskIds?: string[];
   estimatedMinutes?: number | null;
-  timeSpentMinutes?: number | null;
   recurrenceRule?: string | null;
   tagIds?: string[];
 }

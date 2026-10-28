@@ -4,6 +4,7 @@ package projects.v1;
 
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "projects/v1/time.proto";
 import "tags/v1/tags.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
@@ -59,6 +60,33 @@ service ProjectsService {
   rpc ToggleTaskWatcher(ToggleTaskWatcherRequest) returns (ToggleTaskWatcherResponse);
   rpc ListTaskWatchers(ListTaskWatchersRequest) returns (ListTaskWatchersResponse);
   rpc BulkCheckTaskWatchers(BulkCheckTaskWatchersRequest) returns (BulkCheckTaskWatchersResponse);
+
+  // ----- Time tracking -----
+  rpc CreateWorklog(CreateWorklogRequest) returns (CreateWorklogResponse);
+  rpc UpdateWorklog(UpdateWorklogRequest) returns (UpdateWorklogResponse);
+  rpc DeleteWorklog(DeleteWorklogRequest) returns (DeleteWorklogResponse);
+  rpc ListTaskWorklogs(ListTaskWorklogsRequest) returns (ListTaskWorklogsResponse);
+  rpc ListUserWorklogs(ListUserWorklogsRequest) returns (ListUserWorklogsResponse);
+  rpc StartTimer(StartTimerRequest) returns (StartTimerResponse);
+  rpc PauseTimer(PauseTimerRequest) returns (PauseTimerResponse);
+  rpc ResumeTimer(ResumeTimerRequest) returns (ResumeTimerResponse);
+  rpc StopTimer(StopTimerRequest) returns (StopTimerResponse);
+  rpc GetActiveTimer(GetActiveTimerRequest) returns (GetActiveTimerResponse);
+  rpc GetTimePolicy(GetTimePolicyRequest) returns (GetTimePolicyResponse);
+  rpc UpdateTimePolicy(UpdateTimePolicyRequest) returns (UpdateTimePolicyResponse);
+  rpc AggregateWorklogs(AggregateWorklogsRequest) returns (AggregateWorklogsResponse);
+  rpc GetTimesheet(GetTimesheetRequest) returns (GetTimesheetResponse);
+  rpc SubmitTimesheet(SubmitTimesheetRequest) returns (SubmitTimesheetResponse);
+  rpc RecallTimesheet(RecallTimesheetRequest) returns (RecallTimesheetResponse);
+  rpc ListReviewTimesheets(ListReviewTimesheetsRequest) returns (ListReviewTimesheetsResponse);
+  rpc ApproveTimesheet(ApproveTimesheetRequest) returns (ApproveTimesheetResponse);
+  rpc RejectTimesheet(RejectTimesheetRequest) returns (RejectTimesheetResponse);
+  rpc GrantGrace(GrantGraceRequest) returns (GrantGraceResponse);
+  rpc ClosePeriod(ClosePeriodRequest) returns (ClosePeriodResponse);
+  rpc ReopenPeriod(ReopenPeriodRequest) returns (ReopenPeriodResponse);
+  rpc ListPeriods(ListPeriodsRequest) returns (ListPeriodsResponse);
+  rpc CreateInternalTimeProject(CreateInternalTimeProjectRequest) returns (CreateInternalTimeProjectResponse);
+  rpc GetSprintCapacity(GetSprintCapacityRequest) returns (GetSprintCapacityResponse);
 }
 
 // ============================================================================
@@ -195,6 +223,9 @@ enum ActivityAction {
   ACTIVITY_ACTION_ASSIGNED = 7;
   ACTIVITY_ACTION_TYPE_CHANGED = 8;
   ACTIVITY_ACTION_SPRINT_CHANGED = 9;
+  ACTIVITY_ACTION_TIME_LOGGED = 10;
+  ACTIVITY_ACTION_TIME_UPDATED = 11;
+  ACTIVITY_ACTION_TIME_REMOVED = 12;
 }
 
 // ============================================================================
@@ -558,6 +589,9 @@ message ListProjectsResponse {
 // ============================================================================
 
 message CreateTaskRequest {
+  // Time spent is a rollup of worklogs and is never set directly.
+  reserved 18;
+  reserved "time_spent_minutes";
   string organization_id = 1;
   string project_id = 2;
   string title = 3;
@@ -575,7 +609,6 @@ message CreateTaskRequest {
   optional string task_type = 15;
   optional string sprint_id = 16;
   optional int32 estimated_minutes = 17;
-  optional int32 time_spent_minutes = 18;
   // Optional unified-tag ids to assign on create.
   repeated string tag_ids = 19;
 }
@@ -586,6 +619,9 @@ message GetTaskRequest {
 }
 
 message UpdateTaskRequest {
+  // Time spent is a rollup of worklogs and is never set directly.
+  reserved 19;
+  reserved "time_spent_minutes";
   string organization_id = 1;
   string task_id = 2;
   optional string title = 3;
@@ -606,7 +642,6 @@ message UpdateTaskRequest {
   optional string task_type = 16;
   optional string sprint_id = 17;
   optional int32 estimated_minutes = 18;
-  optional int32 time_spent_minutes = 19;
   // Replacement set of unified-tag ids. Empty list clears all manual
   // tags; field unset (HasField=false) leaves them untouched.
   optional TaskTagIds tag_ids = 20;

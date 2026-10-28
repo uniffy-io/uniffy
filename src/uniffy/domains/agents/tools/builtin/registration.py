@@ -12,6 +12,7 @@ from uniffy.domains.agents.tools.builtin.projects import PROJECT_TOOLS, TASK_TOO
 from uniffy.domains.agents.tools.builtin.rooms import ROOMS_TOOLS
 from uniffy.domains.agents.tools.builtin.search import SEARCH_TOOLS
 from uniffy.domains.agents.tools.builtin.system import SYSTEM_TOOLS
+from uniffy.domains.agents.tools.builtin.time import TIME_TOOLS
 from uniffy.domains.agents.tools.registry import ToolRegistry
 
 
@@ -27,6 +28,8 @@ def register_all(registry: ToolRegistry) -> None:
     for tool in PROJECT_TOOLS:
         registry.register(tool)
     for tool in TASK_TOOLS:
+        registry.register(tool)
+    for tool in TIME_TOOLS:
         registry.register(tool)
     for tool in SEARCH_TOOLS:
         registry.register(tool)

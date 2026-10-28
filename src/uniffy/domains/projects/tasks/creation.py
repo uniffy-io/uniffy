@@ -121,7 +121,6 @@ class TaskCreateOperations:
             task_type=task_type,
             sprint_id=kwargs.get("sprint_id"),
             estimated_minutes=kwargs.get("estimated_minutes"),
-            time_spent_minutes=kwargs.get("time_spent_minutes"),
             completed_at=(
                 datetime.now(UTC) if status_semantics.is_completed(initial_status) else None
             ),

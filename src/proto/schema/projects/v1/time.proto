@@ -1,0 +1,498 @@
+syntax = "proto3";
+
+package projects.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
+
+// Time tracking. A worklog is the unit of effort, a task's time spent is the
+// sum of its live worklogs, a server-side timer produces worklogs without
+// typing, and the org policy drives periods, approvals and rounding.
+
+enum WorklogSource {
+  WORKLOG_SOURCE_UNSPECIFIED = 0;
+  WORKLOG_SOURCE_MANUAL = 1;
+  WORKLOG_SOURCE_TIMER = 2;
+  WORKLOG_SOURCE_IMPORT = 3;
+  WORKLOG_SOURCE_AGENT = 4;
+}
+
+enum TimerPauseReason {
+  TIMER_PAUSE_REASON_UNSPECIFIED = 0;
+  // Paused by the overrun job once the elapsed time passed the org limit.
+  TIMER_PAUSE_REASON_LIMIT = 1;
+}
+
+enum TimePeriodType {
+  TIME_PERIOD_TYPE_UNSPECIFIED = 0;
+  TIME_PERIOD_TYPE_WEEKLY = 1;
+  TIME_PERIOD_TYPE_MONTHLY = 2;
+}
+
+enum AggregateGroupBy {
+  AGGREGATE_GROUP_BY_UNSPECIFIED = 0;
+  AGGREGATE_GROUP_BY_DAY = 1;
+  AGGREGATE_GROUP_BY_TASK = 2;
+  AGGREGATE_GROUP_BY_USER = 3;
+  AGGREGATE_GROUP_BY_PROJECT = 4;
+}
+
+message Worklog {
+  string id = 1;
+  string task_id = 2;
+  string project_id = 3;
+  // Whose time this is.
+  string user_id = 4;
+  // Who logged it; differs from user_id on an on-behalf entry.
+  string created_by_user_id = 5;
+  // The worker's calendar day as YYYY-MM-DD, chosen by the client in the
+  // person's own zone.
+  string work_date = 6;
+  optional google.protobuf.Timestamp started_at = 7;
+  int32 duration_minutes = 8;
+  string description = 9;
+  WorklogSource source = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CreateWorklogRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  // Log on behalf of someone else; reviewers and timekeeping admins only.
+  optional string user_id = 3;
+  string work_date = 4;
+  int32 duration_minutes = 5;
+  string description = 6;
+  // When the work began, for an entry placed on the day's timeline; the end is the start plus the duration.
+  optional google.protobuf.Timestamp started_at = 7;
+  // The client's IANA zone, used for the future-day check when the person has none in their settings.
+  optional string time_zone = 8;
+}
+
+message CreateWorklogResponse {
+  Worklog worklog = 1;
+  // The task's rollup after the write, so the client patches state without a refetch.
+  int32 task_time_spent_minutes = 2;
+}
+
+message UpdateWorklogRequest {
+  string organization_id = 1;
+  string worklog_id = 2;
+  optional string work_date = 3;
+  optional int32 duration_minutes = 4;
+  optional string description = 5;
+  optional google.protobuf.Timestamp started_at = 6;
+  // Drops the start so the entry leaves the timeline and keeps only its day.
+  bool clear_started_at = 7;
+  // The client's IANA zone, used for the future-day check when the person has none in their settings.
+  optional string time_zone = 8;
+}
+
+message UpdateWorklogResponse {
+  Worklog worklog = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message DeleteWorklogRequest {
+  string organization_id = 1;
+  string worklog_id = 2;
+}
+
+message DeleteWorklogResponse {
+  string task_id = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message ListTaskWorklogsRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  // Default 200, capped at 500.
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListTaskWorklogsResponse {
+  repeated Worklog worklogs = 1;
+  string next_page_token = 2;
+}
+
+message ListUserWorklogsRequest {
+  string organization_id = 1;
+  // Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+  optional string user_id = 2;
+  // Inclusive YYYY-MM-DD bounds, at most 62 days apart.
+  string from_date = 3;
+  string to_date = 4;
+}
+
+message ListUserWorklogsResponse {
+  repeated Worklog worklogs = 1;
+  // One per day in the range: the person's requirement after holidays and days off.
+  repeated DayTotal days = 2;
+}
+
+message Timer {
+  string id = 1;
+  string task_id = 2;
+  string project_id = 3;
+  string description = 4;
+  // Start of the running segment; unset while paused.
+  optional google.protobuf.Timestamp started_at = 5;
+  // Seconds from finished segments; elapsed is this plus the running segment.
+  int32 accumulated_seconds = 6;
+  optional google.protobuf.Timestamp paused_at = 7;
+  TimerPauseReason pause_reason = 8;
+  // Read-only labels so a header pill needs no task fetch.
+  string task_title = 9;
+  int32 task_number = 10;
+  string project_slug = 11;
+}
+
+message StartTimerRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string description = 3;
+  // Day of the worklog written for a running timer this start replaces.
+  string work_date = 4;
+}
+
+message StartTimerResponse {
+  Timer timer = 1;
+  // The worklog written for the timer this start replaced, if any.
+  optional Worklog stopped_worklog = 2;
+}
+
+message PauseTimerRequest {
+  string organization_id = 1;
+}
+
+message PauseTimerResponse {
+  Timer timer = 1;
+}
+
+message ResumeTimerRequest {
+  string organization_id = 1;
+}
+
+message ResumeTimerResponse {
+  Timer timer = 1;
+}
+
+message StopTimerRequest {
+  string organization_id = 1;
+  string work_date = 2;
+  optional string description = 3;
+  // Replaces the rounded elapsed value when the person corrects it in the stop dialog.
+  optional int32 duration_minutes = 4;
+  // Drop the timer without writing a worklog.
+  bool discard = 5;
+}
+
+message StopTimerResponse {
+  optional Worklog worklog = 1;
+  int32 task_time_spent_minutes = 2;
+}
+
+message GetActiveTimerRequest {
+  string organization_id = 1;
+}
+
+message GetActiveTimerResponse {
+  optional Timer timer = 1;
+}
+
+message TimePolicy {
+  string organization_id = 1;
+  bool enabled = 2;
+  TimePeriodType period_type = 3;
+  // monday, saturday or sunday; org-wide so one team shares a period.
+  string week_start = 4;
+  int32 month_start_day = 5;
+  bool approvals_enabled = 6;
+  bool lock_on_submit = 7;
+  // Days after a period ends before its open sheets lock; auto-submit fires then too.
+  int32 period_lock_delay_days = 8;
+  bool allow_log_for_others = 9;
+  int32 required_minutes_per_day = 10;
+  // 1, 5, 6, 10 or 15.
+  int32 timer_rounding_minutes = 11;
+  bool allow_future_dates = 12;
+  // Unset means a worker may log back until the day is locked.
+  optional int32 max_days_back = 13;
+  int32 max_timer_hours = 14;
+  bool auto_submit = 15;
+  // Org-wide YYYY-MM-DD dates with zero required minutes.
+  repeated string holidays = 16;
+  optional string internal_project_id = 17;
+  bool reminders_enabled = 18;
+  int32 reminder_hour_utc = 19;
+}
+
+message GetTimePolicyRequest {
+  string organization_id = 1;
+}
+
+message GetTimePolicyResponse {
+  TimePolicy policy = 1;
+}
+
+message UpdateTimePolicyRequest {
+  string organization_id = 1;
+  TimePolicy policy = 2;
+}
+
+message UpdateTimePolicyResponse {
+  TimePolicy policy = 1;
+}
+
+message AggregateWorklogsRequest {
+  string organization_id = 1;
+  oneof scope {
+    string project_id = 2;
+    string user_id = 3;
+  }
+  // Inclusive YYYY-MM-DD bounds.
+  string from_date = 4;
+  string to_date = 5;
+  AggregateGroupBy group_by = 6;
+}
+
+message AggregateRow {
+  // A YYYY-MM-DD day, a task id, a user id or a project id, per group_by.
+  string key = 1;
+  string label = 2;
+  int32 minutes = 3;
+  int32 entries = 4;
+}
+
+message AggregateWorklogsResponse {
+  repeated AggregateRow rows = 1;
+  int32 total_minutes = 2;
+}
+
+enum TimesheetStatus {
+  TIMESHEET_STATUS_UNSPECIFIED = 0;
+  TIMESHEET_STATUS_OPEN = 1;
+  TIMESHEET_STATUS_SUBMITTED = 2;
+  TIMESHEET_STATUS_APPROVED = 3;
+  TIMESHEET_STATUS_REJECTED = 4;
+}
+
+enum TimePeriodStatus {
+  TIME_PERIOD_STATUS_UNSPECIFIED = 0;
+  TIME_PERIOD_STATUS_OPEN = 1;
+  TIME_PERIOD_STATUS_CLOSED = 2;
+}
+
+// One person's sheet for one period. A sheet with no row yet is open; the id
+// is empty until the first state change creates it.
+message Timesheet {
+  string id = 1;
+  string user_id = 2;
+  string period_start = 3;
+  string period_end = 4;
+  TimesheetStatus status = 5;
+  optional google.protobuf.Timestamp submitted_at = 6;
+  // Unset on a submitted sheet means the period job submitted it.
+  optional string submitted_by_user_id = 7;
+  string submit_comment = 8;
+  optional string reviewer_user_id = 9;
+  optional google.protobuf.Timestamp reviewed_at = 10;
+  string review_comment = 11;
+  // While this instant is in the future the sheet's days accept edits again.
+  optional google.protobuf.Timestamp grace_until = 12;
+  // Whether the person's days in this period refuse writes right now.
+  bool locked = 13;
+  // The period itself is closed by a timekeeping admin.
+  bool period_closed = 14;
+  // The caller reviews this person and is not the person.
+  bool can_review = 15;
+  int32 total_minutes = 16;
+  int32 required_minutes = 17;
+  // The reviewer the person picked when submitting; unset means every reviewer was told.
+  optional string submitted_to_user_id = 18;
+  // Who may review this sheet, manager first; filled only on the person's own sheet.
+  repeated string reviewer_user_ids = 19;
+}
+
+message DayTotal {
+  string day = 1;
+  int32 minutes = 2;
+  int32 required_minutes = 3;
+  // A holiday or an out-of-office day; required_minutes already reflects it, half for a half day.
+  bool off = 4;
+}
+
+message TimePeriod {
+  // Empty until an admin closes the period; open periods come from the policy.
+  string id = 1;
+  string start_date = 2;
+  string end_date = 3;
+  TimePeriodStatus status = 4;
+  optional string closed_by_user_id = 5;
+  optional google.protobuf.Timestamp closed_at = 6;
+}
+
+// Any day inside the period works as period_start; the server resolves the
+// period containing it.
+message GetTimesheetRequest {
+  string organization_id = 1;
+  // Defaults to the caller; another person needs reviewer or timekeeping admin rights.
+  optional string user_id = 2;
+  string period_start = 3;
+}
+
+message GetTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message SubmitTimesheetRequest {
+  string organization_id = 1;
+  // Submit on behalf of someone else; reviewers and timekeeping admins only.
+  optional string user_id = 2;
+  string period_start = 3;
+  string comment = 4;
+  // One of the person's reviewers; only they are notified. Unset notifies them all.
+  optional string reviewer_user_id = 5;
+}
+
+message SubmitTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message RecallTimesheetRequest {
+  string organization_id = 1;
+  optional string user_id = 2;
+  string period_start = 3;
+}
+
+message RecallTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message ListReviewTimesheetsRequest {
+  string organization_id = 1;
+  string period_start = 2;
+  optional TimesheetStatus status = 3;
+  // Default 50, capped at 200.
+  int32 page_size = 4;
+  string page_token = 5;
+  // Matches the person's name or email.
+  string query = 6;
+  optional string team_id = 7;
+}
+
+message ReviewTimesheetRow {
+  string user_id = 1;
+  TimesheetStatus status = 2;
+  int32 period_minutes = 3;
+  int32 required_minutes = 4;
+  repeated DayTotal days = 5;
+  Timesheet timesheet = 6;
+}
+
+message ListReviewTimesheetsResponse {
+  repeated ReviewTimesheetRow rows = 1;
+  string next_page_token = 2;
+  TimePeriod period = 3;
+  // The caller may close and reopen periods and reviews people nobody else reviews.
+  bool viewer_is_timekeeping_admin = 4;
+}
+
+message ApproveTimesheetRequest {
+  string organization_id = 1;
+  string timesheet_id = 2;
+  string comment = 3;
+}
+
+message ApproveTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message RejectTimesheetRequest {
+  string organization_id = 1;
+  string timesheet_id = 2;
+  // Required; the worker sees it on the sheet.
+  string comment = 3;
+}
+
+message RejectTimesheetResponse {
+  Timesheet timesheet = 1;
+}
+
+message GrantGraceRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string period_start = 3;
+  // 1 to 336 hours from now.
+  int32 hours = 4;
+}
+
+message GrantGraceResponse {
+  Timesheet timesheet = 1;
+}
+
+message ClosePeriodRequest {
+  string organization_id = 1;
+  string period_start = 2;
+}
+
+message ClosePeriodResponse {
+  TimePeriod period = 1;
+}
+
+message ReopenPeriodRequest {
+  string organization_id = 1;
+  string period_start = 2;
+}
+
+message ReopenPeriodResponse {
+  TimePeriod period = 1;
+}
+
+// Every period touching the inclusive range, computed from the policy, with
+// the closed ones marked.
+message ListPeriodsRequest {
+  string organization_id = 1;
+  string from_date = 2;
+  string to_date = 3;
+}
+
+message ListPeriodsResponse {
+  repeated TimePeriod periods = 1;
+}
+
+message CreateInternalTimeProjectRequest {
+  string organization_id = 1;
+}
+
+message CreateInternalTimeProjectResponse {
+  string project_id = 1;
+  string slug = 2;
+  // False when the policy already named a live project and this call returned it.
+  bool created = 3;
+  TimePolicy policy = 4;
+}
+
+message GetSprintCapacityRequest {
+  string organization_id = 1;
+  string sprint_id = 2;
+}
+
+// One assignee of the sprint's tasks; a task shared by several splits its estimate evenly.
+message SprintCapacityRow {
+  string user_id = 1;
+  // Required minutes over the person's workdays inside the sprint dates, less days off.
+  int32 capacity_minutes = 2;
+  int32 estimated_minutes = 3;
+  int32 logged_minutes = 4;
+}
+
+message GetSprintCapacityResponse {
+  repeated SprintCapacityRow rows = 1;
+  int32 capacity_minutes = 2;
+  int32 estimated_minutes = 3;
+  int32 logged_minutes = 4;
+}

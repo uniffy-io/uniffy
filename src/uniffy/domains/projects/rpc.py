@@ -1,5 +1,6 @@
 """Request parsing and error mapping shared by the projects RPC handlers."""
 
+from datetime import date
 from uuid import UUID
 
 from connectrpc.code import Code
@@ -16,6 +17,13 @@ def parse_uuid(value: str, field: str) -> UUID:
         return UUID(value)
     except ValueError as exc:
         raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: {exc}") from exc
+
+
+def parse_date(value: str, field: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise ConnectError(Code.INVALID_ARGUMENT, f"Invalid {field}: expected YYYY-MM-DD") from exc
 
 
 def map_domain_error(operation: str, exc: Exception) -> ConnectError:

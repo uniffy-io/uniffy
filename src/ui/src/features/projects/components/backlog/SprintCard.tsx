@@ -1,14 +1,21 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, CheckCircle, DotsThree, Trash, CaretDown, CaretRight } from "@phosphor-icons/react";
-import { useAppDispatch } from "@/app/hooks";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
+import { SubjectAvatar } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { Button } from "@/components/ui/button";
 import { ActionMenu, ActionMenuItem } from "@/components/ui/action-menu";
+import { PortalMenu } from "@/components/ui/portal-menu";
+import { STATUS_HEX_COLORS } from "@/config/theme/statusColors";
 import { startSprint, deleteSprint } from "@/features/projects/store/sprintsThunks";
+import { selectSprintCapacity } from "@/features/projects/store/timeSlice";
+import { fetchSprintCapacity } from "@/features/projects/store/timeThunks";
 import { SprintCompletionDialog } from "@/features/projects/components/modals/SprintCompletionDialog";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { BacklogTaskRow } from "@/features/projects/components/backlog/BacklogTaskRow";
 import type { Sprint, Task } from "@/features/projects/types";
+import type { SprintCapacity } from "@/features/projects/types/time";
 
 interface SprintCardProps {
   sprint: Sprint;
@@ -17,20 +24,94 @@ interface SprintCardProps {
   projectSlug: string;
 }
 
+/** A thin bar of `value` against `max`; red once the value passes the capacity. */
+function Meter({ value, max, over }: { value: number; max: number; over?: boolean }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <span className="inline-block h-1.5 w-12 overflow-hidden rounded-full bg-muted align-middle">
+      <span
+        className={cn(
+          "block h-full rounded-full transition-all duration-300",
+          !over && "bg-primary",
+        )}
+        style={{ width: `${pct}%`, backgroundColor: over ? STATUS_HEX_COLORS.error : undefined }}
+      />
+    </span>
+  );
+}
+
+function CapacityPopover({ capacity }: { capacity: SprintCapacity }) {
+  const { subjects } = useSubjectResolver(capacity.rows.map((row) => row.userId));
+  const byId = new Map(subjects.map((subject) => [subject.id, subject]));
+  return (
+    <div className="p-2 text-xs" data-testid="sprint-capacity-popover">
+      <div className="px-2 pb-1 text-[10px] uppercase tracking-wide text-subtle-foreground">
+        Capacity by member
+      </div>
+      <ul className="divide-y divide-border/60">
+        {capacity.rows.map((row) => {
+          const subject = byId.get(row.userId);
+          const over = row.estimatedMinutes > row.capacityMinutes;
+          return (
+            <li
+              key={row.userId}
+              className="flex items-center gap-2 px-2 py-1.5"
+              data-testid="sprint-capacity-row"
+              data-over={over ? "true" : undefined}
+            >
+              {subject && <SubjectAvatar subject={subject} size="xs" />}
+              <span className="min-w-0 flex-1 truncate text-foreground">
+                {subject?.name ?? "Member"}
+              </span>
+              <span
+                className="tabular-nums"
+                style={{ color: over ? STATUS_HEX_COLORS.error : undefined }}
+                title="Estimated against capacity"
+              >
+                {formatMinutes(row.estimatedMinutes)} / {formatMinutes(row.capacityMinutes)}
+              </span>
+              <span className="w-14 text-right tabular-nums text-muted-foreground" title="Logged">
+                {formatMinutes(row.loggedMinutes)}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCardProps) {
   const dispatch = useAppDispatch();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const capacityTriggerRef = useRef<HTMLButtonElement>(null);
+  const [isCapacityOpen, setIsCapacityOpen] = useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const capacity = useAppSelector(selectSprintCapacity(sprint.id));
 
   const completedCount = tasks.filter((t) => t.completedAt).length;
   const totalCount = tasks.length;
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const sprintEstimated = tasks.reduce((sum, t) => sum + (t.estimatedMinutes ?? 0), 0);
   const sprintSpent = tasks.reduce((sum, t) => sum + (t.timeSpentMinutes ?? 0), 0);
+  // Estimates, assignments and logged time all move the capacity picture; the dates do too.
+  const capacityInputs = tasks
+    .map(
+      (t) =>
+        `${t.id}:${t.estimatedMinutes ?? 0}:${t.timeSpentMinutes ?? 0}:${t.assigneeIds.join(",")}`,
+    )
+    .join("|");
+
+  useEffect(() => {
+    void dispatch(fetchSprintCapacity({ sprintId: sprint.id }));
+  }, [dispatch, sprint.id, sprint.startDate, sprint.endDate, capacityInputs]);
+
+  const hasCapacity = (capacity?.capacityMinutes ?? 0) > 0;
+  const overCapacity = hasCapacity && capacity!.estimatedMinutes > capacity!.capacityMinutes;
 
   const dateRange =
     sprint.startDate && sprint.endDate
@@ -90,10 +171,41 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
           {completedCount}/{totalCount} ({progressPct}%)
         </span>
 
-        {sprintEstimated > 0 && (
-          <span className="text-xs text-muted-foreground shrink-0">
-            {formatMinutes(sprintSpent)} / {formatMinutes(sprintEstimated)}
-          </span>
+        {hasCapacity && capacity ? (
+          <button
+            type="button"
+            ref={capacityTriggerRef}
+            onClick={() => setIsCapacityOpen(!isCapacityOpen)}
+            className="focus-ring flex shrink-0 items-center gap-3 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+            title="Capacity by member"
+            aria-haspopup="dialog"
+            aria-expanded={isCapacityOpen}
+            data-testid="sprint-capacity"
+            data-over={overCapacity ? "true" : undefined}
+          >
+            <span className="flex items-center gap-1.5 tabular-nums">
+              <Meter
+                value={capacity.estimatedMinutes}
+                max={capacity.capacityMinutes}
+                over={overCapacity}
+              />
+              <span style={{ color: overCapacity ? STATUS_HEX_COLORS.error : undefined }}>
+                {formatMinutes(capacity.estimatedMinutes)} est.
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5 tabular-nums">
+              <Meter value={capacity.loggedMinutes} max={capacity.capacityMinutes} />
+              <span>
+                {formatMinutes(capacity.loggedMinutes)} / {formatMinutes(capacity.capacityMinutes)}
+              </span>
+            </span>
+          </button>
+        ) : (
+          sprintEstimated > 0 && (
+            <span className="text-xs text-muted-foreground shrink-0">
+              {formatMinutes(sprintSpent)} / {formatMinutes(sprintEstimated)}
+            </span>
+          )
         )}
 
         <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium shrink-0", statusColor)}>
@@ -167,6 +279,18 @@ export function SprintCard({ sprint, tasks, projectId, projectSlug }: SprintCard
           )}
         </div>
       </div>
+
+      {capacity && (
+        <PortalMenu
+          open={isCapacityOpen}
+          onClose={() => setIsCapacityOpen(false)}
+          triggerRef={capacityTriggerRef}
+          align="right"
+          className="w-80"
+        >
+          <CapacityPopover capacity={capacity} />
+        </PortalMenu>
+      )}
 
       {/* Error message */}
       {error && (

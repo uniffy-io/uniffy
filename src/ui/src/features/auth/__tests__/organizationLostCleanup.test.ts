@@ -15,6 +15,7 @@ const harness = vi.hoisted(() => ({
   resetUploads: vi.fn(),
   clearNotes: vi.fn().mockResolvedValue(undefined),
   clearRecents: vi.fn(),
+  clearTaskPages: vi.fn(),
   warning: vi.fn(),
   organizationId: "org-b",
 }));
@@ -50,6 +51,9 @@ vi.mock("@/config/api", () => ({
     return pending;
   },
   unaryTransport: {},
+}));
+vi.mock("@/features/projects/hooks/useAssignedTasks", () => ({
+  clearRequestedTaskPages: harness.clearTaskPages,
 }));
 vi.mock("@/features/realtime/hooks/useRealtimeDrain", () => ({ useRealtimeDrain: () => {} }));
 vi.mock("@/features/onboarding/hooks/useOnboardingRedirect", () => ({
@@ -118,6 +122,7 @@ it("cleans a lost organization's device stores after entering another organizati
   expect(harness.clearRecents).toHaveBeenCalledWith("org-a", "alice");
   expect(harness.clearLibrary).not.toHaveBeenCalled();
   expect(harness.clearBlobs).not.toHaveBeenCalled();
+  expect(harness.clearTaskPages).not.toHaveBeenCalled();
   expect(harness.resetUploads).not.toHaveBeenCalled();
   expect(readTabOrganization("alice")?.id).toBe("org-b");
   expect(harness.warning).toHaveBeenCalledOnce();
@@ -129,6 +134,7 @@ it("clears memory and tab identity when the lost organization is still current",
   mount();
   expect(harness.clearLibrary).toHaveBeenCalledOnce();
   expect(harness.clearBlobs).toHaveBeenCalledOnce();
+  expect(harness.clearTaskPages).toHaveBeenCalledOnce();
   expect(harness.purgeOrganization).toHaveBeenCalledWith("org-a", "alice");
   expect(readTabOrganization("alice")).toBeNull();
 });

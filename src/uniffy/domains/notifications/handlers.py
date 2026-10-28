@@ -44,6 +44,7 @@ from uniffy_proto.notifications.v1.notifications_pb import (
     SearchNotificationsResponse,
     StreamNotificationsRequest,
     StreamNotificationsResponse,
+    TimerChangedPayload,
     TypeNotificationStat,
     UnregisterPushSubscriptionRequest,
     UnregisterPushSubscriptionResponse,
@@ -638,6 +639,16 @@ class NotificationsHandlers:
                         yield StreamNotificationsResponse(
                             event_type=StreamNotificationsResponse.EventType.PRESENCE_CHANGED,
                             presence_changed=presence_payload,
+                        )
+                        last_send = now
+                        continue
+
+                    if payload.get("_type") == NotificationPayloadType.TIMER_CHANGED:
+                        yield StreamNotificationsResponse(
+                            event_type=StreamNotificationsResponse.EventType.TIMER_CHANGED,
+                            timer_changed=TimerChangedPayload(
+                                organization_id=payload.get("organization_id", ""),
+                            ),
                         )
                         last_send = now
                         continue

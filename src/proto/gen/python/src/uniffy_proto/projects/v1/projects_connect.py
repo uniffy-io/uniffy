@@ -17,6 +17,7 @@ from protobuf import DescService
 
 from . import projects_pb
 from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
+from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetSprintCapacityRequest, GetSprintCapacityResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, AsyncIterator, Iterable, Iterator, Mapping
@@ -146,6 +147,84 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def bulk_check_task_watchers(self, request: BulkCheckTaskWatchersRequest, ctx: RequestContext[BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse], /) -> BulkCheckTaskWatchersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_worklog(self, request: CreateWorklogRequest, ctx: RequestContext[CreateWorklogRequest, CreateWorklogResponse], /) -> CreateWorklogResponse:
+        """
+        ----- Time tracking -----
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_worklog(self, request: UpdateWorklogRequest, ctx: RequestContext[UpdateWorklogRequest, UpdateWorklogResponse], /) -> UpdateWorklogResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def delete_worklog(self, request: DeleteWorklogRequest, ctx: RequestContext[DeleteWorklogRequest, DeleteWorklogResponse], /) -> DeleteWorklogResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_task_worklogs(self, request: ListTaskWorklogsRequest, ctx: RequestContext[ListTaskWorklogsRequest, ListTaskWorklogsResponse], /) -> ListTaskWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_user_worklogs(self, request: ListUserWorklogsRequest, ctx: RequestContext[ListUserWorklogsRequest, ListUserWorklogsResponse], /) -> ListUserWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def start_timer(self, request: StartTimerRequest, ctx: RequestContext[StartTimerRequest, StartTimerResponse], /) -> StartTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def pause_timer(self, request: PauseTimerRequest, ctx: RequestContext[PauseTimerRequest, PauseTimerResponse], /) -> PauseTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def resume_timer(self, request: ResumeTimerRequest, ctx: RequestContext[ResumeTimerRequest, ResumeTimerResponse], /) -> ResumeTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def stop_timer(self, request: StopTimerRequest, ctx: RequestContext[StopTimerRequest, StopTimerResponse], /) -> StopTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_active_timer(self, request: GetActiveTimerRequest, ctx: RequestContext[GetActiveTimerRequest, GetActiveTimerResponse], /) -> GetActiveTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_time_policy(self, request: GetTimePolicyRequest, ctx: RequestContext[GetTimePolicyRequest, GetTimePolicyResponse], /) -> GetTimePolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_time_policy(self, request: UpdateTimePolicyRequest, ctx: RequestContext[UpdateTimePolicyRequest, UpdateTimePolicyResponse], /) -> UpdateTimePolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def aggregate_worklogs(self, request: AggregateWorklogsRequest, ctx: RequestContext[AggregateWorklogsRequest, AggregateWorklogsResponse], /) -> AggregateWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_timesheet(self, request: GetTimesheetRequest, ctx: RequestContext[GetTimesheetRequest, GetTimesheetResponse], /) -> GetTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def submit_timesheet(self, request: SubmitTimesheetRequest, ctx: RequestContext[SubmitTimesheetRequest, SubmitTimesheetResponse], /) -> SubmitTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def recall_timesheet(self, request: RecallTimesheetRequest, ctx: RequestContext[RecallTimesheetRequest, RecallTimesheetResponse], /) -> RecallTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_review_timesheets(self, request: ListReviewTimesheetsRequest, ctx: RequestContext[ListReviewTimesheetsRequest, ListReviewTimesheetsResponse], /) -> ListReviewTimesheetsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def approve_timesheet(self, request: ApproveTimesheetRequest, ctx: RequestContext[ApproveTimesheetRequest, ApproveTimesheetResponse], /) -> ApproveTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def reject_timesheet(self, request: RejectTimesheetRequest, ctx: RequestContext[RejectTimesheetRequest, RejectTimesheetResponse], /) -> RejectTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def grant_grace(self, request: GrantGraceRequest, ctx: RequestContext[GrantGraceRequest, GrantGraceResponse], /) -> GrantGraceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def close_period(self, request: ClosePeriodRequest, ctx: RequestContext[ClosePeriodRequest, ClosePeriodResponse], /) -> ClosePeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def reopen_period(self, request: ReopenPeriodRequest, ctx: RequestContext[ReopenPeriodRequest, ReopenPeriodResponse], /) -> ReopenPeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_internal_time_project(self, request: CreateInternalTimeProjectRequest, ctx: RequestContext[CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse], /) -> CreateInternalTimeProjectResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -485,6 +564,256 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.bulk_check_task_watchers,
+                ),
+                "/projects.v1.ProjectsService/CreateWorklog": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateWorklogRequest,
+                        output=CreateWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_worklog,
+                ),
+                "/projects.v1.ProjectsService/UpdateWorklog": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateWorklogRequest,
+                        output=UpdateWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_worklog,
+                ),
+                "/projects.v1.ProjectsService/DeleteWorklog": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=DeleteWorklogRequest,
+                        output=DeleteWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_worklog,
+                ),
+                "/projects.v1.ProjectsService/ListTaskWorklogs": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListTaskWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListTaskWorklogsRequest,
+                        output=ListTaskWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_task_worklogs,
+                ),
+                "/projects.v1.ProjectsService/ListUserWorklogs": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListUserWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListUserWorklogsRequest,
+                        output=ListUserWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_user_worklogs,
+                ),
+                "/projects.v1.ProjectsService/StartTimer": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StartTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=StartTimerRequest,
+                        output=StartTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.start_timer,
+                ),
+                "/projects.v1.ProjectsService/PauseTimer": Endpoint.unary(
+                    method=MethodInfo(
+                        name="PauseTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=PauseTimerRequest,
+                        output=PauseTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.pause_timer,
+                ),
+                "/projects.v1.ProjectsService/ResumeTimer": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResumeTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=ResumeTimerRequest,
+                        output=ResumeTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.resume_timer,
+                ),
+                "/projects.v1.ProjectsService/StopTimer": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StopTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=StopTimerRequest,
+                        output=StopTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.stop_timer,
+                ),
+                "/projects.v1.ProjectsService/GetActiveTimer": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetActiveTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetActiveTimerRequest,
+                        output=GetActiveTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_active_timer,
+                ),
+                "/projects.v1.ProjectsService/GetTimePolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetTimePolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimePolicyRequest,
+                        output=GetTimePolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_time_policy,
+                ),
+                "/projects.v1.ProjectsService/UpdateTimePolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateTimePolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateTimePolicyRequest,
+                        output=UpdateTimePolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.update_time_policy,
+                ),
+                "/projects.v1.ProjectsService/AggregateWorklogs": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AggregateWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=AggregateWorklogsRequest,
+                        output=AggregateWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.aggregate_worklogs,
+                ),
+                "/projects.v1.ProjectsService/GetTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimesheetRequest,
+                        output=GetTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_timesheet,
+                ),
+                "/projects.v1.ProjectsService/SubmitTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SubmitTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=SubmitTimesheetRequest,
+                        output=SubmitTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.submit_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RecallTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecallTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RecallTimesheetRequest,
+                        output=RecallTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.recall_timesheet,
+                ),
+                "/projects.v1.ProjectsService/ListReviewTimesheets": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListReviewTimesheets",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListReviewTimesheetsRequest,
+                        output=ListReviewTimesheetsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_review_timesheets,
+                ),
+                "/projects.v1.ProjectsService/ApproveTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ApproveTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=ApproveTimesheetRequest,
+                        output=ApproveTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.approve_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RejectTimesheet": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RejectTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RejectTimesheetRequest,
+                        output=RejectTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reject_timesheet,
+                ),
+                "/projects.v1.ProjectsService/GrantGrace": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GrantGrace",
+                        service_name="projects.v1.ProjectsService",
+                        input=GrantGraceRequest,
+                        output=GrantGraceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.grant_grace,
+                ),
+                "/projects.v1.ProjectsService/ClosePeriod": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ClosePeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ClosePeriodRequest,
+                        output=ClosePeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.close_period,
+                ),
+                "/projects.v1.ProjectsService/ReopenPeriod": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ReopenPeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ReopenPeriodRequest,
+                        output=ReopenPeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.reopen_period,
+                ),
+                "/projects.v1.ProjectsService/ListPeriods": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListPeriods",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListPeriodsRequest,
+                        output=ListPeriodsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_periods,
+                ),
+                "/projects.v1.ProjectsService/CreateInternalTimeProject": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateInternalTimeProject",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateInternalTimeProjectRequest,
+                        output=CreateInternalTimeProjectResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_internal_time_project,
+                ),
+                "/projects.v1.ProjectsService/GetSprintCapacity": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetSprintCapacity",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetSprintCapacityRequest,
+                        output=GetSprintCapacityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_sprint_capacity,
                 ),
             },
             interceptors=interceptors,
@@ -1164,6 +1493,509 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def create_worklog(
+        self,
+        request: CreateWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateWorklogResponse:
+        """
+        ----- Time tracking -----
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=CreateWorklogRequest,
+                output=CreateWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_worklog(
+        self,
+        request: UpdateWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateWorklogResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateWorklogRequest,
+                output=UpdateWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_worklog(
+        self,
+        request: DeleteWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteWorklogResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=DeleteWorklogRequest,
+                output=DeleteWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_task_worklogs(
+        self,
+        request: ListTaskWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListTaskWorklogsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTaskWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=ListTaskWorklogsRequest,
+                output=ListTaskWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_user_worklogs(
+        self,
+        request: ListUserWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListUserWorklogsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListUserWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=ListUserWorklogsRequest,
+                output=ListUserWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def start_timer(
+        self,
+        request: StartTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StartTimerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartTimer",
+                service_name="projects.v1.ProjectsService",
+                input=StartTimerRequest,
+                output=StartTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def pause_timer(
+        self,
+        request: PauseTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> PauseTimerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PauseTimer",
+                service_name="projects.v1.ProjectsService",
+                input=PauseTimerRequest,
+                output=PauseTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def resume_timer(
+        self,
+        request: ResumeTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResumeTimerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResumeTimer",
+                service_name="projects.v1.ProjectsService",
+                input=ResumeTimerRequest,
+                output=ResumeTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def stop_timer(
+        self,
+        request: StopTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StopTimerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopTimer",
+                service_name="projects.v1.ProjectsService",
+                input=StopTimerRequest,
+                output=StopTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_active_timer(
+        self,
+        request: GetActiveTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetActiveTimerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetActiveTimer",
+                service_name="projects.v1.ProjectsService",
+                input=GetActiveTimerRequest,
+                output=GetActiveTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_time_policy(
+        self,
+        request: GetTimePolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimePolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimePolicy",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimePolicyRequest,
+                output=GetTimePolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def update_time_policy(
+        self,
+        request: UpdateTimePolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateTimePolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateTimePolicy",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateTimePolicyRequest,
+                output=UpdateTimePolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def aggregate_worklogs(
+        self,
+        request: AggregateWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AggregateWorklogsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AggregateWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=AggregateWorklogsRequest,
+                output=AggregateWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_timesheet(
+        self,
+        request: GetTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimesheetRequest,
+                output=GetTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def submit_timesheet(
+        self,
+        request: SubmitTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SubmitTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=SubmitTimesheetRequest,
+                output=SubmitTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def recall_timesheet(
+        self,
+        request: RecallTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecallTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecallTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RecallTimesheetRequest,
+                output=RecallTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_review_timesheets(
+        self,
+        request: ListReviewTimesheetsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListReviewTimesheetsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewTimesheets",
+                service_name="projects.v1.ProjectsService",
+                input=ListReviewTimesheetsRequest,
+                output=ListReviewTimesheetsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def approve_timesheet(
+        self,
+        request: ApproveTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ApproveTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApproveTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=ApproveTimesheetRequest,
+                output=ApproveTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def reject_timesheet(
+        self,
+        request: RejectTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RejectTimesheetResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RejectTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RejectTimesheetRequest,
+                output=RejectTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def grant_grace(
+        self,
+        request: GrantGraceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantGraceResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantGrace",
+                service_name="projects.v1.ProjectsService",
+                input=GrantGraceRequest,
+                output=GrantGraceResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def close_period(
+        self,
+        request: ClosePeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ClosePeriodResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ClosePeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ClosePeriodRequest,
+                output=ClosePeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def reopen_period(
+        self,
+        request: ReopenPeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReopenPeriodResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReopenPeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ReopenPeriodRequest,
+                output=ReopenPeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_periods(
+        self,
+        request: ListPeriodsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListPeriodsResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPeriods",
+                service_name="projects.v1.ProjectsService",
+                input=ListPeriodsRequest,
+                output=ListPeriodsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def create_internal_time_project(
+        self,
+        request: CreateInternalTimeProjectRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateInternalTimeProjectResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateInternalTimeProject",
+                service_name="projects.v1.ProjectsService",
+                input=CreateInternalTimeProjectRequest,
+                output=CreateInternalTimeProjectResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_sprint_capacity(
+        self,
+        request: GetSprintCapacityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetSprintCapacityResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSprintCapacity",
+                service_name="projects.v1.ProjectsService",
+                input=GetSprintCapacityRequest,
+                output=GetSprintCapacityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: CreateProjectRequest, ctx: RequestContext[CreateProjectRequest, CreateProjectResponse], /) -> CreateProjectResponse:
         """
@@ -1283,6 +2115,84 @@ class ProjectsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def bulk_check_task_watchers(self, request: BulkCheckTaskWatchersRequest, ctx: RequestContext[BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse], /) -> BulkCheckTaskWatchersResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def create_worklog(self, request: CreateWorklogRequest, ctx: RequestContext[CreateWorklogRequest, CreateWorklogResponse], /) -> CreateWorklogResponse:
+        """
+        ----- Time tracking -----
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_worklog(self, request: UpdateWorklogRequest, ctx: RequestContext[UpdateWorklogRequest, UpdateWorklogResponse], /) -> UpdateWorklogResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def delete_worklog(self, request: DeleteWorklogRequest, ctx: RequestContext[DeleteWorklogRequest, DeleteWorklogResponse], /) -> DeleteWorklogResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_task_worklogs(self, request: ListTaskWorklogsRequest, ctx: RequestContext[ListTaskWorklogsRequest, ListTaskWorklogsResponse], /) -> ListTaskWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_user_worklogs(self, request: ListUserWorklogsRequest, ctx: RequestContext[ListUserWorklogsRequest, ListUserWorklogsResponse], /) -> ListUserWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def start_timer(self, request: StartTimerRequest, ctx: RequestContext[StartTimerRequest, StartTimerResponse], /) -> StartTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def pause_timer(self, request: PauseTimerRequest, ctx: RequestContext[PauseTimerRequest, PauseTimerResponse], /) -> PauseTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def resume_timer(self, request: ResumeTimerRequest, ctx: RequestContext[ResumeTimerRequest, ResumeTimerResponse], /) -> ResumeTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def stop_timer(self, request: StopTimerRequest, ctx: RequestContext[StopTimerRequest, StopTimerResponse], /) -> StopTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_active_timer(self, request: GetActiveTimerRequest, ctx: RequestContext[GetActiveTimerRequest, GetActiveTimerResponse], /) -> GetActiveTimerResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_time_policy(self, request: GetTimePolicyRequest, ctx: RequestContext[GetTimePolicyRequest, GetTimePolicyResponse], /) -> GetTimePolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_time_policy(self, request: UpdateTimePolicyRequest, ctx: RequestContext[UpdateTimePolicyRequest, UpdateTimePolicyResponse], /) -> UpdateTimePolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def aggregate_worklogs(self, request: AggregateWorklogsRequest, ctx: RequestContext[AggregateWorklogsRequest, AggregateWorklogsResponse], /) -> AggregateWorklogsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_timesheet(self, request: GetTimesheetRequest, ctx: RequestContext[GetTimesheetRequest, GetTimesheetResponse], /) -> GetTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def submit_timesheet(self, request: SubmitTimesheetRequest, ctx: RequestContext[SubmitTimesheetRequest, SubmitTimesheetResponse], /) -> SubmitTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def recall_timesheet(self, request: RecallTimesheetRequest, ctx: RequestContext[RecallTimesheetRequest, RecallTimesheetResponse], /) -> RecallTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_review_timesheets(self, request: ListReviewTimesheetsRequest, ctx: RequestContext[ListReviewTimesheetsRequest, ListReviewTimesheetsResponse], /) -> ListReviewTimesheetsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def approve_timesheet(self, request: ApproveTimesheetRequest, ctx: RequestContext[ApproveTimesheetRequest, ApproveTimesheetResponse], /) -> ApproveTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def reject_timesheet(self, request: RejectTimesheetRequest, ctx: RequestContext[RejectTimesheetRequest, RejectTimesheetResponse], /) -> RejectTimesheetResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def grant_grace(self, request: GrantGraceRequest, ctx: RequestContext[GrantGraceRequest, GrantGraceResponse], /) -> GrantGraceResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def close_period(self, request: ClosePeriodRequest, ctx: RequestContext[ClosePeriodRequest, ClosePeriodResponse], /) -> ClosePeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def reopen_period(self, request: ReopenPeriodRequest, ctx: RequestContext[ReopenPeriodRequest, ReopenPeriodResponse], /) -> ReopenPeriodResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_periods(self, request: ListPeriodsRequest, ctx: RequestContext[ListPeriodsRequest, ListPeriodsResponse], /) -> ListPeriodsResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def create_internal_time_project(self, request: CreateInternalTimeProjectRequest, ctx: RequestContext[CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse], /) -> CreateInternalTimeProjectResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -1620,6 +2530,256 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.bulk_check_task_watchers,
+                ),
+                "/projects.v1.ProjectsService/CreateWorklog": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateWorklogRequest,
+                        output=CreateWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_worklog,
+                ),
+                "/projects.v1.ProjectsService/UpdateWorklog": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateWorklogRequest,
+                        output=UpdateWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_worklog,
+                ),
+                "/projects.v1.ProjectsService/DeleteWorklog": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteWorklog",
+                        service_name="projects.v1.ProjectsService",
+                        input=DeleteWorklogRequest,
+                        output=DeleteWorklogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_worklog,
+                ),
+                "/projects.v1.ProjectsService/ListTaskWorklogs": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListTaskWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListTaskWorklogsRequest,
+                        output=ListTaskWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_task_worklogs,
+                ),
+                "/projects.v1.ProjectsService/ListUserWorklogs": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListUserWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListUserWorklogsRequest,
+                        output=ListUserWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_user_worklogs,
+                ),
+                "/projects.v1.ProjectsService/StartTimer": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StartTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=StartTimerRequest,
+                        output=StartTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.start_timer,
+                ),
+                "/projects.v1.ProjectsService/PauseTimer": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="PauseTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=PauseTimerRequest,
+                        output=PauseTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.pause_timer,
+                ),
+                "/projects.v1.ProjectsService/ResumeTimer": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResumeTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=ResumeTimerRequest,
+                        output=ResumeTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.resume_timer,
+                ),
+                "/projects.v1.ProjectsService/StopTimer": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StopTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=StopTimerRequest,
+                        output=StopTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.stop_timer,
+                ),
+                "/projects.v1.ProjectsService/GetActiveTimer": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetActiveTimer",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetActiveTimerRequest,
+                        output=GetActiveTimerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_active_timer,
+                ),
+                "/projects.v1.ProjectsService/GetTimePolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetTimePolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimePolicyRequest,
+                        output=GetTimePolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_time_policy,
+                ),
+                "/projects.v1.ProjectsService/UpdateTimePolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateTimePolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateTimePolicyRequest,
+                        output=UpdateTimePolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.update_time_policy,
+                ),
+                "/projects.v1.ProjectsService/AggregateWorklogs": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AggregateWorklogs",
+                        service_name="projects.v1.ProjectsService",
+                        input=AggregateWorklogsRequest,
+                        output=AggregateWorklogsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.aggregate_worklogs,
+                ),
+                "/projects.v1.ProjectsService/GetTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTimesheetRequest,
+                        output=GetTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_timesheet,
+                ),
+                "/projects.v1.ProjectsService/SubmitTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SubmitTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=SubmitTimesheetRequest,
+                        output=SubmitTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.submit_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RecallTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecallTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RecallTimesheetRequest,
+                        output=RecallTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.recall_timesheet,
+                ),
+                "/projects.v1.ProjectsService/ListReviewTimesheets": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListReviewTimesheets",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListReviewTimesheetsRequest,
+                        output=ListReviewTimesheetsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_review_timesheets,
+                ),
+                "/projects.v1.ProjectsService/ApproveTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ApproveTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=ApproveTimesheetRequest,
+                        output=ApproveTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.approve_timesheet,
+                ),
+                "/projects.v1.ProjectsService/RejectTimesheet": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RejectTimesheet",
+                        service_name="projects.v1.ProjectsService",
+                        input=RejectTimesheetRequest,
+                        output=RejectTimesheetResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reject_timesheet,
+                ),
+                "/projects.v1.ProjectsService/GrantGrace": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GrantGrace",
+                        service_name="projects.v1.ProjectsService",
+                        input=GrantGraceRequest,
+                        output=GrantGraceResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.grant_grace,
+                ),
+                "/projects.v1.ProjectsService/ClosePeriod": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ClosePeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ClosePeriodRequest,
+                        output=ClosePeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.close_period,
+                ),
+                "/projects.v1.ProjectsService/ReopenPeriod": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ReopenPeriod",
+                        service_name="projects.v1.ProjectsService",
+                        input=ReopenPeriodRequest,
+                        output=ReopenPeriodResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.reopen_period,
+                ),
+                "/projects.v1.ProjectsService/ListPeriods": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListPeriods",
+                        service_name="projects.v1.ProjectsService",
+                        input=ListPeriodsRequest,
+                        output=ListPeriodsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_periods,
+                ),
+                "/projects.v1.ProjectsService/CreateInternalTimeProject": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateInternalTimeProject",
+                        service_name="projects.v1.ProjectsService",
+                        input=CreateInternalTimeProjectRequest,
+                        output=CreateInternalTimeProjectResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_internal_time_project,
+                ),
+                "/projects.v1.ProjectsService/GetSprintCapacity": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetSprintCapacity",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetSprintCapacityRequest,
+                        output=GetSprintCapacityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_sprint_capacity,
                 ),
             },
             interceptors=interceptors,
@@ -2262,6 +3422,484 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=BulkCheckTaskWatchersRequest,
                 output=BulkCheckTaskWatchersResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_worklog(
+        self,
+        request: CreateWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateWorklogResponse:
+        """
+        ----- Time tracking -----
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=CreateWorklogRequest,
+                output=CreateWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_worklog(
+        self,
+        request: UpdateWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateWorklogResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateWorklogRequest,
+                output=UpdateWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def delete_worklog(
+        self,
+        request: DeleteWorklogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteWorklogResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteWorklog",
+                service_name="projects.v1.ProjectsService",
+                input=DeleteWorklogRequest,
+                output=DeleteWorklogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_task_worklogs(
+        self,
+        request: ListTaskWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListTaskWorklogsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListTaskWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=ListTaskWorklogsRequest,
+                output=ListTaskWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_user_worklogs(
+        self,
+        request: ListUserWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListUserWorklogsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListUserWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=ListUserWorklogsRequest,
+                output=ListUserWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def start_timer(
+        self,
+        request: StartTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StartTimerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartTimer",
+                service_name="projects.v1.ProjectsService",
+                input=StartTimerRequest,
+                output=StartTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def pause_timer(
+        self,
+        request: PauseTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> PauseTimerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="PauseTimer",
+                service_name="projects.v1.ProjectsService",
+                input=PauseTimerRequest,
+                output=PauseTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def resume_timer(
+        self,
+        request: ResumeTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResumeTimerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResumeTimer",
+                service_name="projects.v1.ProjectsService",
+                input=ResumeTimerRequest,
+                output=ResumeTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def stop_timer(
+        self,
+        request: StopTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StopTimerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopTimer",
+                service_name="projects.v1.ProjectsService",
+                input=StopTimerRequest,
+                output=StopTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_active_timer(
+        self,
+        request: GetActiveTimerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetActiveTimerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetActiveTimer",
+                service_name="projects.v1.ProjectsService",
+                input=GetActiveTimerRequest,
+                output=GetActiveTimerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_time_policy(
+        self,
+        request: GetTimePolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimePolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimePolicy",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimePolicyRequest,
+                output=GetTimePolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_time_policy(
+        self,
+        request: UpdateTimePolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateTimePolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateTimePolicy",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateTimePolicyRequest,
+                output=UpdateTimePolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def aggregate_worklogs(
+        self,
+        request: AggregateWorklogsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AggregateWorklogsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AggregateWorklogs",
+                service_name="projects.v1.ProjectsService",
+                input=AggregateWorklogsRequest,
+                output=AggregateWorklogsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_timesheet(
+        self,
+        request: GetTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=GetTimesheetRequest,
+                output=GetTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def submit_timesheet(
+        self,
+        request: SubmitTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SubmitTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SubmitTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=SubmitTimesheetRequest,
+                output=SubmitTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def recall_timesheet(
+        self,
+        request: RecallTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecallTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecallTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RecallTimesheetRequest,
+                output=RecallTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_review_timesheets(
+        self,
+        request: ListReviewTimesheetsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListReviewTimesheetsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListReviewTimesheets",
+                service_name="projects.v1.ProjectsService",
+                input=ListReviewTimesheetsRequest,
+                output=ListReviewTimesheetsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def approve_timesheet(
+        self,
+        request: ApproveTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ApproveTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ApproveTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=ApproveTimesheetRequest,
+                output=ApproveTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def reject_timesheet(
+        self,
+        request: RejectTimesheetRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RejectTimesheetResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RejectTimesheet",
+                service_name="projects.v1.ProjectsService",
+                input=RejectTimesheetRequest,
+                output=RejectTimesheetResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def grant_grace(
+        self,
+        request: GrantGraceRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GrantGraceResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GrantGrace",
+                service_name="projects.v1.ProjectsService",
+                input=GrantGraceRequest,
+                output=GrantGraceResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def close_period(
+        self,
+        request: ClosePeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ClosePeriodResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ClosePeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ClosePeriodRequest,
+                output=ClosePeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def reopen_period(
+        self,
+        request: ReopenPeriodRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReopenPeriodResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReopenPeriod",
+                service_name="projects.v1.ProjectsService",
+                input=ReopenPeriodRequest,
+                output=ReopenPeriodResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_periods(
+        self,
+        request: ListPeriodsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListPeriodsResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListPeriods",
+                service_name="projects.v1.ProjectsService",
+                input=ListPeriodsRequest,
+                output=ListPeriodsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_internal_time_project(
+        self,
+        request: CreateInternalTimeProjectRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateInternalTimeProjectResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateInternalTimeProject",
+                service_name="projects.v1.ProjectsService",
+                input=CreateInternalTimeProjectRequest,
+                output=CreateInternalTimeProjectResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_sprint_capacity(
+        self,
+        request: GetSprintCapacityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetSprintCapacityResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetSprintCapacity",
+                service_name="projects.v1.ProjectsService",
+                input=GetSprintCapacityRequest,
+                output=GetSprintCapacityResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

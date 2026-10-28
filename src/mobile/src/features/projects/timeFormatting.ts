@@ -22,8 +22,8 @@ export function parseTimeInput(input: string): number | null {
   const m = trimmed.match(/^(\d+)\s*m$/);
   if (m) return parseInt(m[1], 10);
 
-  const num = parseFloat(trimmed);
-  if (!isNaN(num) && num >= 0) return Math.round(num);
+  const bare = trimmed.match(/^(\d+(?:\.\d+)?)$/);
+  if (bare) return Math.round(parseFloat(bare[1]));
 
   return null;
 }

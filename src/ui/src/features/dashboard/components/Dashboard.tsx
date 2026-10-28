@@ -7,6 +7,7 @@ import { MyTasksDialog } from "@/features/dashboard/components/MyTasksDialog";
 import { cn } from "@/shared/utils/cn";
 import { QuickStatsWidget } from "@/features/dashboard/components/widgets/QuickStatsWidget";
 import { QuickActionsWidget } from "@/features/dashboard/components/widgets/QuickActionsWidget";
+import { MyTimeWidget } from "@/features/dashboard/components/widgets/MyTimeWidget";
 import { TodayAgendaWidget } from "@/features/dashboard/components/widgets/TodayAgendaWidget";
 import { MyTasksWidget } from "@/features/dashboard/components/widgets/MyTasksWidget";
 import { BookmarkedItemsWidget } from "@/features/dashboard/components/widgets/BookmarkedItemsWidget";
@@ -187,6 +188,7 @@ export function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {isWidgetVisible("quick-actions") && <QuickActionsWidget />}
+        {isWidgetVisible("my-time") && <MyTimeWidget />}
         {isWidgetVisible("team-presence") && <TeamPresenceWidget />}
         {isWidgetVisible("people") && <PeopleWidget />}
         {isWidgetVisible("recent-notes") && <RecentNotesWidget />}

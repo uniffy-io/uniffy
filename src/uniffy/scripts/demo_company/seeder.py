@@ -36,6 +36,7 @@ from uniffy.scripts.demo_company.people import (
 )
 from uniffy.scripts.demo_company.projects import seed_projects
 from uniffy.scripts.demo_company.rooms import seed_rooms
+from uniffy.scripts.demo_company.time import seed_time
 from uniffy.scripts.demo_company.timeline import apply_demo_timeline
 
 logger = logger.bind(component="scripts.demo_company.seeder")
@@ -49,6 +50,7 @@ class DemoDomain(StrEnum):
     ROOMS = "rooms"
     EVENTS = "events"
     PROJECTS = "projects"
+    TIME = "time"
     CHAT = "chat"
     BOOKMARKS = "bookmarks"
 
@@ -153,6 +155,10 @@ async def _run_domains(
 
     if DemoDomain.PROJECTS in only:
         report.results["projects"] = await seed_projects(ctx, content.projects, tag_ids)
+
+    # Time rides the tasks above: entries, one running timer, then approvals on what was logged.
+    if DemoDomain.TIME in only:
+        report.results["time"] = await seed_time(ctx, content.projects)
 
     # Mentions resolve once every id exists: a note can point at a room, file or
     # event created in this same run. Ahead of chat, which is the long stretch -

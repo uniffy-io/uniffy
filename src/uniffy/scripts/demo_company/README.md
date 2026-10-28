@@ -34,7 +34,7 @@ docker exec uniffy-dev-backend python -m uniffy.scripts.demo_company --only note
 | `--org-slug` | Target organization; defaults to the oldest one |
 | `--actor-email` | Owner of the seeded rows; defaults to the organization owner |
 | `--anchor-date` | Any date inside the week events are laid out on; defaults to this week |
-| `--only` | Comma-separated subset of `users,agents,notes,files,rooms,events,projects,chat` |
+| `--only` | Comma-separated subset of `users,agents,notes,files,rooms,events,projects,time,chat` |
 | `--dry-run` | Report without writing |
 | `--fresh-only` | Stack boot mode: wait for bootstrap, run once per database, record the sentinel |
 
@@ -117,6 +117,15 @@ offsets from the run; negative means the past.
 expansion is seeded by the project slug, so every run renders the same tasks.
 Status, sprint and completion follow each task's dates: past sprints close, the
 one spanning today starts, and parents roll up their children.
+
+Time entries ride the tasks. Every task that is past "to do" and has an
+assignee spreads the time it consumed over its assignees' recent workdays in
+30 to 240 minute chunks (`worklogs` on a hand-written task names the assignee,
+`days_ago` and `minutes`), so the `time_spent` column is always the sum of real
+entries. The time seeder then starts one timer on an in-progress task, turns
+approvals on in the org time policy, and submits last week for the busiest
+team's top logger while approving the week before for a teammate, so the team
+lead's Approvals tab and My time open populated.
 
 ## Generated binaries
 

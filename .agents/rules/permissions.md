@@ -141,6 +141,16 @@ A `people_profiles` row - job title, department, manager edge, phones, bio - is 
 
 The consequence that matters here: an org admin editing someone's profile gains **zero** content access. Nothing in the people domain may add a branch to `effective_role` or `build_accessible_filter`, touch `build_candidate_filter` / `visible_sets.py`, or register a `register_manage_override`. `tests/unit/directory/people/test_people_access.py` asserts both halves - the admin still resolves to `None` on that member's `OWNER_ONLY` note, and an AST walk over `domains/directory/people/` fails the build if any of those names appears there.
 
+## Time records (member-record data, not content)
+
+Worklogs, timers, timesheets and time periods (`projects_worklogs`, `projects_timers`, `projects_timesheets`, `projects_time_periods`) are **member-record data attached to tasks**, the same category as people profiles. They carry no `access_mode`, no `baseline_role` and no `ContentMember` rows, and they never route through `PermissionChecker`. Gates live in `domains/projects/time/access.py` (`TimeAccess`):
+
+- A task's entries are readable by whoever can view the task (`TaskContentOperations.get_by_id`, which resolves the parent project's policy), and a project's aggregates by whoever can view the project. Time logged on shared work is part of the record, like comments.
+- A person's entries across tasks (My time, the reviewer inbox) are readable by that person, by their reviewers - the manager from the people profile and the lead of every TEAM they are an active member of, read from `core.models` directly - and by timekeeping admins (org OWNER/ADMIN or a PROJECTS `DomainAdmin`). When nobody is named, the timekeeping admins are the reviewers. Task chips inside a reviewer's view resolve through the mention system, so a task the reviewer cannot open renders restricted while its minutes still count.
+- Writing on someone else's behalf, overriding a lock, closing a period and editing the policy are org-level powers gated on reviewer or timekeeping-admin status and audited; they confer **zero** content access.
+
+Nothing in `domains/projects/time/` may add a branch to `effective_role` or `build_accessible_filter`, touch `build_candidate_filter` / `visible_sets.py`, or register a `register_manage_override`. `tests/unit/projects/time/test_time_access_guard.py` walks the package's AST and fails the build if any of those names appears there.
+
 ## Frontend mirror (advisory only)
 
 `src/ui/src/shared/utils/contentRoles.ts` mirrors the backend: `roleCanView/...` predicates, `accessModeLabel/accessModeDescription`, and `bucketForContent` (sorts content into `personal` / `shared` / `organization` sidebar buckets). The frontend is for labelling and affordances only - **the backend is the gate.** An admin page may render a control on content the backend will deny; that is safe, not a bypass.

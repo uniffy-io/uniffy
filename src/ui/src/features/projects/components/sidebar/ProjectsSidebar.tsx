@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Gear, CaretDoubleLeft, ChartPieSlice } from "@phosphor-icons/react";
+import { Plus, Gear, CaretDoubleLeft, ChartPieSlice, Clock } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -138,8 +138,17 @@ export function ProjectsSidebar() {
           </div>
         </ScrollArea>
 
-        {/* Portfolio link */}
+        {/* My time and portfolio links */}
         <div className="px-3 py-2 border-t border-border">
+          <button
+            type="button"
+            onClick={() => navigate("/projects/time")}
+            className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-md transition-colors"
+            data-testid="sidebar-my-time"
+          >
+            <Clock size={14} />
+            My time
+          </button>
           <button
             type="button"
             onClick={() => navigate("/portfolio")}

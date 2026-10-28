@@ -7,6 +7,7 @@ import {
   Funnel,
   SquaresFour,
   CaretDown,
+  ClockCountdown,
   Plus,
   SidebarSimple,
   FrameCorners,
@@ -337,6 +338,14 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
 
           <PaneIconButton onClick={() => setIsExportOpen(true)} title="Export tasks">
             <DownloadSimple size={16} />
+          </PaneIconButton>
+
+          <PaneIconButton
+            onClick={() => navigate(`/projects/${project.id}/time`)}
+            title="Time report"
+            data-testid="project-time"
+          >
+            <ClockCountdown size={16} />
           </PaneIconButton>
 
           {canManage && (

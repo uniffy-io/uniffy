@@ -43,6 +43,7 @@ import {
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
+import { TimeColumnCell } from "@/features/projects/components/views/table/TimeColumnCell";
 import {
   selectSelectedTaskIds,
   selectSearchQuery,
@@ -201,7 +202,7 @@ export function TableView() {
   const allNonTitleFields = useMemo(() => {
     if (!project) return [];
     const real = project.fieldDefinitions.filter((f) => f.id !== SYSTEM_FIELD_IDS.TITLE);
-    return [...real, TAGS_VIRTUAL_FIELD];
+    return [...real, TAGS_VIRTUAL_FIELD, ESTIMATE_VIRTUAL_FIELD, SPENT_VIRTUAL_FIELD];
   }, [project]);
 
   // A view that lists its fields shows them in its own order; one that lists none shows them all.
@@ -1321,6 +1322,30 @@ function TableRow({
             </div>
           );
         }
+        if (field.id === ESTIMATE_COLUMN_KEY || field.id === SPENT_COLUMN_KEY) {
+          return (
+            <div
+              key={field.id}
+              className={cn(
+                "shrink-0 flex items-center px-3 border-r border-border relative overflow-hidden",
+                focusedFieldId === field.id && "ring-2 ring-inset ring-primary",
+              )}
+              style={{ width: resolveColumnWidth(field, columnWidths) }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCellClick(field.id);
+              }}
+            >
+              <TimeColumnCell
+                task={task}
+                kind={field.id === ESTIMATE_COLUMN_KEY ? "estimate" : "spent"}
+                isEditing={editingFieldId === field.id}
+                onStartEdit={() => onStartEdit(field.id)}
+                onEndEdit={onEndEdit}
+              />
+            </div>
+          );
+        }
         const isDropdownOpen =
           editingFieldId === field.id &&
           (field.type === "single_select" ||
@@ -2069,6 +2094,8 @@ function TagsRowCell({ task }: { task: Task }) {
 const ID_COLUMN_KEY = "__id__";
 const TITLE_COLUMN_KEY = SYSTEM_FIELD_IDS.TITLE;
 const TAGS_COLUMN_KEY = "__tags__";
+const ESTIMATE_COLUMN_KEY = "__estimate__";
+const SPENT_COLUMN_KEY = "__spent__";
 
 const TAGS_VIRTUAL_FIELD: FieldDefinition = {
   id: TAGS_COLUMN_KEY,
@@ -2083,10 +2110,30 @@ const TAGS_VIRTUAL_FIELD: FieldDefinition = {
   updatedAt: "",
 };
 
+// The two minute pseudo fields already drive filter and sort; these let the column
+// menu and the row renderer treat them like any other column.
+const ESTIMATE_VIRTUAL_FIELD: FieldDefinition = {
+  ...TAGS_VIRTUAL_FIELD,
+  id: ESTIMATE_COLUMN_KEY,
+  name: "Estimate",
+  type: "number",
+  sortOrder: 1001,
+};
+
+const SPENT_VIRTUAL_FIELD: FieldDefinition = {
+  ...TAGS_VIRTUAL_FIELD,
+  id: SPENT_COLUMN_KEY,
+  name: "Time spent",
+  type: "number",
+  sortOrder: 1002,
+};
+
 /** The saved-view field a table column stands for: the ID column is the task number. */
 function columnRef(columnKey: string): ViewFieldRef {
   if (columnKey === ID_COLUMN_KEY) return pseudoRef(TaskPseudoField.NUMBER);
   if (columnKey === TAGS_COLUMN_KEY) return pseudoRef(TaskPseudoField.TAGS);
+  if (columnKey === ESTIMATE_COLUMN_KEY) return pseudoRef(TaskPseudoField.ESTIMATED_MINUTES);
+  if (columnKey === SPENT_COLUMN_KEY) return pseudoRef(TaskPseudoField.TIME_SPENT_MINUTES);
   return fieldRef(columnKey);
 }
 
@@ -2094,6 +2141,8 @@ function columnKeyOf(ref: ViewFieldRef): string | null {
   if (ref.kind === "field") return ref.fieldId;
   if (ref.pseudo === TaskPseudoField.NUMBER) return ID_COLUMN_KEY;
   if (ref.pseudo === TaskPseudoField.TAGS) return TAGS_COLUMN_KEY;
+  if (ref.pseudo === TaskPseudoField.ESTIMATED_MINUTES) return ESTIMATE_COLUMN_KEY;
+  if (ref.pseudo === TaskPseudoField.TIME_SPENT_MINUTES) return SPENT_COLUMN_KEY;
   return null;
 }
 

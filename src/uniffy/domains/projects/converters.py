@@ -91,6 +91,9 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction] = {
     "assigned": ActivityAction.ASSIGNED,
     "type_changed": ActivityAction.TYPE_CHANGED,
     "sprint_changed": ActivityAction.SPRINT_CHANGED,
+    "time_logged": ActivityAction.TIME_LOGGED,
+    "time_updated": ActivityAction.TIME_UPDATED,
+    "time_removed": ActivityAction.TIME_REMOVED,
 }
 
 

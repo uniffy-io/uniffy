@@ -53,6 +53,8 @@ import { SubtasksList } from "./SubtasksList";
 import { TaskRecurrenceSelector } from "./TaskRecurrenceSelector";
 import { ActivityLog } from "./ActivityLog";
 import { DependenciesList } from "./DependenciesList";
+import { WorklogSection } from "@/features/projects/components/time/WorklogSection";
+import { TimerButton } from "@/features/projects/components/time/TimerButton";
 import { ParentPicker } from "./ParentPicker";
 
 interface TaskDetailPanelProps {
@@ -79,6 +81,25 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
     () => allProjectTasks.filter((t) => t.blockedByTaskIds.includes(taskId)).map((t) => t.id),
     [allProjectTasks, taskId],
   );
+  // Time logged on descendants, shown beside the task's own time; the Spent column and
+  // the group sums stay own-time only so nothing double counts.
+  const subtaskTimeSpent = useMemo(() => {
+    const childrenOf = new Map<string, Task[]>();
+    for (const t of allProjectTasks) {
+      if (!t.parentId) continue;
+      const siblings = childrenOf.get(t.parentId) ?? [];
+      siblings.push(t);
+      childrenOf.set(t.parentId, siblings);
+    }
+    let total = 0;
+    const stack = [...(childrenOf.get(taskId) ?? [])];
+    while (stack.length > 0) {
+      const t = stack.pop()!;
+      total += t.timeSpentMinutes ?? 0;
+      stack.push(...(childrenOf.get(t.id) ?? []));
+    }
+    return total;
+  }, [allProjectTasks, taskId]);
   const { canEdit } = useTaskPermission(taskId);
   const sprints = useAppSelector(selectSprintsForProject(project?.id ?? ""));
 
@@ -168,6 +189,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <TimerButton task={task} />
           <WatchButton taskId={task.id} />
           {!isMobileOrTablet && (
             <button
@@ -587,19 +609,22 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                     dispatch(updateTask({ id: task.id, estimatedMinutes: minutes }));
                   }}
                 />
-                <TimeField
-                  label="Time Spent"
-                  minutes={task.timeSpentMinutes}
-                  onSave={(minutes) => {
-                    dispatch(
-                      optimisticUpdateTask({
-                        id: task.id,
-                        timeSpentMinutes: minutes,
-                      }),
-                    );
-                    dispatch(updateTask({ id: task.id, timeSpentMinutes: minutes }));
-                  }}
-                />
+                {/* Time spent is the sum of the task's worklogs, never typed. */}
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground w-20 flex items-center gap-1.5">
+                    <Clock size={12} />
+                    Time Spent
+                  </span>
+                  <span className="text-sm">
+                    {task.timeSpentMinutes ? formatMinutes(task.timeSpentMinutes) : "Not set"}
+                  </span>
+                  {subtaskTimeSpent > 0 && (
+                    <span className="text-xs text-subtle-foreground">
+                      {formatMinutes((task.timeSpentMinutes ?? 0) + subtaskTimeSpent)} incl.
+                      subtasks
+                    </span>
+                  )}
+                </div>
 
                 {/* Time Progress Bar */}
                 {task.estimatedMinutes != null && task.estimatedMinutes > 0 && (
@@ -640,6 +665,8 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
                 )}
               </div>
             </div>
+
+            <WorklogSection task={task} />
 
             {/* Dependencies (Blocked By + Blocks) */}
             <DependenciesList

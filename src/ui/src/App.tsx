@@ -22,6 +22,7 @@ import { PlatformRoute } from "@/features/platform/components/PlatformRoute";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { SpotlightSearch } from "@/features/search/components/SpotlightSearch";
 import { ZenModeHandler } from "@/components/layout/ZenModeHandler";
+import { TimerShortcutHandler } from "@/features/projects/components/time/TimerShortcutHandler";
 import { StreamingProvider } from "@/components/streaming/StreamingProvider";
 import { notificationHref } from "@/features/notifications/utils/notificationTarget";
 import { FileViewerModal } from "@/features/files/components/viewer/FileViewerModal";
@@ -127,6 +128,10 @@ const AuditLogsPage = lazyImport(
 const AdminAgentsPage = lazyImport(() => import("@/features/admin/pages/AgentsPage"), "AgentsPage");
 const StoragePage = lazyImport(() => import("@/features/admin/pages/StoragePage"), "StoragePage");
 const CallsAdminPage = lazyImport(() => import("@/features/admin/pages/CallsPage"), "CallsPage");
+const ProjectsAdminPage = lazyImport(
+  () => import("@/features/admin/pages/ProjectsAdminPage"),
+  "ProjectsAdminPage",
+);
 const ChatAdminPage = lazyImport(() => import("@/features/admin/pages/ChatPage"), "ChatPage");
 const CalendarAdminPage = lazyImport(
   () => import("@/features/admin/pages/CalendarPage"),
@@ -198,6 +203,15 @@ const PortfolioPage = lazyImport(
 const TaskRedirectPage = lazyImport(
   () => import("@/features/projects/pages/TaskRedirectPage"),
   "TaskRedirectPage",
+);
+const MyTimePage = lazyImport(() => import("@/features/projects/pages/MyTimePage"), "MyTimePage");
+const ReviewTimePage = lazyImport(
+  () => import("@/features/projects/pages/ReviewTimePage"),
+  "ReviewTimePage",
+);
+const ProjectTimePage = lazyImport(
+  () => import("@/features/projects/pages/ProjectTimePage"),
+  "ProjectTimePage",
 );
 const ProjectSettingsPage = lazyImport(
   () => import("@/features/projects/pages/ProjectSettingsPage"),
@@ -424,6 +438,8 @@ export function App() {
           <RoomViewerModal />
           {/* Global Zen Mode handler - toggles distraction-free mode */}
           <ZenModeHandler />
+          {/* Global timer shortcut - pause, resume or start on the open task */}
+          <TimerShortcutHandler />
           {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
           <StreamingProvider />
           {/* Global toast notifications */}
@@ -650,6 +666,14 @@ export function App() {
                       element={
                         <LazyRoute>
                           <CallsAdminPage />
+                        </LazyRoute>
+                      }
+                    />
+                    <Route
+                      path="projects"
+                      element={
+                        <LazyRoute>
+                          <ProjectsAdminPage />
                         </LazyRoute>
                       }
                     />
@@ -979,6 +1003,17 @@ export function App() {
                   />
 
                   <Route
+                    path="/projects/:projectId/time"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ProjectTimePage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
                     path="/projects/:projectId/settings"
                     element={
                       <ProtectedRoute>
@@ -997,6 +1032,28 @@ export function App() {
                       <ProtectedRoute>
                         <LazyRoute>
                           <ProjectsPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/projects/time"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <MyTimePage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/projects/time/review/:userId"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ReviewTimePage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }

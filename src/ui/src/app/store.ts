@@ -73,6 +73,7 @@ import { errorToastMiddleware } from "@/app/errorToastMiddleware";
 import { contentAccessMiddleware } from "@/app/contentAccessMiddleware";
 import { presenceReducer } from "@/features/presence/store/presenceSlice";
 import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
+import { timeReducer } from "@/features/projects/store/timeSlice";
 import { roomsReducer } from "@/features/rooms/store/roomsSlice";
 import { chatChannelsReducer } from "@/features/chat/store/chatChannelsSlice";
 import { chatMessagesReducer } from "@/features/chat/store/chatMessagesSlice";
@@ -210,6 +211,7 @@ const rootReducer = combineReducers({
   agentMemories: agentMemoriesReducer,
   integrations: integrationsReducer,
   sprints: sprintsReducer,
+  time: timeReducer,
   rooms: roomsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,

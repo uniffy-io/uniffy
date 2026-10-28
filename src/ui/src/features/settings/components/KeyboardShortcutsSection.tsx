@@ -45,6 +45,11 @@ const SHORTCUT_CATEGORIES = [
     shortcuts: [{ action: "recording.toggleQuickClip", label: "Start / Stop Quick Recording" }],
   },
   {
+    id: "time",
+    label: "Time Tracking",
+    shortcuts: [{ action: "time.toggleTimer", label: "Start / Pause / Resume Timer" }],
+  },
+  {
     id: "editor",
     label: "Notes Editor",
     shortcuts: [

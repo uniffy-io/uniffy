@@ -12,6 +12,8 @@ const client = createClient(SearchService, transport);
 export const searchApi = {
   search: (request: MessageInitShape<typeof SearchRequestSchema>) => client.search(request),
 
-  resolveUrns: (request: MessageInitShape<typeof ResolveUrnsRequestSchema>) =>
-    client.resolveUrns(request),
+  resolveUrns: (
+    request: MessageInitShape<typeof ResolveUrnsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.resolveUrns(request, { signal: options?.signal }),
 };

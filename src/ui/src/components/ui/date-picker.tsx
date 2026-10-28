@@ -32,6 +32,8 @@ interface DatePickerProps {
   triggerClassName?: string;
   /** `sm` fits a pane header controls row. */
   size?: "sm" | "md";
+  /** `YYYY-MM-DD`; later days are shown but cannot be picked. */
+  maxDate?: string;
 }
 
 interface DropdownPosition {
@@ -55,6 +57,7 @@ export function DatePicker({
   className,
   triggerClassName,
   size = "md",
+  maxDate,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<DropdownPosition | null>(null);
@@ -198,17 +201,20 @@ export function DatePicker({
             const isCurrentMonth = isSameMonth(day, displayMonth);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isCurrentDay = isToday(day);
+            const isAfterMax = Boolean(maxDate) && format(day, "yyyy-MM-dd") > maxDate!;
 
             return (
               <button
                 key={day.toISOString()}
                 type="button"
                 onClick={() => handleDayClick(day)}
+                disabled={isAfterMax}
                 className={cn(
                   "h-8 w-full rounded-md text-sm transition-colors",
                   "focus-ring",
                   !isCurrentMonth && "text-subtle-foreground",
                   isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
+                  isAfterMax && "cursor-not-allowed opacity-35 hover:bg-transparent",
                   isCurrentDay && !isSelected && "font-semibold text-primary",
                   isSelected && "bg-primary text-primary-foreground font-medium",
                 )}

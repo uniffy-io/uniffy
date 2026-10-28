@@ -41,6 +41,11 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.SUPPORT_SESSION_STARTED: (ProtoNotificationType.SUPPORT_SESSION_STARTED),
     NotificationType.SUPPORT_SESSION_REVOKED: (ProtoNotificationType.SUPPORT_SESSION_REVOKED),
     NotificationType.SUPPORT_SESSION_EXPIRED: (ProtoNotificationType.SUPPORT_SESSION_EXPIRED),
+    NotificationType.TIMER_LIMIT_REACHED: ProtoNotificationType.TIMER_LIMIT_REACHED,
+    NotificationType.TIMESHEET_SUBMITTED: ProtoNotificationType.TIMESHEET_SUBMITTED,
+    NotificationType.TIMESHEET_APPROVED: ProtoNotificationType.TIMESHEET_APPROVED,
+    NotificationType.TIMESHEET_REJECTED: ProtoNotificationType.TIMESHEET_REJECTED,
+    NotificationType.TIMESHEET_REMINDER: ProtoNotificationType.TIMESHEET_REMINDER,
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {

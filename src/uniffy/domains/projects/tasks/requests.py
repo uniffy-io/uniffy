@@ -67,8 +67,6 @@ def create_task_arguments(request: CreateTaskRequest) -> dict[str, Any]:
         )
     if request.has_field("estimated_minutes"):
         kwargs["estimated_minutes"] = request.estimated_minutes or None
-    if request.has_field("time_spent_minutes"):
-        kwargs["time_spent_minutes"] = request.time_spent_minutes or None
     if request.field_values:
         kwargs["field_values"] = _parse_field_values(request.field_values)
     return kwargs
@@ -112,8 +110,6 @@ def update_task_arguments(request: UpdateTaskRequest) -> dict[str, Any]:
         )
     if request.has_field("estimated_minutes"):
         updates["estimated_minutes"] = request.estimated_minutes or None
-    if request.has_field("time_spent_minutes"):
-        updates["time_spent_minutes"] = request.time_spent_minutes or None
     if request.field_values:
         updates["field_values"] = _parse_field_values(request.field_values)
     if request.has_field("tag_ids"):

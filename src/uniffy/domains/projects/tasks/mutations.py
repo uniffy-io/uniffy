@@ -38,6 +38,9 @@ from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.recurrence import spawn_next_recurring_instance
 from uniffy.domains.projects.tasks.validation import TaskValidator
+from uniffy.domains.projects.time.cleanup import (
+    stage_delete_for_tasks as stage_delete_time_records,
+)
 from uniffy.domains.projects.watchers.operations import WatcherOperations
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import TagOperations
@@ -160,7 +163,6 @@ class TaskMutationOperations:
             "recurrence_rule",
             "sprint_id",
             "estimated_minutes",
-            "time_spent_minutes",
         }
 
         for key, value in kwargs.items():
@@ -417,6 +419,8 @@ class TaskMutationOperations:
 
         staged_tags = None
         if permanent:
+            # Refuses before any other effect while an entry sits in a locked period.
+            await stage_delete_time_records(self.session, organization_id, [task_id])
             tag_ops = TagOperations(self.session, self.content.search_indexer)
             staged_tags = await tag_ops.stage_unassign_all_for_urn(
                 actor_id=user_id,

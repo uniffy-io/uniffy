@@ -44,6 +44,9 @@ from uniffy.domains.projects.defaults import (
     stage_default_project_views,
 )
 from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.projects.time.cleanup import (
+    stage_delete_for_tasks as stage_delete_time_records,
+)
 from uniffy.domains.search.rename import propagate_rename
 from uniffy.domains.tags.operations import StagedManualTagReplacement, TagOperations
 
@@ -378,6 +381,9 @@ class ProjectOperations(BaseContentOperations[Project]):
         ]
         staged_tags = []
         if permanent:
+            # Refuses before any other effect while an entry sits in a locked period, and
+            # clears the rows the raw task delete in the cascade would otherwise trip on.
+            await stage_delete_time_records(self.session, organization_id, task_ids)
             tag_ops = TagOperations(self.session, self.search_indexer)
             project_urn = build_content_urn(self.content_type, project_id)
             staged_tags.append(

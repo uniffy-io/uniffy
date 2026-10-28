@@ -46,6 +46,7 @@ const DEFAULT_SHORTCUTS: Record<string, string> = {
   "projects.undo": "Ctrl+Z",
   "projects.redo": "Ctrl+Shift+Z",
   "recording.toggleQuickClip": "Ctrl+Alt+S",
+  "time.toggleTimer": "Ctrl+Shift+L",
   // Tooltip-only; Milkdown owns the actual keymap.
   "editor.undo": "Ctrl+Z",
   "editor.redo": "Ctrl+Shift+Z",

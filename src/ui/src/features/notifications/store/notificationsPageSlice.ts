@@ -253,6 +253,13 @@ const NOTIFICATION_TYPE_CATEGORIES: Record<string, number[]> = {
     NotificationType.TASK_ASSIGNED,
     NotificationType.TASK_DUE_SOON,
     NotificationType.TASK_OVERDUE,
+    NotificationType.TIMER_LIMIT_REACHED,
+  ],
+  time: [
+    NotificationType.TIMESHEET_SUBMITTED,
+    NotificationType.TIMESHEET_APPROVED,
+    NotificationType.TIMESHEET_REJECTED,
+    NotificationType.TIMESHEET_REMINDER,
   ],
   chat: [
     NotificationType.CHAT_MENTION,
