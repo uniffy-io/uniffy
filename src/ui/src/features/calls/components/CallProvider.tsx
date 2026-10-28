@@ -1,3 +1,4 @@
+import { useCallPopout } from "@/features/calls/hooks/useCallPopout";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ConnectionState,
@@ -165,6 +166,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const { availability, checkAvailability } = useCallAvailability();
   const session = useAppSelector(selectCallSession);
+  const { popoutWindow, openPopout, closePopout } = useCallPopout(session.callId);
   const sessionCall = useAppSelector(selectSessionCall);
   const preferences = useAppSelector(selectCallPreferences);
   const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
@@ -451,7 +453,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             if (roomRef.current === r) dispatch(feedbackChanged(callErrorMessage(null, device)));
           });
         }
-        if (pub.source === Track.Source.ScreenShare) {
+        if (pub.source === Track.Source.Microphone) {
+          dispatch(localMediaChanged({ micEnabled: !pub.isMuted }));
+          reportMediaState();
+        } else if (pub.source === Track.Source.Camera) {
+          dispatch(localMediaChanged({ cameraEnabled: !pub.isMuted }));
+          reportMediaState();
+        } else if (pub.source === Track.Source.ScreenShare) {
           dispatch(localMediaChanged({ screenSharing: true }));
           reportMediaState();
         }
@@ -890,6 +898,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<CallContextValue>(
     () => ({
       room,
+      popoutWindow,
+      openPopout,
+      closePopout,
       availability,
       checkAvailability,
       joinChannelCall,
@@ -905,6 +916,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       room,
+      popoutWindow,
+      openPopout,
+      closePopout,
       availability,
       checkAvailability,
       joinChannelCall,

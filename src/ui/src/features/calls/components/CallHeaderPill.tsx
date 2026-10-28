@@ -1,3 +1,4 @@
+import { CallPopoutButton } from "@/features/calls/components/CallPopoutButton";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, PhoneDisconnect } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
@@ -85,6 +86,7 @@ export function CallHeaderPill() {
         </button>
 
         <ControlsBar compact />
+        <CallPopoutButton />
       </div>
 
       <div className="flex md:hidden items-center gap-1">

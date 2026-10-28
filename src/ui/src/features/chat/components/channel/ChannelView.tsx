@@ -1,3 +1,8 @@
+import {
+  feedbackChanged,
+  prejoinOpened,
+  selectCallSession,
+} from "@/features/calls/store/callsSlice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Hash, Trash } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
@@ -51,6 +56,7 @@ export function ChannelView({
 }: ChannelViewProps) {
   const dispatch = useAppDispatch();
   const lastTypingSentRef = useRef(0);
+  const callSession = useAppSelector(selectCallSession);
 
   const activeChannelIdFromRedux = useAppSelector((state) => state.chatChannels.activeChannelId);
   const effectiveChannelId = channelIdProp ?? activeChannelIdFromRedux;
@@ -260,6 +266,19 @@ export function ChannelView({
       channelId={effectiveChannelId ?? undefined}
       organizationId={organizationId ?? undefined}
       onSend={handleSend}
+      commandHandlers={{
+        call: activeChannel.isAgentDm
+          ? undefined
+          : () => {
+              if (!effectiveChannelId || !activeChannel) return false;
+              if (callSession.status !== "idle") {
+                dispatch(feedbackChanged("Leave your current call before starting another."));
+                return false;
+              }
+              dispatch(prejoinOpened({ channelId: effectiveChannelId }));
+              return true;
+            },
+      }}
       onTyping={handleTyping}
       replyTo={replyToMessage}
       onCancelReply={handleCancelReply}

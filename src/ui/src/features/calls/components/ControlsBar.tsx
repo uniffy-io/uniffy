@@ -1,3 +1,4 @@
+import { useFormattedKeybinding } from "@/features/settings/hooks/useKeyboardShortcuts";
 import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
 import { useRef, useState } from "react";
 import {
@@ -43,6 +44,10 @@ interface ControlsBarProps {
 
 export function ControlsBar({ compact = false, onToggleParticipants }: ControlsBarProps) {
   const dispatch = useAppDispatch();
+  const muteShortcut = useFormattedKeybinding("calls.mute");
+  const cameraShortcut = useFormattedKeybinding("calls.camera");
+  const leaveShortcut = useFormattedKeybinding("calls.leave");
+  const talkShortcut = useFormattedKeybinding("calls.pushToTalk");
   const {
     toggleMic,
     toggleCamera,
@@ -72,6 +77,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
           onClick={() => void toggleMic()}
           className={cn(compactControlClass, !session.micEnabled && offClass)}
           aria-label={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
+          title={`Microphone (${muteShortcut}). Hold ${talkShortcut} to talk while muted.`}
           data-testid="call-mic-toggle"
         >
           {session.micEnabled ? <Microphone size={15} /> : <MicrophoneSlash size={15} />}
@@ -81,6 +87,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
           onClick={() => void toggleCamera()}
           className={cn(compactControlClass, !session.cameraEnabled && offClass)}
           aria-label={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
+          title={`Camera (${cameraShortcut})`}
           data-testid="call-camera-toggle"
         >
           {session.cameraEnabled ? <VideoCamera size={15} /> : <VideoCameraSlash size={15} />}
@@ -105,6 +112,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
             "border-red-500 bg-red-500 text-white hover:bg-red-600",
           )}
           aria-label="Leave call"
+          title={`Leave call (${leaveShortcut})`}
           data-testid="call-leave-button"
         >
           <PhoneDisconnect size={15} weight="fill" />
@@ -121,6 +129,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
           onClick={() => void toggleMic()}
           className={cn(controlClass, "rounded-r-none", !session.micEnabled && offClass)}
           aria-label={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
+          title={`Microphone (${muteShortcut}). Hold ${talkShortcut} to talk while muted.`}
           data-testid="call-mic-toggle"
         >
           {session.micEnabled ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
@@ -154,6 +163,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
           onClick={() => void toggleCamera()}
           className={cn(controlClass, "rounded-r-none", !session.cameraEnabled && offClass)}
           aria-label={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
+          title={`Camera (${cameraShortcut})`}
           data-testid="call-camera-toggle"
         >
           {session.cameraEnabled ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
@@ -232,6 +242,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
         onClick={() => void leaveCurrentCall()}
         className={cn(controlClass, "bg-red-500 border-red-500 text-white hover:bg-red-600 px-3")}
         aria-label="Leave call"
+        title={`Leave call (${leaveShortcut})`}
         data-testid="call-leave-button"
       >
         <PhoneDisconnect size={16} weight="fill" />

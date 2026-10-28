@@ -2,12 +2,19 @@ import { cn } from "@/shared/utils/cn";
 
 interface ToggleSwitchProps {
   enabled: boolean;
+  ariaLabel?: string;
   onChange: (enabled: boolean) => void;
   disabled?: boolean;
   size?: "sm" | "md";
 }
 
-export function ToggleSwitch({ enabled, onChange, disabled, size = "md" }: ToggleSwitchProps) {
+export function ToggleSwitch({
+  enabled,
+  onChange,
+  disabled,
+  ariaLabel,
+  size = "md",
+}: ToggleSwitchProps) {
   const sizeClasses =
     size === "sm"
       ? { container: "h-5 w-9", knob: "h-4 w-4", translate: "translate-x-4" }
@@ -18,6 +25,7 @@ export function ToggleSwitch({ enabled, onChange, disabled, size = "md" }: Toggl
       type="button"
       role="switch"
       aria-checked={enabled}
+      aria-label={ariaLabel}
       disabled={disabled}
       className={cn(
         "focus-ring relative inline-flex shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out",

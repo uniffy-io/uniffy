@@ -345,6 +345,41 @@ direct media), nothing changes anywhere.
 - [ ] VM/compose mode with TURN env unset: calls still connect via LiveKit's embedded TURN,
       responses carry no ice_servers, and webrtc-internals shows the usual candidate mix.
 
+## Calls: preferences, shortcuts and quick start
+
+- [ ] Web Settings > Calls: change ringtone, join-muted, camera-on and default devices. Reload,
+      open setup, cancel, then reopen. Saved defaults apply each time. No media captures before
+      setup opens or after it closes. Missing devices fall back safely; denied permissions show
+      feedback without blocking audio-only or listen-only joining.
+- [ ] Mobile You > Calls: change join-muted, camera-on and front/back camera. Restart app and open
+      setup. Saved defaults apply. Speaker/headset choice in setup persists when available;
+      disconnected routes fall back to system routing. Verify on Android and iOS.
+- [ ] Disable ringtone, receive a call on web and mobile, and confirm no ring. Enable it and repeat.
+      Visual invitation remains available in either case.
+- [ ] Settings > Keyboard Shortcuts lists Calls. Test mute (Ctrl+Alt+M), camera (Ctrl+Alt+V),
+      answer into setup (Ctrl+Alt+A), decline (Ctrl+Alt+D), leave (Ctrl+Alt+L). On Mac use Cmd.
+      Remap each action and test again. Holding keys must not repeatedly toggle or leave calls.
+- [ ] While muted, hold Space outside editors and controls: microphone opens only for that hold.
+      Release, blur window, hide tab, or change binding while held: microphone closes. Release
+      before a slow permission grant finishes: microphone still closes after grant. Starting
+      unmuted leaves microphone unchanged. Space in a composer or on a button keeps normal behavior.
+- [ ] Type `/` in an empty channel composer: command menu shows `/call`, "Open call setup" and
+      a mic/camera explanation. Filter by name or description, browse with arrow keys, select
+      with Enter, Tab or click, and dismiss with Escape. Selection opens setup without sending.
+      Agent skills share this menu when an agent is targeted. Agent DMs show skills without the
+      call action; typing `/call` there must not open call setup. Editing messages and ordinary prose
+      with a slash must not offer call actions. No-match queries show an empty state.
+- [ ] Type exactly `/call` in a channel and send: setup opens, no message or skill invocation is
+      sent. Cancel leaves channel unchanged. Attached files remain in draft. `/callback` and
+      messages containing `/call` stay ordinary text. During another call, draft remains with
+      feedback. Existing-message edits and thread replies keep normal send behavior.
+- [ ] Pop out a live call and navigate to Notes. Video, mute, camera, leave and push-to-talk still
+      work. Closing pop-out or Return to tab keeps same call connected. Leaving or ending call
+      closes pop-out. Original tab must stay open. Theme changes appear in pop-out.
+- [ ] Test Document Picture-in-Picture where supported and normal popup fallback in another
+      browser. Fallback stays in a separate window, with no always-on-top guarantee. Blocking
+      popups shows feedback and keeps embedded call usable. Repeated clicks focus existing window.
+
 ## Calls: mobile client
 
 The phone carries the controls a phone can reasonably offer. Needs a dev build on each platform

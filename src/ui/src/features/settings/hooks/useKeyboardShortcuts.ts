@@ -3,6 +3,12 @@ import { useAppSelector } from "@/app/hooks";
 
 /** Fallback used until user settings load; diff against this drives the rebind UI in KeyboardShortcutsSection. */
 const DEFAULT_SHORTCUTS: Record<string, string> = {
+  "calls.mute": "Ctrl+Alt+M",
+  "calls.camera": "Ctrl+Alt+V",
+  "calls.answer": "Ctrl+Alt+A",
+  "calls.decline": "Ctrl+Alt+D",
+  "calls.leave": "Ctrl+Alt+L",
+  "calls.pushToTalk": "Space",
   "nav.search": "Ctrl+K",
   "app.settings": "Ctrl+,",
   "app.commandPalette": "Ctrl+Shift+P",
@@ -103,6 +109,7 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
   if (event.altKey !== parsed.alt) return false;
 
   const eventKey = event.key.toLowerCase();
+  if (parsed.key === "space") return eventKey === " " || event.code === "Space";
   if (parsed.key === "left") return eventKey === "arrowleft";
   if (parsed.key === "right") return eventKey === "arrowright";
   if (parsed.key === "\\") return eventKey === "\\" || event.code === "Backslash";
@@ -117,10 +124,15 @@ function shortcutOwnsKeypress(shortcut: string): boolean {
   return parsed.ctrl || parsed.meta || parsed.alt;
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+export function isEditableTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el) return false;
-  return el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable;
+  return (
+    el.tagName === "INPUT" ||
+    el.tagName === "TEXTAREA" ||
+    el.tagName === "SELECT" ||
+    el.isContentEditable
+  );
 }
 
 export function useKeyboardBindings() {
@@ -183,15 +195,23 @@ export function useShortcutHandlers(
   options: {
     enabled?: boolean;
     preventDefault?: boolean;
+    targetWindow?: Window;
+    ignoreRepeat?: boolean;
   } = {},
 ) {
-  const { enabled = true, preventDefault = true } = options;
+  const {
+    enabled = true,
+    preventDefault = true,
+    targetWindow = window,
+    ignoreRepeat = false,
+  } = options;
   const bindings = useKeyboardBindings();
 
   useEffect(() => {
     if (!enabled) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.isComposing || (ignoreRepeat && event.repeat)) return;
       const editable = isEditableTarget(event.target);
 
       for (const [action, handler] of Object.entries(handlers)) {
@@ -208,9 +228,9 @@ export function useShortcutHandlers(
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [bindings, handlers, enabled, preventDefault]);
+    targetWindow.addEventListener("keydown", handleKeyDown);
+    return () => targetWindow.removeEventListener("keydown", handleKeyDown);
+  }, [bindings, handlers, enabled, preventDefault, targetWindow, ignoreRepeat]);
 }
 
 export function useGlobalShortcuts() {

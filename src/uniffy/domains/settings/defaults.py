@@ -11,6 +11,12 @@ from uniffy.core.types import NotificationType
 
 # Key: action identifier (dot-separated namespace). Value: shortcut (Ctrl == Cmd on macOS).
 DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
+    "calls.mute": "Ctrl+Alt+M",
+    "calls.camera": "Ctrl+Alt+V",
+    "calls.answer": "Ctrl+Alt+A",
+    "calls.decline": "Ctrl+Alt+D",
+    "calls.leave": "Ctrl+Alt+L",
+    "calls.pushToTalk": "Space",
     "nav.search": "Ctrl+K",
     "app.settings": "Ctrl+,",
     "app.commandPalette": "Ctrl+Shift+P",

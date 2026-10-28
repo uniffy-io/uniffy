@@ -40,6 +40,18 @@ const SHORTCUT_CATEGORIES = [
     shortcuts: [{ action: "chat.editLast", label: "Edit Last Message" }],
   },
   {
+    id: "calls",
+    label: "Calls",
+    shortcuts: [
+      { action: "calls.mute", label: "Mute / Unmute Microphone" },
+      { action: "calls.camera", label: "Toggle Camera" },
+      { action: "calls.answer", label: "Answer Call (Open Setup)" },
+      { action: "calls.decline", label: "Decline Call" },
+      { action: "calls.leave", label: "Leave Call" },
+      { action: "calls.pushToTalk", label: "Hold to Talk While Muted" },
+    ],
+  },
+  {
     id: "recording",
     label: "Screen Recording",
     shortcuts: [{ action: "recording.toggleQuickClip", label: "Start / Stop Quick Recording" }],
