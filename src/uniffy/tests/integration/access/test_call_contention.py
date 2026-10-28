@@ -10,6 +10,7 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calls import Call, CallEndReason, CallParticipant
 from uniffy.core.models.chat.channel import ChannelType
+from uniffy.domains.calls.metrics import CALL_DURATION, CALLS_ENDED, CALLS_STARTED
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.chat import calls as events
 from uniffy.domains.chat.calls import CallChat
@@ -30,6 +31,8 @@ def publication(monkeypatch):
 
 
 async def test_simultaneous_ends_publish_and_audit_once(session, access, livekit, publication):
+    ended_before = CALLS_ENDED.labels(CallEndReason.HOST_ENDED.value)._value.get()
+    duration_before = CALL_DURATION._sum.get()
     call = await _call(session, access)
     await _participant(session, call, access.admin_id)
 
@@ -39,6 +42,8 @@ async def test_simultaneous_ends_publish_and_audit_once(session, access, livekit
 
     results = await contend(select(Call).where(Call.id == call.id).with_for_update(), [end, end])
     assert sorted(results) == [False, True]
+    assert CALLS_ENDED.labels(CallEndReason.HOST_ENDED.value)._value.get() == ended_before + 1
+    assert CALL_DURATION._sum.get() > duration_before
     assert await CallOperations(session).list_active_participants(call.id) == []
     rows = (
         await session.scalars(
@@ -78,6 +83,7 @@ async def test_simultaneous_starts_share_one_call(
     session, access, livekit, publication, monkeypatch
 ):
     channel = await _channel(session, access.org_id, access.owner_id, ChannelType.PUBLIC)
+    started_before = CALLS_STARTED.labels("CHANNEL")._value.get()
     barrier = asyncio.Barrier(2)
     read = CallOperations.get_active_call_row
     admit = CallOperations._join
@@ -110,6 +116,7 @@ async def test_simultaneous_starts_share_one_call(
     async with asyncio.timeout(15), asyncio.TaskGroup() as group:
         starters = [group.create_task(start(uid)) for uid in (access.owner_id, access.admin_id)]
     results = [task.result() for task in starters]
+    assert CALLS_STARTED.labels("CHANNEL")._value.get() == started_before + 1
     assert results[0][0].id == results[1][0].id
     assert sorted(r[3] for r in results) == [False, True]
     call_id = results[0][0].id
@@ -355,6 +362,7 @@ async def test_rejoin_waiting_on_ghost_retirement_creates_fresh_active_row(
 async def test_end_audit_failure_rolls_back_terminal_rows(
     session, access, livekit, publication, monkeypatch
 ):
+    ended_before = CALLS_ENDED.labels(CallEndReason.HOST_ENDED.value)._value.get()
     call = await _call(session, access)
     monkeypatch.setattr(
         "uniffy.domains.calls.operations.write_audit_event",
@@ -366,6 +374,7 @@ async def test_end_audit_failure_rolls_back_terminal_rows(
                 await other.get(Call, call.id), CallEndReason.HOST_ENDED
             )
     await session.refresh(call)
+    assert CALLS_ENDED.labels(CallEndReason.HOST_ENDED.value)._value.get() == ended_before
     assert call.ended_at is None
     assert len(await CallOperations(session).list_active_participants(call.id)) == 1
     assert (

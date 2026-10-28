@@ -12,6 +12,7 @@ from uniffy.domains.calls import operations
 from uniffy.domains.calls.config import get_livekit_config
 from uniffy.domains.calls.jobs import jobs
 from uniffy.domains.calls.livekit import LiveKitAdminClient, LiveKitApiError
+from uniffy.domains.calls.metrics import MAINTENANCE_RUNS, MAINTENANCE_REPAIRS, Outcome
 from uniffy.domains.calls.policy import ResolvedCallPolicy, save_call_policy
 from uniffy.domains.calls.tokens import livekit_room_name
 from uniffy.tests.integration.access.calls import _call, _participant
@@ -61,7 +62,12 @@ async def test_missing_participants_need_two_passes_and_join_grace(
         .values(missing_since=datetime.now(UTC) - timedelta(minutes=2))
     )
     await session.commit()
+    repairs = MAINTENANCE_REPAIRS.labels("reconcile_calls", "ghost_participants")
+    runs = MAINTENANCE_RUNS.labels("reconcile_calls", Outcome.SUCCESS)
+    repair_count, run_count = repairs._value.get(), runs._value.get()
     fourth = await jobs.reconcile_calls({})
+    assert repairs._value.get() == repair_count + 2
+    assert runs._value.get() == run_count + 1
     assert fourth["ghost_participants"] == 2
     assert fourth["ended"] == 1
     await session.refresh(call)
@@ -168,7 +174,10 @@ async def test_media_outage_preserves_presence_but_enforces_duration(
     client._http = SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(status=503)))
     monkeypatch.setattr(jobs, "get_livekit_admin_client", lambda: client)
     monkeypatch.setattr(operations, "get_livekit_admin_client", lambda: client)
+    degraded = MAINTENANCE_RUNS.labels("reconcile_calls", Outcome.DEGRADED)
+    before = degraded._value.get()
     result = await jobs.reconcile_calls({})
+    assert degraded._value.get() == before + 1
     assert result["status"] == "success"
     assert result["media_reachable"] is False
     assert result["ended"] == 1 and result["ghost_participants"] == 0

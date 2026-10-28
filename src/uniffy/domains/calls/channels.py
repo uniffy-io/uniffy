@@ -34,7 +34,7 @@ class CallsLifecycle:
         try:
             operations = CallOperations(session)
         except LiveKitConfigError:
-            logger.warning(
+            logger.bind(call_id=str(call.id)).warning(
                 "Active call {} in channel {} but LiveKit is not configured",
                 call.id,
                 channel_id,

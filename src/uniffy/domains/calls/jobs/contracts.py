@@ -23,8 +23,16 @@ CLEANUP_ORPHAN_CALL_ROOMS_SCHEDULE = JobRef(
     ),
 )
 
+MONITOR_CALLS_SCHEDULE = JobRef(
+    name="cron:monitor_calls",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.BEST_EFFORT,
+)
+
 CALLS_JOB_REFS: tuple[JobRef, ...] = ()
 CALLS_SCHEDULED_JOB_REFS = (
+    MONITOR_CALLS_SCHEDULE,
     RECONCILE_CALLS_SCHEDULE,
     CLEANUP_ORPHAN_CALL_ROOMS_SCHEDULE,
 )

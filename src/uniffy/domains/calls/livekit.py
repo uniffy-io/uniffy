@@ -12,7 +12,8 @@ from loguru import logger
 from pyqwest import Client, ReadError, WriteError
 
 from uniffy.domains.calls.config import LiveKitConfig
-from uniffy.domains.calls.tokens import LiveKitTokenMinter
+from uniffy.domains.calls.metrics import CIRCUIT_OPEN_UNTIL, CIRCUIT_OPENED
+from uniffy.domains.calls.tokens import LiveKitTokenMinter, parse_room_call_id
 
 logger = logger.bind(component="calls.livekit")
 
@@ -58,6 +59,8 @@ class _CircuitBreaker:
         if len(self._failures) >= BREAKER_FAILURE_THRESHOLD:
             self._open_until = now + BREAKER_OPEN_SECONDS
             self._failures.clear()
+            CIRCUIT_OPENED.inc()
+            CIRCUIT_OPEN_UNTIL.set(time.time() + BREAKER_OPEN_SECONDS)
             logger.warning(f"LiveKit circuit breaker opened for {BREAKER_OPEN_SECONDS}s")
 
 
@@ -82,6 +85,20 @@ class LiveKitAdminClient:
             self._availability.reset(token)
 
     async def _call(
+        self, method: str, payload: dict[str, Any], *, room: str | None = None
+    ) -> dict[str, Any]:
+        call_id = parse_room_call_id(room) if room else None
+        fields = {"call_id": str(call_id)} if call_id else {}
+        with logger.contextualize(**fields):
+            try:
+                return await self._request(method, payload, room=room)
+            except LiveKitApiError as exc:
+                logger.bind(method=method, status_code=exc.status_code).warning(
+                    "LiveKit request failed"
+                )
+                raise
+
+    async def _request(
         self, method: str, payload: dict[str, Any], *, room: str | None = None
     ) -> dict[str, Any]:
         availability = self._availability.get()

@@ -35,12 +35,20 @@ from uniffy.domains.calls.config import (
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
 from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
+from uniffy.domains.calls.metrics import (
+    CALL_DURATION,
+    CALLS_ENDED,
+    CALLS_STARTED,
+    RINGS,
+    RingOutcome,
+)
 from uniffy.domains.calls.policy import (
     DEFAULT_MAX_PARTICIPANTS,
     ResolvedCallPolicy,
     load_call_policy,
     save_call_policy,
 )
+from uniffy.domains.calls.telemetry import call_context
 from uniffy.domains.calls.tokens import (
     LiveKitTokenMinter,
     MintedToken,
@@ -174,6 +182,7 @@ class CallOperations:
         )
         return call, participants, token, False
 
+    @call_context
     async def join_call(
         self,
         user_id: UUID,
@@ -197,6 +206,7 @@ class CallOperations:
         )
         return call, participants, token
 
+    @call_context
     async def leave_call(
         self, user_id: UUID, organization_id: UUID, call_id: UUID, device_id: str
     ) -> None:
@@ -208,6 +218,7 @@ class CallOperations:
             return
         await self.mark_participant_left(call, participant)
 
+    @call_context
     async def end_call(
         self,
         user_id: UUID,
@@ -219,6 +230,7 @@ class CallOperations:
         await self._require_moderation(user_id, call, "end")
         await self.end_call_internal(call, reason, actor_user_id=user_id)
 
+    @call_context
     async def refresh_token(
         self,
         user_id: UUID,
@@ -322,6 +334,7 @@ class CallOperations:
             by_call[participant.call_id].append(participant)
         return [(c, by_call[c.id]) for c in calls]
 
+    @call_context
     async def kick_participant(
         self, user_id: UUID, organization_id: UUID, call_id: UUID, identity: str
     ) -> None:
@@ -358,6 +371,7 @@ class CallOperations:
         )
         await self.session.commit()
 
+    @call_context
     async def mute_participant(
         self, user_id: UUID, organization_id: UUID, call_id: UUID, identity: str
     ) -> None:
@@ -391,6 +405,7 @@ class CallOperations:
         await self.session.commit()
         await self.publish_participant_state(call, participant, moderator_muted=True)
 
+    @call_context
     async def update_media_state(
         self,
         user_id: UUID,
@@ -432,6 +447,7 @@ class CallOperations:
         )
         return result.scalar_one_or_none()
 
+    @call_context
     async def list_active_participants(self, call_id: UUID) -> list[CallParticipant]:
         result = await self.session.execute(
             select(CallParticipant)
@@ -443,6 +459,7 @@ class CallOperations:
     async def resolve_profiles(self, user_ids: list[UUID]) -> dict[UUID, SenderInfo]:
         return await self.chat.resolve_profiles(user_ids)
 
+    @call_context
     async def call_recipient_ids(
         self, call: Call, active: list[CallParticipant] | None = None
     ) -> list[UUID]:
@@ -455,6 +472,7 @@ class CallOperations:
         ids.update(p.user_id for p in active)
         return list(ids)
 
+    @call_context
     async def publish_participant_state(
         self, call: Call, participant: CallParticipant, *, moderator_muted: bool = False
     ) -> None:
@@ -484,6 +502,7 @@ class CallOperations:
             channel_id=call.channel_id,
         )
 
+    @call_context
     async def mark_participant_left(self, call: Call, participant: CallParticipant) -> bool:
         won = await self._stage_participant_left(participant)
         await self.session.commit()
@@ -516,6 +535,7 @@ class CallOperations:
         set_committed_value(participant, "left_at", now)
         return True
 
+    @call_context
     async def retire_ghost_participant(
         self, call: Call, participant: CallParticipant, cutoff: datetime
     ) -> bool:
@@ -541,6 +561,7 @@ class CallOperations:
         await self._finalize_participant_left(call, participant)
         return True
 
+    @call_context
     async def _finalize_participant_left(self, call: Call, participant: CallParticipant) -> None:
         remaining = await self.list_active_participants(call.id)
         member_ids = await self.call_recipient_ids(call, remaining)
@@ -625,6 +646,7 @@ class CallOperations:
                 ended += 1
         return ended
 
+    @call_context
     async def remove_channel_member(self, call: Call, user_id: UUID) -> None:
         """Remove every active device after chat membership is revoked."""
         rows = await self.session.execute(
@@ -637,6 +659,7 @@ class CallOperations:
         for participant in rows.scalars().all():
             await self._force_leave(call, participant)
 
+    @call_context
     async def _force_leave(
         self,
         call: Call,
@@ -676,6 +699,7 @@ class CallOperations:
         await self._finalize_participant_left(call, participant)
         return True
 
+    @call_context
     async def end_call_internal(
         self, call: Call, reason: CallEndReason, actor_user_id: UUID | None = None
     ) -> bool:
@@ -718,6 +742,10 @@ class CallOperations:
         )
         await self.session.commit()
 
+        CALLS_ENDED.labels(reason.value).inc()
+        CALL_DURATION.observe(max(0, (now - call.started_at).total_seconds()))
+        logger.bind(reason=reason.value).info("Call ended")
+
         client = get_livekit_admin_client()
         try:
             await client.delete_room(call.livekit_room_name)
@@ -739,6 +767,7 @@ class CallOperations:
 
         return True
 
+    @call_context
     async def _post_call_ended_summary(
         self, call: Call, reason: CallEndReason, actor_user_id: UUID | None, ended_at: datetime
     ) -> None:
@@ -775,6 +804,7 @@ class CallOperations:
             call, content, actor_user_id or call.host_user_id, ChatMessageMetadataKind.CALL_ENDED
         )
 
+    @call_context
     async def _post_call_system_message(
         self, call: Call, content: str, sender_user_id: UUID, kind: ChatMessageMetadataKind
     ) -> None:
@@ -793,6 +823,7 @@ class CallOperations:
                 f"Failed to post call lifecycle message for call={call.id}"
             )
 
+    @call_context
     async def reassign_host_if_absent(self, call: Call) -> None:
         """Hand host to the earliest-joined active participant when the host has no active row."""
         active_user_ids = select(CallParticipant.user_id).where(
@@ -847,6 +878,7 @@ class CallOperations:
         await self.session.commit()
         set_committed_value(participant, "missing_since", value)
 
+    @call_context
     async def _reopen_participant_row(
         self,
         call: Call,
@@ -900,6 +932,7 @@ class CallOperations:
         if revoked is not False:
             raise PermissionDeniedError("call", "Session has been revoked")
 
+    @call_context
     async def _join(
         self,
         call: Call,
@@ -982,6 +1015,10 @@ class CallOperations:
             await self._prepare_media_room(call)
             return token, await self.list_active_participants(call.id)
 
+        if is_start:
+            CALLS_STARTED.labels(call.call_type.value).inc()
+            logger.info("Call started")
+        logger.info("Call participant admitted")
         await self._prepare_media_room(call)
         participants = await self.list_active_participants(call.id)
         member_ids = await self.call_recipient_ids(call, participants)
@@ -1012,6 +1049,7 @@ class CallOperations:
             )
         return token, participants
 
+    @call_context
     async def _prepare_media_room(self, call: Call) -> None:
         """Committed admission never returns credentials for a room with different capacity."""
         room = await get_livekit_admin_client().create_room(
@@ -1024,12 +1062,15 @@ class CallOperations:
                 "Call capacity differs from the media room. End this call and start a new one.",
             )
 
+    @call_context
     async def _ring_callees(self, call: Call, channel: ChatChannel, caller_id: UUID) -> None:
         member_ids = await self.member_user_ids(channel.id)
         callees = [uid for uid in member_ids if uid != caller_id]
         if not callees:
+            RINGS.labels(RingOutcome.NO_RECIPIENTS).inc()
             return
         if call.call_type == CallType.CHANNEL and len(member_ids) >= SILENT_JOIN_MEMBER_THRESHOLD:
+            RINGS.labels(RingOutcome.SUPPRESSED).inc()
             return
         info = await self.chat.resolve_profile(caller_id)
         payload = chat_events.build_call_ring_payload(
@@ -1041,8 +1082,15 @@ class CallOperations:
             caller_avatar_url=info.avatar_url or None,
             expires_at=datetime.now(UTC) + timedelta(seconds=RING_TIMEOUT_SECONDS),
         )
-        await self.chat.publish(callees, chat_events.CALL_RING, payload, channel_id=channel.id)
+        try:
+            await self.chat.publish(callees, chat_events.CALL_RING, payload, channel_id=channel.id)
+        except Exception:
+            RINGS.labels(RingOutcome.ERROR).inc()
+            raise
+        RINGS.labels(RingOutcome.DISPATCHED).inc()
+        logger.bind(recipients=len(callees)).info("Call ring dispatched")
 
+    @call_context
     async def _require_moderation(self, user_id: UUID, call: Call, action: str) -> None:
         channel = await self.access.get_channel(call.channel_id, call.organization_id)
         await self.access.check_access(user_id, call.organization_id, channel)
@@ -1051,6 +1099,7 @@ class CallOperations:
         ):
             raise PermissionDeniedError(action, "Only the host or a channel moderator can do this")
 
+    @call_context
     async def _get_call(
         self, call_id: UUID, organization_id: UUID, *, require_active: bool = False
     ) -> Call:
@@ -1064,6 +1113,7 @@ class CallOperations:
             raise ValidationError("call", "Call has ended")
         return call
 
+    @call_context
     async def get_active_participant(self, call_id: UUID, identity: str) -> CallParticipant | None:
         result = await self.session.execute(
             select(CallParticipant).where(
@@ -1074,6 +1124,7 @@ class CallOperations:
         )
         return result.scalar_one_or_none()
 
+    @call_context
     async def _count_active_devices(self, call_id: UUID, user_id: UUID) -> int:
         result = await self.session.execute(
             select(CallParticipant.id).where(
