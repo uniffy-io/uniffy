@@ -88,6 +88,9 @@ function InviteCard({ invite }: { invite: RingInvite }) {
         popoverShellClass,
         "pointer-events-auto flex w-80 items-center gap-3 rounded-xl p-3",
       )}
+      role="status"
+      aria-live="assertive"
+      aria-atomic="true"
       data-testid="call-invite-toast"
     >
       {invite.callerAvatarUrl ? (

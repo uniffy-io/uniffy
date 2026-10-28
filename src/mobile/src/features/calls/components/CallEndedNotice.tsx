@@ -1,37 +1,26 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { PhoneDisconnect } from "phosphor-react-native";
-import { useCall, type CallEndCause } from "@features/calls/CallContext";
+import { useCall } from "@features/calls/CallContext";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
-const CAUSE_COPY: Record<CallEndCause, string> = {
-  HOST_ENDED: "The host ended the call",
-  ALL_LEFT: "Everyone left the call",
-  MAX_DURATION: "The call reached its time limit",
-  SOLO_TIMEOUT: "The call ended - you were the only one left",
-  CHANNEL_ARCHIVED: "The channel was archived",
-  ORG_SUSPENDED: "The organization was suspended",
-  ORG_DELETED: "The organization was deleted",
-  KICKED: "You were removed from the call",
-  CONNECTION_LOST: "Lost connection to the call",
-  UNKNOWN: "The call ended",
-};
+import { CALL_END_COPY } from "@features/calls/callErrors";
 
 export function CallEndedNotice() {
   const T = useTheme();
   const { endedInfo, clearEndedInfo, rejoin } = useCall();
 
   if (!endedInfo) return null;
-  const canRejoin = endedInfo.cause === "CONNECTION_LOST";
+  const canRejoin = endedInfo.cause === "CONNECTION_LOST" || endedInfo.cause === "NETWORK_LOST";
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={clearEndedInfo}>
       <View style={styles.backdrop}>
         <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
           <PhoneDisconnect size={28} color={T.red} weight="duotone" />
-          <Text style={[styles.message, { color: T.textBright }]}>
-            {CAUSE_COPY[endedInfo.cause]}
+          <Text accessibilityRole="alert" style={[styles.message, { color: T.textBright }]}>
+            {CALL_END_COPY[endedInfo.cause]}
           </Text>
           <View style={styles.buttons}>
             {canRejoin ? (

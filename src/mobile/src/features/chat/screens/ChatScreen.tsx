@@ -65,7 +65,6 @@ import { ChannelDetailsSheet } from "@features/chat/components/ChannelDetailsShe
 import { useCall } from "@features/calls/CallContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useChannelActiveCall } from "@features/calls/useChannelActiveCall";
-import { showCallsUnavailable } from "@features/calls/callsUnavailable";
 import { usePresences } from "@shared/presence/usePresence";
 import { useTheme } from "@shared/hooks/useTheme";
 import type { ThemeColors } from "@theme/theme";
@@ -1104,21 +1103,14 @@ export function ChatConversationScreen() {
               !channel.isSelfDm ? (
                 <TouchableOpacity
                   onPress={() => {
-                    // The button stays put when calls are off so there is
-                    // something to tap that says why.
-                    if (callsDisabledMessage) {
-                      showCallsUnavailable(callsDisabledMessage);
-                      return;
-                    }
                     if (inCallHere) setMinimized(false);
                     else openChannelPrejoin();
                   }}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
-                  accessibilityState={{ disabled: !callsAvailable }}
                   accessibilityLabel={
                     callsDisabledMessage
-                      ? "Calls unavailable"
+                      ? "Calls unavailable. View details"
                       : activeCall
                         ? "Join live call"
                         : "Start call"

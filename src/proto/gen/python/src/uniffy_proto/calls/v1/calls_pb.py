@@ -17,6 +17,140 @@ if TYPE_CHECKING:
     from protobuf.wkt import Timestamp
 
 
+_GetCallAvailabilityRequestFields: TypeAlias = Literal["organization_id", "check_media"]
+
+class GetCallAvailabilityRequest(Message[_GetCallAvailabilityRequestFields]):
+    """
+    ```proto
+    message calls.v1.GetCallAvailabilityRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        check_media:
+            Probe media only when preparing to join, not for every call control render.
+
+            ```proto
+            bool check_media = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "check_media")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            check_media: bool = False,
+        ) -> None:
+            pass
+
+        organization_id: str
+        check_media: bool
+
+_GetCallAvailabilityResponseFields: TypeAlias = Literal["availability"]
+
+class GetCallAvailabilityResponse(Message[_GetCallAvailabilityResponseFields]):
+    """
+    ```proto
+    message calls.v1.GetCallAvailabilityResponse
+    ```
+
+    Attributes:
+        availability:
+            ```proto
+            calls.v1.CallAvailability availability = 1;
+            ```
+    """
+
+    __slots__ = ("availability",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            availability: CallAvailability | None = None,
+        ) -> None:
+            pass
+
+        availability: CallAvailability
+
+_GetCallStateRequestFields: TypeAlias = Literal["organization_id", "call_id"]
+
+class GetCallStateRequest(Message[_GetCallStateRequestFields]):
+    """
+    ```proto
+    message calls.v1.GetCallStateRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        call_id:
+            ```proto
+            string call_id = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "call_id")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            call_id: str = "",
+        ) -> None:
+            pass
+
+        organization_id: str
+        call_id: str
+
+_GetCallStateResponseFields: TypeAlias = Literal["call", "can_moderate"]
+
+class GetCallStateResponse(Message[_GetCallStateResponseFields]):
+    """
+    ```proto
+    message calls.v1.GetCallStateResponse
+    ```
+
+    Attributes:
+        call:
+            Includes terminal reason after the call ends. Roster comes from active-call snapshots.
+
+            ```proto
+            optional calls.v1.Call call = 1;
+            ```
+        can_moderate:
+            ```proto
+            bool can_moderate = 2;
+            ```
+    """
+
+    __slots__ = ("call", "can_moderate")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            call: Call | None = None,
+            can_moderate: bool = False,
+        ) -> None:
+            pass
+
+        call: Call | None
+        can_moderate: bool
+
 _IceServerFields: TypeAlias = Literal["urls", "username", "credential"]
 
 class IceServer(Message[_IceServerFields]):
@@ -1383,6 +1517,41 @@ class ScreenShareQuality(Enum):
     HIGH = 2
     MAX = 3
 
+class CallAvailability(Enum):
+    """
+    ```proto
+    enum calls.v1.CallAvailability
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            CALL_AVAILABILITY_UNSPECIFIED = 0
+            ```
+        READY:
+            ```proto
+            CALL_AVAILABILITY_READY = 1
+            ```
+        DISABLED:
+            ```proto
+            CALL_AVAILABILITY_DISABLED = 2
+            ```
+        NOT_CONFIGURED:
+            ```proto
+            CALL_AVAILABILITY_NOT_CONFIGURED = 3
+            ```
+        UNREACHABLE:
+            ```proto
+            CALL_AVAILABILITY_UNREACHABLE = 4
+            ```
+    """
+
+    UNSPECIFIED = 0
+    READY = 1
+    DISABLED = 2
+    NOT_CONFIGURED = 3
+    UNREACHABLE = 4
+
 class IceTransportPolicy(Enum):
     """
     ```proto
@@ -1412,11 +1581,15 @@ class IceTransportPolicy(Enum):
 
 
 _DESC = file_desc(
-    b'\n\x14calls/v1/calls.proto\x12\x08calls.v1\x1a\x1fgoogle/protobuf/timestamp.proto"\x81\x01\n\tIceServer\x12\x12\n\x04urls\x18\x01 \x03(\tR\x04urls\x12\x1f\n\x08username\x18\x02 \x01(\tH\x00R\x08username\x88\x01\x01\x12#\n\ncredential\x18\x03 \x01(\tH\x01R\ncredential\x88\x01\x01B\x0b\n\t_usernameB\r\n\x0b_credential"\xec\x03\n\x04Call\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x03 \x01(\tR\tchannelId\x12/\n\tcall_type\x18\x04 \x01(\x0e2\x12.calls.v1.CallTypeR\x08callType\x12*\n\x11initiator_user_id\x18\x05 \x01(\tR\x0finitiatorUserId\x12 \n\x0chost_user_id\x18\x06 \x01(\tR\nhostUserId\x129\n\nstarted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartedAt\x12:\n\x08ended_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x07endedAt\x88\x01\x01\x12;\n\nend_reason\x18\t \x01(\x0e2\x17.calls.v1.CallEndReasonH\x01R\tendReason\x88\x01\x01\x12=\n\x0cparticipants\x18\n \x03(\x0b2\x19.calls.v1.CallParticipantR\x0cparticipantsB\x0b\n\t_ended_atB\r\n\x0b_end_reason"\x9a\x03\n\x0fCallParticipant\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n\tdevice_id\x18\x02 \x01(\tR\x08deviceId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity\x12!\n\x0cdisplay_name\x18\x04 \x01(\tR\x0bdisplayName\x12"\n\navatar_url\x18\x05 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12&\n\x0cdevice_label\x18\x06 \x01(\tH\x01R\x0bdeviceLabel\x88\x01\x01\x127\n\tjoined_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\x08joinedAt\x12\x1f\n\x0bmic_enabled\x18\x08 \x01(\x08R\nmicEnabled\x12%\n\x0ecamera_enabled\x18\t \x01(\x08R\rcameraEnabled\x12%\n\x0escreen_sharing\x18\n \x01(\x08R\rscreenSharingB\r\n\x0b_avatar_urlB\x0f\n\r_device_label"\xb3\x01\n\x13InitiateCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12&\n\x0cdevice_label\x18\x04 \x01(\tH\x00R\x0bdeviceLabel\x88\x01\x01B\x0f\n\r_device_label"\xfc\x02\n\x14InitiateCallResponse\x12"\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallR\x04call\x12\x15\n\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n\rlivekit_token\x18\x03 \x01(\tR\x0clivekitToken\x12\'\n\x0fjoined_existing\x18\x04 \x01(\x08R\x0ejoinedExisting\x12U\n\x18screen_share_quality_cap\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n\x0bice_servers\x18\x06 \x03(\x0b2\x13.calls.v1.IceServerR\niceServers\x12N\n\x14ice_transport_policy\x18\x07 \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy"\xa9\x01\n\x0fJoinCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12&\n\x0cdevice_label\x18\x04 \x01(\tH\x00R\x0bdeviceLabel\x88\x01\x01B\x0f\n\r_device_label"\xcf\x02\n\x10JoinCallResponse\x12"\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallR\x04call\x12\x15\n\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n\rlivekit_token\x18\x03 \x01(\tR\x0clivekitToken\x12U\n\x18screen_share_quality_cap\x18\x04 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n\x0bice_servers\x18\x05 \x03(\x0b2\x13.calls.v1.IceServerR\niceServers\x12N\n\x14ice_transport_policy\x18\x06 \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy"q\n\x10LeaveCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId"-\n\x11LeaveCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"R\n\x0eEndCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId"+\n\x0fEndCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"x\n\x17RefreshCallTokenRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId"?\n\x18RefreshCallTokenResponse\x12#\n\rlivekit_token\x18\x01 \x01(\tR\x0clivekitToken"^\n\x14GetActiveCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x02 \x01(\tR\tchannelId"I\n\x15GetActiveCallResponse\x12\'\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallH\x00R\x04call\x88\x01\x01B\x07\n\x05_call"A\n\x16ListActiveCallsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"?\n\x17ListActiveCallsResponse\x12$\n\x05calls\x18\x01 \x03(\x0b2\x0e.calls.v1.CallR\x05calls"V\n\x12DeclineCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId"/\n\x13DeclineCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"v\n\x16KickParticipantRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity"3\n\x17KickParticipantResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"v\n\x16MuteParticipantRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity"3\n\x17MuteParticipantResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe7\x01\n\x17ReportMediaStateRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12\x1f\n\x0bmic_enabled\x18\x04 \x01(\x08R\nmicEnabled\x12%\n\x0ecamera_enabled\x18\x05 \x01(\x08R\rcameraEnabled\x12%\n\x0escreen_sharing\x18\x06 \x01(\x08R\rscreenSharing"4\n\x18ReportMediaStateResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe6\x03\n\rOrgCallPolicy\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n\rcalls_enabled\x18\x02 \x01(\x08R\x0ccallsEnabled\x12)\n\x10max_participants\x18\x03 \x01(\x05R\x0fmaxParticipants\x120\n\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n max_screen_share_quality_channel\x18\x07 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel"B\n\x17GetOrgCallPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"K\n\x18GetOrgCallPolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.calls.v1.OrgCallPolicyR\x06policy"\xf3\x03\n\x1aUpdateOrgCallPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n\rcalls_enabled\x18\x02 \x01(\x08R\x0ccallsEnabled\x12)\n\x10max_participants\x18\x03 \x01(\x05R\x0fmaxParticipants\x120\n\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n max_screen_share_quality_channel\x18\x07 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel"N\n\x1bUpdateOrgCallPolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.calls.v1.OrgCallPolicyR\x06policy*j\n\x08CallType\x12\x19\n\x15CALL_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10CALL_TYPE_DIRECT\x10\x01\x12\x16\n\x12CALL_TYPE_GROUP_DM\x10\x02\x12\x15\n\x11CALL_TYPE_CHANNEL\x10\x03*\x9c\x02\n\rCallEndReason\x12\x1f\n\x1bCALL_END_REASON_UNSPECIFIED\x10\x00\x12\x1e\n\x1aCALL_END_REASON_HOST_ENDED\x10\x01\x12\x1c\n\x18CALL_END_REASON_ALL_LEFT\x10\x02\x12 \n\x1cCALL_END_REASON_MAX_DURATION\x10\x03\x12 \n\x1cCALL_END_REASON_SOLO_TIMEOUT\x10\x04\x12$\n CALL_END_REASON_CHANNEL_ARCHIVED\x10\x05\x12!\n\x1dCALL_END_REASON_ORG_SUSPENDED\x10\x06\x12\x1f\n\x1bCALL_END_REASON_ORG_DELETED\x10\x07*\x9a\x01\n\x12ScreenShareQuality\x12$\n SCREEN_SHARE_QUALITY_UNSPECIFIED\x10\x00\x12!\n\x1dSCREEN_SHARE_QUALITY_BALANCED\x10\x01\x12\x1d\n\x19SCREEN_SHARE_QUALITY_HIGH\x10\x02\x12\x1c\n\x18SCREEN_SHARE_QUALITY_MAX\x10\x03*x\n\x12IceTransportPolicy\x12$\n ICE_TRANSPORT_POLICY_UNSPECIFIED\x10\x00\x12\x1c\n\x18ICE_TRANSPORT_POLICY_ALL\x10\x01\x12\x1e\n\x1aICE_TRANSPORT_POLICY_RELAY\x10\x022\xc0\x08\n\x0bCallService\x12M\n\x0cInitiateCall\x12\x1d.calls.v1.InitiateCallRequest\x1a\x1e.calls.v1.InitiateCallResponse\x12A\n\x08JoinCall\x12\x19.calls.v1.JoinCallRequest\x1a\x1a.calls.v1.JoinCallResponse\x12D\n\tLeaveCall\x12\x1a.calls.v1.LeaveCallRequest\x1a\x1b.calls.v1.LeaveCallResponse\x12>\n\x07EndCall\x12\x18.calls.v1.EndCallRequest\x1a\x19.calls.v1.EndCallResponse\x12Y\n\x10RefreshCallToken\x12!.calls.v1.RefreshCallTokenRequest\x1a".calls.v1.RefreshCallTokenResponse\x12P\n\rGetActiveCall\x12\x1e.calls.v1.GetActiveCallRequest\x1a\x1f.calls.v1.GetActiveCallResponse\x12V\n\x0fListActiveCalls\x12 .calls.v1.ListActiveCallsRequest\x1a!.calls.v1.ListActiveCallsResponse\x12J\n\x0bDeclineCall\x12\x1c.calls.v1.DeclineCallRequest\x1a\x1d.calls.v1.DeclineCallResponse\x12V\n\x0fKickParticipant\x12 .calls.v1.KickParticipantRequest\x1a!.calls.v1.KickParticipantResponse\x12V\n\x0fMuteParticipant\x12 .calls.v1.MuteParticipantRequest\x1a!.calls.v1.MuteParticipantResponse\x12Y\n\x10GetOrgCallPolicy\x12!.calls.v1.GetOrgCallPolicyRequest\x1a".calls.v1.GetOrgCallPolicyResponse\x12b\n\x13UpdateOrgCallPolicy\x12$.calls.v1.UpdateOrgCallPolicyRequest\x1a%.calls.v1.UpdateOrgCallPolicyResponse\x12Y\n\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a".calls.v1.ReportMediaStateResponseB7Z5github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3',
+    b'\n\x14calls/v1/calls.proto\x12\x08calls.v1\x1a\x1fgoogle/protobuf/timestamp.proto"f\n\x1aGetCallAvailabilityRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n\x0bcheck_media\x18\x02 \x01(\x08R\ncheckMedia"]\n\x1bGetCallAvailabilityResponse\x12>\n\x0cavailability\x18\x01 \x01(\x0e2\x1a.calls.v1.CallAvailabilityR\x0cavailability"W\n\x13GetCallStateRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId"]\n\x14GetCallStateResponse\x12"\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallR\x04call\x12!\n\x0ccan_moderate\x18\x02 \x01(\x08R\x0bcanModerate"\x81\x01\n\tIceServer\x12\x12\n\x04urls\x18\x01 \x03(\tR\x04urls\x12\x1f\n\x08username\x18\x02 \x01(\tH\x00R\x08username\x88\x01\x01\x12#\n\ncredential\x18\x03 \x01(\tH\x01R\ncredential\x88\x01\x01B\x0b\n\t_usernameB\r\n\x0b_credential"\xec\x03\n\x04Call\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x03 \x01(\tR\tchannelId\x12/\n\tcall_type\x18\x04 \x01(\x0e2\x12.calls.v1.CallTypeR\x08callType\x12*\n\x11initiator_user_id\x18\x05 \x01(\tR\x0finitiatorUserId\x12 \n\x0chost_user_id\x18\x06 \x01(\tR\nhostUserId\x129\n\nstarted_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\tstartedAt\x12:\n\x08ended_at\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x07endedAt\x88\x01\x01\x12;\n\nend_reason\x18\t \x01(\x0e2\x17.calls.v1.CallEndReasonH\x01R\tendReason\x88\x01\x01\x12=\n\x0cparticipants\x18\n \x03(\x0b2\x19.calls.v1.CallParticipantR\x0cparticipantsB\x0b\n\t_ended_atB\r\n\x0b_end_reason"\x9a\x03\n\x0fCallParticipant\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\x1b\n\tdevice_id\x18\x02 \x01(\tR\x08deviceId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity\x12!\n\x0cdisplay_name\x18\x04 \x01(\tR\x0bdisplayName\x12"\n\navatar_url\x18\x05 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12&\n\x0cdevice_label\x18\x06 \x01(\tH\x01R\x0bdeviceLabel\x88\x01\x01\x127\n\tjoined_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\x08joinedAt\x12\x1f\n\x0bmic_enabled\x18\x08 \x01(\x08R\nmicEnabled\x12%\n\x0ecamera_enabled\x18\t \x01(\x08R\rcameraEnabled\x12%\n\x0escreen_sharing\x18\n \x01(\x08R\rscreenSharingB\r\n\x0b_avatar_urlB\x0f\n\r_device_label"\xb3\x01\n\x13InitiateCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12&\n\x0cdevice_label\x18\x04 \x01(\tH\x00R\x0bdeviceLabel\x88\x01\x01B\x0f\n\r_device_label"\xfc\x02\n\x14InitiateCallResponse\x12"\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallR\x04call\x12\x15\n\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n\rlivekit_token\x18\x03 \x01(\tR\x0clivekitToken\x12\'\n\x0fjoined_existing\x18\x04 \x01(\x08R\x0ejoinedExisting\x12U\n\x18screen_share_quality_cap\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n\x0bice_servers\x18\x06 \x03(\x0b2\x13.calls.v1.IceServerR\niceServers\x12N\n\x14ice_transport_policy\x18\x07 \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy"\xa9\x01\n\x0fJoinCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12&\n\x0cdevice_label\x18\x04 \x01(\tH\x00R\x0bdeviceLabel\x88\x01\x01B\x0f\n\r_device_label"\xcf\x02\n\x10JoinCallResponse\x12"\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallR\x04call\x12\x15\n\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n\rlivekit_token\x18\x03 \x01(\tR\x0clivekitToken\x12U\n\x18screen_share_quality_cap\x18\x04 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x15screenShareQualityCap\x124\n\x0bice_servers\x18\x05 \x03(\x0b2\x13.calls.v1.IceServerR\niceServers\x12N\n\x14ice_transport_policy\x18\x06 \x01(\x0e2\x1c.calls.v1.IceTransportPolicyR\x12iceTransportPolicy"q\n\x10LeaveCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId"-\n\x11LeaveCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"R\n\x0eEndCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId"+\n\x0fEndCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"x\n\x17RefreshCallTokenRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId"?\n\x18RefreshCallTokenResponse\x12#\n\rlivekit_token\x18\x01 \x01(\tR\x0clivekitToken"^\n\x14GetActiveCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n\nchannel_id\x18\x02 \x01(\tR\tchannelId"I\n\x15GetActiveCallResponse\x12\'\n\x04call\x18\x01 \x01(\x0b2\x0e.calls.v1.CallH\x00R\x04call\x88\x01\x01B\x07\n\x05_call"A\n\x16ListActiveCallsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"?\n\x17ListActiveCallsResponse\x12$\n\x05calls\x18\x01 \x03(\x0b2\x0e.calls.v1.CallR\x05calls"V\n\x12DeclineCallRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId"/\n\x13DeclineCallResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"v\n\x16KickParticipantRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity"3\n\x17KickParticipantResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"v\n\x16MuteParticipantRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1a\n\x08identity\x18\x03 \x01(\tR\x08identity"3\n\x17MuteParticipantResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe7\x01\n\x17ReportMediaStateRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07call_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n\tdevice_id\x18\x03 \x01(\tR\x08deviceId\x12\x1f\n\x0bmic_enabled\x18\x04 \x01(\x08R\nmicEnabled\x12%\n\x0ecamera_enabled\x18\x05 \x01(\x08R\rcameraEnabled\x12%\n\x0escreen_sharing\x18\x06 \x01(\x08R\rscreenSharing"4\n\x18ReportMediaStateResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xe6\x03\n\rOrgCallPolicy\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n\rcalls_enabled\x18\x02 \x01(\x08R\x0ccallsEnabled\x12)\n\x10max_participants\x18\x03 \x01(\x05R\x0fmaxParticipants\x120\n\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n max_screen_share_quality_channel\x18\x07 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel"B\n\x17GetOrgCallPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"K\n\x18GetOrgCallPolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.calls.v1.OrgCallPolicyR\x06policy"\xf3\x03\n\x1aUpdateOrgCallPolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n\rcalls_enabled\x18\x02 \x01(\x08R\x0ccallsEnabled\x12)\n\x10max_participants\x18\x03 \x01(\x05R\x0fmaxParticipants\x120\n\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n max_screen_share_quality_channel\x18\x07 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel"N\n\x1bUpdateOrgCallPolicyResponse\x12/\n\x06policy\x18\x01 \x01(\x0b2\x17.calls.v1.OrgCallPolicyR\x06policy*j\n\x08CallType\x12\x19\n\x15CALL_TYPE_UNSPECIFIED\x10\x00\x12\x14\n\x10CALL_TYPE_DIRECT\x10\x01\x12\x16\n\x12CALL_TYPE_GROUP_DM\x10\x02\x12\x15\n\x11CALL_TYPE_CHANNEL\x10\x03*\x9c\x02\n\rCallEndReason\x12\x1f\n\x1bCALL_END_REASON_UNSPECIFIED\x10\x00\x12\x1e\n\x1aCALL_END_REASON_HOST_ENDED\x10\x01\x12\x1c\n\x18CALL_END_REASON_ALL_LEFT\x10\x02\x12 \n\x1cCALL_END_REASON_MAX_DURATION\x10\x03\x12 \n\x1cCALL_END_REASON_SOLO_TIMEOUT\x10\x04\x12$\n CALL_END_REASON_CHANNEL_ARCHIVED\x10\x05\x12!\n\x1dCALL_END_REASON_ORG_SUSPENDED\x10\x06\x12\x1f\n\x1bCALL_END_REASON_ORG_DELETED\x10\x07*\x9a\x01\n\x12ScreenShareQuality\x12$\n SCREEN_SHARE_QUALITY_UNSPECIFIED\x10\x00\x12!\n\x1dSCREEN_SHARE_QUALITY_BALANCED\x10\x01\x12\x1d\n\x19SCREEN_SHARE_QUALITY_HIGH\x10\x02\x12\x1c\n\x18SCREEN_SHARE_QUALITY_MAX\x10\x03*\xbb\x01\n\x10CallAvailability\x12!\n\x1dCALL_AVAILABILITY_UNSPECIFIED\x10\x00\x12\x1b\n\x17CALL_AVAILABILITY_READY\x10\x01\x12\x1e\n\x1aCALL_AVAILABILITY_DISABLED\x10\x02\x12$\n CALL_AVAILABILITY_NOT_CONFIGURED\x10\x03\x12!\n\x1dCALL_AVAILABILITY_UNREACHABLE\x10\x04*x\n\x12IceTransportPolicy\x12$\n ICE_TRANSPORT_POLICY_UNSPECIFIED\x10\x00\x12\x1c\n\x18ICE_TRANSPORT_POLICY_ALL\x10\x01\x12\x1e\n\x1aICE_TRANSPORT_POLICY_RELAY\x10\x022\xf3\t\n\x0bCallService\x12b\n\x13GetCallAvailability\x12$.calls.v1.GetCallAvailabilityRequest\x1a%.calls.v1.GetCallAvailabilityResponse\x12M\n\x0cGetCallState\x12\x1d.calls.v1.GetCallStateRequest\x1a\x1e.calls.v1.GetCallStateResponse\x12M\n\x0cInitiateCall\x12\x1d.calls.v1.InitiateCallRequest\x1a\x1e.calls.v1.InitiateCallResponse\x12A\n\x08JoinCall\x12\x19.calls.v1.JoinCallRequest\x1a\x1a.calls.v1.JoinCallResponse\x12D\n\tLeaveCall\x12\x1a.calls.v1.LeaveCallRequest\x1a\x1b.calls.v1.LeaveCallResponse\x12>\n\x07EndCall\x12\x18.calls.v1.EndCallRequest\x1a\x19.calls.v1.EndCallResponse\x12Y\n\x10RefreshCallToken\x12!.calls.v1.RefreshCallTokenRequest\x1a".calls.v1.RefreshCallTokenResponse\x12P\n\rGetActiveCall\x12\x1e.calls.v1.GetActiveCallRequest\x1a\x1f.calls.v1.GetActiveCallResponse\x12V\n\x0fListActiveCalls\x12 .calls.v1.ListActiveCallsRequest\x1a!.calls.v1.ListActiveCallsResponse\x12J\n\x0bDeclineCall\x12\x1c.calls.v1.DeclineCallRequest\x1a\x1d.calls.v1.DeclineCallResponse\x12V\n\x0fKickParticipant\x12 .calls.v1.KickParticipantRequest\x1a!.calls.v1.KickParticipantResponse\x12V\n\x0fMuteParticipant\x12 .calls.v1.MuteParticipantRequest\x1a!.calls.v1.MuteParticipantResponse\x12Y\n\x10GetOrgCallPolicy\x12!.calls.v1.GetOrgCallPolicyRequest\x1a".calls.v1.GetOrgCallPolicyResponse\x12b\n\x13UpdateOrgCallPolicy\x12$.calls.v1.UpdateOrgCallPolicyRequest\x1a%.calls.v1.UpdateOrgCallPolicyResponse\x12Y\n\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a".calls.v1.ReportMediaStateResponseB7Z5github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3',
     [
         timestamp_pb.desc(),
     ],
     {
+        "GetCallAvailabilityRequest": GetCallAvailabilityRequest,
+        "GetCallAvailabilityResponse": GetCallAvailabilityResponse,
+        "GetCallStateRequest": GetCallStateRequest,
+        "GetCallStateResponse": GetCallStateResponse,
         "IceServer": IceServer,
         "Call": Call,
         "CallParticipant": CallParticipant,
@@ -1450,6 +1623,7 @@ _DESC = file_desc(
         "CallType": CallType,
         "CallEndReason": CallEndReason,
         "ScreenShareQuality": ScreenShareQuality,
+        "CallAvailability": CallAvailability,
         "IceTransportPolicy": IceTransportPolicy,
     },
 )

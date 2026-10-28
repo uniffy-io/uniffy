@@ -8,17 +8,7 @@ import {
   selectEndedInfo,
   sessionReset,
 } from "@/features/calls/store/callsSlice";
-import type { CallEndReason } from "@/features/calls/types";
-
-const END_REASON_COPY: Record<CallEndReason, string> = {
-  HOST_ENDED: "The host ended the call.",
-  ALL_LEFT: "Everyone left the call.",
-  MAX_DURATION: "The call reached its maximum duration.",
-  SOLO_TIMEOUT: "The call ended because you were alone for a while.",
-  CHANNEL_ARCHIVED: "The call ended because the channel was archived.",
-  ORG_SUSPENDED: "The call ended because the organization was suspended.",
-  ORG_DELETED: "The call ended because the organization was deleted.",
-};
+import { CALL_END_COPY } from "@/features/calls/utils/callErrors";
 
 export function CallEndedModal() {
   const dispatch = useAppDispatch();
@@ -37,7 +27,7 @@ export function CallEndedModal() {
           <ModalHeader title="Call ended" />
           <ModalBody>
             <p className="text-sm text-muted-foreground">
-              {endedInfo.reason ? END_REASON_COPY[endedInfo.reason] : "The call has ended."}
+              {endedInfo.reason ? CALL_END_COPY[endedInfo.reason] : "The call has ended."}
             </p>
           </ModalBody>
           <ModalFooter>
@@ -55,7 +45,7 @@ export function CallEndedModal() {
           <ModalHeader title="Lost connection" />
           <ModalBody>
             <p className="text-sm text-muted-foreground">
-              The connection to the call could not be restored.
+              {navigator.onLine ? CALL_END_COPY.CONNECTION_LOST : CALL_END_COPY.NETWORK_LOST}
             </p>
           </ModalBody>
           <ModalFooter>

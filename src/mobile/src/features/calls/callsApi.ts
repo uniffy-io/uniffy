@@ -2,6 +2,8 @@ import { createClient } from "@connectrpc/connect";
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import {
   CallService,
+  GetCallAvailabilityRequestSchema,
+  GetCallStateRequestSchema,
   InitiateCallRequestSchema,
   JoinCallRequestSchema,
   LeaveCallRequestSchema,
@@ -19,6 +21,10 @@ import { transport } from "@core/api/transport";
 const client = createClient(CallService, transport);
 
 export const callsApi = {
+  getCallAvailability: (req: MessageInitShape<typeof GetCallAvailabilityRequestSchema>) =>
+    client.getCallAvailability(req),
+  getCallState: (req: MessageInitShape<typeof GetCallStateRequestSchema>) =>
+    client.getCallState(req),
   initiateCall: (req: MessageInitShape<typeof InitiateCallRequestSchema>) =>
     client.initiateCall(req),
   joinCall: (req: MessageInitShape<typeof JoinCallRequestSchema>) => client.joinCall(req),

@@ -7,12 +7,17 @@ from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
 from loguru import logger
 from uniffy_proto.calls.v1.calls_pb import (
+    CallAvailability,
     DeclineCallRequest,
     DeclineCallResponse,
     EndCallRequest,
     EndCallResponse,
     GetActiveCallRequest,
     GetActiveCallResponse,
+    GetCallAvailabilityRequest,
+    GetCallAvailabilityResponse,
+    GetCallStateRequest,
+    GetCallStateResponse,
     GetOrgCallPolicyRequest,
     GetOrgCallPolicyResponse,
     IceServer,
@@ -44,6 +49,7 @@ from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, 
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.reader import CallReader, probe_call_media
 from uniffy.domains.calls.turn import mint_turn_credentials
 from uniffy.infrastructure.database import open_session
 
@@ -101,6 +107,27 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
 
 
 class CallHandlers:
+    async def get_call_availability(
+        self, request: GetCallAvailabilityRequest, ctx: RequestContext
+    ) -> GetCallAvailabilityResponse:
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        async with open_session() as session:
+            availability = await CallReader(session).availability(current_user_id(), organization_id)
+        if request.check_media and availability == CallAvailability.READY:
+            availability = await probe_call_media()
+        return GetCallAvailabilityResponse(availability=availability)
+
+    async def get_call_state(
+        self, request: GetCallStateRequest, ctx: RequestContext
+    ) -> GetCallStateResponse:
+        organization_id = _parse_uuid(request.organization_id, "organization_id")
+        call_id = _parse_uuid(request.call_id, "call_id")
+        async with open_session() as session:
+            call, can_moderate = await CallReader(session).get_state(
+                current_user_id(), organization_id, call_id
+            )
+            return GetCallStateResponse(call=call_to_proto(call, []), can_moderate=can_moderate)
+
     async def initiate_call(
         self, request: InitiateCallRequest, ctx: RequestContext
     ) -> InitiateCallResponse:

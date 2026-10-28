@@ -1,3 +1,4 @@
+import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
 import { useRef, useState } from "react";
 import {
   CaretDown,
@@ -25,7 +26,7 @@ import {
 
 const controlBase = cn(
   "flex items-center justify-center rounded-lg border border-border/60 bg-muted/40",
-  "text-foreground transition-colors hover:bg-muted",
+  "text-foreground transition-colors hover:bg-muted focus-ring",
 );
 
 const controlClass = cn(controlBase, "h-9 px-2.5");
@@ -53,7 +54,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
   const session = useAppSelector(selectCallSession);
   const sessionCall = useAppSelector(selectSessionCall);
   const preferences = useAppSelector(selectCallPreferences);
-  const currentUserId = useAppSelector((s) => s.auth.user?.id ?? "");
+  const canModerate = useCallModeration();
   const { audioInputs, videoInputs } = useDevices();
 
   const micMenuRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +62,6 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
   const qualityMenuRef = useRef<HTMLButtonElement>(null);
   const [openMenu, setOpenMenu] = useState<"mic" | "cam" | "quality" | null>(null);
 
-  const isHost = sessionCall?.hostUserId === currentUserId;
   const participantCount = sessionCall?.participants.length ?? 0;
 
   if (compact) {
@@ -237,7 +237,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
         <PhoneDisconnect size={16} weight="fill" />
       </button>
 
-      {!compact && isHost && (
+      {!compact && canModerate && (
         <button
           type="button"
           onClick={() => void endCurrentCall()}

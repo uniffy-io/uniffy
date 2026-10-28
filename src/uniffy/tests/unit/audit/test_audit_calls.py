@@ -1,8 +1,4 @@
-"""Call lifecycle and moderation audit emissions.
-
-Join/leave stay unaudited - calls_participants is the attendance record.
-The audit log carries lifecycle (started/ended) and moderation (kick/mute).
-"""
+"""Audit records cover call lifecycle and moderation, while participant rows track attendance."""
 
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -134,6 +130,8 @@ async def test_kick_emits_participant_kicked_with_target() -> None:
         patch.object(type(ops), "_get_call", AsyncMock(return_value=call)),
         patch.object(type(ops), "get_active_participant", AsyncMock(return_value=participant)),
         patch.object(type(ops), "mark_participant_left", AsyncMock()),
+        patch.object(ops.access, "get_channel", AsyncMock()),
+        patch.object(ops.access, "check_access", AsyncMock()),
         patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
     ):
         client_factory.return_value.remove_participant = AsyncMock()
@@ -163,6 +161,8 @@ async def test_mute_emits_participant_muted() -> None:
         patch.object(type(ops), "_get_call", AsyncMock(return_value=call)),
         patch.object(type(ops), "get_active_participant", AsyncMock(return_value=participant)),
         patch.object(type(ops), "publish_participant_state", AsyncMock()),
+        patch.object(ops.access, "get_channel", AsyncMock()),
+        patch.object(ops.access, "check_access", AsyncMock()),
         patch("uniffy.domains.calls.operations.get_livekit_admin_client") as client_factory,
     ):
         client_factory.return_value.mute_participant_microphone = AsyncMock(return_value=True)

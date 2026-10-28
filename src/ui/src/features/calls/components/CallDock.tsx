@@ -1,3 +1,4 @@
+import { CallFeedback } from "@/features/calls/components/CallFeedback";
 import { useCall } from "@/features/calls/components/callContext";
 import { RoomAudio } from "@/features/calls/components/RoomAudio";
 import { CallInviteToasts } from "@/features/calls/components/CallInviteToasts";
@@ -9,6 +10,7 @@ export function CallDock() {
   const { room } = useCall();
   return (
     <>
+      <CallFeedback />
       <RoomAudio room={room} />
       <CallInviteToasts />
       <CallEndedModal />

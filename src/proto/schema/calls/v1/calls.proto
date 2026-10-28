@@ -41,6 +41,8 @@ enum ScreenShareQuality {
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 service CallService {
+  rpc GetCallAvailability(GetCallAvailabilityRequest) returns (GetCallAvailabilityResponse);
+  rpc GetCallState(GetCallStateRequest) returns (GetCallStateResponse);
   // Idempotent per channel: if the channel already has an active call the
   // caller is joined to it instead of a second call being created.
   rpc InitiateCall(InitiateCallRequest) returns (InitiateCallResponse);
@@ -68,6 +70,35 @@ service CallService {
   // stays published, so mute state cannot be inferred server-side). Fans out
   // CALL_PARTICIPANT_STATE only when a flag actually changed.
   rpc ReportMediaState(ReportMediaStateRequest) returns (ReportMediaStateResponse);
+}
+
+enum CallAvailability {
+  CALL_AVAILABILITY_UNSPECIFIED = 0;
+  CALL_AVAILABILITY_READY = 1;
+  CALL_AVAILABILITY_DISABLED = 2;
+  CALL_AVAILABILITY_NOT_CONFIGURED = 3;
+  CALL_AVAILABILITY_UNREACHABLE = 4;
+}
+
+message GetCallAvailabilityRequest {
+  string organization_id = 1;
+  // Probe media only when preparing to join, not for every call control render.
+  bool check_media = 2;
+}
+
+message GetCallAvailabilityResponse {
+  CallAvailability availability = 1;
+}
+
+message GetCallStateRequest {
+  string organization_id = 1;
+  string call_id = 2;
+}
+
+message GetCallStateResponse {
+  // Includes terminal reason after the call ends. Roster comes from active-call snapshots.
+  Call call = 1;
+  bool can_moderate = 2;
 }
 
 // One username/credential pair covers all URLs (TURN REST spec); credentials

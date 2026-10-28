@@ -7,12 +7,15 @@ import {
 } from "@/features/calls/api/callsConverters";
 import {
   callUpserted,
+  feedbackChanged,
   callEnded,
   participantUpserted,
   participantLeft,
   hostChanged,
   ringReceived,
 } from "@/features/calls/store/callsSlice";
+import { getDeviceId } from "@/shared/utils/deviceId";
+import { MODERATOR_MUTED_COPY } from "@/features/calls/utils/callErrors";
 import type { AppDispatch } from "@/app/store";
 
 /**
@@ -44,6 +47,18 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
     case ChatEventType.CALL_PARTICIPANT_JOINED:
     case ChatEventType.CALL_PARTICIPANT_STATE: {
       if (ce.payload.case === "callParticipant" && ce.payload.value.participant) {
+        const payload = ce.payload.value;
+        if (payload.moderatorMuted) {
+          dispatch((innerDispatch, getState) => {
+            const state = getState();
+            if (
+              state.calls.session.callId === payload.callId &&
+              payload.participant?.identity === `${state.auth.user?.id}:${getDeviceId()}`
+            ) {
+              innerDispatch(feedbackChanged(MODERATOR_MUTED_COPY));
+            }
+          });
+        }
         dispatch(
           participantUpserted({
             callId: ce.payload.value.callId,

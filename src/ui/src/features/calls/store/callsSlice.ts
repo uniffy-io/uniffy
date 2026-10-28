@@ -34,6 +34,7 @@ interface CallsState {
   ringInvites: RingInvite[];
   prejoin: PrejoinTarget | null;
   endedInfo: CallEndedInfo | null;
+  feedback: string | null;
 }
 
 const idleSession: CallSessionState = {
@@ -52,6 +53,7 @@ const initialState: CallsState = {
   ringInvites: [],
   prejoin: null,
   endedInfo: null,
+  feedback: null,
 };
 
 function findCallById(state: CallsState, callId: string): CallData | undefined {
@@ -62,6 +64,18 @@ const callsSlice = createSlice({
   name: "calls",
   initialState,
   reducers: {
+    feedbackChanged(state, action: PayloadAction<string | null>) {
+      state.feedback = action.payload;
+    },
+    sessionTerminated(state, action: PayloadAction<CallEndedInfo>) {
+      if (state.session.callId === action.payload.callId) {
+        if (action.payload.reason !== null || state.endedInfo?.callId !== action.payload.callId) {
+          state.endedInfo = action.payload;
+        }
+        state.feedback = null;
+        state.session = idleSession;
+      }
+    },
     callUpserted(state, action: PayloadAction<CallData>) {
       const call = action.payload;
       if (call.endedAt) {
@@ -101,7 +115,10 @@ const callsSlice = createSlice({
         delete state.activeByChannel[channelId];
       }
       state.ringInvites = state.ringInvites.filter((r) => r.callId !== callId);
-      if (state.session.callId === callId && state.session.status !== "idle") {
+      if (
+        (state.session.callId === callId && state.session.status !== "idle") ||
+        (state.endedInfo?.callId === callId && state.endedInfo.reason === null)
+      ) {
         state.endedInfo = { callId, channelId, reason };
       }
     },
@@ -162,6 +179,7 @@ const callsSlice = createSlice({
         screenShareQualityCap: action.payload.screenShareQualityCap,
       };
       state.endedInfo = null;
+      state.feedback = null;
       state.ringInvites = state.ringInvites.filter((r) => r.callId !== action.payload.callId);
     },
     sessionConnected(state) {
@@ -174,6 +192,7 @@ const callsSlice = createSlice({
       if (state.session.status !== "idle") state.session.status = "disconnected";
     },
     sessionReset(state) {
+      state.feedback = null;
       state.session = idleSession;
     },
     localMediaChanged(
@@ -197,12 +216,15 @@ const callsSlice = createSlice({
         ringInvites: [],
         prejoin: null,
         endedInfo: null,
+        feedback: null,
       };
     },
   },
 });
 
 export const {
+  feedbackChanged,
+  sessionTerminated,
   callUpserted,
   callCleared,
   activeCallsSynced,

@@ -213,10 +213,7 @@ class CallOperations:
         reason: CallEndReason = CallEndReason.HOST_ENDED,
     ) -> None:
         call = await self._get_call(call_id, organization_id, require_active=True)
-        if call.host_user_id != user_id and not await self.access.require_elevated(
-            user_id, organization_id, call.channel_id
-        ):
-            raise PermissionDeniedError("end", "Only the host can end the call")
+        await self._require_moderation(user_id, call, "end")
         await self.end_call_internal(call, reason, actor_user_id=user_id)
 
     async def refresh_token(
@@ -316,10 +313,7 @@ class CallOperations:
         self, user_id: UUID, organization_id: UUID, call_id: UUID, identity: str
     ) -> None:
         call = await self._get_call(call_id, organization_id, require_active=True)
-        if call.host_user_id != user_id and not await self.access.require_elevated(
-            user_id, organization_id, call.channel_id
-        ):
-            raise PermissionDeniedError("kick", "Only the host can remove participants")
+        await self._require_moderation(user_id, call, "kick")
         participant = await self.get_active_participant(call_id, identity)
         if participant is None:
             raise NotFoundError("participant", identity)
@@ -355,10 +349,7 @@ class CallOperations:
         self, user_id: UUID, organization_id: UUID, call_id: UUID, identity: str
     ) -> None:
         call = await self._get_call(call_id, organization_id, require_active=True)
-        if call.host_user_id != user_id and not await self.access.require_elevated(
-            user_id, organization_id, call.channel_id
-        ):
-            raise PermissionDeniedError("mute", "Only the host can mute participants")
+        await self._require_moderation(user_id, call, "mute")
         await self.session.commit()  # release the pooled connection before the LiveKit HTTP
         client = get_livekit_admin_client()
         await client.mute_participant_microphone(call.livekit_room_name, identity)
@@ -379,13 +370,13 @@ class CallOperations:
 
         # Mirror the forced mute into DB state and fan it out; the muted client's
         # own ReportMediaState arriving later agrees, so it is a no-op.
-        if participant is None or not participant.mic_enabled:
+        if participant is None:
             await self.session.commit()
             return
         participant.mic_enabled = False
         self.session.add(participant)
         await self.session.commit()
-        await self.publish_participant_state(call, participant)
+        await self.publish_participant_state(call, participant, moderator_muted=True)
 
     async def update_media_state(
         self,
@@ -450,7 +441,9 @@ class CallOperations:
         ids.update(p.user_id for p in active)
         return list(ids)
 
-    async def publish_participant_state(self, call: Call, participant: CallParticipant) -> None:
+    async def publish_participant_state(
+        self, call: Call, participant: CallParticipant, *, moderator_muted: bool = False
+    ) -> None:
         active = await self.list_active_participants(call.id)
         # A concurrent leave/kick/ghost-retire may have closed this row after the
         # caller read it (a debounced ReportMediaState or a host mute racing a
@@ -472,6 +465,7 @@ class CallOperations:
                     avatar_url=getattr(info, "avatar_url", None) or None,
                 ),
                 len(active),
+                moderator_muted=moderator_muted,
             ),
             channel_id=call.channel_id,
         )
@@ -1031,6 +1025,14 @@ class CallOperations:
             expires_at=datetime.now(UTC) + timedelta(seconds=RING_TIMEOUT_SECONDS),
         )
         await self.chat.publish(callees, chat_events.CALL_RING, payload, channel_id=channel.id)
+
+    async def _require_moderation(self, user_id: UUID, call: Call, action: str) -> None:
+        channel = await self.access.get_channel(call.channel_id, call.organization_id)
+        await self.access.check_access(user_id, call.organization_id, channel)
+        if call.host_user_id != user_id and not await self.access.require_elevated(
+            user_id, call.organization_id, call.channel_id
+        ):
+            raise PermissionDeniedError(action, "Only the host or a channel moderator can do this")
 
     async def _get_call(
         self, call_id: UUID, organization_id: UUID, *, require_active: bool = False

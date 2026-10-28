@@ -264,11 +264,14 @@ def build_call_participant_payload(
     call_id: UUID,
     participant: dict[str, Any],
     active_participant_count: int,
+    *,
+    moderator_muted: bool = False,
 ) -> dict[str, Any]:
     return {
         "call_id": str(call_id),
         "participant": participant,
         "active_participant_count": active_participant_count,
+        "moderator_muted": moderator_muted,
     }
 
 

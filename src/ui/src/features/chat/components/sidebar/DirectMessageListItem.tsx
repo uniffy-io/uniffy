@@ -166,8 +166,6 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             <CustomStatusDisplay userId={otherUserId} className="text-sm" compact />
           )}
 
-          <ChannelCallIndicator channelId={channel.id} />
-
           {isMuted && <SpeakerSlash size={12} className="shrink-0 text-subtle-foreground" />}
 
           {hasDraft && !(hasUnread && !isMuted) && (
@@ -187,6 +185,7 @@ export const DirectMessageListItem = memo(function DirectMessageListItem({
             </span>
           )}
         </button>
+        <ChannelCallIndicator channelId={channel.id} />
 
         {isAgentDm && (
           <button

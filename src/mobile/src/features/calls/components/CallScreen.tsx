@@ -1,24 +1,15 @@
+import { useCallModeration } from "@features/calls/useCallModeration";
+import { useParticipantActions } from "@features/calls/useParticipantActions";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MicrophoneSlash, PushPinSlash, Users } from "phosphor-react-native";
-import type { Participant } from "livekit-client";
 import { loadLivekitClient } from "@features/calls/livekit";
 import { useCall } from "@features/calls/CallContext";
-import { useAuth } from "@core/providers/AuthContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { useRoomParticipants } from "@features/calls/useRoomParticipants";
 import { useChannels } from "@features/chat/useChat";
 import { useCameraFit } from "@features/calls/callPrefs";
-import { callsApi } from "@features/calls/callsApi";
 import { formatCallDuration } from "@features/calls/callsSerializer";
 import { ParticipantTile, participantLabel } from "@features/calls/components/ParticipantTile";
 import { DraggablePip } from "@features/calls/components/DraggablePip";
@@ -67,7 +58,6 @@ export function CallScreen() {
   const [pipStage, setPipStage] = useState({ width: 0, height: 0 });
   const [pinned, setPinned] = useState<FocusTarget | null>(null);
   const [rosterOpen, setRosterOpen] = useState(false);
-  const { user, organizationId } = useAuth();
   const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
   const participants = useRoomParticipants(room);
@@ -85,7 +75,8 @@ export function CallScreen() {
     return () => clearInterval(timer);
   }, [session.status]);
 
-  const isHost = !!user && activeCall?.hostUserId === user.id;
+  const canModerate = useCallModeration(session.callId, activeCall?.hostUserId);
+  const { prompt: hostActionsFor } = useParticipantActions(canModerate);
 
   const channelTitle = useMemo(() => {
     const channel = channels.find((c) => c.id === session.channelId);
@@ -144,34 +135,6 @@ export function CallScreen() {
       })),
     ],
     [screenShares, participants],
-  );
-
-  const hostActionsFor = useCallback(
-    (participant: Participant) => {
-      if (!isHost || participant.isLocal || !organizationId || !session.callId) return;
-      const callId = session.callId;
-      Alert.alert(participantLabel(participant), undefined, [
-        {
-          text: "Mute microphone",
-          onPress: () => {
-            callsApi
-              .muteParticipant({ organizationId, callId, identity: participant.identity })
-              .catch(() => {});
-          },
-        },
-        {
-          text: "Remove from call",
-          style: "destructive",
-          onPress: () => {
-            callsApi
-              .kickParticipant({ organizationId, callId, identity: participant.identity })
-              .catch(() => {});
-          },
-        },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    },
-    [isHost, organizationId, session.callId],
   );
 
   const elapsed = session.connectedAtMs ? formatCallDuration(nowMs - session.connectedAtMs) : "";
@@ -407,14 +370,14 @@ export function CallScreen() {
           blurIntensity={48}
           solidColor={T.surface}
         />
-        <CallControls T={T} isHost={isHost} />
+        <CallControls T={T} canModerate={canModerate} />
       </View>
 
       <CallParticipantsSheet
         visible={rosterOpen}
         onClose={() => setRosterOpen(false)}
         participants={participants}
-        isHost={isHost}
+        canModerate={canModerate}
       />
     </View>
   );

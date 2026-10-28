@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import {
+  AccessibilityInfo,
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAudioPlayer } from "expo-audio";
@@ -49,6 +56,12 @@ export function IncomingCallBanner() {
       }
     }
   }, [invites, nowSeconds, organizationId, queryClient]);
+
+  const incomingName = live[0]?.callerName;
+  useEffect(() => {
+    if (incomingName && session.status === "idle")
+      AccessibilityInfo.announceForAccessibility(`Incoming call from ${incomingName}.`);
+  }, [incomingName, session.status]);
 
   const shouldRing = live.length > 0 && session.status === "idle" && ringtoneEnabled && available;
 

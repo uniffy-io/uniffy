@@ -1,3 +1,5 @@
+import { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
+import { callAvailabilityMessage, callErrorMessage } from "@/features/calls/utils/callErrors";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Microphone,
@@ -105,7 +107,7 @@ function DeviceSelect({
 
 export function PreJoinScreen() {
   const dispatch = useAppDispatch();
-  const { joinChannelCall, joinCallById } = useCall();
+  const { joinChannelCall, joinCallById, availability, checkAvailability } = useCall();
   const prejoin = useAppSelector(selectPrejoin);
   const channelId = prejoin?.channelId ?? null;
   const callId = prejoin?.callId ?? null;
@@ -119,10 +121,22 @@ export function PreJoinScreen() {
 
   const [micOn, setMicOn] = useState(false);
   const [camOn, setCamOn] = useState(false);
-  const [micDenied, setMicDenied] = useState(false);
-  const [camDenied, setCamDenied] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [camError, setCamError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState<"failed" | "ended" | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [checkedTarget, setCheckedTarget] = useState<string | null>(null);
+  useEffect(() => {
+    if (!channelId) return;
+    let cancelled = false;
+    void checkAvailability(true).then(() => {
+      if (!cancelled) setCheckedTarget(channelId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, checkAvailability]);
+  const ready = checkedTarget === channelId && availability === CallAvailability.READY;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const camStreamRef = useRef<MediaStream | null>(null);
@@ -147,22 +161,25 @@ export function PreJoinScreen() {
       return;
     }
     let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { deviceId: preferences.videoInputId ?? undefined },
-      })
+    Promise.resolve()
+      .then(() =>
+        navigator.mediaDevices.getUserMedia({
+          video: { deviceId: preferences.videoInputId ?? undefined },
+        }),
+      )
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+        setCamError(null);
         camStreamRef.current = stream;
         if (videoRef.current) videoRef.current.srcObject = stream;
         void refresh();
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
-          setCamDenied(true);
+          setCamError(callErrorMessage(error, "camera"));
           setCamOn(false);
         }
       });
@@ -180,22 +197,24 @@ export function PreJoinScreen() {
       return;
     }
     let cancelled = false;
-    navigator.mediaDevices
-      .getUserMedia({
-        audio: { deviceId: preferences.audioInputId ?? undefined },
-      })
+    Promise.resolve()
+      .then(() =>
+        navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: preferences.audioInputId ?? undefined },
+        }),
+      )
       .then((stream) => {
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         setMicStream(stream);
-        setMicDenied(false);
+        setMicError(null);
         void refresh();
       })
-      .catch(() => {
+      .catch((error) => {
         if (!cancelled) {
-          setMicDenied(true);
+          setMicError(callErrorMessage(error, "microphone"));
           setMicOn(false);
         }
       });
@@ -212,16 +231,17 @@ export function PreJoinScreen() {
     // the "ON but black preview" state on reopen.
     setMicOn(false);
     setCamOn(false);
-    setMicDenied(false);
-    setCamDenied(false);
+    setMicError(null);
+    setCamError(null);
     setJoinError(null);
+    setCheckedTarget(null);
     stopCamStream();
     stopMicStream();
     dispatch(prejoinClosed());
   }, [dispatch, stopCamStream, stopMicStream]);
 
   const handleJoin = useCallback(async () => {
-    if (!channelId) return;
+    if (!channelId || !ready) return;
     setJoining(true);
     setJoinError(null);
     const opts = { micEnabled: micOn, cameraEnabled: camOn };
@@ -239,23 +259,20 @@ export function PreJoinScreen() {
       // showing a stale "ON" with no preview stream.
       setMicOn(false);
       setCamOn(false);
+      setCheckedTarget(null);
       dispatch(prejoinClosed());
     } catch (error) {
       // The preview streams were released before the attempt; clear the toggles
       // so they do not read "on" with no preview while the user retries.
       setMicOn(false);
       setCamOn(false);
-      // unwrap() rejects with a SerializedError (plain object), not an Error.
-      const message =
-        typeof error === "object" && error !== null && "message" in error
-          ? String((error as { message?: unknown }).message ?? "")
-          : "";
-      setJoinError(/call has ended|\[not_found]/i.test(message) ? "ended" : "failed");
+      setJoinError(callErrorMessage(error));
     } finally {
       setJoining(false);
     }
   }, [
     channelId,
+    ready,
     callId,
     micOn,
     camOn,
@@ -329,16 +346,16 @@ export function PreJoinScreen() {
 
           {micOn && <MicLevelMeter stream={micStream} />}
 
-          {(micDenied || camDenied) && (
-            <div className="flex items-start gap-2 rounded-md bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-400">
+          {[micError, camError].filter(Boolean).map((error) => (
+            <div
+              key={error}
+              role="alert"
+              className="flex items-start gap-2 rounded-md bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 text-xs text-yellow-800 dark:text-yellow-400"
+            >
               <Warning size={14} className="mt-0.5 shrink-0" />
-              <span>
-                {micDenied
-                  ? "Microphone access was blocked by the browser. You can join listen-only, or allow access in site settings."
-                  : "Camera access was blocked by the browser. You can join without video."}
-              </span>
+              <span>{error}</span>
             </div>
-          )}
+          ))}
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <DeviceSelect
@@ -380,18 +397,35 @@ export function PreJoinScreen() {
             </div>
           )}
 
-          {joinError === "failed" && (
-            <p className="text-xs text-red-500">Unable to connect. Check your network and retry.</p>
+          {!ready && (
+            <div role="status" className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                {checkedTarget !== channelId
+                  ? "Checking call availability..."
+                  : callAvailabilityMessage(availability)}
+              </p>
+              {checkedTarget === channelId && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setCheckedTarget(null);
+                    void checkAvailability(true).then(() => setCheckedTarget(channelId));
+                  }}
+                >
+                  Check again
+                </Button>
+              )}
+            </div>
           )}
-          {joinError === "ended" && (
-            <p className="text-xs text-muted-foreground" data-testid="call-prejoin-ended">
-              This call has already ended.
+          {joinError && (
+            <p role="alert" className="text-sm text-red-500">
+              {joinError}
             </p>
           )}
         </ModalBody>
 
         <ModalFooter>
-          {joinError === "ended" ? (
+          {joinError === "This call has already ended." ? (
             <Button onClick={close}>Close</Button>
           ) : (
             <>
@@ -401,9 +435,10 @@ export function PreJoinScreen() {
               <Button
                 onClick={() => void handleJoin()}
                 loading={joining}
+                disabled={!ready}
                 data-testid="call-prejoin-join"
               >
-                {joinError === "failed" ? "Retry" : "Join"}
+                {joinError ? "Retry" : "Join"}
               </Button>
             </>
           )}

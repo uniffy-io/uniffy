@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -54,7 +55,17 @@ export function PreJoinScreen() {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { prejoinTarget, closePrejoin, joinChannelCall, joinCallById, session } = useCall();
+  const {
+    prejoinTarget,
+    closePrejoin,
+    joinChannelCall,
+    joinCallById,
+    session,
+    available,
+    callsDisabledMessage,
+    retryAvailability,
+    showFeedback,
+  } = useCall();
   const channelId = prejoinTarget?.channelId;
   const activeCall = useActiveCall(channelId);
   const { channels } = useChannels();
@@ -112,7 +123,12 @@ export function PreJoinScreen() {
       const livekit = loadLivekitClient();
       if (!livekit) return;
       const granted = await ensureCallPermissions({ mic: false, camera: true });
-      if (cancelled || !granted.cameraGranted) return;
+      if (cancelled) return;
+      if (!granted.cameraGranted) {
+        setError(callErrorMessage(null, "camera"));
+        setCameraOn(false);
+        return;
+      }
       try {
         const track = await livekit.createLocalVideoTrack({ facingMode: facing });
         if (cancelled) {
@@ -121,8 +137,9 @@ export function PreJoinScreen() {
         }
         created = track;
         setPreviewTrack(track);
-      } catch {
-        // No camera, or another app holds it; the avatar placeholder stands in.
+      } catch (captureError) {
+        setError(callErrorMessage(captureError, "camera"));
+        setCameraOn(false);
       }
     })();
     return () => {
@@ -135,7 +152,7 @@ export function PreJoinScreen() {
   const others = (activeCall?.participants ?? []).filter((p) => p.userId !== user?.id);
 
   const join = async () => {
-    if (!channelId || joining || busyElsewhere) return;
+    if (!channelId || joining || busyElsewhere || !available) return;
     setJoining(true);
     setError(null);
     try {
@@ -146,12 +163,13 @@ export function PreJoinScreen() {
         facing,
       };
       if (micOn && !granted.micGranted) {
-        setError("Microphone permission denied - joining listen-only");
+        showFeedback(callErrorMessage(null, "microphone"));
       }
+      if (cameraOn && !granted.cameraGranted) showFeedback(callErrorMessage(null, "camera"));
       joinedRef.current = true;
       // The live map wins over the id captured at open time: a call that started
       // while this screen was up is the one to join.
-      const callId = activeCall?.id ?? prejoinTarget?.callId;
+      const callId = prejoinTarget?.callId ?? activeCall?.id;
       if (callId) {
         await joinCallById(callId, channelId, media);
       } else {
@@ -363,18 +381,45 @@ export function PreJoinScreen() {
             Leave the current call before joining another
           </Text>
         ) : null}
-        {error ? <Text style={[styles.error, { color: T.red }]}>{error}</Text> : null}
+        {callsDisabledMessage ? (
+          <View accessibilityLiveRegion="polite" style={{ padding: 16, gap: 8 }}>
+            <Text style={{ color: T.text }}>{callsDisabledMessage}</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Check call availability again"
+              onPress={retryAvailability}
+              style={{ minHeight: 44, justifyContent: "center" }}
+            >
+              <Text style={{ color: T.accent }}>Check again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        {error ? (
+          <View accessibilityLiveRegion="polite">
+            <Text style={[styles.error, { color: T.red }]}>{error}</Text>
+            {/settings/i.test(error) && (
+              <TouchableOpacity
+                onPress={() => void Linking.openSettings().catch(() => {})}
+                accessibilityRole="button"
+                accessibilityLabel="Open app settings"
+                style={{ minHeight: 44, justifyContent: "center" }}
+              >
+                <Text style={{ color: T.accent }}>Open settings</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
 
         <TouchableOpacity
           style={[
             styles.joinButton,
-            { backgroundColor: T.green, opacity: busyElsewhere ? 0.5 : 1 },
+            { backgroundColor: T.green, opacity: busyElsewhere || !available ? 0.5 : 1 },
           ]}
           onPress={() => void join()}
-          disabled={joining || busyElsewhere}
+          disabled={joining || busyElsewhere || !available}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityState={{ disabled: joining || busyElsewhere }}
+          accessibilityState={{ disabled: joining || busyElsewhere || !available }}
           accessibilityLabel="Join call"
         >
           {joining ? (
