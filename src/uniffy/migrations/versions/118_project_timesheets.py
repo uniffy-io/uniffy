@@ -1,14 +1,10 @@
-"""Add project time periods and timesheets for the approval cycle.
-
-A period row exists only once an admin closes it and a sheet row only after
-its first state change; both tables start empty.
-"""
+"""Add project time periods and timesheets for the approval cycle."""
 
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "116"
-down_revision: str | None = "115"
+revision: str = "118"
+down_revision: str | None = "117"
 branch_labels: str | None = None
 depends_on: str | None = None
 

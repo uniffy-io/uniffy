@@ -143,7 +143,9 @@ def _env(rows: list, *, policy: ResolvedTimePolicy | None = None, rollup: int = 
     worklogs = MagicMock()
     staged = WorklogRow(worklog=SimpleNamespace(task_id=TASK_ID), project_id=PROJECT_ID)
     worklogs.stage_create = AsyncMock(return_value=(staged, 150))
-    notify = AsyncMock(side_effect=lambda *_: session.events.append("timer_changed"))
+    notify = AsyncMock(
+        side_effect=lambda *_, organization_id: session.events.append("timer_changed")
+    )
     content = AsyncMock(side_effect=lambda *_: session.events.append("content_changed"))
     emitted = AsyncMock()
     stack.enter_context(
@@ -189,6 +191,7 @@ async def test_start_without_a_timer_adds_one_commits_and_tells_the_owner() -> N
     env.worklogs.stage_create.assert_not_awaited()
     assert env.session.events == ["commit", "timer_changed"]
     assert env.notify.await_args.args[1]["_type"] == NotificationPayloadType.TIMER_CHANGED
+    assert env.notify.await_args.kwargs["organization_id"] == ORG
 
 
 async def test_start_stops_the_running_timer_into_a_timer_worklog_in_the_same_transaction() -> None:
@@ -302,6 +305,7 @@ async def test_limit_pause_applies_once_and_notifies_the_owner() -> None:
     assert over.accumulated_seconds == 13 * 3600  # noqa: PLR2004
     assert under.started_at is not None
     assert env.session.events == ["commit", "timer_changed"]
+    assert env.notify.await_args.kwargs["organization_id"] == ORG
     event = env.emitted.await_args.args[0]
     assert event.notification_type is NotificationType.TIMER_LIMIT_REACHED
     assert event.target_user_ids == [ACTOR]

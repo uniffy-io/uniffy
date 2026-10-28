@@ -45,7 +45,9 @@ async def submit_timesheet(
         reviewer_id=reviewer_id,
     )
     if stopped is not None:
-        await publish_notification(actor_id, timer_changed_payload(organization_id))
+        await publish_notification(
+            actor_id, timer_changed_payload(organization_id), organization_id=organization_id
+        )
         if stopped.worklog is not None:
             await publish_content_changed(ContentType.TASK, stopped.task_id, organization_id)
     return view

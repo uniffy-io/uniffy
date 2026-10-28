@@ -1,15 +1,10 @@
-"""Add project worklogs and timers; backfill one import worklog per task with time spent.
-
-``projects_tasks.time_spent_minutes`` stays as the rollup of live worklogs. The
-backfilled row carries the whole historical total on the task's last update day,
-attributed to the task creator, so the rollup is exact from the first write.
-"""
+"""Add worklogs and timers, preserving historical task totals as import worklogs."""
 
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "115"
-down_revision: str | None = "114"
+revision: str = "117"
+down_revision: str | None = "116"
 branch_labels: str | None = None
 depends_on: str | None = None
 
