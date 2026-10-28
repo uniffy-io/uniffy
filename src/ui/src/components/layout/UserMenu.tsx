@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
+  ArrowRight,
   Books,
-  Buildings,
-  PlusCircle,
   SignOut,
   Moon,
   ShieldCheck,
@@ -14,9 +13,7 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CreateOrganizationDialog } from "@/features/auth/components/CreateOrganizationDialog";
 import { OrganizationList } from "@/features/auth/components/OrganizationList";
 import {
   pendingOrganizationNames,
@@ -27,10 +24,7 @@ import {
 import { useSwitchOrganization } from "@/features/auth/hooks/useSwitchOrganization";
 import { selectPendingInvitationCount } from "@/features/auth/store/invitationsSlice";
 import { refreshMyInvitationsQuietly } from "@/features/auth/store/invitationsThunks";
-import {
-  selectCanCreateOrganization,
-  selectOrganizations,
-} from "@/features/auth/store/organizationsSlice";
+import { selectOrganizations } from "@/features/auth/store/organizationsSlice";
 import { reloadOrganizationsAndRole } from "@/features/auth/store/organizationsThunks";
 import { useCustomStatus } from "@/features/presence/hooks/useCustomStatus";
 import { CustomStatusPicker } from "@/features/presence/components/CustomStatusPicker";
@@ -94,12 +88,11 @@ export function UserMenu() {
   const signOut = useSignOut();
   const listPendingOrganizations = usePendingOrganizations();
   const recordingState = useAppSelector((state) => state.recording.state);
-  const { canAccessAdmin, isOrgAdmin, isSystemAdmin } = useAdminAccess();
+  const { canAccessAdmin, isSystemAdmin } = useAdminAccess();
   const { themeMode, setTheme, availableModes } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const [creatingOrganization, setCreatingOrganization] = useState(false);
   // The organizations holding unsynced edits while the sign-out waits for a decision.
   const [unsynced, setUnsynced] = useState<PendingOrganization[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -109,7 +102,6 @@ export function UserMenu() {
   const organizations = useAppSelector(selectOrganizations);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const switchingSlug = useAppSelector((state) => state.organizations.switchingSlug);
-  const canCreateOrganization = useAppSelector(selectCanCreateOrganization);
   const pendingInvitationCount = useAppSelector(selectPendingInvitationCount);
   const { requestSwitch, confirmDialog: switchConfirmDialog } = useSwitchOrganization();
 
@@ -259,8 +251,34 @@ export function UserMenu() {
           </div>
 
           <div className="border-b border-border py-1.5 px-1.5">
-            <div className="px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              Organizations
+            <div className="flex items-center justify-between gap-2 pl-2.5 pr-1.5">
+              <span className="py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                Organizations
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate("/welcome");
+                }}
+                className="group/all flex min-h-11 md:min-h-0 items-center gap-1.5 rounded px-1 py-0.5 text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors focus-ring"
+              >
+                {pendingInvitationCount > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+                    {pendingInvitationCount > 99 ? "99+" : pendingInvitationCount}
+                    <span className="sr-only"> pending invitations,</span>
+                  </span>
+                )}
+                <span>
+                  View all<span className="sr-only"> organizations</span>
+                </span>
+                <ArrowRight
+                  size={10}
+                  weight="bold"
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover/all:translate-x-0.5"
+                />
+              </button>
             </div>
             {organizations.length > 0 && (
               <div className="max-h-[min(15rem,40dvh)] overflow-y-auto">
@@ -273,57 +291,6 @@ export function UserMenu() {
                 />
               </div>
             )}
-            {canCreateOrganization && (
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  setCreatingOrganization(true);
-                }}
-                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
-              >
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
-                <PlusCircle
-                  size={16}
-                  weight="duotone"
-                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
-                />
-                <span>Create organization</span>
-              </button>
-            )}
-            {isOrgAdmin && (
-              <button
-                onClick={() => {
-                  navigate("/admin/organization");
-                  setIsOpen(false);
-                }}
-                className="group relative flex w-full items-center gap-2.5 px-2.5 py-2 text-sm rounded-md text-foreground/80 hover:text-foreground transition-colors overflow-hidden"
-              >
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-0 rounded-full bg-primary transition-all duration-300 ease-out group-hover:w-1/2 opacity-0 group-hover:opacity-70" />
-                <Buildings
-                  size={16}
-                  weight="duotone"
-                  className="text-muted-foreground group-hover:text-primary transition-colors duration-200"
-                />
-                <span>Organization settings</span>
-              </button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full min-h-11 justify-start"
-              onClick={() => {
-                setIsOpen(false);
-                navigate("/welcome");
-              }}
-            >
-              All organizations
-              {pendingInvitationCount > 0 && (
-                <Badge className="ml-auto px-1.5 py-0 text-[10px] leading-4">
-                  {pendingInvitationCount}
-                  <span className="sr-only"> pending invitations</span>
-                </Badge>
-              )}
-            </Button>
           </div>
 
           <div className="border-b border-border py-1.5 px-1.5">
@@ -531,9 +498,6 @@ export function UserMenu() {
         variant="warning"
       />
       {switchConfirmDialog}
-      {creatingOrganization && (
-        <CreateOrganizationDialog onClose={() => setCreatingOrganization(false)} />
-      )}
     </div>
   );
 }

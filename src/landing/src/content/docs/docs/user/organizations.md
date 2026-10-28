@@ -32,7 +32,7 @@ Self service organization creation and public signup were developed for Uniffy's
 
 On our SaaS, the creation policy decides who may start an organization: anyone with an account, anyone who already belongs to an organization, existing owners, or only platform operators. The flow below applies when that policy permits you to create one.
 
-When you are allowed, your welcome page offers a card to create one and your user menu has a Create organization entry. When you see neither, ask whoever runs your Uniffy.
+When you are allowed, your welcome page offers a card to create one. View all in your user menu takes you there. When you do not see the card, ask whoever runs your Uniffy.
 
 Give it a name. The slug, the short name in its links, follows the name until you change it. A slug that is taken is refused. That includes the slug of a deleted organization until it is purged.
 
@@ -42,7 +42,7 @@ In the mobile app, Create organization sits at the bottom of your organization l
 
 ## Switching
 
-Open your user menu to see every organization you belong to with your current one checked. Pick another and you land on its home page. All organizations opens your welcome page.
+Open your user menu to see every organization you belong to with your current one checked. Pick another and you land on its home page. View all opens your welcome page, which also holds invitations waiting for you.
 
 You stay signed in. Nothing you have open in another tab moves, reloads, or signs out.
 

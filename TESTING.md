@@ -76,7 +76,7 @@ steps below so each one starts from a fresh invitation.
    `{UNIFFY_BASE_URL}/auth/accept-invite?token=...` link. No other mail
    arrives and nothing changes for the user yet.
 3. As the invited user, signed in to Org B, reload. The user menu shows a
-   `1` badge on **All organizations**.
+   `1` badge beside **View all** in the Organizations section.
 4. Open `/welcome`. The **Invitations** list shows Org A with **Accept**
    and **Decline**. Accept: toast "Welcome to Org A", the tab lands on `/`
    in Org A, and the badge is gone. The admin's row
@@ -2985,11 +2985,11 @@ in as the first user. (both products)
 
 - [ ] Header: organization switcher is absent at desktop, tablet, and mobile widths.
 - [ ] User menu: Organizations lists A, B and C with A checked. Pick B: the tab lands on `/` in B
-      without a sign-in prompt. "All organizations" opens `/welcome`. A user in a single
+      without a sign-in prompt. "View all" opens `/welcome`. A user in a single
       organization signs in straight to `/` without the welcome page, and the section shows that
       one checked row.
-- [ ] Fail the first organization-list request after reload. User menu still offers "All
-      organizations". Open it and retry: the welcome page loads current memberships without
+- [ ] Fail the first organization-list request after reload. User menu still offers "View all".
+      Open it and retry: the welcome page loads current memberships without
       signing out.
 - [ ] Two tabs in two organizations: tab 1 stays in A with a note open, tab 2 switches to B and
       opens a note there. Type in both for a minute: both badges stay Live, each note saves its
@@ -3042,15 +3042,14 @@ always may create. (both products)
 
 - [ ] Default `operators_and_owners`, nothing stored: `/platform/server-settings` > Organization
       creation shows "Operators and organization owners" with the `default` badge. The plain
-      member sees no create card on `/welcome` and no **Create organization** in the user menu.
-      The owner of A sees both. The operator with no membership sees the card on `/welcome`. The
-      user with no membership sees "No organizations yet" and "Ask an organization admin to
-      invite you."
+      member sees no create card on `/welcome`. The owner of A sees it. The operator with no
+      membership sees the card on `/welcome`. The user with no membership sees "No organizations
+      yet" and "Ask an organization admin to invite you."
 - [ ] From the platform page, pick "Platform operators only": toast "Organization creation
-      updated" and the badge reads `deployment`. After a reload the owner of A has no card and no
-      menu entry; the operator still has the card. No redeploy, no restart.
-- [ ] Pick "Anyone with a membership": after a reload the plain member sees the card and the
-      menu entry. The user with no membership still sees the "ask your admin" state.
+      updated" and the badge reads `deployment`. After a reload the owner of A has no card; the
+      operator still has the card. No redeploy, no restart.
+- [ ] Pick "Anyone with a membership": after a reload the plain member sees the card. The
+      user with no membership still sees the "ask your admin" state.
 - [ ] Pick "Any signed-in user": the user with no membership now sees the create card on
       `/welcome`. With public registration on, a freshly registered account lands on `/welcome`
       with the card.
@@ -3074,7 +3073,7 @@ Needs the users above, mailcatcher, and a throwaway organization for the delete 
       `/` in Delta Test. The user menu lists it checked, `/settings?section=organization` shows
       the Owner badge, Chat has `#general`, and `/admin/audit-logs` shows
       `Organizations: Created` with this user as actor. Other tabs stay in their organizations.
-- [ ] Create from the user menu entry with A's slug typed in: the slug field shows "Slug is
+- [ ] Create from `/welcome` again with A's slug typed in: the slug field shows "Slug is
       already in use" and nothing is created. Change the slug and submit: the tab lands in the
       new organization as owner.
 - [ ] Invite a current member: as the admin of A, invite the email of an active member of A.
