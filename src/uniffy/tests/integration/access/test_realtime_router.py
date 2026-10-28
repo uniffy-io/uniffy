@@ -66,6 +66,7 @@ class Recorded:
             reload_document=self.reload_document,
             close_stale_user_sessions=ignore,
             close_user_session_by_sid=ignore,
+            close_user_org_handles=ignore,
             recheck_access=ignore,
         )
 

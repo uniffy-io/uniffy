@@ -30,9 +30,21 @@ The platform operator has no access to tenant content, including notes, files, a
 
 Self hosted runs the same code, and the wall is worth honoring on your own deployment for the same reasons: a compromised operator account is an infrastructure breach but not a content breach, a curious admin leaves a trail instead of a silence, and when someone asks "who can read our documents", the answer is a short list that does not include "whoever runs the servers".
 
+## First run
+
+With `INITIAL_ADMIN_PASSWORD` unset, nothing is seeded. The first visit opens `/setup`, which creates the operator account and the first organization in one step. That account is the platform operator and the owner of that organization, and you land in it signed in.
+
+Setup is open to whoever reaches it first. Finish it before you open the deployment to other people. Once any account exists, `/setup` sends visitors to the sign in page and the server refuses a second setup.
+
+The first session skips two factor enrollment, because the account was created in that same request. The platform policy applies from your next sign in.
+
+With `INITIAL_ADMIN_PASSWORD` set, the admin and the default organization are seeded at first boot and the setup page never appears. [Configure Uniffy](/docs/deployment/configure/#initial-seed-and-registration) lists the seed settings.
+
+After setup, invite people into your organization. On self hosted deployments, keep public registration off and leave additional organization creation to platform operators. Public signup and self service organization creation were developed for our hosted SaaS and are not intended for self hosted use. [Configure Uniffy](/docs/deployment/configure/#initial-seed-and-registration) gives the exact values and explains stored overrides.
+
 ## One account or two
 
-The bootstrap settings decide this. Leave `INITIAL_PLATFORM_ADMIN_EMAIL` unset and the first admin is one combined account: org owner and platform operator in one login. Set it to a distinct address and the two jobs start as two accounts.
+The setup page always starts combined: one account that is both org owner and platform operator. When you seed instead, the bootstrap settings decide. Leave `INITIAL_PLATFORM_ADMIN_EMAIL` unset and the first admin is one combined account. Set it to a distinct address and the two jobs start as two accounts.
 
 Three deployments, three right answers.
 

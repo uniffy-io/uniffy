@@ -556,9 +556,9 @@ export function PlatformOrganizationsPage() {
         }
         description={
           pending?.kind === "suspend"
-            ? "Bumps token_version for every member. Existing JWTs invalidated; new logins blocked."
+            ? "Members lose access to this organization until it is lifted. Their sessions in other organizations stay signed in."
             : pending?.kind === "unsuspend"
-              ? "Members can log in again. Their JWTs were invalidated at suspend time."
+              ? "Members regain access to this organization. Nobody has to sign in again."
               : pending?.kind === "restore"
                 ? "Clears the scheduled purge. The workspace becomes accessible again."
                 : pending?.kind === "delete"

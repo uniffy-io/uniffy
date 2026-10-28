@@ -4,8 +4,10 @@ import { Awareness } from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
 import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
+import type { Store } from "@reduxjs/toolkit";
+import type { RootState } from "@/app/store";
+import { setStoreRef } from "@/app/storeRef";
 import { setMemoryAccessToken } from "@/config/api";
-import { AUTH_STORAGE_KEY } from "@/features/auth/store/credentialStorage";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
   realtimeMultiplexer,
@@ -21,6 +23,7 @@ import {
 } from "@/features/realtime/protocol";
 
 export const GENERATION = "3f9c1a52-7d4e-4b8a-9c61-0e2f5d8b7a14";
+export const ORGANIZATION = "org-1";
 export const EPOCH = "E1";
 
 export class FakeWebSocket {
@@ -75,12 +78,15 @@ export function installRealtimeGlobals(): void {
     removeEventListener: () => {},
     visibilityState: "visible",
   });
-  const storage = new Map([[AUTH_STORAGE_KEY, JSON.stringify({ currentOrganizationId: "org-1" })]]);
+  const storage = new Map<string, string>();
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => storage.get(key) ?? null,
     setItem: (key: string, value: string) => storage.set(key, value),
     removeItem: (key: string) => storage.delete(key),
   });
+  setStoreRef({
+    getState: () => ({ auth: { user: { id: "user" }, currentOrganizationId: ORGANIZATION } }),
+  } as unknown as Store<RootState>);
   setMemoryAccessToken("test-token");
 }
 
@@ -100,6 +106,7 @@ export function attachDoc(
   const subscription = realtimeMultiplexer.attach({
     contentType: "TASK",
     contentId,
+    organizationId: ORGANIZATION,
     ydoc,
     awareness: new Awareness(ydoc),
     ...callbacks,

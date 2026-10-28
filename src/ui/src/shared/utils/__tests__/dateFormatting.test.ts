@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import {
   calendarDayKey,
   formatDateShort,
@@ -170,6 +170,59 @@ describe("formatRelativeTime", () => {
   it("falls back to date string for old dates", () => {
     const result = formatRelativeTime("2020-01-15T12:00:00Z");
     expect(result).toContain("Jan");
+  });
+
+  it("reads a timestamp slightly ahead of this clock as now", () => {
+    const skewed = new Date(Date.now() + 30_000).toISOString();
+    expect(formatRelativeTime(skewed)).toBe("Just now");
+  });
+
+  describe("ahead of now", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      setPreferredTimeZone(null);
+    });
+
+    function atViewerTime(iso: string, timeZone = "Europe/Berlin") {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(iso));
+      setPreferredTimeZone(timeZone);
+    }
+
+    it("counts minutes and hours within a day", () => {
+      atViewerTime("2026-10-22T10:00:00Z");
+      expect(formatRelativeTime("2026-10-22T10:05:00Z")).toBe("in 5m");
+      expect(formatRelativeTime("2026-10-22T13:00:00Z")).toBe("in 3h");
+      expect(formatRelativeTime("2026-10-23T09:00:00Z")).toBe("in 23h");
+    });
+
+    it("says Tomorrow only for the next calendar day in the viewer's zone", () => {
+      // 08:00 in Berlin; the target is 09:00 the next day there.
+      atViewerTime("2026-10-22T06:00:00Z");
+      expect(formatRelativeTime("2026-10-23T07:00:00Z")).toBe("Tomorrow");
+      expect(formatRelativeTime("2026-10-23T21:00:00Z")).toBe("Tomorrow");
+    });
+
+    it("counts calendar days once the target is two days out", () => {
+      // 23:00 in Berlin; 25 hours ahead is 00:00 two days later.
+      atViewerTime("2026-10-21T21:00:00Z");
+      expect(formatRelativeTime("2026-10-22T22:00:00Z")).toBe("in 2d");
+      expect(formatRelativeTime("2026-11-19T12:00:00Z")).toBe("in 29d");
+    });
+
+    it("reads the calendar of the viewer's zone, not of UTC", () => {
+      // 22:00 in Los Angeles is 05:00 the next day in UTC; the target is 00:30 two days later there.
+      atViewerTime("2026-10-22T05:00:00Z", "America/Los_Angeles");
+      expect(formatRelativeTime("2026-10-23T07:30:00Z")).toBe("in 2d");
+      atViewerTime("2026-10-22T05:00:00Z", "UTC");
+      expect(formatRelativeTime("2026-10-23T07:30:00Z")).toBe("Tomorrow");
+    });
+  });
+
+  it("falls back to date string for far future dates", () => {
+    const result = formatRelativeTime(new Date(Date.now() + 90 * 86400000).toISOString());
+    expect(result).not.toMatch(/^in |Just now/);
+    expect(result).toMatch(/\d/);
   });
 });
 

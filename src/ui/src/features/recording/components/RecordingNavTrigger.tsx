@@ -25,6 +25,7 @@ import { useBeforeUnloadGuard } from "@/features/recording/hooks/useBeforeUnload
 import { useNetworkStatus } from "@/features/recording/hooks/useNetworkStatus";
 import { subscribeAvailability } from "@/features/recording/utils/crossTabRecordingLock";
 import { recoverOrphanedRecordings } from "@/features/recording/utils/recoverOrphanedRecordings";
+import { ENCRYPTION_READY_EVENT } from "@/shared/crypto/storageEncryption";
 import { useScreenRecordingShortcut } from "@/features/recording/hooks/useScreenRecordingShortcut";
 import { useLongRecordingNudge } from "@/features/recording/hooks/useLongRecordingNudge";
 import { fetchFile } from "@/features/files/store/filesThunks";
@@ -52,6 +53,8 @@ export function RecordingNavTrigger() {
   useScreenRecordingShortcut();
   useLongRecordingNudge();
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const { isMobile } = useBreakpoint();
   const recordingState = useAppSelector((state) => state.recording.state);
   const bytesQueued = useAppSelector((state) => state.recording.bytesQueued);
@@ -67,34 +70,45 @@ export function RecordingNavTrigger() {
 
   useEffect(() => subscribeAvailability(setOtherTabRecording), []);
 
-  // Tab-crash recovery. Runs at most once per session via the module flag in `recoverOrphanedRecordings`.
   useEffect(() => {
-    void recoverOrphanedRecordings(({ fileId, filename }) => {
-      toast.success("Recovered recording from previous session", {
-        description: filename,
-        action: {
-          label: "Open",
-          onClick: () => {
-            void (async () => {
-              try {
-                const file = await dispatch(fetchFile(fileId)).unwrap();
-                dispatch(
-                  openViewer({
-                    fileId: file.id,
-                    playlist: [file.id],
-                    fileData: file,
-                  }),
-                );
-              } catch {
-                window.location.href = "/files";
-              }
-            })();
-          },
+    if (!userId || !organizationId) return;
+    let active = true;
+    const recover = () =>
+      void recoverOrphanedRecordings(
+        ({ fileId, filename }) => {
+          if (!active) return;
+          toast.success("Recovered recording from previous session", {
+            description: filename,
+            action: {
+              label: "Open",
+              onClick: () => {
+                void (async () => {
+                  try {
+                    const file = await dispatch(fetchFile(fileId)).unwrap();
+                    dispatch(
+                      openViewer({
+                        fileId: file.id,
+                        playlist: [file.id],
+                        fileData: file,
+                      }),
+                    );
+                  } catch {
+                    window.location.href = "/files";
+                  }
+                })();
+              },
+            },
+          });
         },
-      });
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per app session, not per render
-  }, []);
+        { userId, organizationId },
+      );
+    window.addEventListener(ENCRYPTION_READY_EVENT, recover);
+    recover();
+    return () => {
+      active = false;
+      window.removeEventListener(ENCRYPTION_READY_EVENT, recover);
+    };
+  }, [dispatch, userId, organizationId]);
 
   const isRecording = recordingState === "recording";
   const isPaused = recordingState === "paused";

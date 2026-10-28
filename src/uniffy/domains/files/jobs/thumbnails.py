@@ -103,8 +103,8 @@ async def generate_image_thumbnail(
                     {
                         "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
-                        "organization_id": str(file.organization_id),
                     },
+                    organization_id=file.organization_id,
                 )
             except Exception:
                 log.warning("Failed to publish file update event")
@@ -200,8 +200,8 @@ async def generate_pdf_thumbnail(
                     {
                         "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
-                        "organization_id": str(file.organization_id),
                     },
+                    organization_id=file.organization_id,
                 )
             except Exception:
                 log.warning("Failed to publish file update event")
@@ -298,8 +298,8 @@ async def generate_video_thumbnail(
                     {
                         "_type": NotificationPayloadType.FILE_UPDATED,
                         "file_id": str(file.id),
-                        "organization_id": str(file.organization_id),
                     },
+                    organization_id=file.organization_id,
                 )
             except Exception:
                 log.warning("Failed to publish file update event")

@@ -13,6 +13,7 @@ import {
   openEditor,
   signInDevice,
   storedRowKeys,
+  switchAccount,
 } from "@/features/realtime/persistence/__tests__/browser";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import { AUTH_REFRESHED_EVENT } from "@/features/realtime/protocol";
@@ -35,6 +36,7 @@ import {
   DRAIN_BACKOFF_MS,
   DRAIN_TIMEOUT_MS,
   abortDrain,
+  abortDrainsOutside,
   drainDoc,
   resumeDrains,
   runRealtimeDrain,
@@ -614,5 +616,69 @@ describe("drains across tabs of one origin", () => {
     expect(await outcome).toBe("retry");
     expect(realtimeMultiplexer.isAttached("TASK:opened")).toBe(false);
     expect(hasPendingDoc("TASK", "opened")).toBe(true);
+  });
+});
+
+describe("drains across an organization switch", () => {
+  afterEach(() => switchAccount("alice", "org-1"));
+
+  it("keeps rows and entry when the tab switches organization while a drain waits for its checkpoint", async () => {
+    const server = new FakeRealtimeServer("NOTE:switched", GENERATION, "Shared note.");
+    await closeEditor(server, "switched", { accepted: [" Accepted."] });
+    const pending = (await storedRowKeys("NOTE", "switched")).filter((key) =>
+      key[3].startsWith("pending:"),
+    );
+    expect(pending).toHaveLength(1);
+    const outcome = drainDoc(noteEntry("switched"));
+    const ws = await attachedSocket(server.docName);
+    server.attach(ws);
+    await eventually(() =>
+      expect(realtimeMultiplexer.getDocState(server.docName).checkpointPending).toBe(true),
+    );
+
+    // The tab signs in to another organization; its socket reconnects there.
+    switchAccount("alice", "org-2");
+    window.dispatchEvent(new Event(AUTH_REFRESHED_EVENT));
+    const other = currentSocket();
+    expect(other).not.toBe(ws);
+    expect(other.url).toContain("org_id=org-2");
+    other.open();
+    // That organization's server knows nothing of the document and says so.
+    server.denyView(other);
+
+    expect(await outcome).toBe("retry");
+    const docFrames = other.sent.filter((frame) => peekVarString(frame).docName === server.docName);
+    expect(docFrames).toEqual([]);
+    expect(hasPendingDoc("NOTE", "switched")).toBe(true);
+    const stored = await storedRowKeys("NOTE", "switched");
+    expect(stored.filter((key) => key[3].startsWith("pending:"))).toEqual(pending);
+    expect(stored.some((key) => key[2].startsWith("recovery:"))).toBe(false);
+    expect(await offeredDrafts(server, "switched", "NOTE")).toEqual([]);
+
+    // Back in the document's organization the drain finishes what it started.
+    switchAccount("alice", "org-1");
+    const resumed = drainDoc(noteEntry("switched"));
+    window.dispatchEvent(new Event(AUTH_REFRESHED_EVENT));
+    const back = await attachedSocket(server.docName);
+    expect(back.url).toContain("org_id=org-1");
+    server.attach(back);
+    server.checkpoint([back]);
+    expect(await resumed).toBe("drained");
+    expect(server.text).toBe("Shared note. Accepted.");
+    expect(hasPendingDoc("NOTE", "switched")).toBe(false);
+  });
+
+  it("ends only the drains of organizations other than the one the tab moves to", async () => {
+    const server = new FakeRealtimeServer("TASK:leaving", GENERATION);
+    await strandRows(server, "leaving", "typed offline");
+    recordPendingDoc(entryFor("leaving"));
+    const { outcome } = await startDrain(server, entryFor("leaving"));
+
+    abortDrainsOutside("org-1");
+    expect(realtimeMultiplexer.isAttached(server.docName)).toBe(true);
+    abortDrainsOutside("org-2");
+    expect(await outcome).toBe("retry");
+    expect(hasPendingDoc("TASK", "leaving")).toBe(true);
+    expect(await discoverStoredPendingDocs("alice")).toBe(true);
   });
 });

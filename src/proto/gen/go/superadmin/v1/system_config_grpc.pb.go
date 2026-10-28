@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	SystemConfigService_GetSystemConfig_FullMethodName         = "/superadmin.v1.SystemConfigService/GetSystemConfig"
 	SystemConfigService_SetPublicRegistration_FullMethodName   = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
+	SystemConfigService_SetOrgCreationPolicy_FullMethodName    = "/superadmin.v1.SystemConfigService/SetOrgCreationPolicy"
 	SystemConfigService_GetMfaPolicy_FullMethodName            = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
 	SystemConfigService_SetMfaPolicy_FullMethodName            = "/superadmin.v1.SystemConfigService/SetMfaPolicy"
 	SystemConfigService_GetRealtimeBufferStatus_FullMethodName = "/superadmin.v1.SystemConfigService/GetRealtimeBufferStatus"
@@ -44,6 +45,8 @@ type SystemConfigServiceClient interface {
 	GetSystemConfig(ctx context.Context, in *GetSystemConfigRequest, opts ...grpc.CallOption) (*GetSystemConfigResponse, error)
 	// Set the public-registration flag.
 	SetPublicRegistration(ctx context.Context, in *SetPublicRegistrationRequest, opts ...grpc.CallOption) (*SetPublicRegistrationResponse, error)
+	// Set who may create organizations through the tenant surface.
+	SetOrgCreationPolicy(ctx context.Context, in *SetOrgCreationPolicyRequest, opts ...grpc.CallOption) (*SetOrgCreationPolicyResponse, error)
 	// Read the deployment-wide MFA policy: whether platform admins must
 	// have MFA enabled, and the day / login caps on the per-user grace
 	// window before the requirement becomes hard.
@@ -80,6 +83,16 @@ func (c *systemConfigServiceClient) SetPublicRegistration(ctx context.Context, i
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetPublicRegistrationResponse)
 	err := c.cc.Invoke(ctx, SystemConfigService_SetPublicRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemConfigServiceClient) SetOrgCreationPolicy(ctx context.Context, in *SetOrgCreationPolicyRequest, opts ...grpc.CallOption) (*SetOrgCreationPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetOrgCreationPolicyResponse)
+	err := c.cc.Invoke(ctx, SystemConfigService_SetOrgCreationPolicy_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +147,8 @@ type SystemConfigServiceServer interface {
 	GetSystemConfig(context.Context, *GetSystemConfigRequest) (*GetSystemConfigResponse, error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *SetPublicRegistrationRequest) (*SetPublicRegistrationResponse, error)
+	// Set who may create organizations through the tenant surface.
+	SetOrgCreationPolicy(context.Context, *SetOrgCreationPolicyRequest) (*SetOrgCreationPolicyResponse, error)
 	// Read the deployment-wide MFA policy: whether platform admins must
 	// have MFA enabled, and the day / login caps on the per-user grace
 	// window before the requirement becomes hard.
@@ -161,6 +176,9 @@ func (UnimplementedSystemConfigServiceServer) GetSystemConfig(context.Context, *
 }
 func (UnimplementedSystemConfigServiceServer) SetPublicRegistration(context.Context, *SetPublicRegistrationRequest) (*SetPublicRegistrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetPublicRegistration not implemented")
+}
+func (UnimplementedSystemConfigServiceServer) SetOrgCreationPolicy(context.Context, *SetOrgCreationPolicyRequest) (*SetOrgCreationPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetOrgCreationPolicy not implemented")
 }
 func (UnimplementedSystemConfigServiceServer) GetMfaPolicy(context.Context, *GetMfaPolicyRequest) (*GetMfaPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMfaPolicy not implemented")
@@ -224,6 +242,24 @@ func _SystemConfigService_SetPublicRegistration_Handler(srv interface{}, ctx con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SystemConfigServiceServer).SetPublicRegistration(ctx, req.(*SetPublicRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemConfigService_SetOrgCreationPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetOrgCreationPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemConfigServiceServer).SetOrgCreationPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemConfigService_SetOrgCreationPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemConfigServiceServer).SetOrgCreationPolicy(ctx, req.(*SetOrgCreationPolicyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -296,6 +332,10 @@ var SystemConfigService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetPublicRegistration",
 			Handler:    _SystemConfigService_SetPublicRegistration_Handler,
+		},
+		{
+			MethodName: "SetOrgCreationPolicy",
+			Handler:    _SystemConfigService_SetOrgCreationPolicy_Handler,
 		},
 		{
 			MethodName: "GetMfaPolicy",

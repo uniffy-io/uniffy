@@ -100,6 +100,7 @@ class OrgSettingsOperations:
                     "value_encrypted": ciphertext,
                     "is_secret": is_secret,
                     "updated_by_user_id": updated_by_user_id,
+                    "updated_at": func.now(),
                 },
             )
         )
@@ -135,6 +136,7 @@ class OrgSettingsOperations:
                     "value_encrypted": None,
                     "is_secret": False,
                     "updated_by_user_id": updated_by_user_id,
+                    "updated_at": func.now(),
                 },
             )
         )

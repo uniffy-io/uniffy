@@ -41,6 +41,7 @@ from uniffy.core.models.files.media_info import FileMediaInfo
 from uniffy.core.models.files.multipart_upload import MultipartUpload, UploadStatus
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.files.uploads import effective_upload_status
 from uniffy.domains.tags.converters import tag_to_proto
 
 EXTRACTION_STATUS_TO_PROTO = {
@@ -231,7 +232,7 @@ def file_version_to_proto(version: FileVersion) -> ProtoFileVersion:
 
 def upload_to_proto_status(upload: MultipartUpload) -> ProtoUploadStatus:
     return UPLOAD_STATUS_TO_PROTO.get(
-        upload.status,
+        effective_upload_status(upload),
         ProtoUploadStatus.ACTIVE,
     )
 

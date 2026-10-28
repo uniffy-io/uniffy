@@ -117,7 +117,9 @@ async def test_an_active_member_streams_on_the_jwt_resolved_org() -> None:
     name is derived from the authenticated org rather than request input.
     """
     member = AsyncMock(return_value=True)
-    fake, calls = _fake_subscription([{"id": "n-1", "title": "hi", "notification_type": 0}])
+    fake, calls = _fake_subscription([
+        {"id": "n-1", "title": "hi", "notification_type": 0, "organization_id": str(ORG_A)}
+    ])
 
     with (
         patch("uniffy.domains.notifications.handlers.is_active_member", member),
@@ -185,6 +187,22 @@ async def test_an_orgless_token_selects_an_org_only_with_active_enrollment() -> 
     assert responses == []
     enrolled.assert_awaited_once_with(USER, ORG_B)
     assert calls["channels"][1] == f"presence:{ORG_B}"
+
+
+async def test_an_orgless_token_without_an_organization_cannot_stream() -> None:
+    member = AsyncMock(return_value=True)
+    fake, calls = _fake_subscription([])
+
+    with (
+        patch("uniffy.domains.notifications.handlers.is_active_member", member),
+        patch("uniffy.domains.notifications.handlers.subscribe_channels", fake),
+    ):
+        with pytest.raises(ConnectError) as exc_info:
+            await _consume(_stream(StreamNotificationsRequest(organization_id=""), _token()))
+
+    assert exc_info.value.code == Code.INVALID_ARGUMENT
+    member.assert_not_awaited()
+    assert "channels" not in calls
 
 
 async def test_a_non_member_system_admin_gets_no_bypass() -> None:

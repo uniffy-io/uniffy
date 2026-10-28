@@ -16,12 +16,11 @@ export const authApi = {
   register: (email: string, username: string, password: string, fullName?: string) =>
     publicAuthClient.register({ email, username, password, fullName }),
 
-  refreshToken: (refreshToken: string) => publicAuthClient.refreshToken({ refreshToken }),
-
-  // Mints a fresh session bound to the target org (also the first bind after a
-  // no-org login). RefreshToken deliberately rejects a cross-org slug.
-  switchOrganization: (refreshToken: string, organizationSlug: string) =>
-    publicAuthClient.switchOrganization({ refreshToken, organizationSlug }),
+  /** `organizationId` wins over `organizationSlug`; omitting both keeps the session's last org. */
+  refreshToken: (
+    refreshToken: string,
+    organization?: { organizationId?: string; organizationSlug?: string },
+  ) => publicAuthClient.refreshToken({ refreshToken, ...organization }),
 
   verifyMfa: (challengeToken: string, code: string, method: string) =>
     publicMfaClient.verifyMfa({ challengeToken, code, method }),
@@ -38,6 +37,17 @@ export const authApi = {
   logout: (refreshToken?: string) => authClient.logout({ refreshToken }).catch(() => {}),
 
   listMyOrganizations: () => orgsClient.listMyOrganizations({}),
+
+  createOrganization: ({ name, slug }: { name: string; slug?: string }) =>
+    orgsClient.createOrganization({ name, slug }),
+
+  listMyInvitations: () => orgsClient.listMyInvitations({}),
+
+  acceptMyInvitation: ({ invitationId }: { invitationId: string }) =>
+    orgsClient.acceptMyInvitation({ lookup: { case: "invitationId", value: invitationId } }),
+
+  declineMyInvitation: ({ invitationId }: { invitationId: string }) =>
+    orgsClient.declineMyInvitation({ invitationId }),
 
   listSessions: () => authClient.listSessions({}),
 

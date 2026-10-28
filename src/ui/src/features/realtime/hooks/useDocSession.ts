@@ -240,6 +240,7 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
     const subscription = realtimeMultiplexer.attach({
       contentType,
       contentId,
+      organizationId,
       ydoc,
       awareness,
       onStatus: (next) => {
@@ -300,6 +301,12 @@ export function useDocSession(opts: UseDocSessionOptions): DocSession | null {
         generationChanged = true;
         onGenerationResetRef.current?.({ hasLocalEdits: persistence.isDirty() });
         setGenerationReset((value) => value + 1);
+      },
+      // The tab moved to another organization before this session closed. No server denied
+      // anything, so the rows and the drain entry stay for when a tab returns to this one.
+      onOrganizationMismatch: () => {
+        transportStatus = "access_lost";
+        setStatus("access_lost");
       },
     });
     // Only a checkpoint may retire the dirty marker and the drain entry.

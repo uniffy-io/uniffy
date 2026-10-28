@@ -149,9 +149,12 @@ function PdfPreview({ uri, onExpand }: { uri: string; onExpand: () => void }) {
   const T = useTheme();
   return (
     <View style={[styles.frame, { borderColor: T.border }]}>
+      {/* Authenticated bytes stay out of the WebView's disk cache. */}
       <WebView
         source={{ uri, headers: assetAuthHeaders() }}
         style={{ flex: 1, backgroundColor: T.surface }}
+        cacheEnabled={false}
+        cacheMode="LOAD_NO_CACHE"
         originWhitelist={["*"]}
         startInLoadingState
         renderLoading={() => (

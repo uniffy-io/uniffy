@@ -13,7 +13,6 @@ import * as syncProtocol from "y-protocols/sync";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
 import { getStoreRef } from "@/app/storeRef";
-import { readStoredAuth } from "@/features/auth/store/credentialStorage";
 import { getAccessToken, refreshAccessToken } from "@/config/api";
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
@@ -31,6 +30,7 @@ import {
   MESSAGE_GENERATION,
   MESSAGE_SESSION_STATE,
   MESSAGE_UPDATE,
+  NOT_A_MEMBER_CLOSE_REASON,
   UNAVAILABLE_REASON,
   UPDATE_CONFLICT_REASON,
   WS_CLOSE_FORBIDDEN,
@@ -91,6 +91,8 @@ function isNoopSyncStep2(reply: Uint8Array): boolean {
 export interface MultiplexerAttachOptions {
   contentType: string;
   contentId: string;
+  /** The organization whose session holds the doc. Only a socket opened for it carries the doc. */
+  organizationId: string;
   ydoc: Y.Doc;
   awareness: Awareness;
   /** Lineage of the device rows the doc was hydrated from before attaching, for content that
@@ -102,6 +104,9 @@ export interface MultiplexerAttachOptions {
   onCloseCode?: (code: number) => void;
   /** The server downgraded this doc to read-only while the client still believed it could edit. */
   onWriteDenied?: (reason: string, noView: boolean) => void;
+  /** The tab's socket serves another organization, so nothing of the doc went out on it. Its
+   * edits stay local: no server answered for the doc. */
+  onOrganizationMismatch?: () => void;
 }
 
 export interface DocSubscription {
@@ -165,6 +170,9 @@ interface DocEntry {
   rejected: boolean;
   syncDeadline: ReturnType<typeof setTimeout> | null;
   docName: string;
+  organizationId: string;
+  // The socket already told of its organization mismatch, so each socket reports it once.
+  mismatchSocket: WebSocket | null;
   ydoc: Y.Doc;
   awareness: Awareness;
   resolvedSyncOnce: boolean;
@@ -256,6 +264,10 @@ class RealtimeMultiplexer {
   // Set by close 4403 and kept until new credentials arrive. The server refuses this account,
   // workspace or origin the same way on every reconnect until then.
   private connectionForbidden = false;
+  // A membership close asked for one refresh; a frame on a later socket allows the next.
+  private membershipRefreshed = false;
+  // The organization the current socket was opened for; null without a socket.
+  private socketOrgId: string | null = null;
   private listenersAttached = false;
 
   attach(opts: MultiplexerAttachOptions): DocSubscription {
@@ -299,6 +311,8 @@ class RealtimeMultiplexer {
         this.queueUpdate(entry, Y.mergeUpdates(this.takeBatch(entry)), this.takeUnsentSince(entry));
       },
       docName,
+      organizationId: opts.organizationId,
+      mismatchSocket: null,
       ydoc: opts.ydoc,
       awareness: opts.awareness,
       resolvedSyncOnce: false,
@@ -364,7 +378,9 @@ class RealtimeMultiplexer {
     this.cancelIdleClose();
     this.openIfNeeded();
 
-    if (this.wsConnected) {
+    if (this.ws && !this.servesOrganization(entry)) {
+      this.reportMismatch(entry);
+    } else if (this.wsConnected) {
       // WS was already open before this attach; push status + SyncStep1
       // synchronously so the new subscription does not stall on `'idle'`.
       opts.onStatus?.("connected");
@@ -467,7 +483,10 @@ class RealtimeMultiplexer {
     }
     ws.binaryType = "arraybuffer";
     this.ws = ws;
+    this.socketOrgId = orgId;
     this.emitStatusAll("connecting");
+    for (const entry of this.docs.values())
+      if (!this.servesOrganization(entry)) this.reportMismatch(entry);
 
     ws.onopen = () => {
       if (this.ws !== ws) return;
@@ -476,7 +495,8 @@ class RealtimeMultiplexer {
       for (const entry of this.docs.values()) {
         entry.resolvedSyncOnce = false;
         entry.generation = null;
-        this.bootstrapDoc(entry);
+        if (this.servesOrganization(entry)) this.bootstrapDoc(entry);
+        else this.reportMismatch(entry);
       }
       this.emitStatusAll("connected");
       this.startResyncTimer();
@@ -527,6 +547,9 @@ class RealtimeMultiplexer {
         // may be accepted again.
         this.connectionForbidden = true;
         this.emitStatusAll("access_lost");
+        // Removal from the organization: a refresh tells whether this tab still holds it, and
+        // the lost-grant path resets the tab when it does not.
+        if (event.reason === NOT_A_MEMBER_CLOSE_REASON) this.refreshMembership();
         return;
       }
       this.emitStatusAll("disconnected");
@@ -550,6 +573,7 @@ class RealtimeMultiplexer {
       this.publishState(entry);
     }
     this.ws = null;
+    this.socketOrgId = null;
     this.wsConnected = false;
     this.wsConnecting = false;
     this.stopResyncTimer();
@@ -564,6 +588,31 @@ class RealtimeMultiplexer {
         "remote",
       );
     }
+  }
+
+  // One refresh per removal: a refresh that keeps the organization reconnects, and a second
+  // refusal before any frame proves that refresh changed nothing.
+  private refreshMembership(): void {
+    if (this.membershipRefreshed) return;
+    this.membershipRefreshed = true;
+    void refreshAccessToken().catch(() => null);
+  }
+
+  // The socket serves one organization; a doc of another sends and receives nothing on it.
+  private servesOrganization(entry: DocEntry): boolean {
+    return this.socketOrgId !== null && entry.organizationId === this.socketOrgId;
+  }
+
+  // Deferred, so an owner that detaches in response does so outside this call and after attach
+  // returned its subscription.
+  private reportMismatch(entry: DocEntry): void {
+    const ws = this.ws;
+    if (!ws || entry.mismatchSocket === ws) return;
+    entry.mismatchSocket = ws;
+    queueMicrotask(() => {
+      if (this.ws === ws && this.docs.get(entry.docName) === entry)
+        entry.options.onOrganizationMismatch?.();
+    });
   }
 
   private reconnectAfterRefresh(): void {
@@ -711,9 +760,10 @@ class RealtimeMultiplexer {
       return;
     }
     const entry = this.docs.get(docName);
-    if (!entry || entry.denied) return;
+    if (!entry || entry.denied || !this.servesOrganization(entry)) return;
     // A refused upgrade also opens, then closes before any frame; only a frame proves a session.
     this.authAttempts = 0;
+    this.membershipRefreshed = false;
     this.reconnectDelayMs = RECONNECT_INITIAL_MS;
     const payload = frame.subarray(payloadOffset);
     if (payload.length === 0) return;
@@ -1063,12 +1113,22 @@ class RealtimeMultiplexer {
     return this.docs.get(docName)?.state ?? DETACHED_DOC_STATE;
   }
 
-  /** Any editable attached doc with an own edit no checkpoint covers yet. */
-  hasCheckpointPending(): boolean {
+  /** Any editable attached doc with an own edit no checkpoint covers yet, only docs of
+   * `organizationId` when it is given. */
+  hasCheckpointPending(organizationId?: string): boolean {
     for (const entry of this.docs.values()) {
+      if (organizationId !== undefined && entry.organizationId !== organizationId) continue;
       if (entry.state.checkpointPending && !entry.readOnly) return true;
     }
     return false;
+  }
+
+  /** Organizations of the editable attached docs holding an own edit no checkpoint covers yet. */
+  checkpointPendingOrganizations(): string[] {
+    const organizations = new Set<string>();
+    for (const entry of this.docs.values())
+      if (entry.state.checkpointPending && !entry.readOnly) organizations.add(entry.organizationId);
+    return [...organizations];
   }
 
   isDocReadOnly(docName: string): boolean {
@@ -1090,7 +1150,8 @@ class RealtimeMultiplexer {
 
   /** True once the frame is handed to an open socket. */
   private sendForDoc(docName: string, payload: Uint8Array): boolean {
-    if (this.docs.get(docName)?.denied) return false;
+    const owner = this.docs.get(docName);
+    if (owner && (owner.denied || !this.servesOrganization(owner))) return false;
     const frame = encodeDocFrame(docName, payload);
     if (frame.length > 1024 * 1024) {
       const entry = this.docs.get(docName);
@@ -1126,7 +1187,7 @@ class RealtimeMultiplexer {
   }
 
   private sendInitialSync(entry: DocEntry): void {
-    if (entry.rejected || entry.denied) return;
+    if (entry.rejected || entry.denied || !this.servesOrganization(entry)) return;
     if (!entry.syncDeadline)
       entry.syncDeadline = setTimeout(() => {
         entry.syncDeadline = null;
@@ -1140,6 +1201,8 @@ class RealtimeMultiplexer {
 
   private emitStatusAll(status: RealtimeStatus): void {
     for (const entry of this.docs.values()) {
+      // Another organization's socket says nothing about this doc; the mismatch report does.
+      if (this.ws && !this.servesOrganization(entry)) continue;
       entry.options.onStatus?.(
         entry.rejected || entry.conflicted.size > 0
           ? "update_rejected"
@@ -1157,12 +1220,9 @@ class RealtimeMultiplexer {
     return `${proto}//${window.location.host}/api/realtime?org_id=${encodeURIComponent(orgId)}`;
   }
 
+  // This tab's organization only: storage shared with other tabs may name theirs.
   private resolveOrgId(): string | null {
-    return (
-      getStoreRef()?.getState().auth.currentOrganizationId ??
-      readStoredAuth()?.currentOrganizationId ??
-      null
-    );
+    return getStoreRef()?.getState().auth.currentOrganizationId ?? null;
   }
 
   private ensureListeners(): void {

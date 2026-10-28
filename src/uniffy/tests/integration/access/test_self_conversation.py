@@ -143,15 +143,15 @@ async def test_removal_waits_for_first_open_and_deletes_its_conversation(
         await asyncio.gather(*tasks, return_exceptions=True)
 
     assert removed is True
-    assert (
-        await session.scalar(
-            select(OrganizationMember.id).where(
-                OrganizationMember.organization_id == access.org_id,
-                OrganizationMember.user_id == access.member_id,
-            )
+    membership = await session.scalar(
+        select(OrganizationMember).where(
+            OrganizationMember.organization_id == access.org_id,
+            OrganizationMember.user_id == access.member_id,
         )
-        is None
     )
+    assert membership is not None
+    assert membership.is_active is False
+    assert membership.removed_at is not None
     assert (
         await session.scalar(select(ChatChannel.is_deleted).where(ChatChannel.id == channel_id))
         is True

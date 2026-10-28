@@ -17,6 +17,7 @@ import type { ReceiptIdentity } from "@/features/realtime/updateCoverage";
 import { randomUUID } from "@/shared/utils/uuid";
 import {
   handOffPendingDoc,
+  isPendingDoc,
   recordPendingDoc,
   type PendingDoc,
 } from "@/features/realtime/pendingDocs";
@@ -64,8 +65,10 @@ const memoryRecovery = new Map<string, Map<string, RecoveredDraft>>();
 const discardedRecovery = new WeakMap<Y.Doc, Set<string>>();
 const recoveryKeys = new WeakMap<
   Y.Doc,
-  { contentType: string; contentId: string; owner: string }
+  { contentType: string; contentId: string; owner: string; binding: RowBinding }
 >();
+// Organizations whose grant this tab saw end. Their sessions close without leaving a cache.
+const lostOrganizations = new Set<string>();
 
 export interface RecoveredDraft {
   /** Draft lineage: a replaced generation or a `recovery:` copy. */
@@ -92,6 +95,56 @@ interface PendingHeader {
 }
 
 const HEADER_LENGTH_BYTES = 4;
+
+// A row of format 2 is stored as an envelope naming its organization, its ciphertext bound to
+// user, organization, document and key through AES-GCM additional data, so it authenticates only
+// where it was written. A row of format 1 is bare ciphertext without additional data; it stays
+// readable and is rewritten bound when this device next stores it.
+export const ROW_FORMAT_VERSION = 2;
+export const ROW_AAD_PREFIX = "uniffy-rt-v1";
+
+/** The account and organization a row is written for. */
+export interface RowBinding {
+  userId: string;
+  organizationId: string;
+}
+
+interface RowEnvelope {
+  version: typeof ROW_FORMAT_VERSION;
+  organizationId: string;
+  data: ArrayBuffer;
+}
+
+/** `uniffy-rt-v1|userId|orgId|contentType|contentId|generation|rowKey`, the row key being the
+ * snapshot seq or `pending:<updateId>`. */
+export function rowAdditionalData(binding: RowBinding, key: readonly string[]): Uint8Array {
+  return new TextEncoder().encode(
+    [ROW_AAD_PREFIX, binding.userId, binding.organizationId, ...key].join("|"),
+  );
+}
+
+function isRowEnvelope(value: unknown): value is RowEnvelope {
+  if (!value || typeof value !== "object") return false;
+  const envelope = value as Record<string, unknown>;
+  return (
+    envelope.version === ROW_FORMAT_VERSION &&
+    typeof envelope.organizationId === "string" &&
+    envelope.data !== null &&
+    typeof envelope.data === "object"
+  );
+}
+
+async function sealRow(binding: RowBinding, key: UpdateKey, row: Uint8Array): Promise<RowEnvelope> {
+  return {
+    version: ROW_FORMAT_VERSION,
+    organizationId: binding.organizationId,
+    data: await encryptBytesForStorage(row, rowAdditionalData(binding, key)),
+  };
+}
+
+function sameScope(scope: PendingDoc, binding: RowBinding): boolean {
+  return scope.userId === binding.userId && scope.organizationId === binding.organizationId;
+}
 
 /** [4-byte header length | JSON header | update bytes], so the update needs no text encoding. */
 function encodeRow(header: SnapshotHeader | PendingHeader, update: Uint8Array): Uint8Array {
@@ -141,7 +194,7 @@ function decodeRow(bytes: Uint8Array): StoredRow | null {
   if (!split || !split.header || typeof split.header !== "object") return null;
   const row = split.header as Record<string, unknown>;
   const update = split.update;
-  const scope = row.scope as PendingDoc | undefined;
+  const scope = isPendingDoc(row.scope) ? row.scope : undefined;
   if (row.kind === "snapshot")
     return { kind: "snapshot", update, dirty: Boolean(row.dirty), scope };
   if (
@@ -159,8 +212,38 @@ function decodeRow(bytes: Uint8Array): StoredRow | null {
   };
 }
 
-async function readRow(blob: unknown): Promise<StoredRow | null> {
-  return decodeRow(await decryptBytesFromStorage(blob as ArrayBuffer));
+interface OpenedRow {
+  row: StoredRow;
+  /** The bound organization; for a format 1 row, the one its header names, if any. */
+  organizationId: string | null;
+  bound: boolean;
+}
+
+/** Decrypts one stored value as `userId` would have written it; throws when it does not
+ * authenticate. A bound row whose header names another scope is refused. */
+async function openRow(value: unknown, key: UpdateKey, userId: string): Promise<OpenedRow | null> {
+  if (isRowEnvelope(value)) {
+    const binding = { userId, organizationId: value.organizationId };
+    const row = decodeRow(
+      await decryptBytesFromStorage(value.data, rowAdditionalData(binding, key)),
+    );
+    if (!row || (row.scope && !sameScope(row.scope, binding))) return null;
+    return { row, organizationId: value.organizationId, bound: true };
+  }
+  const row = decodeRow(await decryptBytesFromStorage(value as ArrayBuffer));
+  return row && { row, organizationId: row.scope?.organizationId ?? null, bound: false };
+}
+
+/** Whether a stored value may be bound to this organization; known without decrypting. */
+function mayBelongTo(value: unknown, binding: RowBinding): boolean {
+  return !isRowEnvelope(value) || value.organizationId === binding.organizationId;
+}
+
+// A format 1 row without a scope names no owner. Replaying it into the session of its document
+// keeps the edit, and only the bound copy that replaces it carries the session's scope.
+function belongsTo(opened: OpenedRow, binding: RowBinding): boolean {
+  if (opened.bound) return opened.organizationId === binding.organizationId;
+  return !opened.row.scope || sameScope(opened.row.scope, binding);
 }
 
 // The session that wrote a row: the epoch of a snapshot row, the ydoc guid that begins the update
@@ -181,29 +264,88 @@ function snapshotSeqs(keys: UpdateKey[], generation: string): string[] {
     .map((key) => key[3]);
 }
 
-/** True when stored rows hold work for this user that no checkpoint covers; records drainable docs. */
-export async function discoverStoredPendingDocs(userId: string): Promise<boolean> {
-  if (!isStorageEncryptionReady()) return false;
+interface UserRow {
+  key: UpdateKey;
+  row: StoredRow;
+  /** Empty for a row written without an organization. */
+  organizationId: string;
+}
+
+/** Rows this user provably wrote: bound rows that authenticate under the user, and format 1 rows
+ * whose header names the user. A format 1 row without a scope belongs to nobody here. */
+async function readUserRows(userId: string): Promise<UserRow[]> {
   const db = await getDB();
   const tx = db.transaction(UPDATES_STORE, "readonly");
   const store = tx.objectStore(UPDATES_STORE);
   const [keys, blobs] = await Promise.all([store.getAllKeys(), store.getAll(), tx.done]);
-  let pending = false;
+  const rows: UserRow[] = [];
   for (let index = 0; index < blobs.length; index++) {
-    let row: StoredRow | null;
+    const key = keys[index] as UpdateKey;
+    if (key.length !== 4) continue;
+    let opened: OpenedRow | null;
     try {
-      row = await readRow(blobs[index]);
+      opened = await openRow(blobs[index], key, userId);
     } catch {
       // Another user's encrypted rows cannot authorize a replay in this session.
       continue;
     }
-    if (!row || (row.scope && row.scope.userId !== userId)) continue;
-    if (row.kind !== "pending" && !row.dirty) continue;
+    if (!opened || (!opened.bound && opened.row.scope?.userId !== userId)) continue;
+    rows.push({ key, row: opened.row, organizationId: opened.organizationId ?? "" });
+  }
+  return rows;
+}
+
+function holdsWork(row: StoredRow): boolean {
+  return row.kind === "pending" || row.dirty;
+}
+
+/** True when stored rows hold work for this user that no checkpoint covers; records drainable docs. */
+export async function discoverStoredPendingDocs(userId: string): Promise<boolean> {
+  if (!isStorageEncryptionReady()) return false;
+  let pending = false;
+  for (const { key, row } of await readUserRows(userId)) {
+    if (!holdsWork(row)) continue;
     pending = true;
     // A recovered draft waits for the user, never for the drain.
-    if (row.scope && !isRecoveryKey(keys[index] as UpdateKey)) recordPendingDoc(row.scope);
+    if (row.scope && !isRecoveryKey(key)) recordPendingDoc(row.scope);
   }
   return pending;
+}
+
+/** Organizations whose stored rows hold this user's work no checkpoint covers, recovered drafts
+ * included. */
+export async function listStoredPendingOrganizations(userId: string): Promise<string[]> {
+  if (!isStorageEncryptionReady()) return [];
+  const organizations = new Set<string>();
+  for (const { row, organizationId } of await readUserRows(userId))
+    if (organizationId && holdsWork(row)) organizations.add(organizationId);
+  return [...organizations];
+}
+
+/** The grant to an organization ended: its documents' clean snapshots, copies of what the server
+ * holds, leave this device. Pending and dirty rows and recovered drafts stay, since reactivation
+ * restores access and only the user discards a draft; so does every snapshot of a document that
+ * still holds such work, which offline replay builds on. Resolves with the rows it deleted. */
+export async function purgeCleanSnapshots(userId: string, organizationId: string): Promise<number> {
+  lostOrganizations.add(organizationId);
+  if (!isStorageEncryptionReady()) return 0;
+  const rows = (await readUserRows(userId)).filter((row) => row.organizationId === organizationId);
+  const working = new Set(
+    rows
+      .filter(({ key, row }) => holdsWork(row) || isRecoveryKey(key))
+      .map(({ key }) => docNameFor(key[0], key[1])),
+  );
+  const clean = rows
+    .filter(
+      ({ key, row }) =>
+        row.kind === "snapshot" && !isRecoveryKey(key) && !working.has(docNameFor(key[0], key[1])),
+    )
+    .map(({ key }) => key);
+  if (clean.length === 0) return 0;
+  await writeRows((store, requests) => {
+    for (const key of clean) requests.push(store.delete(key));
+  });
+  return clean.length;
 }
 
 function isRecoveryKey(key: UpdateKey): boolean {
@@ -233,14 +375,16 @@ export async function readRecoveredDrafts(ydoc: Y.Doc): Promise<RecoveredDraft[]
     const rowKey = keys[index] as UpdateKey;
     // The live generation replays its rows; a key without a generation predates coverage identity.
     if (rowKey.length !== 4 || rowKey[2] === current) continue;
-    let row: StoredRow | null;
+    if (!mayBelongTo(blobs[index], key.binding)) continue;
+    let row: StoredRow;
     try {
-      row = await readRow(blobs[index]);
+      const opened = await openRow(blobs[index], rowKey, key.binding.userId);
+      if (!opened || !belongsTo(opened, key.binding)) continue;
+      row = opened.row;
     } catch {
       // Retain unreadable rows for later recovery with the matching key.
       continue;
     }
-    if (!row) continue;
     const lineage = rowKey[2];
     const entry = documents.get(lineage) ?? { doc: new Y.Doc(), dirty: false };
     documents.set(lineage, entry);
@@ -273,7 +417,7 @@ export async function readRecoveredDrafts(ydoc: Y.Doc): Promise<RecoveredDraft[]
   ];
 }
 
-/** Deletes every row of one draft lineage for the document bound to `ydoc`. */
+/** Deletes the rows of one draft lineage that the session bound to `ydoc` could list. */
 export async function discardRecoveredDraft(ydoc: Y.Doc, lineage: string): Promise<void> {
   const key = recoveryKeys.get(ydoc);
   if (!key) return;
@@ -282,10 +426,27 @@ export async function discardRecoveredDraft(ydoc: Y.Doc, lineage: string): Promi
   discardedRecovery.set(ydoc, discarded);
   memoryRecovery.get(`${key.owner}:${docNameFor(key.contentType, key.contentId)}`)?.delete(lineage);
   if (!isStorageEncryptionReady()) return;
-  await writeRows(async (store, requests) => {
-    const keys = (await store.getAllKeys(rangeFor(key.contentType, key.contentId))) as UpdateKey[];
-    for (const rowKey of keys)
-      if (rowKey.length === 4 && rowKey[2] === lineage) requests.push(store.delete(rowKey));
+  const db = await getDB();
+  const tx = db.transaction(UPDATES_STORE, "readonly");
+  const store = tx.objectStore(UPDATES_STORE);
+  const range = rangeFor(key.contentType, key.contentId);
+  const [keys, blobs] = await Promise.all([store.getAllKeys(range), store.getAll(range), tx.done]);
+  // Rows of another scope, or ones this key cannot read, were never part of the draft shown.
+  const owned: UpdateKey[] = [];
+  for (let index = 0; index < keys.length; index++) {
+    const rowKey = keys[index] as UpdateKey;
+    if (rowKey.length !== 4 || rowKey[2] !== lineage) continue;
+    if (!mayBelongTo(blobs[index], key.binding)) continue;
+    try {
+      const opened = await openRow(blobs[index], rowKey, key.binding.userId);
+      if (opened && belongsTo(opened, key.binding)) owned.push(rowKey);
+    } catch {
+      // Unreadable rows stay for a later key that can read them.
+    }
+  }
+  if (owned.length === 0) return;
+  await writeRows((writable, requests) => {
+    for (const rowKey of owned) requests.push(writable.delete(rowKey));
   });
 }
 
@@ -526,8 +687,17 @@ export function attachEncryptedPersistence(
   opts: EncryptedPersistenceOptions,
 ): EncryptedPersistence {
   const { contentType, contentId, ydoc } = opts;
-  const owner = getStoreRef()?.getState().auth.user?.id ?? "";
-  recoveryKeys.set(ydoc, { contentType, contentId, owner });
+  const auth = getStoreRef()?.getState().auth;
+  const owner = auth?.user?.id ?? "";
+  // Rows bind the scope they are written for. A session without one writes for the signed-in
+  // account in this tab's organization.
+  const binding: RowBinding = {
+    userId: opts.scope?.userId ?? owner,
+    organizationId: opts.scope?.organizationId ?? auth?.currentOrganizationId ?? "",
+  };
+  // Opening a document of the organization again means its grant is back.
+  lostOrganizations.delete(binding.organizationId);
+  recoveryKeys.set(ydoc, { contentType, contentId, owner, binding });
   const recoveryKey = `${owner}:${docNameFor(contentType, contentId)}`;
   const docKey = docNameFor(contentType, contentId);
   const previousDisposal = pendingDisposals.get(docKey);
@@ -556,6 +726,8 @@ export function attachEncryptedPersistence(
   const hydratedSeqs = new Set<string>();
   // Own updates no checkpoint covers yet; their rows go only when a checkpoint covers them.
   const tracked = new Map<string, TrackedUpdate>();
+  // Tracked updates whose stored row is format 1; compaction rewrites them bound.
+  const unboundRows = new Set<string>();
   // Checkpointed ids whose row deletion has not landed; hydration must not restore them.
   const retiring = new Set<string>();
   const rowChanges = new Map<string, { generation: string; row: TrackedUpdate | null }>();
@@ -789,20 +961,26 @@ export function attachEncryptedPersistence(
     // is inside its snapshot.
     const allocated = writeSnapshot ? ++counter : counter;
     const snapshot = writeSnapshot ? snapshotRow(Y.encodeStateAsUpdate(ydoc)) : null;
+    const snapshotKey: UpdateKey = [
+      contentType,
+      contentId,
+      generation,
+      updateRowSeq(epoch, allocated),
+    ];
     let stored: string[] = [];
     try {
-      const snapshotBlob = snapshot && (await encryptBytesForStorage(snapshot));
+      const snapshotBlob = snapshot && (await sealRow(binding, snapshotKey, snapshot));
       const puts = await Promise.all(
-        changes.flatMap(([updateId, change]) =>
-          change.row && !discardedRecovery.get(ydoc)?.has(change.generation)
-            ? [
-                encryptBytesForStorage(pendingRow(updateId, change.row)).then((blob) => ({
-                  key: pendingKey(change.generation, updateId),
-                  blob,
-                })),
-              ]
-            : [],
-        ),
+        changes.flatMap(([updateId, change]) => {
+          if (!change.row || discardedRecovery.get(ydoc)?.has(change.generation)) return [];
+          const key = pendingKey(change.generation, updateId);
+          return [
+            sealRow(binding, key, pendingRow(updateId, change.row)).then((blob) => ({
+              key,
+              blob,
+            })),
+          ];
+        }),
       );
       stored = puts.map(({ key }) => key[3].slice(PENDING_SEQ_PREFIX.length));
       await writeRows(async (store, requests) => {
@@ -816,14 +994,7 @@ export function attachEncryptedPersistence(
           );
           for (const seq of prior)
             requests.push(store.delete([contentType, contentId, generation, seq]));
-          requests.push(
-            store.put(snapshotBlob, [
-              contentType,
-              contentId,
-              generation,
-              updateRowSeq(epoch, allocated),
-            ]),
-          );
+          requests.push(store.put(snapshotBlob, snapshotKey));
         }
         for (const { key, blob } of puts) requests.push(store.put(blob, key));
         for (const [updateId, change] of changes) {
@@ -847,6 +1018,7 @@ export function attachEncryptedPersistence(
       snapshotStored();
     }
     for (const updateId of stored) {
+      unboundRows.delete(updateId);
       const mark = batchMarks.get(updateId);
       if (mark === undefined) continue;
       batchMarks.delete(updateId);
@@ -890,9 +1062,13 @@ export function attachEncryptedPersistence(
         store.getAll(range),
         tx.done,
       ]);
+      // Rows bound to another organization are never this session's, whatever document they key.
+      const inScope = new Set(
+        (keys as UpdateKey[]).filter((_, index) => mayBelongTo(blobs[index], binding)),
+      );
       if (!options) {
         const generations = new Set(
-          (keys as UpdateKey[])
+          [...inScope]
             .filter((key) => key.length === 4 && !key[2].startsWith(RECOVERY_GENERATION_PREFIX))
             .map((key) => key[2]),
         );
@@ -904,10 +1080,11 @@ export function attachEncryptedPersistence(
       // The server value was captured before replay. Reading the merged map
       // here would let a stale local LWW entry decide whether it is current.
       const replayGeneration = options.serverGeneration ?? "";
-      const rejected = (keys as UpdateKey[]).filter(
+      const rejected = [...inScope].filter(
         (key) => key.length === 4 && key[2] !== replayGeneration,
       );
       const replayable = (key: UpdateKey) =>
+        inScope.has(key) &&
         key.length === 4 &&
         key[2] === replayGeneration &&
         !key[2].startsWith(RECOVERY_GENERATION_PREFIX);
@@ -919,15 +1096,18 @@ export function attachEncryptedPersistence(
         const key = keys[i] as UpdateKey;
         if (!replayable(key) || !readable.has(rowWriter(key))) continue;
         try {
-          const row = await readRow(blobs[i]);
+          const opened = await openRow(blobs[i], key, binding.userId);
           if (destroyed || released) return null;
-          if (!row) continue;
+          // A row naming another scope is never replayed here, nor stored again under this one.
+          if (!opened || !belongsTo(opened, binding)) continue;
+          const { row } = opened;
           if (row.update.length > 0) Y.applyUpdate(ydoc, row.update, HYDRATION_ORIGIN);
           if (row.kind === "pending") {
             hydratedDirty = true;
             const { updateId, editedAt, receipt } = row.retained;
             if (tracked.has(updateId) || retiring.has(updateId)) continue;
             tracked.set(updateId, { generation: key[2], update: row.update, editedAt, receipt });
+            if (!opened.bound) unboundRows.add(updateId);
             restored.push(row.retained);
           } else {
             hydratedSeqs.add(key[3]);
@@ -959,7 +1139,8 @@ export function attachEncryptedPersistence(
     await hydration.catch(() => null);
     if (released) return false;
     const previousGeneration = storageGeneration();
-    recoveryGeneration = `${RECOVERY_GENERATION_PREFIX}${randomUUID()}`;
+    const lineage = `${RECOVERY_GENERATION_PREFIX}${randomUUID()}`;
+    recoveryGeneration = lineage;
     // The recovery copy holds these updates, so their rows leave the lineage they would replay into.
     const moved = [...tracked.keys()].filter(
       (updateId) => tracked.get(updateId)?.generation === previousGeneration,
@@ -972,8 +1153,8 @@ export function attachEncryptedPersistence(
     const update = bytesToBase64(encoded);
     const retained = memoryRecovery.get(recoveryKey) ?? new Map<string, RecoveredDraft>();
     memoryRecovery.set(recoveryKey, retained);
-    retained.set(recoveryGeneration, {
-      generation: recoveryGeneration,
+    retained.set(lineage, {
+      generation: lineage,
       update,
       text: ydoc.getText(MARKDOWN_TEXT_FIELD).toString(),
       hasFragment:
@@ -984,10 +1165,13 @@ export function attachEncryptedPersistence(
     try {
       await settleWrites();
       if (isStorageEncryptionReady()) {
-        const blob = await encryptBytesForStorage(
-          encodeRow({ kind: "snapshot", dirty: true }, encoded),
+        const target: UpdateKey = [contentType, contentId, lineage, updateRowSeq(epoch, ++counter)];
+        // The scope lets discovery attribute the draft to its user and organization.
+        const blob = await sealRow(
+          binding,
+          target,
+          encodeRow({ kind: "snapshot", dirty: true, scope: opts.scope }, encoded),
         );
-        const target = recoveryGeneration;
         await writeRows(async (store, requests) => {
           const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
           const removable = selectCompactableSeqs(
@@ -1000,9 +1184,7 @@ export function attachEncryptedPersistence(
             requests.push(store.delete([contentType, contentId, previousGeneration, seq]));
           for (const updateId of moved)
             requests.push(store.delete(pendingKey(previousGeneration, updateId)));
-          requests.push(
-            store.put(blob, [contentType, contentId, target, updateRowSeq(epoch, ++counter)]),
-          );
+          requests.push(store.put(blob, target));
         });
         hydratedSeqs.clear();
       }
@@ -1080,7 +1262,7 @@ export function attachEncryptedPersistence(
     if (discardedRecovery.get(ydoc)?.has(storageGeneration())) return;
     // Nothing local happened: no edit, no hydrated row. A snapshot would only
     // add a row of server state that later reads as a phantom draft.
-    if (localUpdates === 0 && hydratedSeqs.size === 0) return;
+    if (localUpdates === 0 && hydratedSeqs.size === 0 && unboundRows.size === 0) return;
     // Captured with the encode: any own row at or below this counter was
     // applied to the ydoc first, so the snapshot subsumes it. Rows outside
     // the selection (another tab's live writes, an own write landing after
@@ -1089,10 +1271,33 @@ export function attachEncryptedPersistence(
     const snapshotCounter = counter;
     const encodedAt = localUpdates;
     const generation = storageGeneration();
+    const snapshotKey: UpdateKey = [
+      contentType,
+      contentId,
+      generation,
+      updateRowSeq(epoch, ++counter),
+    ];
     try {
-      const blob = await encryptBytesForStorage(snapshotRow(Y.encodeStateAsUpdate(ydoc)));
+      const blob = await sealRow(binding, snapshotKey, snapshotRow(Y.encodeStateAsUpdate(ydoc)));
+      // Pending rows read as format 1 go bound in the same transaction as the snapshot.
+      const rebound = await Promise.all(
+        [...unboundRows].flatMap((updateId) => {
+          const update = tracked.get(updateId);
+          if (!update) return [];
+          const key = pendingKey(update.generation, updateId);
+          return [
+            sealRow(binding, key, pendingRow(updateId, update)).then((sealed) => ({
+              updateId,
+              update,
+              key,
+              sealed,
+            })),
+          ];
+        }),
+      );
       if (generation !== storageGeneration()) return;
       let removable: string[] = [];
+      const written: string[] = [];
       await writeRows(async (store, requests) => {
         const keys = (await store.getAllKeys(rangeFor(contentType, contentId))) as UpdateKey[];
         removable = selectCompactableSeqs(
@@ -1103,11 +1308,16 @@ export function attachEncryptedPersistence(
         );
         for (const seq of removable)
           requests.push(store.delete([contentType, contentId, generation, seq]));
-        requests.push(
-          store.put(blob, [contentType, contentId, generation, updateRowSeq(epoch, ++counter)]),
-        );
+        requests.push(store.put(blob, snapshotKey));
+        // A checkpoint that retired the update meanwhile already queued its row's deletion.
+        for (const row of rebound) {
+          if (tracked.get(row.updateId) !== row.update) continue;
+          requests.push(store.put(row.sealed, row.key));
+          written.push(row.updateId);
+        }
       });
       for (const seq of removable) hydratedSeqs.delete(seq);
+      for (const updateId of written) unboundRows.delete(updateId);
       storageFailed = false;
       persistedUpdates = Math.max(persistedUpdates, encodedAt);
       snapshotStored();
@@ -1163,7 +1373,11 @@ export function attachEncryptedPersistence(
     if (snapshotTimer !== null) clearTimeout(snapshotTimer);
     snapshotTimer = null;
     requestWrite();
-    const finish = options?.discard ? clear : compact;
+    // A document of an organization whose grant ended leaves no cache once nothing of it waits.
+    const finish = () =>
+      options?.discard || (lostOrganizations.has(binding.organizationId) && !holdsUncheckpointed())
+        ? clear()
+        : compact();
     const disposal = settleWrites()
       .then(finish)
       .then(() => {

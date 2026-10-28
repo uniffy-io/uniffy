@@ -1,11 +1,10 @@
-/**
- * Recovers orphaned screen recordings on boot: IDB-buffered chunks whose `MultipartUpload` is still
- * ACTIVE server-side (24h TTL) get re-uploaded and completed. 60s idle grace skips the live session's
- * own chunks. Cross-tab races guarded by a BroadcastChannel claim.
- */
+/** Resumes scoped recording buffers after a tab closes before upload completes. */
 
 import { UploadStatus } from "@uniffy/proto/files/v1/files_pb";
 import { filesApi } from "@/features/files/api/filesApi";
+import type { UploadScope } from "@/features/files/upload/uploadTypes";
+import { getUploadScope } from "@/features/files/upload/uploadScope";
+import { isStorageEncryptionReady } from "@/shared/crypto/storageEncryption";
 import {
   clearUploadChunks,
   deleteChunk,
@@ -22,7 +21,7 @@ interface RecoveryClaim {
   tabId: string;
 }
 
-let recoveryRan = false;
+const recoveredScopes = new Set<string>();
 const claimedByOtherTab = new Set<string>();
 let recoveryChannel: BroadcastChannel | null = null;
 
@@ -53,14 +52,18 @@ export interface RecoveryResult {
 }
 
 /** Pushes IDB-buffered chunks then completes; returns null if the server-side upload is no longer ACTIVE. */
-export async function resumeUpload(uploadId: string): Promise<RecoveryResult | null> {
+export async function resumeUpload(
+  uploadId: string,
+  scope: UploadScope | null = getUploadScope(),
+): Promise<RecoveryResult | null> {
+  // Read every part before completing anything; unavailable keys must never look like an empty buffer.
+  const chunks = await loadPendingChunks(uploadId, scope);
   const status = await filesApi.getUploadStatus({ uploadId });
   if (status.status !== UploadStatus.ACTIVE) {
     await clearUploadChunks(uploadId);
     return null;
   }
   const completed = new Set<number>(status.completedChunks.map((n) => Number(n)));
-  const chunks = await loadPendingChunks(uploadId);
   for (const chunk of chunks) {
     if (completed.has(chunk.partNumber)) {
       await deleteChunk(uploadId, chunk.partNumber);
@@ -84,16 +87,21 @@ export async function resumeUpload(uploadId: string): Promise<RecoveryResult | n
   };
 }
 
+/** Runs once per account and organization; without a tab scope nothing is matched and a later call retries. */
 export async function recoverOrphanedRecordings(
   onRecovered: (info: RecoveryResult) => void,
+  scope: UploadScope | null = getUploadScope(),
 ): Promise<void> {
-  if (recoveryRan) return;
-  recoveryRan = true;
+  if (!scope || !isStorageEncryptionReady()) return;
+  const scopeKey = `${scope.userId}|${scope.organizationId}`;
+  if (recoveredScopes.has(scopeKey)) return;
+  recoveredScopes.add(scopeKey);
 
   let uploadIds: string[];
   try {
-    uploadIds = await listOrphanedChunkUploads(ORPHAN_AGE_MS);
+    uploadIds = await listOrphanedChunkUploads(ORPHAN_AGE_MS, scope);
   } catch {
+    recoveredScopes.delete(scopeKey);
     return;
   }
   if (uploadIds.length === 0) return;
@@ -110,13 +118,13 @@ export async function recoverOrphanedRecordings(
     } satisfies RecoveryClaim);
 
     try {
-      const result = await resumeUpload(uploadId);
+      const result = await resumeUpload(uploadId, scope);
       if (result) {
         onRecovered(result);
       }
     } catch (err) {
       console.warn("[recording] recovery failed", uploadId, err);
-      await clearUploadChunks(uploadId);
+      recoveredScopes.delete(scopeKey);
     }
   }
 }

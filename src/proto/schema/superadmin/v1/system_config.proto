@@ -20,6 +20,9 @@ service SystemConfigService {
   // Set the public-registration flag.
   rpc SetPublicRegistration(SetPublicRegistrationRequest) returns (SetPublicRegistrationResponse) {}
 
+  // Set who may create organizations through the tenant surface.
+  rpc SetOrgCreationPolicy(SetOrgCreationPolicyRequest) returns (SetOrgCreationPolicyResponse) {}
+
   // Read the deployment-wide MFA policy: whether platform admins must
   // have MFA enabled, and the day / login caps on the per-user grace
   // window before the requirement becomes hard.
@@ -43,9 +46,37 @@ message SystemFlag {
   string source = 2;
 }
 
+// Who may create organizations through organizations.v1.CreateOrganization.
+// Each level includes the ones before it; platform operators always may.
+enum OrgCreationPolicy {
+  ORG_CREATION_POLICY_UNSPECIFIED = 0;
+  ORG_CREATION_POLICY_OPERATORS_ONLY = 1;
+  // Plus owners of an existing organization. The coded default.
+  ORG_CREATION_POLICY_OPERATORS_AND_OWNERS = 2;
+  // Plus anyone holding an active membership somewhere.
+  ORG_CREATION_POLICY_MEMBERS = 3;
+  // Plus signed-in users with no membership: register, then create.
+  ORG_CREATION_POLICY_ANYONE = 4;
+}
+
+message OrgCreationSetting {
+  OrgCreationPolicy policy = 1;
+  // 'deployment' | 'env' | 'default'
+  string source = 2;
+}
+
 message SystemConfig {
   // Allow self-service Register RPC to create accounts without an invite.
   SystemFlag public_registration = 1;
+  OrgCreationSetting org_creation = 2;
+}
+
+message SetOrgCreationPolicyRequest {
+  OrgCreationPolicy policy = 1;
+}
+
+message SetOrgCreationPolicyResponse {
+  SystemConfig config = 1;
 }
 
 message GetSystemConfigRequest {}

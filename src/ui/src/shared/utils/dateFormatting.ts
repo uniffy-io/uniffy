@@ -121,12 +121,14 @@ export function isOverdue(dateStr: string): boolean {
   return calendarDayKey(dateStr) < effectiveDayKey(new Date());
 }
 
-/** "Just now" / "5m ago" / "3d ago"; falls back to short date past 7 days. */
+/** "Just now" / "5m ago" / "3d ago" / "in 2h"; falls back to a short date past 30 days either way. */
 export function formatRelativeTime(dateStr: string | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const now = Date.now();
   const diffMs = now - date.getTime();
+  // Clock skew can put a fresh server timestamp just ahead of this clock; that still reads as now.
+  if (diffMs <= -60000) return formatTimeUntil(date, new Date(now));
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
@@ -145,6 +147,33 @@ export function formatRelativeTime(dateStr: string | undefined): string {
   });
 }
 
+/** Whole days between the calendar days of two instants in the effective zone. */
+function calendarDaysBetween(from: Date, to: Date): number {
+  return Math.round(
+    (parseCalendarDate(effectiveDayKey(to)).getTime() -
+      parseCalendarDate(effectiveDayKey(from)).getTime()) /
+      86400000,
+  );
+}
+
+function formatTimeUntil(date: Date, now: Date): string {
+  const aheadMin = Math.floor((date.getTime() - now.getTime()) / 60000);
+  const aheadHr = Math.floor(aheadMin / 60);
+
+  if (aheadMin < 60) return `in ${aheadMin}m`;
+  // Past a day ahead, the count is calendar days in the viewer's zone, not 24-hour spans.
+  const aheadDays = calendarDaysBetween(now, date);
+  if (aheadHr < 24 || aheadDays < 1) return `in ${aheadHr}h`;
+  if (aheadDays === 1) return "Tomorrow";
+  if (aheadDays < 30) return `in ${aheadDays}d`;
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: displayTimeZone(),
+  });
+}
+
 /** Today -> "2:30 PM"; yesterday -> "Yesterday, 4:15 PM"; this week -> "Mon, 10:00 AM"; this year -> "Apr 12, 2:30 PM"; older includes year. */
 export function formatSmartDateTime(dateStr: string | undefined): string {
   if (!dateStr) return "";
@@ -153,11 +182,7 @@ export function formatSmartDateTime(dateStr: string | undefined): string {
   const now = new Date();
 
   // Day boundaries live on the DISPLAY zone's calendar.
-  const dayDiff = Math.round(
-    (parseCalendarDate(effectiveDayKey(now)).getTime() -
-      parseCalendarDate(effectiveDayKey(date)).getTime()) /
-      86400000,
-  );
+  const dayDiff = calendarDaysBetween(date, now);
 
   const time = date.toLocaleTimeString(undefined, {
     hour: "numeric",

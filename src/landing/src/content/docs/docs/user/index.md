@@ -1,6 +1,6 @@
 ---
 title: Uniffy user guide
-description: Learn how sharing, AI agents, people profiles, bookmarks, tags, and project exports work in Uniffy. Find guides for everyday workspace use.
+description: Learn how sharing, AI agents, people profiles, bookmarks, tags, project exports, and organizations work in Uniffy. Find guides for everyday workspace use.
 sidebar:
   label: Overview
   order: 0
@@ -19,5 +19,7 @@ This guide is for everyone using Uniffy.
 [Library, tags and the knowledge graph](/docs/user/library/) covers finding your way back to your work. Private bookmarks, one tag vocabulary for the whole organization, and a graph drawn from your mentions.
 
 [Exporting projects](/docs/user/exporting-projects/) covers taking your tasks out as a CSV file, from one view, one project or several at once.
+
+[Organizations](/docs/user/organizations/) covers joining from an invitation, creating an organization, switching, and leaving. One sign in for all of them, and every tab in the organization you put it in.
 
 Still to write: getting started, notes, files, chat, mentions and search, tasks and projects, calendar, keyboard shortcuts, and the mobile app.

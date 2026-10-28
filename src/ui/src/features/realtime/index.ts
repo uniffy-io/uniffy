@@ -13,7 +13,8 @@ export { usePendingDocSync } from "@/features/realtime/hooks/useRealtimeDrain";
 export { docContentTypeName, docNameFor } from "@/features/realtime/docNames";
 export { RealtimeStatusBadge } from "@/features/realtime/components/RealtimeStatusBadge";
 export { RealtimeSessionStatus } from "@/features/realtime/components/RealtimeSessionStatus";
-export { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
+export { hasUnsyncedEdits, listPendingOrganizations } from "@/features/realtime/unsyncedEdits";
+export { abortDrainsOutside } from "@/features/realtime/drain";
 export { clearPendingDocsFor } from "@/features/realtime/pendingDocs";
 export {
   discoverStoredPendingDocs,

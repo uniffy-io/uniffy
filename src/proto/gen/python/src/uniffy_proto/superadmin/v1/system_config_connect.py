@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import system_config_pb
-from .system_config_pb import GetMfaPolicyRequest, GetMfaPolicyResponse, GetRealtimeBufferStatusRequest, GetRealtimeBufferStatusResponse, GetSystemConfigRequest, GetSystemConfigResponse, SetMfaPolicyRequest, SetMfaPolicyResponse, SetPublicRegistrationRequest, SetPublicRegistrationResponse
+from .system_config_pb import GetMfaPolicyRequest, GetMfaPolicyResponse, GetRealtimeBufferStatusRequest, GetRealtimeBufferStatusResponse, GetSystemConfigRequest, GetSystemConfigResponse, SetMfaPolicyRequest, SetMfaPolicyResponse, SetOrgCreationPolicyRequest, SetOrgCreationPolicyResponse, SetPublicRegistrationRequest, SetPublicRegistrationResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -48,6 +48,12 @@ class SystemConfigService(Protocol):
     async def set_public_registration(self, request: SetPublicRegistrationRequest, ctx: RequestContext[SetPublicRegistrationRequest, SetPublicRegistrationResponse], /) -> SetPublicRegistrationResponse:
         """
         Set the public-registration flag.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_org_creation_policy(self, request: SetOrgCreationPolicyRequest, ctx: RequestContext[SetOrgCreationPolicyRequest, SetOrgCreationPolicyResponse], /) -> SetOrgCreationPolicyResponse:
+        """
+        Set who may create organizations through the tenant surface.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -112,6 +118,16 @@ class SystemConfigServiceASGIApplication(ConnectASGIApplication[SystemConfigServ
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.set_public_registration,
+                ),
+                "/superadmin.v1.SystemConfigService/SetOrgCreationPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetOrgCreationPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=SetOrgCreationPolicyRequest,
+                        output=SetOrgCreationPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_org_creation_policy,
                 ),
                 "/superadmin.v1.SystemConfigService/GetMfaPolicy": Endpoint.unary(
                     method=MethodInfo(
@@ -208,6 +224,29 @@ class SystemConfigServiceClient(ConnectClient):
                 service_name="superadmin.v1.SystemConfigService",
                 input=SetPublicRegistrationRequest,
                 output=SetPublicRegistrationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_org_creation_policy(
+        self,
+        request: SetOrgCreationPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetOrgCreationPolicyResponse:
+        """
+        Set who may create organizations through the tenant surface.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetOrgCreationPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=SetOrgCreationPolicyRequest,
+                output=SetOrgCreationPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -313,6 +352,12 @@ class SystemConfigServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def set_org_creation_policy(self, request: SetOrgCreationPolicyRequest, ctx: RequestContext[SetOrgCreationPolicyRequest, SetOrgCreationPolicyResponse], /) -> SetOrgCreationPolicyResponse:
+        """
+        Set who may create organizations through the tenant surface.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def get_mfa_policy(self, request: GetMfaPolicyRequest, ctx: RequestContext[GetMfaPolicyRequest, GetMfaPolicyResponse], /) -> GetMfaPolicyResponse:
         """
         Read the deployment-wide MFA policy: whether platform admins must
@@ -372,6 +417,16 @@ class SystemConfigServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.set_public_registration,
+                ),
+                "/superadmin.v1.SystemConfigService/SetOrgCreationPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetOrgCreationPolicy",
+                        service_name="superadmin.v1.SystemConfigService",
+                        input=SetOrgCreationPolicyRequest,
+                        output=SetOrgCreationPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_org_creation_policy,
                 ),
                 "/superadmin.v1.SystemConfigService/GetMfaPolicy": EndpointSync.unary(
                     method=MethodInfo(
@@ -467,6 +522,28 @@ class SystemConfigServiceClientSync(ConnectClientSync):
                 service_name="superadmin.v1.SystemConfigService",
                 input=SetPublicRegistrationRequest,
                 output=SetPublicRegistrationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_org_creation_policy(
+        self,
+        request: SetOrgCreationPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetOrgCreationPolicyResponse:
+        """
+        Set who may create organizations through the tenant surface.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetOrgCreationPolicy",
+                service_name="superadmin.v1.SystemConfigService",
+                input=SetOrgCreationPolicyRequest,
+                output=SetOrgCreationPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

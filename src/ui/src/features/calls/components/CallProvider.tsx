@@ -696,12 +696,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const onPageHide = () => {
       const { status, callId, channelId, micEnabled, cameraEnabled } = sessionRef.current;
+      const organizationId = orgIdRef.current;
       const active = status === "connected" || status === "connecting" || status === "reconnecting";
-      if (!active || !callId || !channelId) return;
-      writeCallMarkers({ callId, channelId, micEnabled, cameraEnabled, ts: Date.now() });
+      if (!active || !callId || !channelId || !organizationId) return;
+      writeCallMarkers({
+        callId,
+        channelId,
+        organizationId,
+        micEnabled,
+        cameraEnabled,
+        ts: Date.now(),
+      });
       const others = roomRef.current?.remoteParticipants.size ?? 0;
-      if (others > 0 && orgIdRef.current) {
-        sendLeaveBeacon(orgIdRef.current, callId);
+      if (others > 0) {
+        sendLeaveBeacon(organizationId, callId);
       }
     };
     window.addEventListener("pagehide", onPageHide);
@@ -716,7 +724,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     restoreAttemptedRef.current = true;
     const sessionMarker = consumeSessionMarker();
     const target = sessionMarker ?? readRecentMarker();
-    if (!target) return;
+    // A call in another organization is not this tab's to rejoin; a tab in that org may still be.
+    if (!target || target.organizationId !== currentOrgId) return;
     void (async () => {
       try {
         const call = await dispatch(fetchActiveCall(target.channelId)).unwrap();
@@ -796,7 +805,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [endedInfo, room, teardown]);
 
-  // Switching org context mid-call (/select-org lives inside this provider) must
+  // Switching org context mid-call (/welcome lives inside this provider) must
   // leave the call in the previous org: the room stays connected otherwise, and
   // the new org's ListActiveCalls resync would flag the now-absent call as ended
   // while the mic keeps transmitting. currentUserId-clear (logout) is handled above.
@@ -804,7 +813,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (prevOrgRef.current && currentOrgId && prevOrgRef.current !== currentOrgId) {
       void teardown();
-      clearCallMarkers();
+      clearCallMarkers(prevOrgRef.current);
       dispatch(clearCalls());
     }
     prevOrgRef.current = currentOrgId;

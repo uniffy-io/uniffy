@@ -20,7 +20,8 @@ service AuthService {
   // Login with email and password
   rpc Login(LoginRequest) returns (LoginResponse);
 
-  // Refresh access token using refresh token
+  // Refresh the access token. Also the way to enter another organization:
+  // pass its slug and the session stays signed in.
   rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
 
   // Get current authenticated user info
@@ -38,11 +39,6 @@ service AuthService {
   // Revoke all sessions except the current one
   rpc RevokeOtherSessions(RevokeOtherSessionsRequest) returns (RevokeOtherSessionsResponse);
 
-  // Switch the active organization for the current user. Revokes the current
-  // session and issues a fresh session bound to the target org. Use this
-  // instead of RefreshToken with a slug to change tenant context.
-  rpc SwitchOrganization(SwitchOrganizationRequest) returns (SwitchOrganizationResponse);
-
   // Get the cache key seed for client-side storage encryption (called once per session)
   rpc GetCacheKeySeed(GetCacheKeySeedRequest) returns (GetCacheKeySeedResponse);
 
@@ -51,6 +47,11 @@ service AuthService {
 
   // Public auth configuration (e.g. whether registration is open).
   rpc GetAuthConfig(GetAuthConfigRequest) returns (GetAuthConfigResponse);
+
+  // First run of an empty deployment: creates the platform operator, the first
+  // organization with that user as owner, and signs them in. Refuses once any
+  // user exists.
+  rpc SetupDeployment(SetupDeploymentRequest) returns (SetupDeploymentResponse);
 
   // Preview an invitation by token (un-authenticated).
   rpc GetInvitation(GetInvitationRequest) returns (GetInvitationResponse);
@@ -86,22 +87,17 @@ message LoginRequest {
   optional string organization_slug = 3; // Authenticate into specific org
 }
 
-// Request to refresh access token. The refresh stays bound to the session's
-// organization; the optional organization_slug is kept for backwards reads
-// and rejected when it differs from the session's bound org.
+// Request to refresh access token. organization_id, else organization_slug,
+// selects the organization the new access token is bound to; omitting both
+// means the session's last organization. The caller must be an active member
+// of it. Moving to another organization keeps the session and rotates the
+// refresh token like any refresh.
 message RefreshTokenRequest {
   string refresh_token = 1;
   optional string organization_slug = 2;
-}
-
-// Request to switch the active organization for the current session.
-message SwitchOrganizationRequest {
-  string refresh_token = 1;
-  string organization_slug = 2;
-}
-
-message SwitchOrganizationResponse {
-  AuthResult auth_result = 1;
+  // Takes precedence over organization_slug. A slug can be renamed and an id
+  // cannot, so a client holding the id keeps its organization across a rename.
+  optional string organization_id = 3;
 }
 
 // Request to get current user info
@@ -281,6 +277,21 @@ message GetAuthConfigRequest {}
 // Public auth configuration the login / register pages need
 message GetAuthConfigResponse {
   bool public_registration_enabled = 1;
+  // True while the deployment has no user at all; the client shows the setup screen.
+  bool setup_required = 2;
+}
+
+message SetupDeploymentRequest {
+  string email = 1;
+  string password = 2;
+  optional string full_name = 3;
+  string organization_name = 4;
+  // Derived from the organization name when empty.
+  optional string organization_slug = 5;
+}
+
+message SetupDeploymentResponse {
+  AuthResult auth_result = 1;
 }
 
 // Preview an invitation before showing the accept form
@@ -296,6 +307,8 @@ message GetInvitationResponse {
   optional string inviter_display_name = 5;
   common.v1.OrganizationRole role = 6;
   google.protobuf.Timestamp expires_at = 7;
+  // An account already holds this email; the holder signs in to accept.
+  bool account_exists = 8;
 }
 
 // Accept an invitation; this creates the user + membership and returns auth tokens.

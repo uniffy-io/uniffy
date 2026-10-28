@@ -34,6 +34,7 @@ _PERM_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.PERM}
 _DEFAULTS_PATTERN = f"{RealtimeChannelNamespace.REALTIME}:{RealtimeChannelKind.DEFAULTS}:*"
 _REVOKE_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE}:*"
 _REVOKE_SID_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_SESSION}:*"
+_REVOKE_ORG_PATTERN = f"{RealtimeChannelNamespace.AUTH}:{RealtimeChannelKind.REVOKE_MEMBERSHIP}:*"
 _RECONNECT_DELAY_INITIAL = 1.0
 _RECONNECT_DELAY_MAX = 30.0
 # Records past this many queued for one document collapse into one reload of checkpoint plus tail.
@@ -70,6 +71,7 @@ class RouterCallbacks:
     reload_document: Callable[[DocKey], Awaitable[None]]
     close_stale_user_sessions: Callable[[UUID, int], Awaitable[None]]
     close_user_session_by_sid: Callable[[UUID, UUID], Awaitable[None]]
+    close_user_org_handles: Callable[[UUID, UUID], Awaitable[None]]
     # ``user_id`` narrows to that user's handles; ``None`` re-checks everyone on the docs.
     recheck_access: Callable[[Sequence[DocKey], UUID | None], Awaitable[None]]
 
@@ -159,6 +161,20 @@ def _parse_revoke_sid_channel(channel: str) -> UUID | None:
         return None
 
 
+def _parse_revoke_org_channel(channel: str) -> UUID | None:
+    parts = channel.split(":")
+    if (
+        len(parts) != 3
+        or parts[0] != RealtimeChannelNamespace.AUTH
+        or parts[1] != RealtimeChannelKind.REVOKE_MEMBERSHIP
+    ):
+        return None
+    try:
+        return UUID(parts[2])
+    except ValueError:
+        return None
+
+
 def _observe_pubsub_latency(channel_label: str, payload: dict[str, object]) -> None:
     """Observe publish-to-receive latency. No-op without ``published_at``;
     negative deltas clamp to 0.
@@ -232,8 +248,12 @@ class RealtimeRouter:
                 self._run_with_reconnect(_REVOKE_SID_PATTERN, self._handle_revoke_sid_message),
                 name="realtime-router-revoke-sid",
             ),
+            asyncio.create_task(
+                self._run_with_reconnect(_REVOKE_ORG_PATTERN, self._handle_revoke_org_message),
+                name="realtime-router-revoke-org",
+            ),
         ]
-        logger.info("realtime router started (5 pattern subscribers)")
+        logger.info(f"realtime router started ({len(self._tasks)} pattern subscribers)")
 
     async def stop(self) -> None:
         """Cancel the subscriber tasks. Idempotent."""
@@ -476,3 +496,22 @@ class RealtimeRouter:
             return
         _observe_pubsub_latency("revoke_sid", payload)
         await callbacks.close_user_session_by_sid(user_id, session_id)
+
+    async def _handle_revoke_org_message(self, channel: str, payload: dict[str, object]) -> None:
+        user_id = _parse_revoke_org_channel(channel)
+        if user_id is None:
+            return
+        org_raw = payload.get("organization_id")
+        if not isinstance(org_raw, str):
+            return
+        try:
+            organization_id = UUID(org_raw)
+        except ValueError:
+            return
+        callbacks = self._callbacks
+        if callbacks is None:
+            return
+        if user_id not in self._user_handles:
+            return
+        _observe_pubsub_latency("revoke_org", payload)
+        await callbacks.close_user_org_handles(user_id, organization_id)

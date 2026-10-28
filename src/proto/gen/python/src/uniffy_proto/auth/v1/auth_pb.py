@@ -123,13 +123,15 @@ class LoginRequest(Message[_LoginRequestFields]):
         password: str
         organization_slug: str
 
-_RefreshTokenRequestFields: TypeAlias = Literal["refresh_token", "organization_slug"]
+_RefreshTokenRequestFields: TypeAlias = Literal["refresh_token", "organization_slug", "organization_id"]
 
 class RefreshTokenRequest(Message[_RefreshTokenRequestFields]):
     """
-    Request to refresh access token. The refresh stays bound to the session's
-    organization; the optional organization_slug is kept for backwards reads
-    and rejected when it differs from the session's bound org.
+    Request to refresh access token. organization_id, else organization_slug,
+    selects the organization the new access token is bound to; omitting both
+    means the session's last organization. The caller must be an active member
+    of it. Moving to another organization keeps the session and rotates the
+    refresh token like any refresh.
 
     ```proto
     message auth.v1.RefreshTokenRequest
@@ -144,9 +146,16 @@ class RefreshTokenRequest(Message[_RefreshTokenRequestFields]):
             ```proto
             optional string organization_slug = 2;
             ```
+        organization_id:
+            Takes precedence over organization_slug. A slug can be renamed and an id
+            cannot, so a client holding the id keeps its organization across a rename.
+
+            ```proto
+            optional string organization_id = 3;
+            ```
     """
 
-    __slots__ = ("refresh_token", "organization_slug")
+    __slots__ = ("refresh_token", "organization_slug", "organization_id")
 
     if TYPE_CHECKING:
 
@@ -155,75 +164,13 @@ class RefreshTokenRequest(Message[_RefreshTokenRequestFields]):
             *,
             refresh_token: str = "",
             organization_slug: str | None = None,
+            organization_id: str | None = None,
         ) -> None:
             pass
 
         refresh_token: str
         organization_slug: str
-
-_SwitchOrganizationRequestFields: TypeAlias = Literal["refresh_token", "organization_slug"]
-
-class SwitchOrganizationRequest(Message[_SwitchOrganizationRequestFields]):
-    """
-    Request to switch the active organization for the current session.
-
-    ```proto
-    message auth.v1.SwitchOrganizationRequest
-    ```
-
-    Attributes:
-        refresh_token:
-            ```proto
-            string refresh_token = 1;
-            ```
-        organization_slug:
-            ```proto
-            string organization_slug = 2;
-            ```
-    """
-
-    __slots__ = ("refresh_token", "organization_slug")
-
-    if TYPE_CHECKING:
-
-        def __init__(
-            self,
-            *,
-            refresh_token: str = "",
-            organization_slug: str = "",
-        ) -> None:
-            pass
-
-        refresh_token: str
-        organization_slug: str
-
-_SwitchOrganizationResponseFields: TypeAlias = Literal["auth_result"]
-
-class SwitchOrganizationResponse(Message[_SwitchOrganizationResponseFields]):
-    """
-    ```proto
-    message auth.v1.SwitchOrganizationResponse
-    ```
-
-    Attributes:
-        auth_result:
-            ```proto
-            optional auth.v1.AuthResult auth_result = 1;
-            ```
-    """
-
-    __slots__ = ("auth_result",)
-
-    if TYPE_CHECKING:
-
-        def __init__(
-            self,
-            *,
-            auth_result: AuthResult | None = None,
-        ) -> None:
-            pass
-
-        auth_result: AuthResult | None
+        organization_id: str
 
 _GetCurrentUserRequestFields: TypeAlias = NoReturn
 
@@ -1172,7 +1119,7 @@ class GetAuthConfigRequest(Message[_GetAuthConfigRequestFields]):
         ) -> None:
             pass
 
-_GetAuthConfigResponseFields: TypeAlias = Literal["public_registration_enabled"]
+_GetAuthConfigResponseFields: TypeAlias = Literal["public_registration_enabled", "setup_required"]
 
 class GetAuthConfigResponse(Message[_GetAuthConfigResponseFields]):
     """
@@ -1187,9 +1134,15 @@ class GetAuthConfigResponse(Message[_GetAuthConfigResponseFields]):
             ```proto
             bool public_registration_enabled = 1;
             ```
+        setup_required:
+            True while the deployment has no user at all; the client shows the setup screen.
+
+            ```proto
+            bool setup_required = 2;
+            ```
     """
 
-    __slots__ = ("public_registration_enabled",)
+    __slots__ = ("public_registration_enabled", "setup_required")
 
     if TYPE_CHECKING:
 
@@ -1197,10 +1150,94 @@ class GetAuthConfigResponse(Message[_GetAuthConfigResponseFields]):
             self,
             *,
             public_registration_enabled: bool = False,
+            setup_required: bool = False,
         ) -> None:
             pass
 
         public_registration_enabled: bool
+        setup_required: bool
+
+_SetupDeploymentRequestFields: TypeAlias = Literal["email", "password", "full_name", "organization_name", "organization_slug"]
+
+class SetupDeploymentRequest(Message[_SetupDeploymentRequestFields]):
+    """
+    ```proto
+    message auth.v1.SetupDeploymentRequest
+    ```
+
+    Attributes:
+        email:
+            ```proto
+            string email = 1;
+            ```
+        password:
+            ```proto
+            string password = 2;
+            ```
+        full_name:
+            ```proto
+            optional string full_name = 3;
+            ```
+        organization_name:
+            ```proto
+            string organization_name = 4;
+            ```
+        organization_slug:
+            Derived from the organization name when empty.
+
+            ```proto
+            optional string organization_slug = 5;
+            ```
+    """
+
+    __slots__ = ("email", "password", "full_name", "organization_name", "organization_slug")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            email: str = "",
+            password: str = "",
+            full_name: str | None = None,
+            organization_name: str = "",
+            organization_slug: str | None = None,
+        ) -> None:
+            pass
+
+        email: str
+        password: str
+        full_name: str
+        organization_name: str
+        organization_slug: str
+
+_SetupDeploymentResponseFields: TypeAlias = Literal["auth_result"]
+
+class SetupDeploymentResponse(Message[_SetupDeploymentResponseFields]):
+    """
+    ```proto
+    message auth.v1.SetupDeploymentResponse
+    ```
+
+    Attributes:
+        auth_result:
+            ```proto
+            optional auth.v1.AuthResult auth_result = 1;
+            ```
+    """
+
+    __slots__ = ("auth_result",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            auth_result: AuthResult | None = None,
+        ) -> None:
+            pass
+
+        auth_result: AuthResult | None
 
 _GetInvitationRequestFields: TypeAlias = Literal["token"]
 
@@ -1232,7 +1269,7 @@ class GetInvitationRequest(Message[_GetInvitationRequestFields]):
 
         token: str
 
-_GetInvitationResponseFields: TypeAlias = Literal["email", "organization_id", "organization_name", "organization_slug", "inviter_display_name", "role", "expires_at"]
+_GetInvitationResponseFields: TypeAlias = Literal["email", "organization_id", "organization_name", "organization_slug", "inviter_display_name", "role", "expires_at", "account_exists"]
 
 class GetInvitationResponse(Message[_GetInvitationResponseFields]):
     """
@@ -1269,9 +1306,15 @@ class GetInvitationResponse(Message[_GetInvitationResponseFields]):
             ```proto
             optional google.protobuf.Timestamp expires_at = 7;
             ```
+        account_exists:
+            An account already holds this email; the holder signs in to accept.
+
+            ```proto
+            bool account_exists = 8;
+            ```
     """
 
-    __slots__ = ("email", "organization_id", "organization_name", "organization_slug", "inviter_display_name", "role", "expires_at")
+    __slots__ = ("email", "organization_id", "organization_name", "organization_slug", "inviter_display_name", "role", "expires_at", "account_exists")
 
     if TYPE_CHECKING:
 
@@ -1285,6 +1328,7 @@ class GetInvitationResponse(Message[_GetInvitationResponseFields]):
             inviter_display_name: str | None = None,
             role: OrganizationRole | None = None,
             expires_at: Timestamp | None = None,
+            account_exists: bool = False,
         ) -> None:
             pass
 
@@ -1295,6 +1339,7 @@ class GetInvitationResponse(Message[_GetInvitationResponseFields]):
         inviter_display_name: str
         role: OrganizationRole
         expires_at: Timestamp | None
+        account_exists: bool
 
 _AcceptInvitationRequestFields: TypeAlias = Literal["token", "username", "password", "full_name"]
 
@@ -1558,7 +1603,7 @@ class ResetPasswordResponse(Message[_ResetPasswordResponseFields]):
 
 
 _DESC = file_desc(
-    b'\n\x12auth/v1/auth.proto\x12\x07auth.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"\xd7\x01\n\x0fRegisterRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01\x120\n\x11organization_slug\x18\x05 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01B\x0c\n\n_full_nameB\x14\n\x12_organization_slug"\x88\x01\n\x0cLoginRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x120\n\x11organization_slug\x18\x03 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01B\x14\n\x12_organization_slug"\x82\x01\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\x120\n\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01B\x14\n\x12_organization_slug"m\n\x19SwitchOrganizationRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\x12+\n\x11organization_slug\x18\x02 \x01(\tR\x10organizationSlug"R\n\x1aSwitchOrganizationResponse\x124\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultR\nauthResult"\x17\n\x15GetCurrentUserRequest"K\n\rLogoutRequest\x12(\n\rrefresh_token\x18\x01 \x01(\tH\x00R\x0crefreshToken\x88\x01\x01B\x10\n\x0e_refresh_token"\x15\n\x13ListSessionsRequest"5\n\x14RevokeSessionRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId"\x1c\n\x1aRevokeOtherSessionsRequest"\x83\x04\n\x10RegisterResponse\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"\xdf\x01\n\rLoginResponse\x126\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultH\x00R\nauthResult\x12<\n\rmfa_challenge\x18\x02 \x01(\x0b2\x15.auth.v1.MfaChallengeH\x00R\x0cmfaChallenge\x12N\n\x13enrollment_required\x18\x03 \x01(\x0b2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\x08\n\x06result"\xfd\x03\n\nAuthResult\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"Q\n\x0cMfaChallenge\x12\'\n\x0fchallenge_token\x18\x01 \x01(\tR\x0echallengeToken\x12\x18\n\x07methods\x18\x02 \x03(\tR\x07methods"\x9f\x01\n\x12EnrollmentRequired\x12)\n\x10enrollment_token\x18\x01 \x01(\tR\x0fenrollmentToken\x12I\n\x10grace_expires_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x0egraceExpiresAt\x88\x01\x01B\x13\n\x11_grace_expires_at"\x87\x04\n\x14RefreshTokenResponse\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"\xe5\x03\n\x16GetCurrentUserResponse\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12&\n\x0fis_system_admin\x18\x06 \x01(\x08R\risSystemAdmin\x12%\n\x0eemail_verified\x18\x07 \x01(\x08R\remailVerified\x12&\n\x0caccent_color\x18\x08 \x01(\tH\x01R\x0baccentColor\x88\x01\x01\x12$\n\x0bfont_family\x18\t \x01(\tH\x02R\nfontFamily\x88\x01\x01\x12"\n\navatar_url\x18\n \x01(\tH\x03R\tavatarUrl\x88\x01\x01\x12\x1d\n\nhas_avatar\x18\x0b \x01(\x08R\thasAvatar\x12\x1f\n\x08pronouns\x18\x0c \x01(\tH\x04R\x08pronouns\x88\x01\x01B\x0c\n\n_full_nameB\x0f\n\r_accent_colorB\x0e\n\x0c_font_familyB\r\n\x0b_avatar_urlB\x0b\n\t_pronouns"*\n\x0eLogoutResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xc2\x01\n\x0bSessionInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n\nuser_agent\x18\x02 \x01(\tR\tuserAgent\x12!\n\x0cdevice_label\x18\x03 \x01(\tR\x0bdeviceLabel\x12\x1d\n\ncreated_at\x18\x04 \x01(\tR\tcreatedAt\x12#\n\rlast_activity\x18\x05 \x01(\tR\x0clastActivity\x12\x1d\n\nis_current\x18\x06 \x01(\x08R\tisCurrent"H\n\x14ListSessionsResponse\x120\n\x08sessions\x18\x01 \x03(\x0b2\x14.auth.v1.SessionInfoR\x08sessions"1\n\x15RevokeSessionResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"B\n\x1bRevokeOtherSessionsResponse\x12#\n\rrevoked_count\x18\x01 \x01(\x05R\x0crevokedCount"\x18\n\x16GetCacheKeySeedRequest"?\n\x17GetCacheKeySeedResponse\x12$\n\x0ecache_key_seed\x18\x01 \x01(\x0cR\x0ccacheKeySeed"Y\n\x19RotateCacheKeySeedRequest\x12)\n\x0etarget_user_id\x18\x01 \x01(\tH\x00R\x0ctargetUserId\x88\x01\x01B\x11\n\x0f_target_user_id"I\n\x1aRotateCacheKeySeedResponse\x12+\n\x12new_cache_key_seed\x18\x01 \x01(\x0cR\x0fnewCacheKeySeed"\x16\n\x14GetAuthConfigRequest"W\n\x15GetAuthConfigResponse\x12>\n\x1bpublic_registration_enabled\x18\x01 \x01(\x08R\x19publicRegistrationEnabled",\n\x14GetInvitationRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token"\xec\x02\n\x15GetInvitationResponse\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12+\n\x11organization_name\x18\x03 \x01(\tR\x10organizationName\x12+\n\x11organization_slug\x18\x04 \x01(\tR\x10organizationSlug\x125\n\x14inviter_display_name\x18\x05 \x01(\tH\x00R\x12inviterDisplayName\x88\x01\x01\x12/\n\x04role\x18\x06 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x129\n\nexpires_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAtB\x17\n\x15_inviter_display_name"\x97\x01\n\x17AcceptInvitationRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01B\x0c\n\n_full_name"\xac\x01\n\x18AcceptInvitationResponse\x126\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultH\x00R\nauthResult\x12N\n\x13enrollment_required\x18\x02 \x01(\x0b2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\x08\n\x06result"0\n\x18SendPasswordResetRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email"\x1b\n\x19SendPasswordResetResponse"7\n\x1fVerifyPasswordResetTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token"s\n VerifyPasswordResetTokenResponse\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x129\n\nexpires_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt"O\n\x14ResetPasswordRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12!\n\x0cnew_password\x18\x02 \x01(\tR\x0bnewPassword"1\n\x15ResetPasswordResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success2\x8a\x0b\n\x0bAuthService\x12?\n\x08Register\x12\x18.auth.v1.RegisterRequest\x1a\x19.auth.v1.RegisterResponse\x126\n\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12K\n\x0cRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x1d.auth.v1.RefreshTokenResponse\x12Q\n\x0eGetCurrentUser\x12\x1e.auth.v1.GetCurrentUserRequest\x1a\x1f.auth.v1.GetCurrentUserResponse\x129\n\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\x12K\n\x0cListSessions\x12\x1c.auth.v1.ListSessionsRequest\x1a\x1d.auth.v1.ListSessionsResponse\x12N\n\rRevokeSession\x12\x1d.auth.v1.RevokeSessionRequest\x1a\x1e.auth.v1.RevokeSessionResponse\x12`\n\x13RevokeOtherSessions\x12#.auth.v1.RevokeOtherSessionsRequest\x1a$.auth.v1.RevokeOtherSessionsResponse\x12]\n\x12SwitchOrganization\x12".auth.v1.SwitchOrganizationRequest\x1a#.auth.v1.SwitchOrganizationResponse\x12T\n\x0fGetCacheKeySeed\x12\x1f.auth.v1.GetCacheKeySeedRequest\x1a .auth.v1.GetCacheKeySeedResponse\x12]\n\x12RotateCacheKeySeed\x12".auth.v1.RotateCacheKeySeedRequest\x1a#.auth.v1.RotateCacheKeySeedResponse\x12N\n\rGetAuthConfig\x12\x1d.auth.v1.GetAuthConfigRequest\x1a\x1e.auth.v1.GetAuthConfigResponse\x12N\n\rGetInvitation\x12\x1d.auth.v1.GetInvitationRequest\x1a\x1e.auth.v1.GetInvitationResponse\x12W\n\x10AcceptInvitation\x12 .auth.v1.AcceptInvitationRequest\x1a!.auth.v1.AcceptInvitationResponse\x12Z\n\x11SendPasswordReset\x12!.auth.v1.SendPasswordResetRequest\x1a".auth.v1.SendPasswordResetResponse\x12o\n\x18VerifyPasswordResetToken\x12(.auth.v1.VerifyPasswordResetTokenRequest\x1a).auth.v1.VerifyPasswordResetTokenResponse\x12N\n\rResetPassword\x12\x1d.auth.v1.ResetPasswordRequest\x1a\x1e.auth.v1.ResetPasswordResponseB5Z3github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3',
+    b'\n\x12auth/v1/auth.proto\x12\x07auth.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"\xd7\x01\n\x0fRegisterRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01\x120\n\x11organization_slug\x18\x05 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01B\x0c\n\n_full_nameB\x14\n\x12_organization_slug"\x88\x01\n\x0cLoginRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x120\n\x11organization_slug\x18\x03 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01B\x14\n\x12_organization_slug"\xc4\x01\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\x120\n\x11organization_slug\x18\x02 \x01(\tH\x00R\x10organizationSlug\x88\x01\x01\x12,\n\x0forganization_id\x18\x03 \x01(\tH\x01R\x0eorganizationId\x88\x01\x01B\x14\n\x12_organization_slugB\x12\n\x10_organization_id"\x17\n\x15GetCurrentUserRequest"K\n\rLogoutRequest\x12(\n\rrefresh_token\x18\x01 \x01(\tH\x00R\x0crefreshToken\x88\x01\x01B\x10\n\x0e_refresh_token"\x15\n\x13ListSessionsRequest"5\n\x14RevokeSessionRequest\x12\x1d\n\nsession_id\x18\x01 \x01(\tR\tsessionId"\x1c\n\x1aRevokeOtherSessionsRequest"\x83\x04\n\x10RegisterResponse\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"\xdf\x01\n\rLoginResponse\x126\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultH\x00R\nauthResult\x12<\n\rmfa_challenge\x18\x02 \x01(\x0b2\x15.auth.v1.MfaChallengeH\x00R\x0cmfaChallenge\x12N\n\x13enrollment_required\x18\x03 \x01(\x0b2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\x08\n\x06result"\xfd\x03\n\nAuthResult\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"Q\n\x0cMfaChallenge\x12\'\n\x0fchallenge_token\x18\x01 \x01(\tR\x0echallengeToken\x12\x18\n\x07methods\x18\x02 \x03(\tR\x07methods"\x9f\x01\n\x12EnrollmentRequired\x12)\n\x10enrollment_token\x18\x01 \x01(\tR\x0fenrollmentToken\x12I\n\x10grace_expires_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\x0egraceExpiresAt\x88\x01\x01B\x13\n\x11_grace_expires_at"\x87\x04\n\x14RefreshTokenResponse\x12!\n\x0caccess_token\x18\x01 \x01(\tR\x0baccessToken\x12#\n\rrefresh_token\x18\x02 \x01(\tR\x0crefreshToken\x12\x1d\n\ntoken_type\x18\x03 \x01(\tR\ttokenType\x12\x17\n\x07user_id\x18\x04 \x01(\tR\x06userId\x12,\n\x0forganization_id\x18\x05 \x01(\tH\x00R\x0eorganizationId\x88\x01\x01\x120\n\x11organization_role\x18\x06 \x01(\tH\x01R\x10organizationRole\x88\x01\x01\x12"\n\nsession_id\x18\x07 \x01(\tH\x02R\tsessionId\x88\x01\x01\x12G\n\x14domain_admin_domains\x18\x08 \x03(\x0e2\x15.common.v1.DomainTypeR\x12domainAdminDomains\x120\n\x11organization_slug\x18\t \x01(\tH\x03R\x10organizationSlug\x88\x01\x01\x12!\n\x0casset_cookie\x18\n \x01(\tR\x0bassetCookieB\x12\n\x10_organization_idB\x14\n\x12_organization_roleB\r\n\x0b_session_idB\x14\n\x12_organization_slug"\xe5\x03\n\x16GetCurrentUserResponse\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n\x08username\x18\x03 \x01(\tR\x08username\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01\x12\x1b\n\tis_active\x18\x05 \x01(\x08R\x08isActive\x12&\n\x0fis_system_admin\x18\x06 \x01(\x08R\risSystemAdmin\x12%\n\x0eemail_verified\x18\x07 \x01(\x08R\remailVerified\x12&\n\x0caccent_color\x18\x08 \x01(\tH\x01R\x0baccentColor\x88\x01\x01\x12$\n\x0bfont_family\x18\t \x01(\tH\x02R\nfontFamily\x88\x01\x01\x12"\n\navatar_url\x18\n \x01(\tH\x03R\tavatarUrl\x88\x01\x01\x12\x1d\n\nhas_avatar\x18\x0b \x01(\x08R\thasAvatar\x12\x1f\n\x08pronouns\x18\x0c \x01(\tH\x04R\x08pronouns\x88\x01\x01B\x0c\n\n_full_nameB\x0f\n\r_accent_colorB\x0e\n\x0c_font_familyB\r\n\x0b_avatar_urlB\x0b\n\t_pronouns"*\n\x0eLogoutResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"\xc2\x01\n\x0bSessionInfo\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n\nuser_agent\x18\x02 \x01(\tR\tuserAgent\x12!\n\x0cdevice_label\x18\x03 \x01(\tR\x0bdeviceLabel\x12\x1d\n\ncreated_at\x18\x04 \x01(\tR\tcreatedAt\x12#\n\rlast_activity\x18\x05 \x01(\tR\x0clastActivity\x12\x1d\n\nis_current\x18\x06 \x01(\x08R\tisCurrent"H\n\x14ListSessionsResponse\x120\n\x08sessions\x18\x01 \x03(\x0b2\x14.auth.v1.SessionInfoR\x08sessions"1\n\x15RevokeSessionResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success"B\n\x1bRevokeOtherSessionsResponse\x12#\n\rrevoked_count\x18\x01 \x01(\x05R\x0crevokedCount"\x18\n\x16GetCacheKeySeedRequest"?\n\x17GetCacheKeySeedResponse\x12$\n\x0ecache_key_seed\x18\x01 \x01(\x0cR\x0ccacheKeySeed"Y\n\x19RotateCacheKeySeedRequest\x12)\n\x0etarget_user_id\x18\x01 \x01(\tH\x00R\x0ctargetUserId\x88\x01\x01B\x11\n\x0f_target_user_id"I\n\x1aRotateCacheKeySeedResponse\x12+\n\x12new_cache_key_seed\x18\x01 \x01(\x0cR\x0fnewCacheKeySeed"\x16\n\x14GetAuthConfigRequest"~\n\x15GetAuthConfigResponse\x12>\n\x1bpublic_registration_enabled\x18\x01 \x01(\x08R\x19publicRegistrationEnabled\x12%\n\x0esetup_required\x18\x02 \x01(\x08R\rsetupRequired"\xef\x01\n\x16SetupDeploymentRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n\x08password\x18\x02 \x01(\tR\x08password\x12 \n\tfull_name\x18\x03 \x01(\tH\x00R\x08fullName\x88\x01\x01\x12+\n\x11organization_name\x18\x04 \x01(\tR\x10organizationName\x120\n\x11organization_slug\x18\x05 \x01(\tH\x01R\x10organizationSlug\x88\x01\x01B\x0c\n\n_full_nameB\x14\n\x12_organization_slug"O\n\x17SetupDeploymentResponse\x124\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultR\nauthResult",\n\x14GetInvitationRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token"\x93\x03\n\x15GetInvitationResponse\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x12\'\n\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12+\n\x11organization_name\x18\x03 \x01(\tR\x10organizationName\x12+\n\x11organization_slug\x18\x04 \x01(\tR\x10organizationSlug\x125\n\x14inviter_display_name\x18\x05 \x01(\tH\x00R\x12inviterDisplayName\x88\x01\x01\x12/\n\x04role\x18\x06 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x04role\x129\n\nexpires_at\x18\x07 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt\x12%\n\x0eaccount_exists\x18\x08 \x01(\x08R\raccountExistsB\x17\n\x15_inviter_display_name"\x97\x01\n\x17AcceptInvitationRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1a\n\x08username\x18\x02 \x01(\tR\x08username\x12\x1a\n\x08password\x18\x03 \x01(\tR\x08password\x12 \n\tfull_name\x18\x04 \x01(\tH\x00R\x08fullName\x88\x01\x01B\x0c\n\n_full_name"\xac\x01\n\x18AcceptInvitationResponse\x126\n\x0bauth_result\x18\x01 \x01(\x0b2\x13.auth.v1.AuthResultH\x00R\nauthResult\x12N\n\x13enrollment_required\x18\x02 \x01(\x0b2\x1b.auth.v1.EnrollmentRequiredH\x00R\x12enrollmentRequiredB\x08\n\x06result"0\n\x18SendPasswordResetRequest\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email"\x1b\n\x19SendPasswordResetResponse"7\n\x1fVerifyPasswordResetTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token"s\n VerifyPasswordResetTokenResponse\x12\x14\n\x05email\x18\x01 \x01(\tR\x05email\x129\n\nexpires_at\x18\x02 \x01(\x0b2\x1a.google.protobuf.TimestampR\texpiresAt"O\n\x14ResetPasswordRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12!\n\x0cnew_password\x18\x02 \x01(\tR\x0bnewPassword"1\n\x15ResetPasswordResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success2\x81\x0b\n\x0bAuthService\x12?\n\x08Register\x12\x18.auth.v1.RegisterRequest\x1a\x19.auth.v1.RegisterResponse\x126\n\x05Login\x12\x15.auth.v1.LoginRequest\x1a\x16.auth.v1.LoginResponse\x12K\n\x0cRefreshToken\x12\x1c.auth.v1.RefreshTokenRequest\x1a\x1d.auth.v1.RefreshTokenResponse\x12Q\n\x0eGetCurrentUser\x12\x1e.auth.v1.GetCurrentUserRequest\x1a\x1f.auth.v1.GetCurrentUserResponse\x129\n\x06Logout\x12\x16.auth.v1.LogoutRequest\x1a\x17.auth.v1.LogoutResponse\x12K\n\x0cListSessions\x12\x1c.auth.v1.ListSessionsRequest\x1a\x1d.auth.v1.ListSessionsResponse\x12N\n\rRevokeSession\x12\x1d.auth.v1.RevokeSessionRequest\x1a\x1e.auth.v1.RevokeSessionResponse\x12`\n\x13RevokeOtherSessions\x12#.auth.v1.RevokeOtherSessionsRequest\x1a$.auth.v1.RevokeOtherSessionsResponse\x12T\n\x0fGetCacheKeySeed\x12\x1f.auth.v1.GetCacheKeySeedRequest\x1a .auth.v1.GetCacheKeySeedResponse\x12]\n\x12RotateCacheKeySeed\x12".auth.v1.RotateCacheKeySeedRequest\x1a#.auth.v1.RotateCacheKeySeedResponse\x12N\n\rGetAuthConfig\x12\x1d.auth.v1.GetAuthConfigRequest\x1a\x1e.auth.v1.GetAuthConfigResponse\x12T\n\x0fSetupDeployment\x12\x1f.auth.v1.SetupDeploymentRequest\x1a .auth.v1.SetupDeploymentResponse\x12N\n\rGetInvitation\x12\x1d.auth.v1.GetInvitationRequest\x1a\x1e.auth.v1.GetInvitationResponse\x12W\n\x10AcceptInvitation\x12 .auth.v1.AcceptInvitationRequest\x1a!.auth.v1.AcceptInvitationResponse\x12Z\n\x11SendPasswordReset\x12!.auth.v1.SendPasswordResetRequest\x1a".auth.v1.SendPasswordResetResponse\x12o\n\x18VerifyPasswordResetToken\x12(.auth.v1.VerifyPasswordResetTokenRequest\x1a).auth.v1.VerifyPasswordResetTokenResponse\x12N\n\rResetPassword\x12\x1d.auth.v1.ResetPasswordRequest\x1a\x1e.auth.v1.ResetPasswordResponseB5Z3github.com/uniffy-io/uniffy-proto-go/auth/v1;authv1b\x06proto3',
     [
         common_pb.desc(),
         timestamp_pb.desc(),
@@ -1567,8 +1612,6 @@ _DESC = file_desc(
         "RegisterRequest": RegisterRequest,
         "LoginRequest": LoginRequest,
         "RefreshTokenRequest": RefreshTokenRequest,
-        "SwitchOrganizationRequest": SwitchOrganizationRequest,
-        "SwitchOrganizationResponse": SwitchOrganizationResponse,
         "GetCurrentUserRequest": GetCurrentUserRequest,
         "LogoutRequest": LogoutRequest,
         "ListSessionsRequest": ListSessionsRequest,
@@ -1592,6 +1635,8 @@ _DESC = file_desc(
         "RotateCacheKeySeedResponse": RotateCacheKeySeedResponse,
         "GetAuthConfigRequest": GetAuthConfigRequest,
         "GetAuthConfigResponse": GetAuthConfigResponse,
+        "SetupDeploymentRequest": SetupDeploymentRequest,
+        "SetupDeploymentResponse": SetupDeploymentResponse,
         "GetInvitationRequest": GetInvitationRequest,
         "GetInvitationResponse": GetInvitationResponse,
         "AcceptInvitationRequest": AcceptInvitationRequest,

@@ -6,6 +6,7 @@ import {
   updatePermissionDefaults,
   fetchOrganizationOverview,
   fetchMembers,
+  refreshMembersQuietly,
   updateMemberRole,
   removeMember,
   fetchGroups,
@@ -18,6 +19,7 @@ import {
   fetchDomainAdmins,
   grantDomainAdmin,
   revokeDomainAdmin,
+  type MemberPageQuery,
 } from "@/features/admin/store/adminThunks";
 import {
   ContentType,
@@ -113,8 +115,15 @@ export function useOrgMembers() {
   const error = useAppSelector((state) => state.admin.error);
 
   const refresh = useCallback(
-    (options?: { page?: number; pageSize?: number; roleFilter?: number; search?: string }) => {
+    (options?: MemberPageQuery) => {
       dispatch(fetchMembers(options || {}));
+    },
+    [dispatch],
+  );
+
+  const refreshQuietly = useCallback(
+    (options?: MemberPageQuery) => {
+      dispatch(refreshMembersQuietly(options || {}));
     },
     [dispatch],
   );
@@ -139,6 +148,7 @@ export function useOrgMembers() {
     totalCount,
     error,
     refresh,
+    refreshQuietly,
     updateRole,
     remove,
   };

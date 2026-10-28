@@ -201,7 +201,15 @@ export function openDocSession(options: OpenDocSessionOptions): DocSessionHandle
           : noView
             ? "access_lost"
             : "permission_lost";
-        if (noView && !readOnly) settleLost();
+        // Only a socket of this document's organization speaks for its access.
+        if (noView && !readOnly && realtimeMultiplexer.servesOrganization(organizationId))
+          settleLost();
+        publish();
+      },
+      // No server of this organization answered: editing stops, and the device copy and its
+      // retained updates stay as they are for a socket of the right organization.
+      onOrganizationMismatch: () => {
+        denial = "access_lost";
         publish();
       },
       onCoverage: (events) => {

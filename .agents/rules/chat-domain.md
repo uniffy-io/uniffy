@@ -24,6 +24,7 @@ Chat uses **channel membership**, not `access_mode`. `ChatAccessChecker` (`domai
 
 - Channel-scoped event types MUST be listed in `_CHANNEL_EVENT_TYPES` (`domains/chat/streaming/handlers.py`) or subscribers silently never receive them. Adding a new event type without updating that set is the known failure mode (it broke CALL_* events once).
 - `CALL_*` events ride the chat user-stream; the calls rule (`calls-domain.md`) owns their semantics.
+- A stream serves the organization its request names. `chat:user:{user_id}` carries the user's events from every organization, so `ChannelOrganizationFilter` (`domains/chat/streaming/scope.py`) passes only events of that organization's channels.
 - A stream reconnect must be able to resync any state the events carry (snapshot RPC), because events during the gap are lost.
 
 ## Performance discipline (chat-specific)

@@ -26,9 +26,9 @@ Someone leaves the company. The notes they kept private stay private. Removing t
 
 ## What you do control
 
-You set the starting point for new content through [default permissions](/docs/administration/security/default-permissions/). If your organization wants new notes to open to everyone by default, you set that. If you want everything to start locked down, you set that instead. Members can still change the setting on their own items.
+You set the starting point for new content through default permissions on the Default Permissions admin page. If your organization wants new notes to open to everyone by default, you set that. If you want everything to start locked down, you set that instead. Members can still change the setting on their own items.
 
-You decide who is in the org and what role they hold on the [Members](/docs/administration/access/members/) page. You bundle people into [groups](/docs/administration/access/groups/) so that granting access stays simple.
+You decide who is in the org and what role they hold on the [Members](/docs/administration/access/members/) page. You bundle people into [groups](/docs/administration/access/teams-and-groups/) so that granting access stays simple.
 
 ## Narrower admins
 
@@ -50,7 +50,6 @@ If you want a tool where an admin can quietly read anyone's notes, you want a di
 
 ## See also
 
-- [Default Permissions](/docs/administration/security/default-permissions/): what new content inherits when a member creates it.
 - [Members](/docs/administration/access/members/): who is in the org and what role they hold.
 - [Sharing and privacy](/docs/user/sharing/): the same model from a member's point of view.
 - [Principles](/docs/principles/): why we cannot see your workspace on cloud.

@@ -77,6 +77,7 @@ def model_info_to_proto(model: DomainModelInfo) -> ProtoModelInfo:
         parameter_schema_json=_parameter_schema_json(model),
         image_parameter_schema_json=_image_parameter_schema_json(model),
         image_price_estimates_json=_image_price_estimates_json(model),
+        provider_default=model.provider_default,
     )
 
 

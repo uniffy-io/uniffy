@@ -53,7 +53,43 @@ class SystemFlag(Message[_SystemFlagFields]):
         enabled: bool
         source: str
 
-_SystemConfigFields: TypeAlias = Literal["public_registration"]
+_OrgCreationSettingFields: TypeAlias = Literal["policy", "source"]
+
+class OrgCreationSetting(Message[_OrgCreationSettingFields]):
+    """
+    ```proto
+    message superadmin.v1.OrgCreationSetting
+    ```
+
+    Attributes:
+        policy:
+            ```proto
+            superadmin.v1.OrgCreationPolicy policy = 1;
+            ```
+        source:
+            'deployment' | 'env' | 'default'
+
+            ```proto
+            string source = 2;
+            ```
+    """
+
+    __slots__ = ("policy", "source")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            policy: OrgCreationPolicy | None = None,
+            source: str = "",
+        ) -> None:
+            pass
+
+        policy: OrgCreationPolicy
+        source: str
+
+_SystemConfigFields: TypeAlias = Literal["public_registration", "org_creation"]
 
 class SystemConfig(Message[_SystemConfigFields]):
     """
@@ -68,9 +104,13 @@ class SystemConfig(Message[_SystemConfigFields]):
             ```proto
             optional superadmin.v1.SystemFlag public_registration = 1;
             ```
+        org_creation:
+            ```proto
+            optional superadmin.v1.OrgCreationSetting org_creation = 2;
+            ```
     """
 
-    __slots__ = ("public_registration",)
+    __slots__ = ("public_registration", "org_creation")
 
     if TYPE_CHECKING:
 
@@ -78,10 +118,68 @@ class SystemConfig(Message[_SystemConfigFields]):
             self,
             *,
             public_registration: SystemFlag | None = None,
+            org_creation: OrgCreationSetting | None = None,
         ) -> None:
             pass
 
         public_registration: SystemFlag | None
+        org_creation: OrgCreationSetting | None
+
+_SetOrgCreationPolicyRequestFields: TypeAlias = Literal["policy"]
+
+class SetOrgCreationPolicyRequest(Message[_SetOrgCreationPolicyRequestFields]):
+    """
+    ```proto
+    message superadmin.v1.SetOrgCreationPolicyRequest
+    ```
+
+    Attributes:
+        policy:
+            ```proto
+            superadmin.v1.OrgCreationPolicy policy = 1;
+            ```
+    """
+
+    __slots__ = ("policy",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            policy: OrgCreationPolicy | None = None,
+        ) -> None:
+            pass
+
+        policy: OrgCreationPolicy
+
+_SetOrgCreationPolicyResponseFields: TypeAlias = Literal["config"]
+
+class SetOrgCreationPolicyResponse(Message[_SetOrgCreationPolicyResponseFields]):
+    """
+    ```proto
+    message superadmin.v1.SetOrgCreationPolicyResponse
+    ```
+
+    Attributes:
+        config:
+            ```proto
+            optional superadmin.v1.SystemConfig config = 1;
+            ```
+    """
+
+    __slots__ = ("config",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            config: SystemConfig | None = None,
+        ) -> None:
+            pass
+
+        config: SystemConfig | None
 
 _GetSystemConfigRequestFields: TypeAlias = NoReturn
 
@@ -582,6 +680,50 @@ class GetRealtimeBufferStatusResponse(Message[_GetRealtimeBufferStatusResponseFi
 
         status: RealtimeBufferStatus | None
 
+class OrgCreationPolicy(Enum):
+    """
+    Who may create organizations through organizations.v1.CreateOrganization.
+    Each level includes the ones before it; platform operators always may.
+
+    ```proto
+    enum superadmin.v1.OrgCreationPolicy
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            ORG_CREATION_POLICY_UNSPECIFIED = 0
+            ```
+        OPERATORS_ONLY:
+            ```proto
+            ORG_CREATION_POLICY_OPERATORS_ONLY = 1
+            ```
+        OPERATORS_AND_OWNERS:
+            Plus owners of an existing organization. The coded default.
+
+            ```proto
+            ORG_CREATION_POLICY_OPERATORS_AND_OWNERS = 2
+            ```
+        MEMBERS:
+            Plus anyone holding an active membership somewhere.
+
+            ```proto
+            ORG_CREATION_POLICY_MEMBERS = 3
+            ```
+        ANYONE:
+            Plus signed-in users with no membership: register, then create.
+
+            ```proto
+            ORG_CREATION_POLICY_ANYONE = 4
+            ```
+    """
+
+    UNSPECIFIED = 0
+    OPERATORS_ONLY = 1
+    OPERATORS_AND_OWNERS = 2
+    MEMBERS = 3
+    ANYONE = 4
+
 class RealtimeBufferVerdict(Enum):
     """
     Whether the serving Valkey instance may hold accepted realtime edits.
@@ -627,11 +769,14 @@ class RealtimeBufferVerdict(Enum):
 
 
 _DESC = file_desc(
-    b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1">\n\nSystemFlag\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source"Z\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b2\x19.superadmin.v1.SystemFlagR\x12publicRegistration"\x18\n\x16GetSystemConfigRequest"N\n\x17GetSystemConfigResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled"T\n\x1dSetPublicRegistrationResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"H\n\tMfaPolicy\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"\x15\n\x13GetMfaPolicyRequest"H\n\x14GetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"R\n\x13SetMfaPolicyRequest\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"H\n\x14SetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"\xda\x03\n\x17RealtimeBufferPreflight\x12,\n\x0feviction_policy\x18\x01 \x01(\tH\x00R\x0eevictionPolicy\x88\x01\x01\x12,\n\x0fmaxmemory_bytes\x18\x02 \x01(\x03H\x01R\x0emaxmemoryBytes\x88\x01\x01\x12$\n\x0baof_enabled\x18\x03 \x01(\x08H\x02R\naofEnabled\x88\x01\x01\x12=\n\x18rdb_snapshots_configured\x18\x04 \x01(\x08H\x03R\x16rdbSnapshotsConfigured\x88\x01\x01\x12\x1f\n\x0bloss_window\x18\x05 \x01(\tR\nlossWindow\x12%\n\x0evalkey_version\x18\x06 \x01(\tR\rvalkeyVersion\x12/\n\x14valkey_run_id_prefix\x18\x07 \x01(\tR\x11valkeyRunIdPrefix\x120\n\x14pending_budget_bytes\x18\x08 \x01(\x03R\x12pendingBudgetBytesB\x12\n\x10_eviction_policyB\x12\n\x10_maxmemory_bytesB\x0e\n\x0c_aof_enabledB\x1b\n\x19_rdb_snapshots_configured"\xc7\x01\n\x14RealtimeBufferTotals\x12#\n\rpending_bytes\x18\x01 \x01(\x03R\x0cpendingBytes\x12\'\n\x0fpending_records\x18\x02 \x01(\x03R\x0ependingRecords\x12+\n\x11pending_documents\x18\x03 \x01(\x03R\x10pendingDocuments\x124\n\x16oldest_pending_seconds\x18\x04 \x01(\x01R\x14oldestPendingSeconds"\x89\x05\n\x14RealtimeBufferStatus\x12>\n\x07verdict\x18\x01 \x01(\x0e2$.superadmin.v1.RealtimeBufferVerdictR\x07verdict\x12%\n\x0epreflight_mode\x18\x02 \x01(\tR\rpreflightMode\x125\n\x17pending_budget_from_env\x18\x03 \x01(\x08R\x14pendingBudgetFromEnv\x12D\n\tpreflight\x18\x04 \x01(\x0b2&.superadmin.v1.RealtimeBufferPreflightR\tpreflight\x12;\n\x06totals\x18\x05 \x01(\x0b2#.superadmin.v1.RealtimeBufferTotalsR\x06totals\x12W\n\x0cepoch_resets\x18\x06 \x03(\x0b24.superadmin.v1.RealtimeBufferStatus.EpochResetsEntryR\x0bepochResets\x12o\n\x14poisoned_checkpoints\x18\x07 \x03(\x0b2<.superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntryR\x13poisonedCheckpoints\x1a>\n\x10EpochResetsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\x1aF\n\x18PoisonedCheckpointsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01" \n\x1eGetRealtimeBufferStatusRequest"^\n\x1fGetRealtimeBufferStatusResponse\x12;\n\x06status\x18\x01 \x01(\x0b2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xd5\x01\n\x15RealtimeBufferVerdict\x12\'\n#REALTIME_BUFFER_VERDICT_UNSPECIFIED\x10\x00\x12#\n\x1fREALTIME_BUFFER_VERDICT_NOT_RUN\x10\x01\x12#\n\x1fREALTIME_BUFFER_VERDICT_ENABLED\x10\x02\x12$\n REALTIME_BUFFER_VERDICT_DISABLED\x10\x03\x12#\n\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\xa1\x04\n\x13SystemConfigService\x12b\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse"\x00\x12Y\n\x0cGetMfaPolicy\x12".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse"\x00\x12Y\n\x0cSetMfaPolicy\x12".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse"\x00\x12z\n\x17GetRealtimeBufferStatus\x12-.superadmin.v1.GetRealtimeBufferStatusRequest\x1a..superadmin.v1.GetRealtimeBufferStatusResponse"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3',
+    b'\n!superadmin/v1/system_config.proto\x12\rsuperadmin.v1">\n\nSystemFlag\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source"f\n\x12OrgCreationSetting\x128\n\x06policy\x18\x01 \x01(\x0e2 .superadmin.v1.OrgCreationPolicyR\x06policy\x12\x16\n\x06source\x18\x02 \x01(\tR\x06source"\xa0\x01\n\x0cSystemConfig\x12J\n\x13public_registration\x18\x01 \x01(\x0b2\x19.superadmin.v1.SystemFlagR\x12publicRegistration\x12D\n\x0corg_creation\x18\x02 \x01(\x0b2!.superadmin.v1.OrgCreationSettingR\x0borgCreation"W\n\x1bSetOrgCreationPolicyRequest\x128\n\x06policy\x18\x01 \x01(\x0e2 .superadmin.v1.OrgCreationPolicyR\x06policy"S\n\x1cSetOrgCreationPolicyResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"\x18\n\x16GetSystemConfigRequest"N\n\x17GetSystemConfigResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"8\n\x1cSetPublicRegistrationRequest\x12\x18\n\x07enabled\x18\x01 \x01(\x08R\x07enabled"T\n\x1dSetPublicRegistrationResponse\x123\n\x06config\x18\x01 \x01(\x0b2\x1b.superadmin.v1.SystemConfigR\x06config"H\n\tMfaPolicy\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"\x15\n\x13GetMfaPolicyRequest"H\n\x14GetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"R\n\x13SetMfaPolicyRequest\x12;\n\x1arequired_for_system_admins\x18\x01 \x01(\x08R\x17requiredForSystemAdmins"H\n\x14SetMfaPolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.superadmin.v1.MfaPolicyR\x06policy"\xda\x03\n\x17RealtimeBufferPreflight\x12,\n\x0feviction_policy\x18\x01 \x01(\tH\x00R\x0eevictionPolicy\x88\x01\x01\x12,\n\x0fmaxmemory_bytes\x18\x02 \x01(\x03H\x01R\x0emaxmemoryBytes\x88\x01\x01\x12$\n\x0baof_enabled\x18\x03 \x01(\x08H\x02R\naofEnabled\x88\x01\x01\x12=\n\x18rdb_snapshots_configured\x18\x04 \x01(\x08H\x03R\x16rdbSnapshotsConfigured\x88\x01\x01\x12\x1f\n\x0bloss_window\x18\x05 \x01(\tR\nlossWindow\x12%\n\x0evalkey_version\x18\x06 \x01(\tR\rvalkeyVersion\x12/\n\x14valkey_run_id_prefix\x18\x07 \x01(\tR\x11valkeyRunIdPrefix\x120\n\x14pending_budget_bytes\x18\x08 \x01(\x03R\x12pendingBudgetBytesB\x12\n\x10_eviction_policyB\x12\n\x10_maxmemory_bytesB\x0e\n\x0c_aof_enabledB\x1b\n\x19_rdb_snapshots_configured"\xc7\x01\n\x14RealtimeBufferTotals\x12#\n\rpending_bytes\x18\x01 \x01(\x03R\x0cpendingBytes\x12\'\n\x0fpending_records\x18\x02 \x01(\x03R\x0ependingRecords\x12+\n\x11pending_documents\x18\x03 \x01(\x03R\x10pendingDocuments\x124\n\x16oldest_pending_seconds\x18\x04 \x01(\x01R\x14oldestPendingSeconds"\x89\x05\n\x14RealtimeBufferStatus\x12>\n\x07verdict\x18\x01 \x01(\x0e2$.superadmin.v1.RealtimeBufferVerdictR\x07verdict\x12%\n\x0epreflight_mode\x18\x02 \x01(\tR\rpreflightMode\x125\n\x17pending_budget_from_env\x18\x03 \x01(\x08R\x14pendingBudgetFromEnv\x12D\n\tpreflight\x18\x04 \x01(\x0b2&.superadmin.v1.RealtimeBufferPreflightR\tpreflight\x12;\n\x06totals\x18\x05 \x01(\x0b2#.superadmin.v1.RealtimeBufferTotalsR\x06totals\x12W\n\x0cepoch_resets\x18\x06 \x03(\x0b24.superadmin.v1.RealtimeBufferStatus.EpochResetsEntryR\x0bepochResets\x12o\n\x14poisoned_checkpoints\x18\x07 \x03(\x0b2<.superadmin.v1.RealtimeBufferStatus.PoisonedCheckpointsEntryR\x13poisonedCheckpoints\x1a>\n\x10EpochResetsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01\x1aF\n\x18PoisonedCheckpointsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\x03R\x05value:\x028\x01" \n\x1eGetRealtimeBufferStatusRequest"^\n\x1fGetRealtimeBufferStatusResponse\x12;\n\x06status\x18\x01 \x01(\x0b2#.superadmin.v1.RealtimeBufferStatusR\x06status*\xcf\x01\n\x11OrgCreationPolicy\x12#\n\x1fORG_CREATION_POLICY_UNSPECIFIED\x10\x00\x12&\n"ORG_CREATION_POLICY_OPERATORS_ONLY\x10\x01\x12,\n(ORG_CREATION_POLICY_OPERATORS_AND_OWNERS\x10\x02\x12\x1f\n\x1bORG_CREATION_POLICY_MEMBERS\x10\x03\x12\x1e\n\x1aORG_CREATION_POLICY_ANYONE\x10\x04*\xd5\x01\n\x15RealtimeBufferVerdict\x12\'\n#REALTIME_BUFFER_VERDICT_UNSPECIFIED\x10\x00\x12#\n\x1fREALTIME_BUFFER_VERDICT_NOT_RUN\x10\x01\x12#\n\x1fREALTIME_BUFFER_VERDICT_ENABLED\x10\x02\x12$\n REALTIME_BUFFER_VERDICT_DISABLED\x10\x03\x12#\n\x1fREALTIME_BUFFER_VERDICT_UNKNOWN\x10\x042\x94\x05\n\x13SystemConfigService\x12b\n\x0fGetSystemConfig\x12%.superadmin.v1.GetSystemConfigRequest\x1a&.superadmin.v1.GetSystemConfigResponse"\x00\x12t\n\x15SetPublicRegistration\x12+.superadmin.v1.SetPublicRegistrationRequest\x1a,.superadmin.v1.SetPublicRegistrationResponse"\x00\x12q\n\x14SetOrgCreationPolicy\x12*.superadmin.v1.SetOrgCreationPolicyRequest\x1a+.superadmin.v1.SetOrgCreationPolicyResponse"\x00\x12Y\n\x0cGetMfaPolicy\x12".superadmin.v1.GetMfaPolicyRequest\x1a#.superadmin.v1.GetMfaPolicyResponse"\x00\x12Y\n\x0cSetMfaPolicy\x12".superadmin.v1.SetMfaPolicyRequest\x1a#.superadmin.v1.SetMfaPolicyResponse"\x00\x12z\n\x17GetRealtimeBufferStatus\x12-.superadmin.v1.GetRealtimeBufferStatusRequest\x1a..superadmin.v1.GetRealtimeBufferStatusResponse"\x00BAZ?github.com/uniffy-io/uniffy-proto-go/superadmin/v1;superadminv1b\x06proto3',
     [],
     {
         "SystemFlag": SystemFlag,
+        "OrgCreationSetting": OrgCreationSetting,
         "SystemConfig": SystemConfig,
+        "SetOrgCreationPolicyRequest": SetOrgCreationPolicyRequest,
+        "SetOrgCreationPolicyResponse": SetOrgCreationPolicyResponse,
         "GetSystemConfigRequest": GetSystemConfigRequest,
         "GetSystemConfigResponse": GetSystemConfigResponse,
         "SetPublicRegistrationRequest": SetPublicRegistrationRequest,
@@ -646,6 +791,7 @@ _DESC = file_desc(
         "RealtimeBufferStatus": RealtimeBufferStatus,
         "GetRealtimeBufferStatusRequest": GetRealtimeBufferStatusRequest,
         "GetRealtimeBufferStatusResponse": GetRealtimeBufferStatusResponse,
+        "OrgCreationPolicy": OrgCreationPolicy,
         "RealtimeBufferVerdict": RealtimeBufferVerdict,
     },
 )

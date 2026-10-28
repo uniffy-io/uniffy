@@ -39,6 +39,9 @@ const (
 	// SystemConfigServiceSetPublicRegistrationProcedure is the fully-qualified name of the
 	// SystemConfigService's SetPublicRegistration RPC.
 	SystemConfigServiceSetPublicRegistrationProcedure = "/superadmin.v1.SystemConfigService/SetPublicRegistration"
+	// SystemConfigServiceSetOrgCreationPolicyProcedure is the fully-qualified name of the
+	// SystemConfigService's SetOrgCreationPolicy RPC.
+	SystemConfigServiceSetOrgCreationPolicyProcedure = "/superadmin.v1.SystemConfigService/SetOrgCreationPolicy"
 	// SystemConfigServiceGetMfaPolicyProcedure is the fully-qualified name of the SystemConfigService's
 	// GetMfaPolicy RPC.
 	SystemConfigServiceGetMfaPolicyProcedure = "/superadmin.v1.SystemConfigService/GetMfaPolicy"
@@ -56,6 +59,8 @@ type SystemConfigServiceClient interface {
 	GetSystemConfig(context.Context, *connect.Request[v1.GetSystemConfigRequest]) (*connect.Response[v1.GetSystemConfigResponse], error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error)
+	// Set who may create organizations through the tenant surface.
+	SetOrgCreationPolicy(context.Context, *connect.Request[v1.SetOrgCreationPolicyRequest]) (*connect.Response[v1.SetOrgCreationPolicyResponse], error)
 	// Read the deployment-wide MFA policy: whether platform admins must
 	// have MFA enabled, and the day / login caps on the per-user grace
 	// window before the requirement becomes hard.
@@ -93,6 +98,12 @@ func NewSystemConfigServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(systemConfigServiceMethods.ByName("SetPublicRegistration")),
 			connect.WithClientOptions(opts...),
 		),
+		setOrgCreationPolicy: connect.NewClient[v1.SetOrgCreationPolicyRequest, v1.SetOrgCreationPolicyResponse](
+			httpClient,
+			baseURL+SystemConfigServiceSetOrgCreationPolicyProcedure,
+			connect.WithSchema(systemConfigServiceMethods.ByName("SetOrgCreationPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 		getMfaPolicy: connect.NewClient[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse](
 			httpClient,
 			baseURL+SystemConfigServiceGetMfaPolicyProcedure,
@@ -118,6 +129,7 @@ func NewSystemConfigServiceClient(httpClient connect.HTTPClient, baseURL string,
 type systemConfigServiceClient struct {
 	getSystemConfig         *connect.Client[v1.GetSystemConfigRequest, v1.GetSystemConfigResponse]
 	setPublicRegistration   *connect.Client[v1.SetPublicRegistrationRequest, v1.SetPublicRegistrationResponse]
+	setOrgCreationPolicy    *connect.Client[v1.SetOrgCreationPolicyRequest, v1.SetOrgCreationPolicyResponse]
 	getMfaPolicy            *connect.Client[v1.GetMfaPolicyRequest, v1.GetMfaPolicyResponse]
 	setMfaPolicy            *connect.Client[v1.SetMfaPolicyRequest, v1.SetMfaPolicyResponse]
 	getRealtimeBufferStatus *connect.Client[v1.GetRealtimeBufferStatusRequest, v1.GetRealtimeBufferStatusResponse]
@@ -131,6 +143,11 @@ func (c *systemConfigServiceClient) GetSystemConfig(ctx context.Context, req *co
 // SetPublicRegistration calls superadmin.v1.SystemConfigService.SetPublicRegistration.
 func (c *systemConfigServiceClient) SetPublicRegistration(ctx context.Context, req *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error) {
 	return c.setPublicRegistration.CallUnary(ctx, req)
+}
+
+// SetOrgCreationPolicy calls superadmin.v1.SystemConfigService.SetOrgCreationPolicy.
+func (c *systemConfigServiceClient) SetOrgCreationPolicy(ctx context.Context, req *connect.Request[v1.SetOrgCreationPolicyRequest]) (*connect.Response[v1.SetOrgCreationPolicyResponse], error) {
+	return c.setOrgCreationPolicy.CallUnary(ctx, req)
 }
 
 // GetMfaPolicy calls superadmin.v1.SystemConfigService.GetMfaPolicy.
@@ -154,6 +171,8 @@ type SystemConfigServiceHandler interface {
 	GetSystemConfig(context.Context, *connect.Request[v1.GetSystemConfigRequest]) (*connect.Response[v1.GetSystemConfigResponse], error)
 	// Set the public-registration flag.
 	SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error)
+	// Set who may create organizations through the tenant surface.
+	SetOrgCreationPolicy(context.Context, *connect.Request[v1.SetOrgCreationPolicyRequest]) (*connect.Response[v1.SetOrgCreationPolicyResponse], error)
 	// Read the deployment-wide MFA policy: whether platform admins must
 	// have MFA enabled, and the day / login caps on the per-user grace
 	// window before the requirement becomes hard.
@@ -187,6 +206,12 @@ func NewSystemConfigServiceHandler(svc SystemConfigServiceHandler, opts ...conne
 		connect.WithSchema(systemConfigServiceMethods.ByName("SetPublicRegistration")),
 		connect.WithHandlerOptions(opts...),
 	)
+	systemConfigServiceSetOrgCreationPolicyHandler := connect.NewUnaryHandler(
+		SystemConfigServiceSetOrgCreationPolicyProcedure,
+		svc.SetOrgCreationPolicy,
+		connect.WithSchema(systemConfigServiceMethods.ByName("SetOrgCreationPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	systemConfigServiceGetMfaPolicyHandler := connect.NewUnaryHandler(
 		SystemConfigServiceGetMfaPolicyProcedure,
 		svc.GetMfaPolicy,
@@ -211,6 +236,8 @@ func NewSystemConfigServiceHandler(svc SystemConfigServiceHandler, opts ...conne
 			systemConfigServiceGetSystemConfigHandler.ServeHTTP(w, r)
 		case SystemConfigServiceSetPublicRegistrationProcedure:
 			systemConfigServiceSetPublicRegistrationHandler.ServeHTTP(w, r)
+		case SystemConfigServiceSetOrgCreationPolicyProcedure:
+			systemConfigServiceSetOrgCreationPolicyHandler.ServeHTTP(w, r)
 		case SystemConfigServiceGetMfaPolicyProcedure:
 			systemConfigServiceGetMfaPolicyHandler.ServeHTTP(w, r)
 		case SystemConfigServiceSetMfaPolicyProcedure:
@@ -232,6 +259,10 @@ func (UnimplementedSystemConfigServiceHandler) GetSystemConfig(context.Context, 
 
 func (UnimplementedSystemConfigServiceHandler) SetPublicRegistration(context.Context, *connect.Request[v1.SetPublicRegistrationRequest]) (*connect.Response[v1.SetPublicRegistrationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.SetPublicRegistration is not implemented"))
+}
+
+func (UnimplementedSystemConfigServiceHandler) SetOrgCreationPolicy(context.Context, *connect.Request[v1.SetOrgCreationPolicyRequest]) (*connect.Response[v1.SetOrgCreationPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("superadmin.v1.SystemConfigService.SetOrgCreationPolicy is not implemented"))
 }
 
 func (UnimplementedSystemConfigServiceHandler) GetMfaPolicy(context.Context, *connect.Request[v1.GetMfaPolicyRequest]) (*connect.Response[v1.GetMfaPolicyResponse], error) {

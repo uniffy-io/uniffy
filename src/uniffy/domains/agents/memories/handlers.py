@@ -29,7 +29,12 @@ from uniffy_proto.common.v1.common_pb import PaginationResponse
 
 from uniffy.core.auth.membership import is_active_member
 from uniffy.core.auth.principal import current_user_id, resolve_organization_id
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    MembershipRequiredError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import MemoryScope
 from uniffy.core.models.login.user import User
@@ -327,7 +332,7 @@ class MemoriesHandlers:
         try:
             async with open_session() as session:
                 if not await is_active_member(user_id, org_id, session=session):
-                    raise ConnectError(Code.PERMISSION_DENIED, "Not an organization member")
+                    raise MembershipRequiredError("Requires organization membership")
                 settings = await get_runtime_settings(session, org_id)
                 enabled = await is_personal_bridge_enabled(
                     session, user_id=user_id, organization_id=org_id
@@ -355,7 +360,7 @@ class MemoriesHandlers:
         try:
             async with open_session() as session:
                 if not await is_active_member(user_id, org_id, session=session):
-                    raise ConnectError(Code.PERMISSION_DENIED, "Not an organization member")
+                    raise MembershipRequiredError("Requires organization membership")
                 settings = await get_runtime_settings(session, org_id)
                 if request.use_in_shared_spaces and not settings.personal_memory_bridge_enabled:
                     raise ConnectError(

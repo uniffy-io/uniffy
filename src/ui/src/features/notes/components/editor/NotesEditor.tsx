@@ -38,12 +38,15 @@ interface NotesEditorProps {
   /** The open note was deleted or its access went: it stays on screen read-only, as last shown,
    * with the Access lost chip until the user navigates. */
   lostNote?: SerializedNote | null;
+  /** The routed note failed to load in this tab's organization. */
+  loadFailed?: boolean;
 }
 
-export function NotesEditor({ lostNote = null }: NotesEditorProps) {
+export function NotesEditor({ lostNote = null, loadFailed = false }: NotesEditorProps) {
   const location = useLocation();
   const notesState = useAppSelector((state) => state.notes);
   const editorState = useAppSelector((state) => state.editor);
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
 
@@ -64,17 +67,24 @@ export function NotesEditor({ lostNote = null }: NotesEditorProps) {
   const roleAllowsEdit = role === null ? true : roleCanEdit(role);
 
   const isCanvas = currentNote?.nodeType === NodeType.CANVAS;
+  // A session stamps this tab's organization on the rows it stores and replays, so it starts only
+  // once the note loaded here. A route to another organization's note never opens one.
+  const loadedHere =
+    lost ||
+    (!loadFailed &&
+      Boolean(currentNote) &&
+      (!currentNote?.organizationId || currentNote.organizationId === organizationId));
   // Viewers attach too so read-only shares render the live Y.Text; the
   // multiplexer suppresses write frames for read-only docs.
   // A lost note keeps its session read-only, so the server's denial still settles local recovery.
   const { binding: realtimeBinding, status: liveStatus } = useNoteRealtimeSession(
     currentNoteId ?? null,
-    Boolean(currentNoteId) && !isCanvas,
+    Boolean(currentNoteId) && loadedHere && !isCanvas,
     roleAllowsEdit && !lost,
   );
   const { binding: canvasRealtimeBinding, status: canvasLiveStatus } = useCanvasRealtimeSession(
     currentNoteId ?? null,
-    Boolean(currentNoteId) && roleAllowsEdit && isCanvas,
+    Boolean(currentNoteId) && loadedHere && roleAllowsEdit && isCanvas,
   );
   const realtimeStatus = lost ? "access_lost" : liveStatus;
   const canvasRealtimeStatus = lost ? "access_lost" : canvasLiveStatus;

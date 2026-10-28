@@ -19,27 +19,38 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	OrganizationsService_ListMyOrganizations_FullMethodName      = "/organizations.v1.OrganizationsService/ListMyOrganizations"
-	OrganizationsService_GetOrganization_FullMethodName          = "/organizations.v1.OrganizationsService/GetOrganization"
-	OrganizationsService_UpdateOrganization_FullMethodName       = "/organizations.v1.OrganizationsService/UpdateOrganization"
-	OrganizationsService_GetOrganizationOverview_FullMethodName  = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
-	OrganizationsService_ListMembers_FullMethodName              = "/organizations.v1.OrganizationsService/ListMembers"
-	OrganizationsService_AddMember_FullMethodName                = "/organizations.v1.OrganizationsService/AddMember"
-	OrganizationsService_UpdateMemberRole_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateMemberRole"
-	OrganizationsService_RemoveMember_FullMethodName             = "/organizations.v1.OrganizationsService/RemoveMember"
-	OrganizationsService_InviteMember_FullMethodName             = "/organizations.v1.OrganizationsService/InviteMember"
-	OrganizationsService_ListInvitations_FullMethodName          = "/organizations.v1.OrganizationsService/ListInvitations"
-	OrganizationsService_RevokeInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/RevokeInvitation"
-	OrganizationsService_ResendInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/ResendInvitation"
-	OrganizationsService_GetSecuritySettings_FullMethodName      = "/organizations.v1.OrganizationsService/GetSecuritySettings"
-	OrganizationsService_UpdateSecuritySettings_FullMethodName   = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
-	OrganizationsService_GetPermissionDefaults_FullMethodName    = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
-	OrganizationsService_UpdatePermissionDefaults_FullMethodName = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
-	OrganizationsService_GrantDomainAdmin_FullMethodName         = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
-	OrganizationsService_RevokeDomainAdmin_FullMethodName        = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
-	OrganizationsService_ListDomainAdmins_FullMethodName         = "/organizations.v1.OrganizationsService/ListDomainAdmins"
-	OrganizationsService_GetUserDomainAdmins_FullMethodName      = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
-	OrganizationsService_RotateEncryptionKey_FullMethodName      = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
+	OrganizationsService_ListMyOrganizations_FullMethodName        = "/organizations.v1.OrganizationsService/ListMyOrganizations"
+	OrganizationsService_ResolveContentOrganization_FullMethodName = "/organizations.v1.OrganizationsService/ResolveContentOrganization"
+	OrganizationsService_CreateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/CreateOrganization"
+	OrganizationsService_GetOnboarding_FullMethodName              = "/organizations.v1.OrganizationsService/GetOnboarding"
+	OrganizationsService_RecordOnboardingStep_FullMethodName       = "/organizations.v1.OrganizationsService/RecordOnboardingStep"
+	OrganizationsService_FinishOnboarding_FullMethodName           = "/organizations.v1.OrganizationsService/FinishOnboarding"
+	OrganizationsService_ListMyInvitations_FullMethodName          = "/organizations.v1.OrganizationsService/ListMyInvitations"
+	OrganizationsService_AcceptMyInvitation_FullMethodName         = "/organizations.v1.OrganizationsService/AcceptMyInvitation"
+	OrganizationsService_DeclineMyInvitation_FullMethodName        = "/organizations.v1.OrganizationsService/DeclineMyInvitation"
+	OrganizationsService_GetOrganization_FullMethodName            = "/organizations.v1.OrganizationsService/GetOrganization"
+	OrganizationsService_UpdateOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/UpdateOrganization"
+	OrganizationsService_LeaveOrganization_FullMethodName          = "/organizations.v1.OrganizationsService/LeaveOrganization"
+	OrganizationsService_TransferOwnership_FullMethodName          = "/organizations.v1.OrganizationsService/TransferOwnership"
+	OrganizationsService_DeleteOrganization_FullMethodName         = "/organizations.v1.OrganizationsService/DeleteOrganization"
+	OrganizationsService_GetOrganizationOverview_FullMethodName    = "/organizations.v1.OrganizationsService/GetOrganizationOverview"
+	OrganizationsService_ListMembers_FullMethodName                = "/organizations.v1.OrganizationsService/ListMembers"
+	OrganizationsService_AddMember_FullMethodName                  = "/organizations.v1.OrganizationsService/AddMember"
+	OrganizationsService_UpdateMemberRole_FullMethodName           = "/organizations.v1.OrganizationsService/UpdateMemberRole"
+	OrganizationsService_RemoveMember_FullMethodName               = "/organizations.v1.OrganizationsService/RemoveMember"
+	OrganizationsService_InviteMember_FullMethodName               = "/organizations.v1.OrganizationsService/InviteMember"
+	OrganizationsService_ListInvitations_FullMethodName            = "/organizations.v1.OrganizationsService/ListInvitations"
+	OrganizationsService_RevokeInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/RevokeInvitation"
+	OrganizationsService_ResendInvitation_FullMethodName           = "/organizations.v1.OrganizationsService/ResendInvitation"
+	OrganizationsService_GetSecuritySettings_FullMethodName        = "/organizations.v1.OrganizationsService/GetSecuritySettings"
+	OrganizationsService_UpdateSecuritySettings_FullMethodName     = "/organizations.v1.OrganizationsService/UpdateSecuritySettings"
+	OrganizationsService_GetPermissionDefaults_FullMethodName      = "/organizations.v1.OrganizationsService/GetPermissionDefaults"
+	OrganizationsService_UpdatePermissionDefaults_FullMethodName   = "/organizations.v1.OrganizationsService/UpdatePermissionDefaults"
+	OrganizationsService_GrantDomainAdmin_FullMethodName           = "/organizations.v1.OrganizationsService/GrantDomainAdmin"
+	OrganizationsService_RevokeDomainAdmin_FullMethodName          = "/organizations.v1.OrganizationsService/RevokeDomainAdmin"
+	OrganizationsService_ListDomainAdmins_FullMethodName           = "/organizations.v1.OrganizationsService/ListDomainAdmins"
+	OrganizationsService_GetUserDomainAdmins_FullMethodName        = "/organizations.v1.OrganizationsService/GetUserDomainAdmins"
+	OrganizationsService_RotateEncryptionKey_FullMethodName        = "/organizations.v1.OrganizationsService/RotateEncryptionKey"
 )
 
 // OrganizationsServiceClient is the client API for OrganizationsService service.
@@ -48,10 +59,33 @@ const (
 type OrganizationsServiceClient interface {
 	// User's organizations
 	ListMyOrganizations(ctx context.Context, in *ListMyOrganizationsRequest, opts ...grpc.CallOption) (*ListMyOrganizationsResponse, error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(ctx context.Context, in *ResolveContentOrganizationRequest, opts ...grpc.CallOption) (*ResolveContentOrganizationResponse, error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error)
+	// First-run entry flow for the user who created the organization. Pending
+	// only while that user is still its active OWNER and has neither finished
+	// nor skipped it. Record and Finish are no-ops once the flow is over.
+	GetOnboarding(ctx context.Context, in *GetOnboardingRequest, opts ...grpc.CallOption) (*GetOnboardingResponse, error)
+	RecordOnboardingStep(ctx context.Context, in *RecordOnboardingStepRequest, opts ...grpc.CallOption) (*RecordOnboardingStepResponse, error)
+	FinishOnboarding(ctx context.Context, in *FinishOnboardingRequest, opts ...grpc.CallOption) (*FinishOnboardingResponse, error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(ctx context.Context, in *ListMyInvitationsRequest, opts ...grpc.CallOption) (*ListMyInvitationsResponse, error)
+	AcceptMyInvitation(ctx context.Context, in *AcceptMyInvitationRequest, opts ...grpc.CallOption) (*AcceptMyInvitationResponse, error)
+	DeclineMyInvitation(ctx context.Context, in *DeclineMyInvitationRequest, opts ...grpc.CallOption) (*DeclineMyInvitationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error)
 	UpdateOrganization(ctx context.Context, in *UpdateOrganizationRequest, opts ...grpc.CallOption) (*UpdateOrganizationResponse, error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(ctx context.Context, in *LeaveOrganizationRequest, opts ...grpc.CallOption) (*LeaveOrganizationResponse, error)
+	TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error)
+	DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(ctx context.Context, in *GetOrganizationOverviewRequest, opts ...grpc.CallOption) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
@@ -97,6 +131,86 @@ func (c *organizationsServiceClient) ListMyOrganizations(ctx context.Context, in
 	return out, nil
 }
 
+func (c *organizationsServiceClient) ResolveContentOrganization(ctx context.Context, in *ResolveContentOrganizationRequest, opts ...grpc.CallOption) (*ResolveContentOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveContentOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ResolveContentOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) CreateOrganization(ctx context.Context, in *CreateOrganizationRequest, opts ...grpc.CallOption) (*CreateOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_CreateOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) GetOnboarding(ctx context.Context, in *GetOnboardingRequest, opts ...grpc.CallOption) (*GetOnboardingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOnboardingResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_GetOnboarding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) RecordOnboardingStep(ctx context.Context, in *RecordOnboardingStepRequest, opts ...grpc.CallOption) (*RecordOnboardingStepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordOnboardingStepResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_RecordOnboardingStep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) FinishOnboarding(ctx context.Context, in *FinishOnboardingRequest, opts ...grpc.CallOption) (*FinishOnboardingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishOnboardingResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_FinishOnboarding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) ListMyInvitations(ctx context.Context, in *ListMyInvitationsRequest, opts ...grpc.CallOption) (*ListMyInvitationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListMyInvitationsResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_ListMyInvitations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) AcceptMyInvitation(ctx context.Context, in *AcceptMyInvitationRequest, opts ...grpc.CallOption) (*AcceptMyInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcceptMyInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_AcceptMyInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) DeclineMyInvitation(ctx context.Context, in *DeclineMyInvitationRequest, opts ...grpc.CallOption) (*DeclineMyInvitationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeclineMyInvitationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_DeclineMyInvitation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *organizationsServiceClient) GetOrganization(ctx context.Context, in *GetOrganizationRequest, opts ...grpc.CallOption) (*GetOrganizationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetOrganizationResponse)
@@ -111,6 +225,36 @@ func (c *organizationsServiceClient) UpdateOrganization(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateOrganizationResponse)
 	err := c.cc.Invoke(ctx, OrganizationsService_UpdateOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) LeaveOrganization(ctx context.Context, in *LeaveOrganizationRequest, opts ...grpc.CallOption) (*LeaveOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaveOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_LeaveOrganization_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) TransferOwnership(ctx context.Context, in *TransferOwnershipRequest, opts ...grpc.CallOption) (*TransferOwnershipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferOwnershipResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_TransferOwnership_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *organizationsServiceClient) DeleteOrganization(ctx context.Context, in *DeleteOrganizationRequest, opts ...grpc.CallOption) (*DeleteOrganizationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteOrganizationResponse)
+	err := c.cc.Invoke(ctx, OrganizationsService_DeleteOrganization_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -303,10 +447,33 @@ func (c *organizationsServiceClient) RotateEncryptionKey(ctx context.Context, in
 type OrganizationsServiceServer interface {
 	// User's organizations
 	ListMyOrganizations(context.Context, *ListMyOrganizationsRequest) (*ListMyOrganizationsResponse, error)
+	// Finds which of the caller's own organizations owns the content behind a
+	// URN. Unknown content, content the caller cannot view, and content outside
+	// the caller's memberships all return the same NOT_FOUND error.
+	ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error)
+	// Self-service creation. Allowed when the deployment's org_creation policy
+	// admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+	CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error)
+	// First-run entry flow for the user who created the organization. Pending
+	// only while that user is still its active OWNER and has neither finished
+	// nor skipped it. Record and Finish are no-ops once the flow is over.
+	GetOnboarding(context.Context, *GetOnboardingRequest) (*GetOnboardingResponse, error)
+	RecordOnboardingStep(context.Context, *RecordOnboardingStepRequest) (*RecordOnboardingStepResponse, error)
+	FinishOnboarding(context.Context, *FinishOnboardingRequest) (*FinishOnboardingResponse, error)
+	// Invitations addressed to the caller's email, and the signed-in way to act on them.
+	ListMyInvitations(context.Context, *ListMyInvitationsRequest) (*ListMyInvitationsResponse, error)
+	AcceptMyInvitation(context.Context, *AcceptMyInvitationRequest) (*AcceptMyInvitationResponse, error)
+	DeclineMyInvitation(context.Context, *DeclineMyInvitationRequest) (*DeclineMyInvitationResponse, error)
 	// Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
 	// is the platform surface: superadmin.v1.SystemOrganizationsService.
 	GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error)
 	UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error)
+	// Membership lifecycle for the caller's own place in the organization.
+	// An OWNER transfers before leaving; deletion is OWNER only and soft, with
+	// the same purge window the platform surface applies.
+	LeaveOrganization(context.Context, *LeaveOrganizationRequest) (*LeaveOrganizationResponse, error)
+	TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error)
+	DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error)
 	// Organization overview (Org Admin)
 	GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error)
 	// Member management (Org Admin)
@@ -345,11 +512,44 @@ type UnimplementedOrganizationsServiceServer struct{}
 func (UnimplementedOrganizationsServiceServer) ListMyOrganizations(context.Context, *ListMyOrganizationsRequest) (*ListMyOrganizationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListMyOrganizations not implemented")
 }
+func (UnimplementedOrganizationsServiceServer) ResolveContentOrganization(context.Context, *ResolveContentOrganizationRequest) (*ResolveContentOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveContentOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) CreateOrganization(context.Context, *CreateOrganizationRequest) (*CreateOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) GetOnboarding(context.Context, *GetOnboardingRequest) (*GetOnboardingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOnboarding not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) RecordOnboardingStep(context.Context, *RecordOnboardingStepRequest) (*RecordOnboardingStepResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordOnboardingStep not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) FinishOnboarding(context.Context, *FinishOnboardingRequest) (*FinishOnboardingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinishOnboarding not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) ListMyInvitations(context.Context, *ListMyInvitationsRequest) (*ListMyInvitationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListMyInvitations not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) AcceptMyInvitation(context.Context, *AcceptMyInvitationRequest) (*AcceptMyInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptMyInvitation not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) DeclineMyInvitation(context.Context, *DeclineMyInvitationRequest) (*DeclineMyInvitationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeclineMyInvitation not implemented")
+}
 func (UnimplementedOrganizationsServiceServer) GetOrganization(context.Context, *GetOrganizationRequest) (*GetOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) UpdateOrganization(context.Context, *UpdateOrganizationRequest) (*UpdateOrganizationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) LeaveOrganization(context.Context, *LeaveOrganizationRequest) (*LeaveOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LeaveOrganization not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) TransferOwnership(context.Context, *TransferOwnershipRequest) (*TransferOwnershipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferOwnership not implemented")
+}
+func (UnimplementedOrganizationsServiceServer) DeleteOrganization(context.Context, *DeleteOrganizationRequest) (*DeleteOrganizationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteOrganization not implemented")
 }
 func (UnimplementedOrganizationsServiceServer) GetOrganizationOverview(context.Context, *GetOrganizationOverviewRequest) (*GetOrganizationOverviewResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetOrganizationOverview not implemented")
@@ -444,6 +644,150 @@ func _OrganizationsService_ListMyOrganizations_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _OrganizationsService_ResolveContentOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveContentOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ResolveContentOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ResolveContentOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ResolveContentOrganization(ctx, req.(*ResolveContentOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_CreateOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).CreateOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_CreateOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).CreateOrganization(ctx, req.(*CreateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_GetOnboarding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOnboardingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).GetOnboarding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_GetOnboarding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).GetOnboarding(ctx, req.(*GetOnboardingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_RecordOnboardingStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordOnboardingStepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).RecordOnboardingStep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_RecordOnboardingStep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).RecordOnboardingStep(ctx, req.(*RecordOnboardingStepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_FinishOnboarding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishOnboardingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).FinishOnboarding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_FinishOnboarding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).FinishOnboarding(ctx, req.(*FinishOnboardingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_ListMyInvitations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListMyInvitationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).ListMyInvitations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_ListMyInvitations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).ListMyInvitations(ctx, req.(*ListMyInvitationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_AcceptMyInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcceptMyInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).AcceptMyInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_AcceptMyInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).AcceptMyInvitation(ctx, req.(*AcceptMyInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_DeclineMyInvitation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeclineMyInvitationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).DeclineMyInvitation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_DeclineMyInvitation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).DeclineMyInvitation(ctx, req.(*DeclineMyInvitationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OrganizationsService_GetOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetOrganizationRequest)
 	if err := dec(in); err != nil {
@@ -476,6 +820,60 @@ func _OrganizationsService_UpdateOrganization_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OrganizationsServiceServer).UpdateOrganization(ctx, req.(*UpdateOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_LeaveOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaveOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).LeaveOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_LeaveOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).LeaveOrganization(ctx, req.(*LeaveOrganizationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_TransferOwnership_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferOwnershipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).TransferOwnership(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_TransferOwnership_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).TransferOwnership(ctx, req.(*TransferOwnershipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OrganizationsService_DeleteOrganization_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOrganizationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OrganizationsServiceServer).DeleteOrganization(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OrganizationsService_DeleteOrganization_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OrganizationsServiceServer).DeleteOrganization(ctx, req.(*DeleteOrganizationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -816,12 +1214,56 @@ var OrganizationsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _OrganizationsService_ListMyOrganizations_Handler,
 		},
 		{
+			MethodName: "ResolveContentOrganization",
+			Handler:    _OrganizationsService_ResolveContentOrganization_Handler,
+		},
+		{
+			MethodName: "CreateOrganization",
+			Handler:    _OrganizationsService_CreateOrganization_Handler,
+		},
+		{
+			MethodName: "GetOnboarding",
+			Handler:    _OrganizationsService_GetOnboarding_Handler,
+		},
+		{
+			MethodName: "RecordOnboardingStep",
+			Handler:    _OrganizationsService_RecordOnboardingStep_Handler,
+		},
+		{
+			MethodName: "FinishOnboarding",
+			Handler:    _OrganizationsService_FinishOnboarding_Handler,
+		},
+		{
+			MethodName: "ListMyInvitations",
+			Handler:    _OrganizationsService_ListMyInvitations_Handler,
+		},
+		{
+			MethodName: "AcceptMyInvitation",
+			Handler:    _OrganizationsService_AcceptMyInvitation_Handler,
+		},
+		{
+			MethodName: "DeclineMyInvitation",
+			Handler:    _OrganizationsService_DeclineMyInvitation_Handler,
+		},
+		{
 			MethodName: "GetOrganization",
 			Handler:    _OrganizationsService_GetOrganization_Handler,
 		},
 		{
 			MethodName: "UpdateOrganization",
 			Handler:    _OrganizationsService_UpdateOrganization_Handler,
+		},
+		{
+			MethodName: "LeaveOrganization",
+			Handler:    _OrganizationsService_LeaveOrganization_Handler,
+		},
+		{
+			MethodName: "TransferOwnership",
+			Handler:    _OrganizationsService_TransferOwnership_Handler,
+		},
+		{
+			MethodName: "DeleteOrganization",
+			Handler:    _OrganizationsService_DeleteOrganization_Handler,
 		},
 		{
 			MethodName: "GetOrganizationOverview",

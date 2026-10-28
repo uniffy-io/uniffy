@@ -13,9 +13,10 @@ export interface RecentItem {
 }
 
 const MAX_RECENT_ITEMS = 10;
+const STORAGE_KEY_PREFIX = "uniffy:recent-items:";
 
 function storageKey(organizationId: string, userId: string): string {
-  return `uniffy:recent-items:${organizationId}:${userId}`;
+  return `${STORAGE_KEY_PREFIX}${organizationId}:${userId}`;
 }
 
 export function getRecentItems(organizationId: string, userId: string): RecentItem[] {
@@ -49,6 +50,30 @@ export function recordRecentItem(
     localStorage.setItem(storageKey(organizationId, userId), JSON.stringify(next));
   } catch {
     // Quota or privacy-mode failure loses history, nothing else.
+  }
+}
+
+/** Titles name the content of every organization the user opened; sign-out removes them all. */
+export function clearRecentItemsForUser(userId: string): void {
+  try {
+    const suffix = `:${userId}`;
+    const keys: string[] = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(STORAGE_KEY_PREFIX) && key.endsWith(suffix)) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable (private mode); nothing was recorded then.
+  }
+}
+
+/** A lost grant takes that organization's titles with it; the user's other organizations keep theirs. */
+export function clearRecentItemsForOrganization(organizationId: string, userId: string): void {
+  try {
+    localStorage.removeItem(storageKey(organizationId, userId));
+  } catch {
+    // Storage can be unavailable (private mode); nothing was recorded then.
   }
 }
 

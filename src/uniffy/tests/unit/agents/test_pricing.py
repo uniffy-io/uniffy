@@ -26,6 +26,7 @@ from uniffy.domains.agents.providers.catalog.loader import (
     cache_write_rate,
 )
 from uniffy.domains.agents.providers.catalog.schema import Model, ProviderCatalog
+from uniffy.domains.agents.providers.converters import model_info_to_proto
 
 
 def _text_model(
@@ -208,6 +209,7 @@ def mock_catalog(monkeypatch: pytest.MonkeyPatch) -> Catalog:
         providers={
             "first-party": ProviderCatalog(
                 display_name="First Party",
+                default_large_model_id="chat-model",
                 models=[
                     Model(
                         id="chat-model",
@@ -336,6 +338,19 @@ class TestCatalogResolution:
         assert info is not None
         assert info.cache_read_per_1m == Decimal("0.2")
         assert info.cache_write_per_1m == Decimal("2.5")
+
+    def test_model_info_flags_the_provider_default(self) -> None:
+        default = model_info_for("first-party", "chat-model")
+        other = model_info_for("first-party", "retired-model")
+        no_default = model_info_for("router", "vendor/chat-model")
+
+        assert default is not None
+        assert default.provider_default is True
+        assert model_info_to_proto(default).provider_default is True
+        assert other is not None
+        assert other.provider_default is False
+        assert no_default is not None
+        assert no_default.provider_default is False
 
     def test_deprecation_metadata_is_preserved(self) -> None:
         model = get_model("first-party", "retired-model")

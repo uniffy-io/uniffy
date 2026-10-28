@@ -58,9 +58,11 @@ class Action:
     ORGANIZATION_ENCRYPTION_KEY_ROTATED = "organization.encryption_key_rotated"
     ORGANIZATION_PERMISSION_DEFAULTS_CHANGED = "organization.permission_defaults_changed"
     ORGANIZATION_MEMBER_INVITED = "organization.member_invited"
-    ORGANIZATION_MEMBER_ADDED_VIA_INVITE = "organization.member_added_via_invite"
     ORGANIZATION_INVITATION_REVOKED = "organization.invitation_revoked"
     ORGANIZATION_INVITATION_RESENT = "organization.invitation_resent"
+    ORGANIZATION_INVITATION_DECLINED = "organization.invitation_declined"
+    ORGANIZATION_MEMBER_LEFT = "organization.member_left"
+    ORGANIZATION_OWNERSHIP_TRANSFERRED = "organization.ownership_transferred"
     ORGANIZATION_SECURITY_SETTINGS_CHANGED = "organization.security_settings_changed"
     ORGANIZATION_SUSPENDED = "organization.suspended"
     ORGANIZATION_UNSUSPENDED = "organization.unsuspended"
@@ -227,11 +229,13 @@ class Action:
     MAIL_SYSTEM_CONFIG_UPDATED = "mail.system_config_updated"
     MAIL_SYSTEM_CONFIG_CLEARED = "mail.system_config_cleared"
 
-    # Deployment encryption
+    # Deployment
     DEPLOYMENT_ENCRYPTION_ROTATED = "deployment.encryption_rotated"
+    DEPLOYMENT_SETUP_COMPLETED = "deployment.setup_completed"
 
     # System config flags
     SYSTEM_PUBLIC_REGISTRATION_CHANGED = "system.public_registration_changed"
+    SYSTEM_ORG_CREATION_CHANGED = "system.org_creation_changed"
 
     # Support sessions (time-bound platform-operator grants into a tenant)
     SUPPORT_SESSION_REQUESTED = "support_session.requested"

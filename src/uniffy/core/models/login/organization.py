@@ -38,6 +38,13 @@ class Organization(SQLModel, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
+    created_by_user_id: UUID | None = Field(
+        default=None,
+        foreign_key="login_users.id",
+        ondelete="SET NULL",
+        nullable=True,
+        index=True,
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

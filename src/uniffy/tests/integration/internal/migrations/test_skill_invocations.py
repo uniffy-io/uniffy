@@ -4,7 +4,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
-from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
@@ -15,10 +14,11 @@ from uniffy.domains.agents.skills.resolution import SkillInvocationError, SkillS
 from uniffy.domains.agents.skills.validation import validate_skill_selection
 from uniffy.infrastructure.database.session import get_database_url
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
-    _provision_to,
-    _migrate_to,
-    _query,
     _execute,
+    _insert_organization,
+    _migrate_to,
+    _provision_to,
+    _query,
 )
 
 # psycopg2 builds its exception classes at runtime; look the class up by SQLSTATE.
@@ -30,9 +30,9 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            org = Organization(name="Skills", slug="skills")
+            org_id = await _insert_organization(session, name="Skills", slug="skills")
             user = User(username="builder", email="builder@example.test")
-            session.add_all([org, user])
+            session.add(user)
             await session.flush()
             skill_id, version_id = generate_id(), generate_id()
             await session.execute(
@@ -43,7 +43,7 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
                     "VALUES (:id, :org, 'release', 'Release', 'organization', 'Head body', "
                     "true, 'Automatic guidance', '[\"chat\"]', :version, now())"
                 ),
-                {"id": skill_id, "org": org.id, "version": version_id},
+                {"id": skill_id, "org": org_id, "version": version_id},
             )
             await session.execute(
                 text(
@@ -62,17 +62,17 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
                     "(:id, :org, :owner, :skill, 'edit', 'Draft body', true, "
                     "'Draft guidance', '[\"session\"]')"
                 ),
-                {"id": generate_id(), "org": org.id, "owner": user.id, "skill": skill_id},
+                {"id": generate_id(), "org": org_id, "owner": user.id, "skill": skill_id},
             )
             await session.execute(
                 text(
                     "INSERT INTO agents_agents (id, organization_id, owner_id, name, enabled_skills) "
                     "VALUES (:id, :org, :owner, 'Assigned', jsonb_build_array(CAST(:skill AS text)))"
                 ),
-                {"id": generate_id(), "org": org.id, "owner": user.id, "skill": str(skill_id)},
+                {"id": generate_id(), "org": org_id, "owner": user.id, "skill": str(skill_id)},
             )
             session.add_all([
-                OrgSetting(organization_id=org.id, namespace=namespace, key=key, value=value)
+                OrgSetting(organization_id=org_id, namespace=namespace, key=key, value=value)
                 for namespace, key, value in (
                     ("agents", "enabled_rules", [str(generate_id())]),
                     ("agents", "skill_evolution_enabled", True),
@@ -127,12 +127,10 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            first = Organization(name="First", slug="first")
-            second = Organization(name="Second", slug="second")
-            session.add_all([first, second])
-            await session.flush()
+            first_id = await _insert_organization(session, name="First", slug="first")
+            second_id = await _insert_organization(session, name="Second", slug="second")
             skill = AgentSkill(
-                organization_id=first.id,
+                organization_id=first_id,
                 source=AgentSkillSource.ORGANIZATION,
                 name="report",
                 display_name="Report",
@@ -153,7 +151,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
             skill.status = AgentSkillStatus.RETIRED
             await session.commit()
             args = dict(
-                organization_id=first.id,
+                organization_id=first_id,
                 enabled_skill_ids=[str(skill.id)],
                 invoked_skill_id=skill.id,
                 surface=SkillSurface.CHAT,
@@ -168,7 +166,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
             assert await ops.resolve_active_version_numbers([skill]) == {skill.id: 1}
             assert (await ops._load_active_version(skill)).id == pinned.id
             summaries = await resolution.resolve_assigned_skill_summaries(
-                session, organization_id=first.id, enabled_skill_ids=[str(skill.id)]
+                session, organization_id=first_id, enabled_skill_ids=[str(skill.id)]
             )
             assert [summary.version_id for summary in summaries] == [pinned.id]
             assert not hasattr(summaries[0], "content")
@@ -176,7 +174,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
             assert not session.dirty
             with pytest.raises(SkillInvocationError, match="unavailable"):
                 await resolution.resolve_skill_invocation(
-                    session, **{**args, "organization_id": second.id}
+                    session, **{**args, "organization_id": second_id}
                 )
             with pytest.raises(SkillInvocationError, match="unavailable"):
                 await resolution.resolve_skill_invocation(
@@ -184,7 +182,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
                 )
 
             other = AgentSkill(
-                organization_id=second.id,
+                organization_id=second_id,
                 source=AgentSkillSource.ORGANIZATION,
                 name="report",
                 display_name="Other report",
@@ -202,7 +200,7 @@ async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(
                 await ops._load_active_version(skill)
             assert (
                 await resolution.resolve_assigned_skill_summaries(
-                    session, organization_id=first.id, enabled_skill_ids=[str(skill.id)]
+                    session, organization_id=first_id, enabled_skill_ids=[str(skill.id)]
                 )
                 == []
             )
@@ -221,18 +219,16 @@ async def test_skill_selection_enforces_tenant_scope_and_retirement(scratch_data
     engine = create_async_engine(get_database_url())
     try:
         async with AsyncSession(engine, expire_on_commit=False) as session:
-            first = Organization(name="First", slug="first")
-            second = Organization(name="Second", slug="second")
-            session.add_all([first, second])
-            await session.flush()
+            first_id = await _insert_organization(session, name="First", slug="first")
+            second_id = await _insert_organization(session, name="Second", slug="second")
             own = AgentSkill(
-                organization_id=first.id,
+                organization_id=first_id,
                 source=AgentSkillSource.ORGANIZATION,
                 name="own",
                 display_name="Own",
             )
             foreign = AgentSkill(
-                organization_id=second.id,
+                organization_id=second_id,
                 source=AgentSkillSource.ORGANIZATION,
                 name="foreign",
                 display_name="Foreign",
@@ -241,7 +237,7 @@ async def test_skill_selection_enforces_tenant_scope_and_retirement(scratch_data
                 source=AgentSkillSource.BUNDLED, name="bundled", display_name="Bundled"
             )
             retired = AgentSkill(
-                organization_id=first.id,
+                organization_id=first_id,
                 source=AgentSkillSource.ORGANIZATION,
                 name="retired",
                 display_name="Retired",
@@ -250,18 +246,18 @@ async def test_skill_selection_enforces_tenant_scope_and_retirement(scratch_data
             session.add_all([own, foreign, bundled, retired])
             await session.commit()
             selected = await validate_skill_selection(
-                session, first.id, [own.id.hex.upper(), str(bundled.id), str(own.id)], existing=[]
+                session, first_id, [own.id.hex.upper(), str(bundled.id), str(own.id)], existing=[]
             )
             assert selected == [str(own.id), str(bundled.id)]
             for unavailable in (foreign.id, generate_id()):
                 with pytest.raises(ValidationError, match="unavailable"):
                     await validate_skill_selection(
-                        session, first.id, [str(unavailable)], existing=[]
+                        session, first_id, [str(unavailable)], existing=[]
                     )
             with pytest.raises(ValidationError, match="Retired"):
-                await validate_skill_selection(session, first.id, [str(retired.id)], existing=[])
+                await validate_skill_selection(session, first_id, [str(retired.id)], existing=[])
             assert await validate_skill_selection(
-                session, first.id, [str(retired.id)], existing=[str(retired.id)]
+                session, first_id, [str(retired.id)], existing=[str(retired.id)]
             ) == [str(retired.id)]
     finally:
         await engine.dispose()

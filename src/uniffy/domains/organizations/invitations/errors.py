@@ -20,8 +20,4 @@ class InvitationAlreadyUsedError(InvitationError):
 
 
 class InvitationRevokedError(InvitationError):
-    """Invitation was revoked by an admin."""
-
-
-class InvitationEmailConflictError(InvitationError):
-    """Email is already bound to an active user (race between invite + register)."""
+    """Invitation was revoked by an admin or declined by its recipient."""

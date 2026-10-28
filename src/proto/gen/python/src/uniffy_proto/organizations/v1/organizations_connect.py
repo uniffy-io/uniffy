@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import organizations_pb
-from .organizations_pb import AddMemberRequest, AddMemberResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
+from .organizations_pb import AcceptMyInvitationRequest, AcceptMyInvitationResponse, AddMemberRequest, AddMemberResponse, CreateOrganizationRequest, CreateOrganizationResponse, DeclineMyInvitationRequest, DeclineMyInvitationResponse, DeleteOrganizationRequest, DeleteOrganizationResponse, FinishOnboardingRequest, FinishOnboardingResponse, GetOnboardingRequest, GetOnboardingResponse, GetOrganizationOverviewRequest, GetOrganizationOverviewResponse, GetOrganizationRequest, GetOrganizationResponse, GetPermissionDefaultsRequest, GetPermissionDefaultsResponse, GetSecuritySettingsRequest, GetSecuritySettingsResponse, GetUserDomainAdminsRequest, GetUserDomainAdminsResponse, GrantDomainAdminRequest, GrantDomainAdminResponse, InviteMemberRequest, InviteMemberResponse, LeaveOrganizationRequest, LeaveOrganizationResponse, ListDomainAdminsRequest, ListDomainAdminsResponse, ListInvitationsRequest, ListInvitationsResponse, ListMembersRequest, ListMembersResponse, ListMyInvitationsRequest, ListMyInvitationsResponse, ListMyOrganizationsRequest, ListMyOrganizationsResponse, RecordOnboardingStepRequest, RecordOnboardingStepResponse, RemoveMemberRequest, RemoveMemberResponse, ResendInvitationRequest, ResendInvitationResponse, ResolveContentOrganizationRequest, ResolveContentOrganizationResponse, RevokeDomainAdminRequest, RevokeDomainAdminResponse, RevokeInvitationRequest, RevokeInvitationResponse, RotateEncryptionKeyRequest, RotateEncryptionKeyResponse, TransferOwnershipRequest, TransferOwnershipResponse, UpdateMemberRoleRequest, UpdateMemberRoleResponse, UpdateOrganizationRequest, UpdateOrganizationResponse, UpdatePermissionDefaultsRequest, UpdatePermissionDefaultsResponse, UpdateSecuritySettingsRequest, UpdateSecuritySettingsResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -34,6 +34,47 @@ class OrganizationsService(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    async def resolve_content_organization(self, request: ResolveContentOrganizationRequest, ctx: RequestContext[ResolveContentOrganizationRequest, ResolveContentOrganizationResponse], /) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_organization(self, request: CreateOrganizationRequest, ctx: RequestContext[CreateOrganizationRequest, CreateOrganizationResponse], /) -> CreateOrganizationResponse:
+        """
+        Self-service creation. Allowed when the deployment's org_creation policy
+        admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_onboarding(self, request: GetOnboardingRequest, ctx: RequestContext[GetOnboardingRequest, GetOnboardingResponse], /) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def record_onboarding_step(self, request: RecordOnboardingStepRequest, ctx: RequestContext[RecordOnboardingStepRequest, RecordOnboardingStepResponse], /) -> RecordOnboardingStepResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def finish_onboarding(self, request: FinishOnboardingRequest, ctx: RequestContext[FinishOnboardingRequest, FinishOnboardingResponse], /) -> FinishOnboardingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_my_invitations(self, request: ListMyInvitationsRequest, ctx: RequestContext[ListMyInvitationsRequest, ListMyInvitationsResponse], /) -> ListMyInvitationsResponse:
+        """
+        Invitations addressed to the caller's email, and the signed-in way to act on them.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def accept_my_invitation(self, request: AcceptMyInvitationRequest, ctx: RequestContext[AcceptMyInvitationRequest, AcceptMyInvitationResponse], /) -> AcceptMyInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def decline_my_invitation(self, request: DeclineMyInvitationRequest, ctx: RequestContext[DeclineMyInvitationRequest, DeclineMyInvitationResponse], /) -> DeclineMyInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     async def get_organization(self, request: GetOrganizationRequest, ctx: RequestContext[GetOrganizationRequest, GetOrganizationResponse], /) -> GetOrganizationResponse:
         """
         Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
@@ -42,6 +83,20 @@ class OrganizationsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def update_organization(self, request: UpdateOrganizationRequest, ctx: RequestContext[UpdateOrganizationRequest, UpdateOrganizationResponse], /) -> UpdateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def leave_organization(self, request: LeaveOrganizationRequest, ctx: RequestContext[LeaveOrganizationRequest, LeaveOrganizationResponse], /) -> LeaveOrganizationResponse:
+        """
+        Membership lifecycle for the caller's own place in the organization.
+        An OWNER transfers before leaving; deletion is OWNER only and soft, with
+        the same purge window the platform surface applies.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def transfer_ownership(self, request: TransferOwnershipRequest, ctx: RequestContext[TransferOwnershipRequest, TransferOwnershipResponse], /) -> TransferOwnershipResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def delete_organization(self, request: DeleteOrganizationRequest, ctx: RequestContext[DeleteOrganizationRequest, DeleteOrganizationResponse], /) -> DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def get_organization_overview(self, request: GetOrganizationOverviewRequest, ctx: RequestContext[GetOrganizationOverviewRequest, GetOrganizationOverviewResponse], /) -> GetOrganizationOverviewResponse:
@@ -143,6 +198,86 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                     ),
                     function=svc.list_my_organizations,
                 ),
+                "/organizations.v1.OrganizationsService/ResolveContentOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ResolveContentOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ResolveContentOrganizationRequest,
+                        output=ResolveContentOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.resolve_content_organization,
+                ),
+                "/organizations.v1.OrganizationsService/CreateOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=CreateOrganizationRequest,
+                        output=CreateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.create_organization,
+                ),
+                "/organizations.v1.OrganizationsService/GetOnboarding": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=GetOnboardingRequest,
+                        output=GetOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/RecordOnboardingStep": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecordOnboardingStep",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=RecordOnboardingStepRequest,
+                        output=RecordOnboardingStepResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.record_onboarding_step,
+                ),
+                "/organizations.v1.OrganizationsService/FinishOnboarding": Endpoint.unary(
+                    method=MethodInfo(
+                        name="FinishOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=FinishOnboardingRequest,
+                        output=FinishOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.finish_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/ListMyInvitations": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListMyInvitations",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ListMyInvitationsRequest,
+                        output=ListMyInvitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_my_invitations,
+                ),
+                "/organizations.v1.OrganizationsService/AcceptMyInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AcceptMyInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=AcceptMyInvitationRequest,
+                        output=AcceptMyInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.accept_my_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/DeclineMyInvitation": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeclineMyInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=DeclineMyInvitationRequest,
+                        output=DeclineMyInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.decline_my_invitation,
+                ),
                 "/organizations.v1.OrganizationsService/GetOrganization": Endpoint.unary(
                     method=MethodInfo(
                         name="GetOrganization",
@@ -162,6 +297,36 @@ class OrganizationsServiceASGIApplication(ConnectASGIApplication[OrganizationsSe
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_organization,
+                ),
+                "/organizations.v1.OrganizationsService/LeaveOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="LeaveOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=LeaveOrganizationRequest,
+                        output=LeaveOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.leave_organization,
+                ),
+                "/organizations.v1.OrganizationsService/TransferOwnership": Endpoint.unary(
+                    method=MethodInfo(
+                        name="TransferOwnership",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=TransferOwnershipRequest,
+                        output=TransferOwnershipResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.transfer_ownership,
+                ),
+                "/organizations.v1.OrganizationsService/DeleteOrganization": Endpoint.unary(
+                    method=MethodInfo(
+                        name="DeleteOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=DeleteOrganizationRequest,
+                        output=DeleteOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.delete_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganizationOverview": Endpoint.unary(
                     method=MethodInfo(
@@ -380,6 +545,183 @@ class OrganizationsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveContentOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=ResolveContentOrganizationRequest,
+                output=ResolveContentOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def create_organization(
+        self,
+        request: CreateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateOrganizationResponse:
+        """
+        Self-service creation. Allowed when the deployment's org_creation policy
+        admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=CreateOrganizationRequest,
+                output=CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_onboarding(
+        self,
+        request: GetOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=GetOnboardingRequest,
+                output=GetOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def record_onboarding_step(
+        self,
+        request: RecordOnboardingStepRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordOnboardingStepResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordOnboardingStep",
+                service_name="organizations.v1.OrganizationsService",
+                input=RecordOnboardingStepRequest,
+                output=RecordOnboardingStepResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def finish_onboarding(
+        self,
+        request: FinishOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> FinishOnboardingResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="FinishOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=FinishOnboardingRequest,
+                output=FinishOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def list_my_invitations(
+        self,
+        request: ListMyInvitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListMyInvitationsResponse:
+        """
+        Invitations addressed to the caller's email, and the signed-in way to act on them.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMyInvitations",
+                service_name="organizations.v1.OrganizationsService",
+                input=ListMyInvitationsRequest,
+                output=ListMyInvitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def accept_my_invitation(
+        self,
+        request: AcceptMyInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AcceptMyInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AcceptMyInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=AcceptMyInvitationRequest,
+                output=AcceptMyInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def decline_my_invitation(
+        self,
+        request: DeclineMyInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeclineMyInvitationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeclineMyInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=DeclineMyInvitationRequest,
+                output=DeclineMyInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_organization(
         self,
         request: GetOrganizationRequest,
@@ -418,6 +760,71 @@ class OrganizationsServiceClient(ConnectClient):
                 service_name="organizations.v1.OrganizationsService",
                 input=UpdateOrganizationRequest,
                 output=UpdateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def leave_organization(
+        self,
+        request: LeaveOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> LeaveOrganizationResponse:
+        """
+        Membership lifecycle for the caller's own place in the organization.
+        An OWNER transfers before leaving; deletion is OWNER only and soft, with
+        the same purge window the platform surface applies.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="LeaveOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=LeaveOrganizationRequest,
+                output=LeaveOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def transfer_ownership(
+        self,
+        request: TransferOwnershipRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> TransferOwnershipResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="TransferOwnership",
+                service_name="organizations.v1.OrganizationsService",
+                input=TransferOwnershipRequest,
+                output=TransferOwnershipResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def delete_organization(
+        self,
+        request: DeleteOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteOrganizationResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=DeleteOrganizationRequest,
+                output=DeleteOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -808,6 +1215,47 @@ class OrganizationsServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def resolve_content_organization(self, request: ResolveContentOrganizationRequest, ctx: RequestContext[ResolveContentOrganizationRequest, ResolveContentOrganizationResponse], /) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def create_organization(self, request: CreateOrganizationRequest, ctx: RequestContext[CreateOrganizationRequest, CreateOrganizationResponse], /) -> CreateOrganizationResponse:
+        """
+        Self-service creation. Allowed when the deployment's org_creation policy
+        admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_onboarding(self, request: GetOnboardingRequest, ctx: RequestContext[GetOnboardingRequest, GetOnboardingResponse], /) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def record_onboarding_step(self, request: RecordOnboardingStepRequest, ctx: RequestContext[RecordOnboardingStepRequest, RecordOnboardingStepResponse], /) -> RecordOnboardingStepResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def finish_onboarding(self, request: FinishOnboardingRequest, ctx: RequestContext[FinishOnboardingRequest, FinishOnboardingResponse], /) -> FinishOnboardingResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_my_invitations(self, request: ListMyInvitationsRequest, ctx: RequestContext[ListMyInvitationsRequest, ListMyInvitationsResponse], /) -> ListMyInvitationsResponse:
+        """
+        Invitations addressed to the caller's email, and the signed-in way to act on them.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def accept_my_invitation(self, request: AcceptMyInvitationRequest, ctx: RequestContext[AcceptMyInvitationRequest, AcceptMyInvitationResponse], /) -> AcceptMyInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def decline_my_invitation(self, request: DeclineMyInvitationRequest, ctx: RequestContext[DeclineMyInvitationRequest, DeclineMyInvitationResponse], /) -> DeclineMyInvitationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def get_organization(self, request: GetOrganizationRequest, ctx: RequestContext[GetOrganizationRequest, GetOrganizationResponse], /) -> GetOrganizationResponse:
         """
         Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
@@ -816,6 +1264,20 @@ class OrganizationsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def update_organization(self, request: UpdateOrganizationRequest, ctx: RequestContext[UpdateOrganizationRequest, UpdateOrganizationResponse], /) -> UpdateOrganizationResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def leave_organization(self, request: LeaveOrganizationRequest, ctx: RequestContext[LeaveOrganizationRequest, LeaveOrganizationResponse], /) -> LeaveOrganizationResponse:
+        """
+        Membership lifecycle for the caller's own place in the organization.
+        An OWNER transfers before leaving; deletion is OWNER only and soft, with
+        the same purge window the platform surface applies.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def transfer_ownership(self, request: TransferOwnershipRequest, ctx: RequestContext[TransferOwnershipRequest, TransferOwnershipResponse], /) -> TransferOwnershipResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def delete_organization(self, request: DeleteOrganizationRequest, ctx: RequestContext[DeleteOrganizationRequest, DeleteOrganizationResponse], /) -> DeleteOrganizationResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def get_organization_overview(self, request: GetOrganizationOverviewRequest, ctx: RequestContext[GetOrganizationOverviewRequest, GetOrganizationOverviewResponse], /) -> GetOrganizationOverviewResponse:
@@ -915,6 +1377,86 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.list_my_organizations,
                 ),
+                "/organizations.v1.OrganizationsService/ResolveContentOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ResolveContentOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ResolveContentOrganizationRequest,
+                        output=ResolveContentOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.resolve_content_organization,
+                ),
+                "/organizations.v1.OrganizationsService/CreateOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=CreateOrganizationRequest,
+                        output=CreateOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.create_organization,
+                ),
+                "/organizations.v1.OrganizationsService/GetOnboarding": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=GetOnboardingRequest,
+                        output=GetOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/RecordOnboardingStep": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecordOnboardingStep",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=RecordOnboardingStepRequest,
+                        output=RecordOnboardingStepResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.record_onboarding_step,
+                ),
+                "/organizations.v1.OrganizationsService/FinishOnboarding": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="FinishOnboarding",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=FinishOnboardingRequest,
+                        output=FinishOnboardingResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.finish_onboarding,
+                ),
+                "/organizations.v1.OrganizationsService/ListMyInvitations": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListMyInvitations",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=ListMyInvitationsRequest,
+                        output=ListMyInvitationsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_my_invitations,
+                ),
+                "/organizations.v1.OrganizationsService/AcceptMyInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AcceptMyInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=AcceptMyInvitationRequest,
+                        output=AcceptMyInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.accept_my_invitation,
+                ),
+                "/organizations.v1.OrganizationsService/DeclineMyInvitation": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeclineMyInvitation",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=DeclineMyInvitationRequest,
+                        output=DeclineMyInvitationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.decline_my_invitation,
+                ),
                 "/organizations.v1.OrganizationsService/GetOrganization": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetOrganization",
@@ -934,6 +1476,36 @@ class OrganizationsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_organization,
+                ),
+                "/organizations.v1.OrganizationsService/LeaveOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="LeaveOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=LeaveOrganizationRequest,
+                        output=LeaveOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.leave_organization,
+                ),
+                "/organizations.v1.OrganizationsService/TransferOwnership": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="TransferOwnership",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=TransferOwnershipRequest,
+                        output=TransferOwnershipResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.transfer_ownership,
+                ),
+                "/organizations.v1.OrganizationsService/DeleteOrganization": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="DeleteOrganization",
+                        service_name="organizations.v1.OrganizationsService",
+                        input=DeleteOrganizationRequest,
+                        output=DeleteOrganizationResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.delete_organization,
                 ),
                 "/organizations.v1.OrganizationsService/GetOrganizationOverview": EndpointSync.unary(
                     method=MethodInfo(
@@ -1151,6 +1723,175 @@ class OrganizationsServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+    def resolve_content_organization(
+        self,
+        request: ResolveContentOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ResolveContentOrganizationResponse:
+        """
+        Finds which of the caller's own organizations owns the content behind a
+        URN. Unknown content, content the caller cannot view, and content outside
+        the caller's memberships all return the same NOT_FOUND error.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ResolveContentOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=ResolveContentOrganizationRequest,
+                output=ResolveContentOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_organization(
+        self,
+        request: CreateOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateOrganizationResponse:
+        """
+        Self-service creation. Allowed when the deployment's org_creation policy
+        admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=CreateOrganizationRequest,
+                output=CreateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_onboarding(
+        self,
+        request: GetOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetOnboardingResponse:
+        """
+        First-run entry flow for the user who created the organization. Pending
+        only while that user is still its active OWNER and has neither finished
+        nor skipped it. Record and Finish are no-ops once the flow is over.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=GetOnboardingRequest,
+                output=GetOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def record_onboarding_step(
+        self,
+        request: RecordOnboardingStepRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordOnboardingStepResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordOnboardingStep",
+                service_name="organizations.v1.OrganizationsService",
+                input=RecordOnboardingStepRequest,
+                output=RecordOnboardingStepResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def finish_onboarding(
+        self,
+        request: FinishOnboardingRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> FinishOnboardingResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="FinishOnboarding",
+                service_name="organizations.v1.OrganizationsService",
+                input=FinishOnboardingRequest,
+                output=FinishOnboardingResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_my_invitations(
+        self,
+        request: ListMyInvitationsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListMyInvitationsResponse:
+        """
+        Invitations addressed to the caller's email, and the signed-in way to act on them.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListMyInvitations",
+                service_name="organizations.v1.OrganizationsService",
+                input=ListMyInvitationsRequest,
+                output=ListMyInvitationsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def accept_my_invitation(
+        self,
+        request: AcceptMyInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AcceptMyInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AcceptMyInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=AcceptMyInvitationRequest,
+                output=AcceptMyInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def decline_my_invitation(
+        self,
+        request: DeclineMyInvitationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeclineMyInvitationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeclineMyInvitation",
+                service_name="organizations.v1.OrganizationsService",
+                input=DeclineMyInvitationRequest,
+                output=DeclineMyInvitationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     def get_organization(
         self,
         request: GetOrganizationRequest,
@@ -1188,6 +1929,68 @@ class OrganizationsServiceClientSync(ConnectClientSync):
                 service_name="organizations.v1.OrganizationsService",
                 input=UpdateOrganizationRequest,
                 output=UpdateOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def leave_organization(
+        self,
+        request: LeaveOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> LeaveOrganizationResponse:
+        """
+        Membership lifecycle for the caller's own place in the organization.
+        An OWNER transfers before leaving; deletion is OWNER only and soft, with
+        the same purge window the platform surface applies.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="LeaveOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=LeaveOrganizationRequest,
+                output=LeaveOrganizationResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def transfer_ownership(
+        self,
+        request: TransferOwnershipRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> TransferOwnershipResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="TransferOwnership",
+                service_name="organizations.v1.OrganizationsService",
+                input=TransferOwnershipRequest,
+                output=TransferOwnershipResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def delete_organization(
+        self,
+        request: DeleteOrganizationRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> DeleteOrganizationResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="DeleteOrganization",
+                service_name="organizations.v1.OrganizationsService",
+                input=DeleteOrganizationRequest,
+                output=DeleteOrganizationResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

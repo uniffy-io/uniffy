@@ -1,0 +1,43 @@
+/* The orbit pages (organization picker, onboarding): the app's own surfaces with a little more
+   air. Everything paints from theme variables, so light, dark and the user accent carry over. */
+.orbit-wash {
+  background:
+    radial-gradient(60% 50% at 85% 0%, hsl(var(--primary) / 0.1), transparent 70%),
+    radial-gradient(40% 40% at 0% 100%, hsl(var(--primary) / 0.05), transparent 70%);
+}
+
+.orbit-dots {
+  background-image: radial-gradient(hsl(var(--foreground) / 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  background-position: center;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 20%, transparent 75%);
+}
+
+.orbit-rise {
+  animation: hero-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 60ms + 40ms);
+}
+
+/* On the way into the app the page strips down to the background and the flaring hub, which is
+   exactly what the launch curtain paints first, so the hand-off to it is invisible. */
+.orbit-fade,
+.orbit-chrome,
+.orbit-wash,
+.orbit-dots {
+  transition:
+    opacity 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.orbit-page[data-launching="true"] :is(.orbit-chrome, .orbit-wash, .orbit-dots) {
+  opacity: 0;
+}
+.orbit-page[data-launching="true"] .orbit-fade {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-rise {
+    animation: none;
+  }
+}

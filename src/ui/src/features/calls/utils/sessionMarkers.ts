@@ -1,12 +1,14 @@
 /**
  * Call continuity markers. sessionStorage survives refresh and crash-restore
  * (silent auto-rejoin); localStorage survives a full browser restart (rejoin
- * prompt). Both carry a timestamp so stale markers never trigger anything.
+ * prompt). Both carry a timestamp so stale markers never trigger anything, and
+ * the organization so a tab only rejoins calls of the org it is in.
  */
 
 export interface CallSessionMarker {
   callId: string;
   channelId: string;
+  organizationId: string;
   micEnabled: boolean;
   cameraEnabled: boolean;
   ts: number;
@@ -22,7 +24,8 @@ function parse(raw: string | null, ttlMs: number): CallSessionMarker | null {
   if (!raw) return null;
   try {
     const marker = JSON.parse(raw) as CallSessionMarker;
-    if (!marker.callId || !marker.channelId || typeof marker.ts !== "number") return null;
+    if (!marker.callId || !marker.channelId || !marker.organizationId) return null;
+    if (typeof marker.ts !== "number") return null;
     if (Date.now() - marker.ts > ttlMs) return null;
     return marker;
   } catch {
@@ -59,10 +62,17 @@ export function readRecentMarker(): CallSessionMarker | null {
   }
 }
 
-export function clearCallMarkers(): void {
+/**
+ * With an organization, the device-wide marker goes only when it names that org: it may be a call
+ * another tab left in a different organization.
+ */
+export function clearCallMarkers(organizationId?: string): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(RECENT_KEY);
+    const recent = readRecentMarker();
+    if (!organizationId || !recent || recent.organizationId === organizationId) {
+      localStorage.removeItem(RECENT_KEY);
+    }
   } catch {
     // Best-effort.
   }

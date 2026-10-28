@@ -74,6 +74,13 @@ async def test_public_methods_pass_without_a_token(qualified: str) -> None:
     await AuthenticationInterceptor().on_start(_ctx(qualified))
 
 
+async def test_first_run_setup_is_reachable_without_a_token() -> None:
+    """The setup screen runs before any account exists to sign in with."""
+    qualified = "auth.v1.AuthService/SetupDeployment"
+    assert qualified in PUBLIC_METHODS
+    assert await AuthenticationInterceptor().on_start(_ctx(qualified)) is None
+
+
 async def test_every_other_method_is_denied_without_a_token() -> None:
     interceptor = AuthenticationInterceptor()
     private = sorted(_all_generated_methods() - PUBLIC_METHODS)

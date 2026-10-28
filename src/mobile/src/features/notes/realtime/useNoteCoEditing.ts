@@ -37,9 +37,14 @@ export function useNoteCoEditing(
     noteId: string | undefined;
     enabled: boolean;
     readOnly?: boolean;
+    /** Organization the note was loaded in. */
+    organizationId?: string | null;
   } & TextBindingCallbacks,
 ): NoteCoEditing {
   const { user, organizationId } = useAuth();
+  // A note loaded in one organization never attaches or keeps drafts under another, even while
+  // a switch or a lost grant leaves its screen mounted.
+  const inOrganization = !opts.organizationId || opts.organizationId === organizationId;
   const controllerRef = useRef<TextBinding | null>(null);
   const inputBase = useRef<{ noteId: string | undefined; text: string } | null>(null);
   // Flush in-flight local edits while the doc and socket are still live; the
@@ -60,7 +65,7 @@ export function useNoteCoEditing(
     persistLocally,
   } = useNoteRealtimeSession({
     noteId: opts.noteId,
-    enabled: opts.enabled,
+    enabled: opts.enabled && inOrganization,
     readOnly: opts.readOnly,
     onBeforeDetach,
   });
@@ -154,7 +159,7 @@ export function useNoteCoEditing(
 
   const scheduleLocalPush = useCallback(
     (canonical: string) => {
-      if (opts.readOnly) return;
+      if (opts.readOnly || !inOrganization) return;
       if (live) controllerRef.current?.schedule(canonical);
       else if (user?.id && organizationId && opts.noteId) {
         void trackDraftWrite(
@@ -169,7 +174,7 @@ export function useNoteCoEditing(
         );
       }
     },
-    [live, user, organizationId, opts.noteId, opts.readOnly, trackDraftWrite],
+    [live, user, organizationId, inOrganization, opts.noteId, opts.readOnly, trackDraftWrite],
   );
   const flushLocalPush = useCallback(() => {
     controllerRef.current?.flush();

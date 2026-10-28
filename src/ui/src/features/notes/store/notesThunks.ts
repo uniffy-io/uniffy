@@ -14,11 +14,17 @@ import {
 import { bulkUpsertTags } from "@/features/tags/store/tagsSlice";
 import { tagToPlain } from "@/features/tags/store/tagsThunks";
 
-let initializeRequestPromise: Promise<{
-  notes: SerializedNote[];
-  tree: OrganizedNotes;
-  totalCount: number;
-}> | null = null;
+// The full-tree load in flight, shared only by calls of the same organization and account: a
+// switch mid-load must not hand one organization's notes to another.
+let initializeRequest: {
+  organizationId: string;
+  userId: string;
+  promise: Promise<{
+    notes: SerializedNote[];
+    tree: OrganizedNotes;
+    totalCount: number;
+  }>;
+} | null = null;
 
 const getOrganizationId = (state: RootState): string => {
   const orgId = state.auth.currentOrganizationId;
@@ -544,8 +550,14 @@ export const initializeNotesData = createAsyncThunk<
       };
     }
 
-    if (initializeRequestPromise && !forceRefresh) {
-      const result = await initializeRequestPromise;
+    const inFlight = initializeRequest;
+    if (
+      inFlight &&
+      !forceRefresh &&
+      inFlight.organizationId === organizationId &&
+      inFlight.userId === currentUserId
+    ) {
+      const result = await inFlight.promise;
       return { ...result, fromCache: false };
     }
 
@@ -580,10 +592,15 @@ export const initializeNotesData = createAsyncThunk<
       }
     }
 
-    initializeRequestPromise = fetchAllNotesFromAPI(organizationId, currentUserId, dispatch);
+    const request = {
+      organizationId,
+      userId: currentUserId,
+      promise: fetchAllNotesFromAPI(organizationId, currentUserId, dispatch),
+    };
+    initializeRequest = request;
 
     try {
-      const result = await initializeRequestPromise;
+      const result = await request.promise;
 
       if (isIndexedDBAvailable()) {
         setCachedNotes(
@@ -599,10 +616,10 @@ export const initializeNotesData = createAsyncThunk<
 
       return { ...result, fromCache: false };
     } finally {
-      initializeRequestPromise = null;
+      // A later load of another scope may have replaced this one; it stays shareable.
+      if (initializeRequest === request) initializeRequest = null;
     }
   } catch (error) {
-    initializeRequestPromise = null;
     return rejectWithValue(error instanceof Error ? error.message : "Failed to initialize notes");
   }
 });

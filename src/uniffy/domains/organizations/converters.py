@@ -31,6 +31,7 @@ def my_organization_to_proto(
         organization=org_info_to_proto(org),
         role=org_role_to_proto(membership.role),
         joined_at=datetime_to_timestamp(membership.joined_at),
+        suspended=org.is_suspended,
     )
 
 

@@ -17,7 +17,7 @@ This skill turns the Playwright MCP browser into a disciplined E2E tester for th
 
 ## Fixtures (dev seed - `src/uniffy/db/seed_dev.py`)
 
-All users share the password `admin` (or `$INITIAL_ADMIN_PASSWORD` if set). Org is **"Uniffy"** (the workspace card on `/select-org`).
+All users share the password `admin` (or `$INITIAL_ADMIN_PASSWORD` if set). Org is **"Uniffy"** (the workspace card on `/welcome`).
 
 | Email | Org role | Groups | Use as |
 |---|---|---|---|
@@ -95,12 +95,12 @@ For RPC verification use `browser_network_requests` with a filter, e.g. `Members
 
 | # | Case | Expected |
 |---|---|---|
-| 1 | Login, valid creds | `/auth` -> `/select-org` -> pick org -> `/` |
+| 1 | Login, valid creds | `/auth` -> `/` in the last used org, or `/auth` -> `/welcome` -> pick org -> `/` when none is picked yet |
 | 2 | Login, wrong password | stays on `/auth`, error toast, no token |
 | 3 | Protected route while logged out | navigate to `/notes` after logout -> redirect to `/auth` |
 | 4 | Logout | tokens cleared, redirect to `/auth`, browser-back does not restore the app |
 | 5 | Org selection | the workspace card sets org context; landing shows that org |
-| 6 | Register (if open) | switch to register tab, submit -> onboarding or `/select-org` |
+| 6 | Register (if open) | switch to register tab, submit -> `/welcome` (with a create card when the deployment allows it) |
 | 7 | Token refresh | over a long session, `AuthService/RefreshToken` fires and succeeds silently (network tab); access token is memory-only (never in localStorage) |
 | 8 | MFA (if enabled) | TOTP challenge after password; recovery path. Planned feature - test only if the flow is present |
 

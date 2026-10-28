@@ -8,7 +8,12 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import is_active_member
-from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
+from uniffy.core.errors import (
+    MembershipRequiredError,
+    NotFoundError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import AgentMemory, MemoryCategory, MemoryScope, MemorySource
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
@@ -131,7 +136,7 @@ class MemoryOperations:
                 return
             raise PermissionDeniedError("view", "Not a participant of this session")
         if not await is_active_member(user_id, organization_id, session=self._session):
-            raise PermissionDeniedError("view", "Not a member of this organization")
+            raise MembershipRequiredError("view", "Not a member of this organization")
 
     async def _require_create(
         self,

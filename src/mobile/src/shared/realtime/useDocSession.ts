@@ -40,6 +40,10 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
 
   const [handle, setHandle] = useState<DocSessionHandle | null>(null);
   const [reset, setReset] = useState(0);
+  // Content stays in the organization it was first opened in. After a switch or a lost grant the
+  // screen can still name it for a moment, and attaching it under the new organization would
+  // keep its edits there.
+  const openedIn = useRef<{ contentId: string; organizationId: string } | null>(null);
 
   const beforeDetachRef = useRef(opts.onBeforeDetach);
   useEffect(() => {
@@ -48,6 +52,9 @@ export function useDocSession(opts: UseDocSessionOptions): DocSessionState {
 
   useEffect(() => {
     if (!enabled || !contentId || !organizationId || !userId) return;
+    const loadedIn = openedIn.current;
+    if (loadedIn?.contentId === contentId && loadedIn.organizationId !== organizationId) return;
+    openedIn.current = { contentId, organizationId };
     const opened = openDocSession({
       contentType,
       contentId,

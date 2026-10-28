@@ -95,13 +95,20 @@ export const fetchOrganizationOverview = createAsyncThunk<
 /** `fetchMembers` replaces the member list with its page, so every directory loader asks for this size. */
 export const DIRECTORY_MEMBERS_PAGE_SIZE = 200;
 
-export const fetchMembers = createAsyncThunk<
-  { members: SerializedMemberInfo[]; totalCount: number },
-  { page?: number; pageSize?: number; roleFilter?: number; search?: string },
-  { state: RootState }
->("admin/fetchMembers", async (args, { getState }) => {
-  const { auth } = getState();
-  const organizationId = auth.currentOrganizationId;
+export interface MemberPageQuery {
+  page?: number;
+  pageSize?: number;
+  roleFilter?: number;
+  search?: string;
+}
+
+export interface MemberPage {
+  members: SerializedMemberInfo[];
+  totalCount: number;
+}
+
+async function loadMemberPage(state: RootState, args: MemberPageQuery): Promise<MemberPage> {
+  const organizationId = state.auth.currentOrganizationId;
 
   if (!organizationId) {
     throw new Error("No organization selected");
@@ -121,6 +128,27 @@ export const fetchMembers = createAsyncThunk<
     members: response.members.map(serializeMemberInfo),
     totalCount: response.pagination?.totalCount || 0,
   };
+}
+
+export const fetchMembers = createAsyncThunk<MemberPage, MemberPageQuery, { state: RootState }>(
+  "admin/fetchMembers",
+  async (args, { getState }) => loadMemberPage(getState(), args),
+);
+
+/**
+ * Reloads the member page in place for a background refresh: no loading flag, and a failure keeps
+ * the rows on screen instead of toasting through errorToastMiddleware.
+ */
+export const refreshMembersQuietly = createAsyncThunk<
+  MemberPage | null,
+  MemberPageQuery,
+  { state: RootState }
+>("admin/refreshMembersQuietly", async (args, { getState }) => {
+  try {
+    return await loadMemberPage(getState(), args);
+  } catch {
+    return null;
+  }
 });
 
 export const updateMemberRole = createAsyncThunk<

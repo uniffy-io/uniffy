@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
+from uniffy.core.auth.membership import get_active_membership
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.audit.event import AuditResourceType
@@ -81,6 +82,13 @@ def undersized_part_numbers(parts: Sequence[tuple[int, int]]) -> list[int]:
     ``parts`` is ``(part_number, size)`` sorted by part number.
     """
     return [number for number, size in parts[:-1] if size < MIN_CHUNK_SIZE]
+
+
+def effective_upload_status(upload: MultipartUpload) -> UploadStatus:
+    """An ACTIVE row past ``expires_at`` already counts as EXPIRED; the reaper relabels it later."""
+    if upload.status == UploadStatus.ACTIVE and upload.expires_at <= datetime.now(UTC):
+        return UploadStatus.EXPIRED
+    return upload.status
 
 
 class FileUploadOperations:
@@ -194,6 +202,13 @@ class FileUploadOperations:
         )
         return result.scalar_one_or_none()
 
+    async def uploader_is_active_member(self, upload: MultipartUpload) -> bool:
+        """An upload ends as a File in its organization, so it needs the same live membership."""
+        membership = await get_active_membership(
+            self.session, upload.user_id, upload.organization_id
+        )
+        return membership is not None
+
     async def record_chunk_completed(
         self,
         upload_id: UUID,
@@ -205,10 +220,11 @@ class FileUploadOperations:
         upload = await self.get_upload_status(upload_id)
         if not upload:
             raise NotFoundError("Upload", upload_id)
-        if upload.status != UploadStatus.ACTIVE:
+        status = effective_upload_status(upload)
+        if status != UploadStatus.ACTIVE:
             raise ValidationError(
                 "upload_status",
-                f"Upload is {upload.status.value}, not ACTIVE",
+                f"Upload is {status.value}, not ACTIVE",
             )
 
         stmt = (
@@ -253,13 +269,17 @@ class FileUploadOperations:
         upload = upload_row.scalar_one_or_none()
         if not upload:
             raise NotFoundError("Upload", upload_id)
-        if upload.status != UploadStatus.ACTIVE:
-            raise ValidationError(
-                "upload_status",
-                f"Upload is {upload.status.value}, not ACTIVE",
-            )
         if upload.user_id != user_id:
             raise PermissionDeniedError("complete", "upload")
+        # A removed member must not land a File in the organization they left.
+        if not await self.uploader_is_active_member(upload):
+            raise NotFoundError("Upload", upload_id)
+        status = effective_upload_status(upload)
+        if status != UploadStatus.ACTIVE:
+            raise ValidationError(
+                "upload_status",
+                f"Upload is {status.value}, not ACTIVE",
+            )
 
         parts_result = await self.session.execute(
             select(

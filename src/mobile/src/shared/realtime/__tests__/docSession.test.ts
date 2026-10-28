@@ -427,3 +427,24 @@ it("keeps an edit the server never accepted as a recovered draft once view acces
   expect(await stored()).toEqual([["recovery", "base unsent"]]);
   expect(socket.writtenIds()).toEqual([]);
 });
+
+it("shows Access lost and keeps the device copy when the socket moves to another organization", async () => {
+  const { readStoredDrafts } = await import("@shared/realtime/draftStorage");
+  const { emitAuthBoundary } = await import("@core/auth/sessionEvents");
+  const { handle, socket, type } = await openNote();
+  type(" unsent");
+  emitAuthBoundary("org-b");
+  const next = FakeSocket.sockets.at(-1)!;
+  expect(next).not.toBe(socket);
+  next.open();
+  await Promise.resolve();
+  expect(handle.getSnapshot().status).toBe("access_lost");
+  expect(handle.getSnapshot().persistence).toBe("access_lost");
+  // A late refusal on the previous organization's socket settles nothing.
+  socket.deliver(viewDenial());
+  await handle.close();
+  expect((await readStoredDrafts(KEY)).map((draft) => [draft.generation, draft.text])).toEqual([
+    ["G", "base unsent"],
+  ]);
+  expect(next.sent).toEqual([]);
+});

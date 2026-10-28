@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useShortcutHandlers } from "@/features/settings";
@@ -24,10 +24,15 @@ import { useProjectPermission } from "../hooks/useProjectPermissions";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
 import { taskPath } from "@/features/projects/utils/taskPath";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { WrongOrganizationNotice } from "@/features/auth/components/WrongOrganizationNotice";
+import { useContentOrganizationResolver } from "@/features/auth/hooks/useContentOrganizationResolver";
+import { cn } from "@/shared/utils/cn";
+import { buildUrn, UrnType } from "@/shared/utils/urn";
 
 export function ProjectsPage() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { projectId, taskId } = useParams<{ projectId?: string; taskId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const viewParam = searchParams.get(VIEW_PARAM);
@@ -36,6 +41,21 @@ export function ProjectsPage() {
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
   const isDetailPanelOpen = useAppSelector(selectIsDetailPanelOpen);
   const { canEdit } = useProjectPermission();
+  const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const isZenMode = useAppSelector((state) => state.zenMode.isActive);
+
+  // The routed project is missing from a settled list, or the list itself failed to load. Either
+  // way another organization of the user may hold it.
+  const projectLoadFailed = useAppSelector((state) => {
+    const { projects, projectsListed, errors } = state.projects;
+    if (!projectId || projects[projectId]) return false;
+    return projectsListed || errors.projects !== null;
+  });
+  const projectUrn = projectId ? buildUrn(UrnType.PROJECT, projectId) : null;
+  const { match: projectOrganization } = useContentOrganizationResolver(
+    projectUrn,
+    projectLoadFailed,
+  );
 
   // Suppresses the URL->state effect immediately after a state->URL navigation.
   const isProgrammaticNav = useRef(false);
@@ -56,15 +76,16 @@ export function ProjectsPage() {
     },
   });
 
+  // A switch into another organization from this route resets the slice, so both run again.
   useEffect(() => {
     dispatch(fetchProjects());
-  }, [dispatch]);
+  }, [dispatch, organizationId]);
 
   useEffect(() => {
     if (projectId) {
       dispatch(setCurrentProject(projectId));
     }
-  }, [dispatch, projectId]);
+  }, [dispatch, projectId, organizationId]);
 
   const currentProjectId = currentProject?.id;
   const projectViews = useAppSelector(selectProjectViews(currentProjectId ?? ""));
@@ -193,7 +214,17 @@ export function ProjectsPage() {
   return (
     <>
       <AppHeader />
-      <ProjectsLayout />
+      {projectUrn && projectOrganization ? (
+        <WrongOrganizationNotice
+          urn={projectUrn}
+          organization={projectOrganization}
+          path={`${location.pathname}${location.search}`}
+          onDismiss={() => navigate("/projects", { replace: true })}
+          className={cn("bg-background", isZenMode ? "h-dvh" : "h-[calc(100dvh-3rem)]")}
+        />
+      ) : (
+        <ProjectsLayout />
+      )}
     </>
   );
 }

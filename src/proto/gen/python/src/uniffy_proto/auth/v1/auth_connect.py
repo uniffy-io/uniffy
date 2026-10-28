@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import auth_pb
-from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, SwitchOrganizationRequest, SwitchOrganizationResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
+from .auth_pb import AcceptInvitationRequest, AcceptInvitationResponse, GetAuthConfigRequest, GetAuthConfigResponse, GetCacheKeySeedRequest, GetCacheKeySeedResponse, GetCurrentUserRequest, GetCurrentUserResponse, GetInvitationRequest, GetInvitationResponse, ListSessionsRequest, ListSessionsResponse, LoginRequest, LoginResponse, LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse, RegisterRequest, RegisterResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeOtherSessionsRequest, RevokeOtherSessionsResponse, RevokeSessionRequest, RevokeSessionResponse, RotateCacheKeySeedRequest, RotateCacheKeySeedResponse, SendPasswordResetRequest, SendPasswordResetResponse, SetupDeploymentRequest, SetupDeploymentResponse, VerifyPasswordResetTokenRequest, VerifyPasswordResetTokenResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -48,7 +48,8 @@ class AuthService(Protocol):
 
     async def refresh_token(self, request: RefreshTokenRequest, ctx: RequestContext[RefreshTokenRequest, RefreshTokenResponse], /) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -82,14 +83,6 @@ class AuthService(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
-    async def switch_organization(self, request: SwitchOrganizationRequest, ctx: RequestContext[SwitchOrganizationRequest, SwitchOrganizationResponse], /) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
-
     async def get_cache_key_seed(self, request: GetCacheKeySeedRequest, ctx: RequestContext[GetCacheKeySeedRequest, GetCacheKeySeedResponse], /) -> GetCacheKeySeedResponse:
         """
         Get the cache key seed for client-side storage encryption (called once per session)
@@ -105,6 +98,14 @@ class AuthService(Protocol):
     async def get_auth_config(self, request: GetAuthConfigRequest, ctx: RequestContext[GetAuthConfigRequest, GetAuthConfigResponse], /) -> GetAuthConfigResponse:
         """
         Public auth configuration (e.g. whether registration is open).
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def setup_deployment(self, request: SetupDeploymentRequest, ctx: RequestContext[SetupDeploymentRequest, SetupDeploymentResponse], /) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -236,16 +237,6 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                     ),
                     function=svc.revoke_other_sessions,
                 ),
-                "/auth.v1.AuthService/SwitchOrganization": Endpoint.unary(
-                    method=MethodInfo(
-                        name="SwitchOrganization",
-                        service_name="auth.v1.AuthService",
-                        input=SwitchOrganizationRequest,
-                        output=SwitchOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=svc.switch_organization,
-                ),
                 "/auth.v1.AuthService/GetCacheKeySeed": Endpoint.unary(
                     method=MethodInfo(
                         name="GetCacheKeySeed",
@@ -275,6 +266,16 @@ class AuthServiceASGIApplication(ConnectASGIApplication[AuthService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_auth_config,
+                ),
+                "/auth.v1.AuthService/SetupDeployment": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetupDeployment",
+                        service_name="auth.v1.AuthService",
+                        input=SetupDeploymentRequest,
+                        output=SetupDeploymentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.setup_deployment,
                 ),
                 "/auth.v1.AuthService/GetInvitation": Endpoint.unary(
                     method=MethodInfo(
@@ -400,7 +401,8 @@ class AuthServiceClient(ConnectClient):
         timeout_ms: int | None = None,
     ) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         return await self.execute_unary(
             request=request,
@@ -530,31 +532,6 @@ class AuthServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
-    async def switch_organization(
-        self,
-        request: SwitchOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        return await self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SwitchOrganization",
-                service_name="auth.v1.AuthService",
-                input=SwitchOrganizationRequest,
-                output=SwitchOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
-
     async def get_cache_key_seed(
         self,
         request: GetCacheKeySeedRequest,
@@ -618,6 +595,31 @@ class AuthServiceClient(ConnectClient):
                 service_name="auth.v1.AuthService",
                 input=GetAuthConfigRequest,
                 output=GetAuthConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def setup_deployment(
+        self,
+        request: SetupDeploymentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetupDeployment",
+                service_name="auth.v1.AuthService",
+                input=SetupDeploymentRequest,
+                output=SetupDeploymentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
@@ -760,7 +762,8 @@ class AuthServiceSync(Protocol):
 
     def refresh_token(self, request: RefreshTokenRequest, ctx: RequestContext[RefreshTokenRequest, RefreshTokenResponse], /) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -794,14 +797,6 @@ class AuthServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
-    def switch_organization(self, request: SwitchOrganizationRequest, ctx: RequestContext[SwitchOrganizationRequest, SwitchOrganizationResponse], /) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
-
     def get_cache_key_seed(self, request: GetCacheKeySeedRequest, ctx: RequestContext[GetCacheKeySeedRequest, GetCacheKeySeedResponse], /) -> GetCacheKeySeedResponse:
         """
         Get the cache key seed for client-side storage encryption (called once per session)
@@ -817,6 +812,14 @@ class AuthServiceSync(Protocol):
     def get_auth_config(self, request: GetAuthConfigRequest, ctx: RequestContext[GetAuthConfigRequest, GetAuthConfigResponse], /) -> GetAuthConfigResponse:
         """
         Public auth configuration (e.g. whether registration is open).
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def setup_deployment(self, request: SetupDeploymentRequest, ctx: RequestContext[SetupDeploymentRequest, SetupDeploymentResponse], /) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -946,16 +949,6 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.revoke_other_sessions,
                 ),
-                "/auth.v1.AuthService/SwitchOrganization": EndpointSync.unary(
-                    method=MethodInfo(
-                        name="SwitchOrganization",
-                        service_name="auth.v1.AuthService",
-                        input=SwitchOrganizationRequest,
-                        output=SwitchOrganizationResponse,
-                        idempotency_level=IdempotencyLevel.UNKNOWN,
-                    ),
-                    function=service.switch_organization,
-                ),
                 "/auth.v1.AuthService/GetCacheKeySeed": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetCacheKeySeed",
@@ -985,6 +978,16 @@ class AuthServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_auth_config,
+                ),
+                "/auth.v1.AuthService/SetupDeployment": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetupDeployment",
+                        service_name="auth.v1.AuthService",
+                        input=SetupDeploymentRequest,
+                        output=SetupDeploymentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.setup_deployment,
                 ),
                 "/auth.v1.AuthService/GetInvitation": EndpointSync.unary(
                     method=MethodInfo(
@@ -1108,7 +1111,8 @@ class AuthServiceClientSync(ConnectClientSync):
         timeout_ms: int | None = None,
     ) -> RefreshTokenResponse:
         """
-        Refresh access token using refresh token
+        Refresh the access token. Also the way to enter another organization:
+        pass its slug and the session stays signed in.
         """
         return self.execute_unary(
             request=request,
@@ -1232,30 +1236,6 @@ class AuthServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
-    def switch_organization(
-        self,
-        request: SwitchOrganizationRequest,
-        *,
-        headers: Headers | Mapping[str, str] | None = None,
-        timeout_ms: int | None = None,
-    ) -> SwitchOrganizationResponse:
-        """
-        Switch the active organization for the current user. Revokes the current
-        session and issues a fresh session bound to the target org. Use this
-        instead of RefreshToken with a slug to change tenant context.
-        """
-        return self.execute_unary(
-            request=request,
-            method=MethodInfo(
-                name="SwitchOrganization",
-                service_name="auth.v1.AuthService",
-                input=SwitchOrganizationRequest,
-                output=SwitchOrganizationResponse,
-                idempotency_level=IdempotencyLevel.UNKNOWN,
-            ),
-            headers=headers,
-            timeout_ms=timeout_ms,
-        )
     def get_cache_key_seed(
         self,
         request: GetCacheKeySeedRequest,
@@ -1317,6 +1297,30 @@ class AuthServiceClientSync(ConnectClientSync):
                 service_name="auth.v1.AuthService",
                 input=GetAuthConfigRequest,
                 output=GetAuthConfigResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def setup_deployment(
+        self,
+        request: SetupDeploymentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetupDeploymentResponse:
+        """
+        First run of an empty deployment: creates the platform operator, the first
+        organization with that user as owner, and signs them in. Refuses once any
+        user exists.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetupDeployment",
+                service_name="auth.v1.AuthService",
+                input=SetupDeploymentRequest,
+                output=SetupDeploymentResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

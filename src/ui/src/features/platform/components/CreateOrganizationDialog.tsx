@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { friendlyErrorMessage } from "@/config";
 import { platformOrgsApi } from "@/features/platform/api/systemDirectoryApi";
+import { MAX_SLUG_LENGTH, MIN_SLUG_LENGTH, toSlug, toSlugDraft } from "@/shared/utils/slug";
 
 interface Props {
   onClose: () => void;
@@ -20,15 +21,6 @@ const PLAN_OPTIONS = [
   { value: "enterprise", label: "Enterprise" },
 ];
 
-function slugFrom(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[-\s]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -38,9 +30,12 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
   const [domain, setDomain] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const effectiveSlug = slugEdited ? slug : slugFrom(name);
+  const shownSlug = slugEdited ? slug : toSlug(name);
+  const effectiveSlug = toSlug(shownSlug);
   const canSubmit =
-    name.trim().length > 0 && effectiveSlug.length >= 2 && ownerEmail.trim().includes("@");
+    name.trim().length > 0 &&
+    effectiveSlug.length >= MIN_SLUG_LENGTH &&
+    ownerEmail.trim().includes("@");
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -92,12 +87,12 @@ export function CreateOrganizationDialog({ onClose, onCreated }: Props) {
           </label>
           <Input
             id="org-create-slug"
-            value={effectiveSlug}
+            value={shownSlug}
             onChange={(e) => {
               setSlugEdited(true);
-              setSlug(slugFrom(e.target.value));
+              setSlug(toSlugDraft(e.target.value));
             }}
-            maxLength={255}
+            maxLength={MAX_SLUG_LENGTH}
             placeholder="acme-inc"
             className="font-mono"
             disabled={submitting}

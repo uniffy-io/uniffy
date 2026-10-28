@@ -54,9 +54,6 @@ const (
 	// AuthServiceRevokeOtherSessionsProcedure is the fully-qualified name of the AuthService's
 	// RevokeOtherSessions RPC.
 	AuthServiceRevokeOtherSessionsProcedure = "/auth.v1.AuthService/RevokeOtherSessions"
-	// AuthServiceSwitchOrganizationProcedure is the fully-qualified name of the AuthService's
-	// SwitchOrganization RPC.
-	AuthServiceSwitchOrganizationProcedure = "/auth.v1.AuthService/SwitchOrganization"
 	// AuthServiceGetCacheKeySeedProcedure is the fully-qualified name of the AuthService's
 	// GetCacheKeySeed RPC.
 	AuthServiceGetCacheKeySeedProcedure = "/auth.v1.AuthService/GetCacheKeySeed"
@@ -66,6 +63,9 @@ const (
 	// AuthServiceGetAuthConfigProcedure is the fully-qualified name of the AuthService's GetAuthConfig
 	// RPC.
 	AuthServiceGetAuthConfigProcedure = "/auth.v1.AuthService/GetAuthConfig"
+	// AuthServiceSetupDeploymentProcedure is the fully-qualified name of the AuthService's
+	// SetupDeployment RPC.
+	AuthServiceSetupDeploymentProcedure = "/auth.v1.AuthService/SetupDeployment"
 	// AuthServiceGetInvitationProcedure is the fully-qualified name of the AuthService's GetInvitation
 	// RPC.
 	AuthServiceGetInvitationProcedure = "/auth.v1.AuthService/GetInvitation"
@@ -89,7 +89,8 @@ type AuthServiceClient interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	// Login with email and password
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	// Get current authenticated user info
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -101,16 +102,16 @@ type AuthServiceClient interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -182,12 +183,6 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 			connect.WithClientOptions(opts...),
 		),
-		switchOrganization: connect.NewClient[v1.SwitchOrganizationRequest, v1.SwitchOrganizationResponse](
-			httpClient,
-			baseURL+AuthServiceSwitchOrganizationProcedure,
-			connect.WithSchema(authServiceMethods.ByName("SwitchOrganization")),
-			connect.WithClientOptions(opts...),
-		),
 		getCacheKeySeed: connect.NewClient[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse](
 			httpClient,
 			baseURL+AuthServiceGetCacheKeySeedProcedure,
@@ -204,6 +199,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+AuthServiceGetAuthConfigProcedure,
 			connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		setupDeployment: connect.NewClient[v1.SetupDeploymentRequest, v1.SetupDeploymentResponse](
+			httpClient,
+			baseURL+AuthServiceSetupDeploymentProcedure,
+			connect.WithSchema(authServiceMethods.ByName("SetupDeployment")),
 			connect.WithClientOptions(opts...),
 		),
 		getInvitation: connect.NewClient[v1.GetInvitationRequest, v1.GetInvitationResponse](
@@ -249,10 +250,10 @@ type authServiceClient struct {
 	listSessions             *connect.Client[v1.ListSessionsRequest, v1.ListSessionsResponse]
 	revokeSession            *connect.Client[v1.RevokeSessionRequest, v1.RevokeSessionResponse]
 	revokeOtherSessions      *connect.Client[v1.RevokeOtherSessionsRequest, v1.RevokeOtherSessionsResponse]
-	switchOrganization       *connect.Client[v1.SwitchOrganizationRequest, v1.SwitchOrganizationResponse]
 	getCacheKeySeed          *connect.Client[v1.GetCacheKeySeedRequest, v1.GetCacheKeySeedResponse]
 	rotateCacheKeySeed       *connect.Client[v1.RotateCacheKeySeedRequest, v1.RotateCacheKeySeedResponse]
 	getAuthConfig            *connect.Client[v1.GetAuthConfigRequest, v1.GetAuthConfigResponse]
+	setupDeployment          *connect.Client[v1.SetupDeploymentRequest, v1.SetupDeploymentResponse]
 	getInvitation            *connect.Client[v1.GetInvitationRequest, v1.GetInvitationResponse]
 	acceptInvitation         *connect.Client[v1.AcceptInvitationRequest, v1.AcceptInvitationResponse]
 	sendPasswordReset        *connect.Client[v1.SendPasswordResetRequest, v1.SendPasswordResetResponse]
@@ -300,11 +301,6 @@ func (c *authServiceClient) RevokeOtherSessions(ctx context.Context, req *connec
 	return c.revokeOtherSessions.CallUnary(ctx, req)
 }
 
-// SwitchOrganization calls auth.v1.AuthService.SwitchOrganization.
-func (c *authServiceClient) SwitchOrganization(ctx context.Context, req *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error) {
-	return c.switchOrganization.CallUnary(ctx, req)
-}
-
 // GetCacheKeySeed calls auth.v1.AuthService.GetCacheKeySeed.
 func (c *authServiceClient) GetCacheKeySeed(ctx context.Context, req *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {
 	return c.getCacheKeySeed.CallUnary(ctx, req)
@@ -318,6 +314,11 @@ func (c *authServiceClient) RotateCacheKeySeed(ctx context.Context, req *connect
 // GetAuthConfig calls auth.v1.AuthService.GetAuthConfig.
 func (c *authServiceClient) GetAuthConfig(ctx context.Context, req *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error) {
 	return c.getAuthConfig.CallUnary(ctx, req)
+}
+
+// SetupDeployment calls auth.v1.AuthService.SetupDeployment.
+func (c *authServiceClient) SetupDeployment(ctx context.Context, req *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error) {
+	return c.setupDeployment.CallUnary(ctx, req)
 }
 
 // GetInvitation calls auth.v1.AuthService.GetInvitation.
@@ -351,7 +352,8 @@ type AuthServiceHandler interface {
 	Register(context.Context, *connect.Request[v1.RegisterRequest]) (*connect.Response[v1.RegisterResponse], error)
 	// Login with email and password
 	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
-	// Refresh access token using refresh token
+	// Refresh the access token. Also the way to enter another organization:
+	// pass its slug and the session stays signed in.
 	RefreshToken(context.Context, *connect.Request[v1.RefreshTokenRequest]) (*connect.Response[v1.RefreshTokenResponse], error)
 	// Get current authenticated user info
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -363,16 +365,16 @@ type AuthServiceHandler interface {
 	RevokeSession(context.Context, *connect.Request[v1.RevokeSessionRequest]) (*connect.Response[v1.RevokeSessionResponse], error)
 	// Revoke all sessions except the current one
 	RevokeOtherSessions(context.Context, *connect.Request[v1.RevokeOtherSessionsRequest]) (*connect.Response[v1.RevokeOtherSessionsResponse], error)
-	// Switch the active organization for the current user. Revokes the current
-	// session and issues a fresh session bound to the target org. Use this
-	// instead of RefreshToken with a slug to change tenant context.
-	SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error)
 	// Get the cache key seed for client-side storage encryption (called once per session)
 	GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error)
 	// Rotate cache key seed (invalidates all device caches)
 	RotateCacheKeySeed(context.Context, *connect.Request[v1.RotateCacheKeySeedRequest]) (*connect.Response[v1.RotateCacheKeySeedResponse], error)
 	// Public auth configuration (e.g. whether registration is open).
 	GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error)
+	// First run of an empty deployment: creates the platform operator, the first
+	// organization with that user as owner, and signs them in. Refuses once any
+	// user exists.
+	SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error)
 	// Preview an invitation by token (un-authenticated).
 	GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error)
 	// Accept an invitation by token; creates the user + membership and logs them in.
@@ -440,12 +442,6 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("RevokeOtherSessions")),
 		connect.WithHandlerOptions(opts...),
 	)
-	authServiceSwitchOrganizationHandler := connect.NewUnaryHandler(
-		AuthServiceSwitchOrganizationProcedure,
-		svc.SwitchOrganization,
-		connect.WithSchema(authServiceMethods.ByName("SwitchOrganization")),
-		connect.WithHandlerOptions(opts...),
-	)
 	authServiceGetCacheKeySeedHandler := connect.NewUnaryHandler(
 		AuthServiceGetCacheKeySeedProcedure,
 		svc.GetCacheKeySeed,
@@ -462,6 +458,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		AuthServiceGetAuthConfigProcedure,
 		svc.GetAuthConfig,
 		connect.WithSchema(authServiceMethods.ByName("GetAuthConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceSetupDeploymentHandler := connect.NewUnaryHandler(
+		AuthServiceSetupDeploymentProcedure,
+		svc.SetupDeployment,
+		connect.WithSchema(authServiceMethods.ByName("SetupDeployment")),
 		connect.WithHandlerOptions(opts...),
 	)
 	authServiceGetInvitationHandler := connect.NewUnaryHandler(
@@ -512,14 +514,14 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRevokeSessionHandler.ServeHTTP(w, r)
 		case AuthServiceRevokeOtherSessionsProcedure:
 			authServiceRevokeOtherSessionsHandler.ServeHTTP(w, r)
-		case AuthServiceSwitchOrganizationProcedure:
-			authServiceSwitchOrganizationHandler.ServeHTTP(w, r)
 		case AuthServiceGetCacheKeySeedProcedure:
 			authServiceGetCacheKeySeedHandler.ServeHTTP(w, r)
 		case AuthServiceRotateCacheKeySeedProcedure:
 			authServiceRotateCacheKeySeedHandler.ServeHTTP(w, r)
 		case AuthServiceGetAuthConfigProcedure:
 			authServiceGetAuthConfigHandler.ServeHTTP(w, r)
+		case AuthServiceSetupDeploymentProcedure:
+			authServiceSetupDeploymentHandler.ServeHTTP(w, r)
 		case AuthServiceGetInvitationProcedure:
 			authServiceGetInvitationHandler.ServeHTTP(w, r)
 		case AuthServiceAcceptInvitationProcedure:
@@ -571,10 +573,6 @@ func (UnimplementedAuthServiceHandler) RevokeOtherSessions(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.RevokeOtherSessions is not implemented"))
 }
 
-func (UnimplementedAuthServiceHandler) SwitchOrganization(context.Context, *connect.Request[v1.SwitchOrganizationRequest]) (*connect.Response[v1.SwitchOrganizationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.SwitchOrganization is not implemented"))
-}
-
 func (UnimplementedAuthServiceHandler) GetCacheKeySeed(context.Context, *connect.Request[v1.GetCacheKeySeedRequest]) (*connect.Response[v1.GetCacheKeySeedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetCacheKeySeed is not implemented"))
 }
@@ -585,6 +583,10 @@ func (UnimplementedAuthServiceHandler) RotateCacheKeySeed(context.Context, *conn
 
 func (UnimplementedAuthServiceHandler) GetAuthConfig(context.Context, *connect.Request[v1.GetAuthConfigRequest]) (*connect.Response[v1.GetAuthConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.GetAuthConfig is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) SetupDeployment(context.Context, *connect.Request[v1.SetupDeploymentRequest]) (*connect.Response[v1.SetupDeploymentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("auth.v1.AuthService.SetupDeployment is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) GetInvitation(context.Context, *connect.Request[v1.GetInvitationRequest]) (*connect.Response[v1.GetInvitationResponse], error) {

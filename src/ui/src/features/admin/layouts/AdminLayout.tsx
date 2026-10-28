@@ -6,6 +6,7 @@ import { cn } from "@/shared/utils/cn";
 import { useAdminAccess } from "@/features/admin/hooks/useAdminHooks";
 import type { Icon } from "@phosphor-icons/react";
 import {
+  Buildings,
   CalendarBlank,
   Users,
   UsersThree,
@@ -44,6 +45,7 @@ const orgGroups: NavGroup[] = [
     id: "access",
     title: "Access",
     items: [
+      { name: "Organization", path: "/admin/organization", icon: Buildings },
       { name: "Members", path: "/admin/members", icon: Users },
       { name: "Teams", path: "/admin/teams", icon: TreeStructure },
       { name: "Groups", path: "/admin/groups", icon: UsersThree },

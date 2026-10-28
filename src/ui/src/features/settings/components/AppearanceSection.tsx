@@ -1,12 +1,4 @@
-import {
-  Sun,
-  Moon,
-  Desktop,
-  Check,
-  CheckSquare,
-  CalendarBlank,
-  ArrowSquareOut,
-} from "@phosphor-icons/react";
+import { Sun, Moon, Desktop, Check } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { controlShellClass } from "@/components/ui/input";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
@@ -17,6 +9,8 @@ import {
   useAppearanceSettings,
   useSchedulingSettings,
 } from "@/features/settings/hooks/useSettings";
+import { ACCENT_COLORS, hexToHsl, hslToHex } from "@/config/theme/accentColors";
+import { MentionDisplayPicker } from "@/features/settings/components/MentionDisplayPicker";
 
 const WORKDAY_OPTIONS = [
   { id: "monday", label: "Mon" },
@@ -33,88 +27,6 @@ const CLOCK_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const minutes = i % 2 === 0 ? "00" : "30";
   return `${String(hours).padStart(2, "0")}:${minutes}`;
 });
-
-// Theme token cascade: accent color (HSL) layers on top of base palette and mode (light/dark/system).
-const ACCENT_COLORS = [
-  { name: "Blue", value: "217 91% 60%" },
-  { name: "Sky", value: "199 84% 50%" },
-  { name: "Purple", value: "262.1 83.3% 57.8%" },
-  { name: "Green", value: "142.1 76.2% 36.3%" },
-  { name: "Orange", value: "24.6 95% 53.1%" },
-  { name: "Red", value: "0 84.2% 60.2%" },
-  { name: "Pink", value: "330 81% 60%" },
-  { name: "Teal", value: "174 72% 40%" },
-  { name: "Amber", value: "38 92% 50%" },
-];
-
-function hslToHex(hsl: string): string {
-  const parts = hsl.split(" ");
-  if (parts.length !== 3) return "#684aff";
-
-  const h = parseFloat(parts[0]) / 360;
-  const s = parseFloat(parts[1]) / 100;
-  const l = parseFloat(parts[2]) / 100;
-
-  const hue2rgb = (p: number, q: number, t: number) => {
-    if (t < 0) t += 1;
-    if (t > 1) t -= 1;
-    if (t < 1 / 6) return p + (q - p) * 6 * t;
-    if (t < 1 / 2) return q;
-    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-    return p;
-  };
-
-  let r, g, b;
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-
-  const toHex = (x: number) => {
-    const hex = Math.round(x * 255).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  };
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function hexToHsl(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return "217 91% 60%";
-
-  const r = parseInt(result[1], 16) / 255;
-  const g = parseInt(result[2], 16) / 255;
-  const b = parseInt(result[3], 16) / 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / d + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / d + 4) / 6;
-        break;
-    }
-  }
-
-  return `${(h * 360).toFixed(1)} ${(s * 100).toFixed(1)}% ${(l * 100).toFixed(1)}%`;
-}
 
 const FONT_FAMILIES = [
   { id: "inter", name: "Inter", description: "Clean and modern", stack: "var(--font-inter)" },
@@ -356,47 +268,11 @@ export function AppearanceSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
-          {[
-            {
-              id: "expanded",
-              label: "Expanded",
-              description: "Rich card with live metadata",
-            },
-            {
-              id: "compact",
-              label: "Compact",
-              description: "Inline chip with label only",
-            },
-          ].map(({ id, label, description }) => (
-            <button
-              key={id}
-              type="button"
-              disabled={saving}
-              className={cn(
-                "flex flex-col items-stretch gap-3 p-4 rounded-xl transition-shadow duration-150 text-left",
-                appearance.mentionDisplay === id
-                  ? "bg-primary/5 shadow-edge-primary"
-                  : "bg-surface shadow-edge hover:shadow-edge-strong",
-              )}
-              onClick={() => handleMentionDisplayChange(id)}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-medium text-foreground">{label}</div>
-                  <div className="text-xs font-medium text-muted-foreground">{description}</div>
-                </div>
-                {appearance.mentionDisplay === id && (
-                  <Check size={18} weight="bold" className="text-primary shrink-0" />
-                )}
-              </div>
-
-              <div className="rounded-md border border-border/50 bg-muted/40 p-3">
-                {id === "expanded" ? <MentionPreviewExpanded /> : <MentionPreviewCompact />}
-              </div>
-            </button>
-          ))}
-        </div>
+        <MentionDisplayPicker
+          value={appearance.mentionDisplay === "compact" ? "compact" : "expanded"}
+          onChange={handleMentionDisplayChange}
+          disabled={saving}
+        />
       </section>
 
       <section className="space-y-4">
@@ -570,41 +446,5 @@ export function AppearanceSection() {
         </div>
       </section>
     </div>
-  );
-}
-
-function MentionPreviewExpanded() {
-  return (
-    <div className="inline-flex flex-col gap-1.5 max-w-full rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <span className="flex items-center justify-center w-6 h-6 rounded-md bg-rose-500 text-white shrink-0">
-          <CalendarBlank size={14} weight="duotone" />
-        </span>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-foreground truncate">Q2 Planning Sync</div>
-          <div className="text-[11px] text-muted-foreground">
-            Calendar event . Tomorrow, 10:00 AM
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-        <CheckSquare size={12} weight="duotone" className="text-emerald-500" />
-        <span>3 of 5 tasks ready</span>
-        <span className="text-subtle-foreground">.</span>
-        <ArrowSquareOut size={11} className="text-muted-foreground/70" />
-        <span className="text-muted-foreground/70">Open</span>
-      </div>
-    </div>
-  );
-}
-
-function MentionPreviewCompact() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-gradient-to-r from-rose-500/10 to-rose-500/5 px-1.5 py-0.5">
-      <span className="flex items-center justify-center w-3.5 h-3.5 rounded-sm bg-rose-500 shrink-0">
-        <CalendarBlank size={9} weight="duotone" className="text-white" />
-      </span>
-      <span className="text-xs font-medium text-foreground">Q2 Planning Sync</span>
-    </span>
   );
 }

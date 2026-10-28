@@ -79,6 +79,7 @@ export function MfaEnrollFlow({ color, onDone }: { color: string; onDone: () => 
         accessToken: res.accessToken,
         refreshToken: res.refreshToken,
         organizationId: res.organizationId,
+        organizationSlug: res.organizationSlug,
         organizationRole: res.organizationRole,
         assetCookie: res.assetCookie,
       });

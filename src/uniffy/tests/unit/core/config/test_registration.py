@@ -5,10 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from uniffy.core.config.registration import (
-    RegistrationSource,
-    resolve_public_registration,
-)
+from uniffy.core.config.registration import resolve_public_registration
+from uniffy.core.config.source import SettingSource
 
 
 def _empty_namespace_mock() -> AsyncMock:
@@ -22,20 +20,20 @@ class TestPublicRegistrationFlag:
     @pytest.mark.parametrize(
         ("raw", "expected", "expected_source"),
         [
-            ("true", True, RegistrationSource.ENV),
-            ("True", True, RegistrationSource.ENV),
-            ("TRUE", True, RegistrationSource.ENV),
-            ("false", False, RegistrationSource.ENV),
-            ("0", False, RegistrationSource.ENV),
-            ("", False, RegistrationSource.DEFAULT),
-            ("anything-else", False, RegistrationSource.ENV),
+            ("true", True, SettingSource.ENV),
+            ("True", True, SettingSource.ENV),
+            ("TRUE", True, SettingSource.ENV),
+            ("false", False, SettingSource.ENV),
+            ("0", False, SettingSource.ENV),
+            ("", False, SettingSource.DEFAULT),
+            ("anything-else", False, SettingSource.ENV),
         ],
     )
     async def test_env_fallback_when_no_deployment_row(
         self,
         raw: str,
         expected: bool,
-        expected_source: RegistrationSource,
+        expected_source: SettingSource,
     ) -> None:
         session = MagicMock()
         with (
@@ -61,7 +59,7 @@ class TestPublicRegistrationFlag:
         ):
             state = await resolve_public_registration(session)
         assert state.enabled is False
-        assert state.source is RegistrationSource.DEFAULT
+        assert state.source is SettingSource.DEFAULT
 
     async def test_deployment_row_wins_over_env(self) -> None:
         # Even with env set to false, a deployment row that says true wins.
@@ -80,4 +78,4 @@ class TestPublicRegistrationFlag:
         ):
             state = await resolve_public_registration(session)
         assert state.enabled is True
-        assert state.source is RegistrationSource.DEPLOYMENT
+        assert state.source is SettingSource.DEPLOYMENT

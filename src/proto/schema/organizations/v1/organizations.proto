@@ -12,11 +12,37 @@ option go_package = "github.com/uniffy-io/uniffy-proto-go/organizations/v1;organ
 service OrganizationsService {
   // User's organizations
   rpc ListMyOrganizations(ListMyOrganizationsRequest) returns (ListMyOrganizationsResponse);
+  // Finds which of the caller's own organizations owns the content behind a
+  // URN. Unknown content, content the caller cannot view, and content outside
+  // the caller's memberships all return the same NOT_FOUND error.
+  rpc ResolveContentOrganization(ResolveContentOrganizationRequest) returns (ResolveContentOrganizationResponse);
+  // Self-service creation. Allowed when the deployment's org_creation policy
+  // admits the caller; the caller becomes OWNER. Rate limited per user and IP.
+  rpc CreateOrganization(CreateOrganizationRequest) returns (CreateOrganizationResponse);
+
+  // First-run entry flow for the user who created the organization. Pending
+  // only while that user is still its active OWNER and has neither finished
+  // nor skipped it. Record and Finish are no-ops once the flow is over.
+  rpc GetOnboarding(GetOnboardingRequest) returns (GetOnboardingResponse);
+  rpc RecordOnboardingStep(RecordOnboardingStepRequest) returns (RecordOnboardingStepResponse);
+  rpc FinishOnboarding(FinishOnboardingRequest) returns (FinishOnboardingResponse);
+
+  // Invitations addressed to the caller's email, and the signed-in way to act on them.
+  rpc ListMyInvitations(ListMyInvitationsRequest) returns (ListMyInvitationsResponse);
+  rpc AcceptMyInvitation(AcceptMyInvitationRequest) returns (AcceptMyInvitationResponse);
+  rpc DeclineMyInvitation(DeclineMyInvitationRequest) returns (DeclineMyInvitationResponse);
 
   // Organization read/update (Org Member / Org Admin). Cross-tenant CRUD
   // is the platform surface: superadmin.v1.SystemOrganizationsService.
   rpc GetOrganization(GetOrganizationRequest) returns (GetOrganizationResponse);
   rpc UpdateOrganization(UpdateOrganizationRequest) returns (UpdateOrganizationResponse);
+
+  // Membership lifecycle for the caller's own place in the organization.
+  // An OWNER transfers before leaving; deletion is OWNER only and soft, with
+  // the same purge window the platform surface applies.
+  rpc LeaveOrganization(LeaveOrganizationRequest) returns (LeaveOrganizationResponse);
+  rpc TransferOwnership(TransferOwnershipRequest) returns (TransferOwnershipResponse);
+  rpc DeleteOrganization(DeleteOrganizationRequest) returns (DeleteOrganizationResponse);
 
   // Organization overview (Org Admin)
   rpc GetOrganizationOverview(GetOrganizationOverviewRequest) returns (GetOrganizationOverviewResponse);
@@ -57,12 +83,96 @@ message ListMyOrganizationsRequest {}
 
 message ListMyOrganizationsResponse {
   repeated MyOrganization organizations = 1;
+  // Whether the deployment's org_creation policy lets this caller create one.
+  bool can_create_organization = 2;
 }
 
 message MyOrganization {
   common.v1.OrganizationInfo organization = 1;
   common.v1.OrganizationRole role = 2;
   google.protobuf.Timestamp joined_at = 3;
+  // Listed but cannot be entered until a platform operator lifts the suspension.
+  bool suspended = 4;
+}
+
+message CreateOrganizationRequest {
+  string name = 1;
+  // Derived from the name when empty.
+  optional string slug = 2;
+}
+
+message CreateOrganizationResponse {
+  MyOrganization organization = 1;
+}
+
+message ListMyInvitationsRequest {}
+
+message ListMyInvitationsResponse {
+  repeated MyInvitation invitations = 1;
+}
+
+// A pending invitation addressed to the caller's email.
+message MyInvitation {
+  string id = 1;
+  common.v1.OrganizationInfo organization = 2;
+  common.v1.OrganizationRole role = 3;
+  optional string inviter_display_name = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message AcceptMyInvitationRequest {
+  oneof lookup {
+    // From the welcome page list.
+    string invitation_id = 1;
+    // From the mail link while signed in; proves control of the mailbox.
+    string token = 2;
+  }
+}
+
+message AcceptMyInvitationResponse {
+  MyOrganization organization = 1;
+}
+
+message DeclineMyInvitationRequest {
+  string invitation_id = 1;
+}
+
+message DeclineMyInvitationResponse {}
+
+message LeaveOrganizationRequest {
+  string organization_id = 1;
+}
+
+message LeaveOrganizationResponse {}
+
+message TransferOwnershipRequest {
+  string organization_id = 1;
+  string new_owner_user_id = 2;
+}
+
+message TransferOwnershipResponse {
+  common.v1.MemberInfo new_owner = 1;
+  common.v1.MemberInfo previous_owner = 2;
+}
+
+message DeleteOrganizationRequest {
+  string organization_id = 1;
+  // Must equal the organization's slug.
+  string confirm_slug = 2;
+}
+
+message DeleteOrganizationResponse {
+  google.protobuf.Timestamp purge_at = 1;
+}
+
+message ResolveContentOrganizationRequest {
+  string urn = 1;
+}
+
+message ResolveContentOrganizationResponse {
+  common.v1.OrganizationInfo organization = 1;
+  common.v1.OrganizationRole role = 2;
 }
 
 message OrganizationDetail {
@@ -89,7 +199,8 @@ message UpdateOrganizationRequest {
   optional string name = 2;
   optional string slug = 3;
   optional string logo_url = 4;
-  optional bool is_active = 5;
+  reserved 5;
+  reserved "is_active";
 }
 
 // Organization Overview Messages (Org Admin)
@@ -274,13 +385,11 @@ message InviteMemberRequest {
   common.v1.OrganizationRole role = 3;
 }
 
-// Two-shape response: existing user becomes a member immediately;
-// a brand-new email gets a pending invitation row to accept.
+// Every email gets a pending invitation; an existing account accepts it signed in.
 message InviteMemberResponse {
-  oneof result {
-    common.v1.MemberInfo added_member = 1;
-    Invitation invitation = 2;
-  }
+  reserved 1, 2;
+  reserved "added_member";
+  Invitation invitation = 3;
 }
 
 message ListInvitationsRequest {
@@ -337,4 +446,50 @@ message UpdateSecuritySettingsRequest {
 
 message UpdateSecuritySettingsResponse {
   SecuritySettings settings = 1;
+}
+
+enum OnboardingStep {
+  ONBOARDING_STEP_UNSPECIFIED = 0;
+  ONBOARDING_STEP_WELCOME = 1;
+  ONBOARDING_STEP_MENTIONS = 2;
+  ONBOARDING_STEP_SHARING = 3;
+  ONBOARDING_STEP_APPEARANCE = 4;
+  ONBOARDING_STEP_AGENTS = 5;
+  ONBOARDING_STEP_TEAM = 6;
+  ONBOARDING_STEP_LAUNCH = 7;
+  ONBOARDING_STEP_MENTION_DISPLAY = 8;
+}
+
+message OnboardingState {
+  // True while the caller still has the entry flow to go through here.
+  bool pending = 1;
+  // The step the caller last reached, so a reload resumes there.
+  OnboardingStep current_step = 2;
+}
+
+message GetOnboardingRequest {
+  string organization_id = 1;
+}
+
+message GetOnboardingResponse {
+  OnboardingState state = 1;
+}
+
+message RecordOnboardingStepRequest {
+  string organization_id = 1;
+  OnboardingStep step = 2;
+}
+
+message RecordOnboardingStepResponse {
+  OnboardingState state = 1;
+}
+
+message FinishOnboardingRequest {
+  string organization_id = 1;
+  // True when the owner skipped the rest of the flow instead of finishing it.
+  bool dismissed = 2;
+}
+
+message FinishOnboardingResponse {
+  OnboardingState state = 1;
 }

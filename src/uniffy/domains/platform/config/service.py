@@ -8,6 +8,8 @@ from uniffy_proto.superadmin.v1.system_config_pb import (
     GetSystemConfigResponse,
     SetMfaPolicyRequest,
     SetMfaPolicyResponse,
+    SetOrgCreationPolicyRequest,
+    SetOrgCreationPolicyResponse,
     SetPublicRegistrationRequest,
     SetPublicRegistrationResponse,
 )
@@ -33,6 +35,13 @@ class SystemConfigServiceImpl:
         ctx: RequestContext,
     ) -> SetPublicRegistrationResponse:
         return await self._handlers.set_public_registration(request, ctx)
+
+    async def set_org_creation_policy(
+        self,
+        request: SetOrgCreationPolicyRequest,
+        ctx: RequestContext,
+    ) -> SetOrgCreationPolicyResponse:
+        return await self._handlers.set_org_creation_policy(request, ctx)
 
     async def get_mfa_policy(
         self,

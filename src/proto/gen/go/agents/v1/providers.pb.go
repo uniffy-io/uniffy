@@ -215,8 +215,11 @@ type ModelInfo struct {
 	// "{aspect_ratio}|{resolution}|{quality}"; "" when the model has no
 	// published image rates. Values are estimates for token-metered models.
 	ImagePriceEstimatesJson string `protobuf:"bytes,21,opt,name=image_price_estimates_json,json=imagePriceEstimatesJson,proto3" json:"image_price_estimates_json,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Whether the catalog names this the provider's default large model, the
+	// sensible org default when an owner connects their first key.
+	ProviderDefault bool `protobuf:"varint,22,opt,name=provider_default,json=providerDefault,proto3" json:"provider_default,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ModelInfo) Reset() {
@@ -394,6 +397,13 @@ func (x *ModelInfo) GetImagePriceEstimatesJson() string {
 		return x.ImagePriceEstimatesJson
 	}
 	return ""
+}
+
+func (x *ModelInfo) GetProviderDefault() bool {
+	if x != nil {
+		return x.ProviderDefault
+	}
+	return false
 }
 
 // Request to add a new provider key
@@ -1165,7 +1175,7 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"created_by\x18\f \x01(\tR\tcreatedByB\x14\n" +
 	"\x12_last_validated_atB\x0f\n" +
 	"\r_last_used_atB\r\n" +
-	"\v_last_error\"\x94\a\n" +
+	"\v_last_error\"\xbf\a\n" +
 	"\tModelInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x1a\n" +
@@ -1191,7 +1201,8 @@ const file_agents_v1_providers_proto_rawDesc = "" +
 	"\rcatalog_known\x18\x12 \x01(\bR\fcatalogKnown\x122\n" +
 	"\x15parameter_schema_json\x18\x13 \x01(\tR\x13parameterSchemaJson\x12=\n" +
 	"\x1bimage_parameter_schema_json\x18\x14 \x01(\tR\x18imageParameterSchemaJson\x12;\n" +
-	"\x1aimage_price_estimates_json\x18\x15 \x01(\tR\x17imagePriceEstimatesJson\"\x92\x01\n" +
+	"\x1aimage_price_estimates_json\x18\x15 \x01(\tR\x17imagePriceEstimatesJson\x12)\n" +
+	"\x10provider_default\x18\x16 \x01(\bR\x0fproviderDefault\"\x92\x01\n" +
 	"\x15AddProviderKeyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1a\n" +
 	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x14\n" +
