@@ -1,4 +1,4 @@
-import { configureStore } from "@reduxjs/toolkit";
+import { configureStore, type UnknownAction } from "@reduxjs/toolkit";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDispatch, RootState } from "@/app/store";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
@@ -37,12 +37,12 @@ vi.mock("@/features/projects/store/projectsThunks", () => ({
 function fixture() {
   const store = configureStore({
     reducer: (
-      state = {
+      state: RootState = {
         time: initialTimeState,
         auth: { currentOrganizationId: "org-a", user: { id: "person" } },
       } as RootState,
-      action,
-    ) => {
+      action: UnknownAction,
+    ): RootState => {
       if (resetOrganizationScope.match(action))
         return {
           ...state,
@@ -220,9 +220,10 @@ describe("time requests", () => {
       const policyB = { enabled: true } as TimePolicy;
       vi.mocked(timeApi.getTimePolicy).mockReturnValueOnce(old.promise);
       vi.mocked(timeApi.updateTimePolicy).mockReturnValueOnce(old.promise);
-      const request = store.dispatch(
-        operation === "save" ? saveTimePolicy(policyA) : fetchTimePolicy(),
-      );
+      const request =
+        operation === "save"
+          ? store.dispatch(saveTimePolicy(policyA))
+          : store.dispatch(fetchTimePolicy());
       store.dispatch(resetOrganizationScope());
       store.dispatch(fetchTimePolicy.fulfilled(policyB, "org-b"));
       old.resolve(policyA);
