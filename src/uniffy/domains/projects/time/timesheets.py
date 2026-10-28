@@ -32,6 +32,7 @@ from uniffy.domains.projects.time.locks import (
 )
 from uniffy.domains.projects.time.periods import period_for, period_is_lock_due
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy, load_time_policy
+from uniffy.domains.projects.time.transactions import lock_time_people
 
 logger = logger.bind(component="projects.time.timesheets")
 
@@ -72,9 +73,9 @@ class TimesheetOperations:
 
     async def _sheet_by_id(self, organization_id: UUID, timesheet_id: UUID) -> Timesheet:
         result = await self.session.execute(
-            select(Timesheet).where(
-                Timesheet.id == timesheet_id, Timesheet.organization_id == organization_id
-            )
+            select(Timesheet)
+            .execution_options(populate_existing=True)
+            .where(Timesheet.id == timesheet_id, Timesheet.organization_id == organization_id)
         )
         sheet = result.scalars().first()
         if sheet is None:
@@ -100,6 +101,7 @@ class TimesheetOperations:
         """An entry changed under a pending sheet: approved returns for review, submitted recalls."""
         if not policy.approvals_enabled:
             return
+        await lock_time_people(self.session, organization_id, [user_id])
         start, _ = period_for(work_date, policy)
         sheet = await sheet_row(self.session, organization_id, user_id, start)
         if sheet is None:
@@ -218,6 +220,7 @@ class TimesheetOperations:
         submitted_to: UUID | None = None,
     ) -> Timesheet:
         """Move the sheet to SUBMITTED; a missing actor means the period job did it."""
+        await lock_time_people(self.session, organization_id, [user_id])
         now = now or datetime.now(UTC)
         start, end = period_for(day, policy)
         await self._require_open_period(organization_id, start, end)
@@ -307,6 +310,7 @@ class TimesheetOperations:
             await self.access.require_active_actor(actor_id, organization_id)
         else:
             await self._require_reviewer(actor_id, organization_id, subject_id)
+        await lock_time_people(self.session, organization_id, [subject_id])
         start, end = period_for(day, policy)
         await self._require_open_period(organization_id, start, end)
         sheet = await sheet_row(self.session, organization_id, subject_id, start)
@@ -329,6 +333,8 @@ class TimesheetOperations:
     ) -> SheetView:
         policy = await load_time_policy(self.session, organization_id)
         _require_approvals(policy)
+        sheet = await self._sheet_by_id(organization_id, timesheet_id)
+        await lock_time_people(self.session, organization_id, [sheet.user_id])
         sheet = await self._sheet_by_id(organization_id, timesheet_id)
         await self._require_reviewer(actor_id, organization_id, sheet.user_id)
         await self._require_open_period(organization_id, sheet.period_start, sheet.period_end)
@@ -388,6 +394,7 @@ class TimesheetOperations:
             raise ValidationError("hours", f"must be between 1 and {MAX_GRACE_HOURS}")
         await self._require_reviewer(actor_id, organization_id, user_id)
         await self.access.require_active_member(user_id, organization_id)
+        await lock_time_people(self.session, organization_id, [user_id])
         start, end = period_for(day, policy)
         await self._require_open_period(organization_id, start, end)
         sheet = await sheet_row(self.session, organization_id, user_id, start)

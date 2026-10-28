@@ -25,6 +25,7 @@ from uniffy.domains.projects.time.capacity import (
     required_minutes_on,
     schedules_for_users,
 )
+from uniffy.domains.projects.time.periods import validate_date_range
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy, load_time_policy
 
 
@@ -58,7 +59,10 @@ def _sprint_dates(sprint: Sprint) -> tuple[date, date] | None:
         start, end = date.fromisoformat(sprint.start_date), date.fromisoformat(sprint.end_date)
     except ValueError:
         return None
-    return (start, end) if start <= end else None
+    if start > end:
+        return None
+    validate_date_range(start, end)
+    return start, end
 
 
 def split_estimate(estimate: int, user_ids: list[UUID]) -> dict[UUID, int]:
@@ -89,6 +93,7 @@ class SprintCapacityReader:
         await self.access.require_project_view(actor_id, organization_id, sprint.project_id)
         policy = await load_time_policy(self.session, organization_id)
 
+        dates = _sprint_dates(sprint)
         tasks = await self._tasks(organization_id, sprint_id)
         members = sorted({user_id for task in tasks for user_id in task.assignees})
         estimated: dict[UUID, int] = dict.fromkeys(members, 0)
@@ -96,7 +101,7 @@ class SprintCapacityReader:
             for user_id, share in split_estimate(task.estimated_minutes, task.assignees).items():
                 estimated[user_id] += share
         logged = await self._logged([task.id for task in tasks], members)
-        capacity = await self._capacity(organization_id, members, _sprint_dates(sprint), policy)
+        capacity = await self._capacity(organization_id, members, dates, policy)
 
         rows = [
             MemberCapacity(

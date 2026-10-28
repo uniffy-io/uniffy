@@ -15,8 +15,8 @@ import {
   resumeTimer,
 } from "@/features/projects/store/timeThunks";
 import { formatClock } from "@/features/projects/utils/timerElapsed";
-import { LogTimeModal } from "./LogTimeModal";
-import { useTimerElapsed } from "./useTimerElapsed";
+import { LogTimeModal } from "@/features/projects/components/time/LogTimeModal";
+import { useTimerElapsed } from "@/features/projects/components/time/useTimerElapsed";
 
 /** The running or paused timer in the top nav; below md it collapses to the icon and the clock. */
 export function TimerPill() {

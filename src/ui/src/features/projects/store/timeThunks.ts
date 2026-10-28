@@ -1,9 +1,9 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { AppDispatch, RootState } from "@/app/store";
 import { effectiveDayKey } from "@/shared/utils/dateFormatting";
-import { timeApi } from "../api/timeApi";
-import { instantOf } from "../utils/timeClock";
-import { weekRangeKey } from "../utils/timeWeek";
+import { timeApi } from "@/features/projects/api/timeApi";
+import { instantOf } from "@/features/projects/utils/timeClock";
+import { weekRangeKey } from "@/features/projects/utils/timeWeek";
 import type {
   CreateWorklogInput,
   InternalProjectResult,
@@ -22,9 +22,9 @@ import type {
   UserWeek,
   WeekEvent,
   Worklog,
-} from "../types/time";
-import { applyTaskTimeSpent } from "./projectsSlice";
-import { fetchActivities, fetchTask } from "./projectsThunks";
+} from "@/features/projects/types/time";
+import { applyTaskTimeSpent } from "@/features/projects/store/projectsSlice";
+import { fetchActivities, fetchTask } from "@/features/projects/store/projectsThunks";
 
 type ThunkConfig = { dispatch: AppDispatch; state: RootState; rejectValue: string };
 
@@ -37,15 +37,20 @@ function messageOf(error: unknown, fallback: string): string {
 }
 
 export const fetchTaskWorklogs = createAsyncThunk<
-  { taskId: string; worklogs: Worklog[] },
-  string,
+  { taskId: string; worklogs: Worklog[]; nextPageToken?: string; replace?: boolean },
+  string | { taskId: string; pageToken: string },
   ThunkConfig
->("time/fetchTaskWorklogs", async (taskId, { getState, rejectWithValue }) => {
-  const orgId = organizationIdOf(getState());
+>("time/fetchTaskWorklogs", async (input, { getState, rejectWithValue }) => {
+  const taskId = typeof input === "string" ? input : input.taskId;
+  const state = getState();
+  const stale =
+    (state.time.taskHistoryVersions[taskId] ?? 0) !== (state.time.taskLoadedVersions[taskId] ?? 0);
+  const pageToken = typeof input === "string" || stale ? "" : input.pageToken;
+  const orgId = organizationIdOf(state);
   if (!orgId) return rejectWithValue("No organization selected");
   try {
-    const worklogs = await timeApi.listTaskWorklogs(taskId, orgId);
-    return { taskId, worklogs };
+    const page = await timeApi.listTaskWorklogs(taskId, orgId, pageToken);
+    return { taskId, ...page, replace: !pageToken };
   } catch (error) {
     return rejectWithValue(messageOf(error, "Failed to load time entries"));
   }
@@ -146,6 +151,33 @@ export const fetchTimePolicy = createAsyncThunk<TimePolicy, void, ThunkConfig>(
       return await timeApi.getTimePolicy(orgId);
     } catch (error) {
       return rejectWithValue(messageOf(error, "Failed to load the time policy"));
+    }
+  },
+);
+
+export const saveTimePolicy = createAsyncThunk<TimePolicy, TimePolicy, ThunkConfig>(
+  "time/saveTimePolicy",
+  async (policy, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      return await timeApi.updateTimePolicy(policy, orgId);
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to save the time policy"));
+    }
+  },
+);
+
+export const fetchReviewEligibility = createAsyncThunk<boolean, string, ThunkConfig>(
+  "time/fetchReviewEligibility",
+  async (day, { getState, rejectWithValue }) => {
+    const orgId = organizationIdOf(getState());
+    if (!orgId) return rejectWithValue("No organization selected");
+    try {
+      const page = await timeApi.listReviewTimesheets({ periodStart: day }, orgId);
+      return page.viewerIsTimekeepingAdmin || page.rows.length > 0;
+    } catch (error) {
+      return rejectWithValue(messageOf(error, "Failed to load review access"));
     }
   },
 );

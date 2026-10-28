@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Clock, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
@@ -15,9 +15,10 @@ import {
   fetchTaskWorklogs,
   fetchTimePolicy,
 } from "@/features/projects/store/timeThunks";
+import { TASK_WORKLOG_PAGE_SIZE } from "@/features/projects/api/timeApi";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 import { endOf, wallTimeOf } from "@/features/projects/utils/timeClock";
-import { LogTimeModal } from "./LogTimeModal";
+import { LogTimeModal } from "@/features/projects/components/time/LogTimeModal";
 
 /** "09:30 to 10:15" when the entry sits on the day's timeline. */
 function clockOf(entry: Worklog): string | null {
@@ -35,9 +36,22 @@ const SOURCE_LABEL: Record<Worklog["source"], string | null> = {
 };
 
 export function WorklogSection({ task }: { task: Task }) {
+  return <TaskWorklogs key={task.id} task={task} />;
+}
+
+function TaskWorklogs({ task }: { task: Task }) {
   const dispatch = useAppDispatch();
   const selectWorklogs = useMemo(() => selectWorklogsForTask(task.id), [task.id]);
   const worklogs = useAppSelector(selectWorklogs);
+  const nextPageToken = useAppSelector((state) => state.time.taskPageTokens[task.id] ?? "");
+  const historyVersion = useAppSelector((state) => state.time.taskHistoryVersions[task.id] ?? 0);
+  const loadedVersion = useAppSelector((state) => state.time.taskLoadedVersions[task.id] ?? 0);
+  const historyDirty = historyVersion !== loadedVersion;
+  const writesPending = useAppSelector(
+    (state) => state.time.saving || state.time.timerBusy || state.time.rangeSaving,
+  );
+  const attemptedRefresh = useRef(-1);
+  const [page, setPage] = useState(0);
   const loading = useAppSelector((state) => state.time.loadingByTask[task.id] ?? false);
   const policy = useAppSelector(selectTimePolicy);
   const userId = useAppSelector((state) => state.auth.user?.id);
@@ -63,12 +77,48 @@ export function WorklogSection({ task }: { task: Task }) {
   }, [dispatch, task.id]);
 
   useEffect(() => {
+    if (
+      !historyDirty ||
+      writesPending ||
+      loading ||
+      editor ||
+      pendingDelete ||
+      attemptedRefresh.current === historyVersion
+    )
+      return;
+    attemptedRefresh.current = historyVersion;
+    void dispatch(fetchTaskWorklogs(task.id)).then((result) => {
+      if (fetchTaskWorklogs.fulfilled.match(result)) setPage(0);
+    });
+  }, [
+    dispatch,
+    task.id,
+    historyDirty,
+    historyVersion,
+    writesPending,
+    loading,
+    editor,
+    pendingDelete,
+  ]);
+
+  useEffect(() => {
     if (!policy) void dispatch(fetchTimePolicy());
   }, [dispatch, policy]);
 
   if (policy && !policy.enabled) return null;
 
-  const total = worklogs.reduce((sum, entry) => sum + entry.durationMinutes, 0);
+  const total = task.timeSpentMinutes ?? 0;
+  const lastPage = Math.max(0, Math.ceil(worklogs.length / TASK_WORKLOG_PAGE_SIZE) - 1);
+  const shownPage = Math.min(page, lastPage);
+  const shown = worklogs.slice(
+    shownPage * TASK_WORKLOG_PAGE_SIZE,
+    (shownPage + 1) * TASK_WORKLOG_PAGE_SIZE,
+  );
+  const loadMore = async () => {
+    const result = await dispatch(fetchTaskWorklogs({ taskId: task.id, pageToken: nextPageToken }));
+    if (fetchTaskWorklogs.fulfilled.match(result))
+      setPage(result.payload.replace ? 0 : shownPage + 1);
+  };
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
@@ -83,7 +133,7 @@ export function WorklogSection({ task }: { task: Task }) {
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Clock size={12} />
-          Time entries ({worklogs.length})
+          Time entries
           {total > 0 && (
             <span className="text-foreground font-semibold">{formatMinutes(total)}</span>
           )}
@@ -106,7 +156,7 @@ export function WorklogSection({ task }: { task: Task }) {
         </p>
       ) : (
         <ul className="space-y-1.5">
-          {worklogs.map((entry) => {
+          {shown.map((entry) => {
             const own = entry.userId === userId || entry.createdByUserId === userId;
             const sourceLabel = SOURCE_LABEL[entry.source];
             return (
@@ -164,6 +214,39 @@ export function WorklogSection({ task }: { task: Task }) {
             );
           })}
         </ul>
+      )}
+
+      {(lastPage > 0 || nextPageToken || historyDirty) && (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <Button
+            variant="ghost"
+            size="xs"
+            disabled={shownPage === 0 || loading}
+            onClick={() => setPage(shownPage - 1)}
+          >
+            Newer entries
+          </Button>
+          <span className="text-xs text-muted-foreground">Page {shownPage + 1}</span>
+          {shownPage < lastPage && !historyDirty ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              disabled={loading}
+              onClick={() => setPage(shownPage + 1)}
+            >
+              Older entries
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="xs"
+              disabled={(!nextPageToken && !historyDirty) || loading || writesPending}
+              onClick={() => void loadMore()}
+            >
+              {loading ? "Loading" : historyDirty ? "Refresh entries" : "Load more"}
+            </Button>
+          )}
+        </div>
       )}
 
       {editor && (

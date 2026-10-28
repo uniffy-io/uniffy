@@ -22,7 +22,7 @@ export function ReviewTimePage() {
           isZenMode ? "h-dvh" : "h-[calc(100dvh-3rem)]",
         )}
       >
-        <ReviewWeek key={userId} userId={userId} initialDay={day} />
+        <ReviewWeek key={`${userId}:${day}`} userId={userId} initialDay={day} />
       </div>
     </>
   );

@@ -313,7 +313,6 @@ export function LogTimeModal({
   });
   const [start, setStart] = useState<string>(() => {
     if (existingStart && existingStart.day === worklog?.workDate) return existingStart.wall;
-    if (timer?.startedAt) return wallTimeOf(timer.startedAt, zone).wall;
     return initialStart ?? "";
   });
   const [description, setDescription] = useState(
@@ -419,7 +418,6 @@ export function LogTimeModal({
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSave || minutes === null || !task) return;
-    const startedAt = start ? instantOf(workDate, start, zone) : undefined;
     if (timer) {
       const stopped = await dispatch(
         stopTimer({ workDate, durationMinutes: minutes, description }),
@@ -427,6 +425,7 @@ export function LogTimeModal({
       if (stopTimer.fulfilled.match(stopped)) onClose();
       return;
     }
+    const startedAt = start ? instantOf(workDate, start, zone) : undefined;
     if (worklog) {
       const result = await dispatch(
         updateWorklog({
@@ -455,6 +454,7 @@ export function LogTimeModal({
       if (!createWorklogRange.fulfilled.match(result)) return;
       const { created, failed } = result.payload;
       if (failed) {
+        setWorkDate(failed);
         toast.warning(
           `${created} of ${days.length} days logged; stopped at ${formatDateShort(failed)}`,
         );
@@ -584,48 +584,52 @@ export function LogTimeModal({
                   data-testid="log-time-duration"
                 />
               </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">Start</label>
-                <Select
-                  value={start || undefined}
-                  onChange={setStart}
-                  options={startOptions}
-                  placeholder="--:--"
-                  searchable
-                  searchPlaceholder="09:00"
-                  ariaLabel="Start time"
-                  size="sm"
-                  triggerClassName="h-7 w-24 tabular-nums"
-                  menuMinWidth={120}
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-1">End</label>
-                <Select
-                  value={end || undefined}
-                  onChange={pickEnd}
-                  options={endOptions}
-                  placeholder="--:--"
-                  searchable
-                  searchPlaceholder="17:00"
-                  ariaLabel="End time"
-                  size="sm"
-                  triggerClassName="h-7 w-36 tabular-nums"
-                  menuMinWidth={160}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setStart("")}
-                disabled={!start}
-                aria-label="Clear the clock times"
-                title="Keep only the day"
-              >
-                <X size={14} />
-              </Button>
+              {!timer && (
+                <>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">Start</label>
+                    <Select
+                      value={start || undefined}
+                      onChange={setStart}
+                      options={startOptions}
+                      placeholder="--:--"
+                      searchable
+                      searchPlaceholder="09:00"
+                      ariaLabel="Start time"
+                      size="sm"
+                      triggerClassName="h-7 w-24 tabular-nums"
+                      menuMinWidth={120}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-muted-foreground mb-1">End</label>
+                    <Select
+                      value={end || undefined}
+                      onChange={pickEnd}
+                      options={endOptions}
+                      placeholder="--:--"
+                      searchable
+                      searchPlaceholder="17:00"
+                      ariaLabel="End time"
+                      size="sm"
+                      triggerClassName="h-7 w-36 tabular-nums"
+                      menuMinWidth={160}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setStart("")}
+                    disabled={!start}
+                    aria-label="Clear the clock times"
+                    title="Keep only the day"
+                  >
+                    <X size={14} />
+                  </Button>
+                </>
+              )}
             </div>
             {tooLong ? (
               <p
@@ -638,8 +642,10 @@ export function LogTimeModal({
               </p>
             ) : (
               <p className="-mt-2 text-xs text-subtle-foreground">
-                Accepts 2h 30m, 1.5h or a plain number of minutes. Times are optional and place the
-                entry on the calendar.
+                Accepts 2h 30m, 1.5h or a plain number of minutes.{" "}
+                {timer
+                  ? "The entry keeps the timer's original start time."
+                  : "Times are optional and place the entry on the calendar."}
               </p>
             )}
             <div>
@@ -705,7 +711,11 @@ export function LogTimeModal({
         onClose={() => setConfirmDelete(false)}
         onConfirm={remove}
         title="Delete time entry"
-        message={`Remove ${formatMinutes(worklog?.durationMinutes ?? 0)} logged on ${formatDateShort(worklog?.workDate ?? "")}?`}
+        message={
+          worklog
+            ? `Remove ${formatMinutes(worklog.durationMinutes)} logged on ${formatDateShort(worklog.workDate)}?`
+            : ""
+        }
         confirmLabel="Delete"
         loading={saving}
       />

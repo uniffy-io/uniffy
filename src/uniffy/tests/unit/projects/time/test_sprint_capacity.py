@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy
 from uniffy.domains.projects.time.sprint_capacity import SprintCapacityReader, split_estimate
 from uniffy.domains.scheduling.calendar.availability import BusyInterval
@@ -149,3 +149,20 @@ async def test_an_unknown_sprint_and_a_denied_project_both_refuse() -> None:
     with patches[0], patches[1], patches[2], pytest.raises(PermissionDeniedError):
         await SprintCapacityReader(session).get(ACTOR, ORG, SPRINT)
     assert not any("from projects_tasks" in sql for sql in session.statements)
+
+
+@pytest.mark.parametrize(
+    "start,end",
+    [
+        ("2026-01-01", "2126-01-01"),
+        ("0001-01-01", "0001-01-07"),
+        ("9999-12-25", "9999-12-31"),
+    ],
+)
+async def test_capacity_rejects_invalid_ranges_before_expansion(start: str, end: str) -> None:
+    busy = AsyncMock(return_value={})
+    session, _, patches = _env(_sprint(start, end), [], busy=busy)
+    with patches[0], patches[1], patches[2], pytest.raises(ValidationError):
+        await SprintCapacityReader(session).get(ACTOR, ORG, SPRINT)
+    busy.assert_not_awaited()
+    assert len(session.statements) == 1

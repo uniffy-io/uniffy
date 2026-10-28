@@ -1,14 +1,8 @@
-"""Gates for time records.
-
-Worklogs, timers and timesheets are member-record data, like people profiles:
-they carry no access mode and never enter the content path. A task's entries are
-readable by whoever can view the task; a person's entries across tasks are readable
-by that person, their reviewers (manager from the people profile, lead of any TEAM
-they belong to) and timekeeping admins (org admins and PROJECTS domain admins).
-"""
+"""Authorization for task-attached time records."""
 
 from __future__ import annotations
 
+from itertools import batched
 from uuid import UUID
 
 from loguru import logger
@@ -17,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.domain_admin import is_domain_admin
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.errors import MembershipRequiredError, PermissionDeniedError, ValidationError
 from uniffy.core.models.login.group import Group, GroupKind
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
@@ -56,7 +50,7 @@ class TimeAccess:
 
     async def require_active_actor(self, actor_id: UUID, organization_id: UUID) -> None:
         if await get_active_membership(self.session, actor_id, organization_id) is None:
-            raise PermissionDeniedError("act in this organization")
+            raise MembershipRequiredError("act in this organization")
 
     async def reviewers_of(self, organization_id: UUID, subject_id: UUID) -> set[UUID]:
         """Manager plus every TEAM lead, minus the person, active members only; one query."""
@@ -119,6 +113,54 @@ class TimeAccess:
         if reviewers:
             return reviewers
         return (await self.timekeeping_admins(organization_id)) - {subject_id}
+
+    async def batch_review_recipients(
+        self, organization_id: UUID, subject_ids: list[UUID]
+    ) -> dict[UUID, set[UUID]]:
+        recipients: dict[UUID, set[UUID]] = {subject_id: set() for subject_id in subject_ids}
+        for chunk in batched(sorted(recipients), 500, strict=False):
+            managers = select(
+                PeopleProfile.user_id.label("subject_id"),
+                PeopleProfile.manager_user_id.label("reviewer_id"),
+            ).where(
+                PeopleProfile.organization_id == organization_id,
+                PeopleProfile.user_id.in_(chunk),
+                PeopleProfile.manager_user_id.is_not(None),
+            )
+            leads = (
+                select(
+                    GroupMember.user_id.label("subject_id"),
+                    Group.lead_user_id.label("reviewer_id"),
+                )
+                .join(GroupMember, GroupMember.group_id == Group.id)
+                .where(
+                    Group.organization_id == organization_id,
+                    Group.kind == GroupKind.TEAM,
+                    Group.lead_user_id.is_not(None),
+                    GroupMember.user_id.in_(chunk),
+                    GroupMember.is_active.is_(True),
+                )
+            )
+            candidates = managers.union(leads).subquery()
+            result = await self.session.execute(
+                select(candidates.c.subject_id, candidates.c.reviewer_id)
+                .join(OrganizationMember, OrganizationMember.user_id == candidates.c.reviewer_id)
+                .join(User, User.id == candidates.c.reviewer_id)
+                .where(
+                    OrganizationMember.organization_id == organization_id,
+                    OrganizationMember.is_active.is_(True),
+                    User.is_active.is_(True),
+                    candidates.c.subject_id != candidates.c.reviewer_id,
+                )
+            )
+            for subject_id, reviewer_id in result.all():
+                recipients[subject_id].add(reviewer_id)
+        if any(not reviewers for reviewers in recipients.values()):
+            admins = await self.timekeeping_admins(organization_id)
+            for subject_id, reviewers in recipients.items():
+                if not reviewers:
+                    reviewers.update(admins - {subject_id})
+        return recipients
 
     async def ordered_review_recipients(
         self, organization_id: UUID, subject_id: UUID

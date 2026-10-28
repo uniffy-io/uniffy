@@ -50,7 +50,7 @@ import {
 } from "@/features/projects/store/timeThunks";
 import { addDays, dayStatus, offLabel } from "@/features/projects/utils/timeWeek";
 import { graceActive } from "@/features/projects/utils/timesheet";
-import { StatusPill } from "./PeriodBanner";
+import { StatusPill } from "@/features/projects/components/time/PeriodBanner";
 
 type StatusFilter = "all" | TimesheetStatus;
 
@@ -133,7 +133,12 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
   const navigate = useNavigate();
   const review = useAppSelector(selectReview);
   const groups = useAppSelector((state) => state.admin.groups) as SerializedGroupInfo[];
-  const [anchor, setAnchor] = useState(initialDay);
+  const anchor = initialDay;
+  const setAnchor = (day: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("period", day);
+    setSearchParams(params, { replace: true });
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const today = effectiveDayKey(new Date());
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -191,15 +196,6 @@ export function ApprovalsInbox({ initialDay, headerExtra }: ApprovalsInboxProps)
   );
 
   const period = review.period;
-  // The period in view lives in the address, so leaving for someone's week and coming back
-  // (by the back link or the browser) lands on the same period.
-  const periodStart = period?.startDate;
-  useEffect(() => {
-    if (!periodStart || searchParams.get("period") === periodStart) return;
-    const params = new URLSearchParams(searchParams);
-    params.set("period", periodStart);
-    setSearchParams(params, { replace: true });
-  }, [periodStart, searchParams, setSearchParams]);
   const isCurrentPeriod = Boolean(period && period.startDate <= today && today <= period.endDate);
   const periodClosed = period?.status === "closed";
   const rangeLabel = period

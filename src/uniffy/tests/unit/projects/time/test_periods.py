@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from uniffy.core.errors import ValidationError
 from uniffy.domains.projects.time.periods import (
     period_for,
     period_lock_date,
@@ -106,3 +107,22 @@ def test_lock_due_and_previous_period_follow_the_delay() -> None:
     assert period_is_lock_due(date(2026, 10, 18), date(2026, 10, 20), policy) is False
     assert period_is_lock_due(date(2026, 10, 18), date(2026, 10, 21), policy) is True
     assert previous_period(date(2026, 10, 12), policy) == (date(2026, 10, 5), date(2026, 10, 11))
+
+
+@pytest.mark.parametrize(
+    "start,end",
+    [
+        (date(2026, 1, 1), date(2126, 1, 1)),
+        (date.min, date.min),
+        (date.max, date.max),
+        (date(2026, 2, 1), date(2026, 1, 1)),
+    ],
+)
+def test_period_ranges_reject_unbounded_and_calendar_edge_dates(start: date, end: date) -> None:
+    with pytest.raises(ValidationError):
+        periods_between(start, end, _weekly())
+
+
+def test_period_ranges_accept_one_leap_year() -> None:
+    periods = periods_between(date(2028, 1, 1), date(2028, 12, 31), _weekly())
+    assert len(periods) == 53

@@ -12,18 +12,21 @@ import {
   type Timesheet,
   type WeekEvent,
   type Worklog,
-} from "../types/time";
+} from "@/features/projects/types/time";
 import {
   approveTimesheet,
   closePeriod,
   createInternalTimeProject,
   createWorklog,
+  createWorklogRange,
   deleteWorklog,
   fetchActiveTimer,
   fetchPersonTimesheet,
   fetchPersonWorklogs,
   fetchProjectReport,
   fetchReviewTimesheets,
+  fetchReviewEligibility,
+  saveTimePolicy,
   fetchSprintCapacity,
   fetchTaskWorklogs,
   fetchTimePolicy,
@@ -40,7 +43,7 @@ import {
   stopTimer,
   submitTimesheet,
   updateWorklog,
-} from "./timeThunks";
+} from "@/features/projects/store/timeThunks";
 
 export interface ReviewState {
   rows: ReviewRow[];
@@ -55,6 +58,13 @@ export interface ReviewState {
 export interface TimeState {
   worklogsByTask: Record<string, Worklog[]>;
   loadingByTask: Record<string, boolean>;
+  taskPageTokens: Record<string, string>;
+  taskRequests: Record<string, string>;
+  taskHistoryVersions: Record<string, number>;
+  taskLoadedVersions: Record<string, number>;
+  taskRequestVersions: Record<string, number>;
+  rangeSaving: boolean;
+  reviewEligibility: { eligible: boolean; loaded: boolean; loading: boolean };
   policy: TimePolicy | null;
   saving: boolean;
   /** The person's one timer in this organization; null once the first fetch found none. */
@@ -86,6 +96,13 @@ export interface TimeState {
 export const initialTimeState: TimeState = {
   worklogsByTask: {},
   loadingByTask: {},
+  taskPageTokens: {},
+  taskRequests: {},
+  taskHistoryVersions: {},
+  taskLoadedVersions: {},
+  taskRequestVersions: {},
+  rangeSaving: false,
+  reviewEligibility: { eligible: false, loaded: false, loading: false },
   policy: null,
   saving: false,
   activeTimer: null,
@@ -155,7 +172,15 @@ function dropFromWeeks(state: TimeState, worklogId: string): void {
   }
 }
 
+function invalidateTaskHistory(state: TimeState, taskId: string): void {
+  // Offset cursors shift after inserts, removals and date changes.
+  if (state.taskRequests[taskId]) {
+    state.taskHistoryVersions[taskId] = (state.taskHistoryVersions[taskId] ?? 0) + 1;
+  }
+}
+
 function prependEntry(state: TimeState, worklog: Worklog): void {
+  invalidateTaskHistory(state, worklog.taskId);
   const current = state.worklogsByTask[worklog.taskId];
   if (current) state.worklogsByTask[worklog.taskId] = sortEntries([worklog, ...current]);
 }
@@ -169,22 +194,44 @@ function sortEntries(entries: Worklog[]): Worklog[] {
 export const timeSlice = createSlice({
   name: "time",
   initialState: initialTimeState,
-  reducers: {
-    timePolicyLoaded(state, action: { payload: TimePolicy }) {
-      state.policy = action.payload;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchTaskWorklogs.pending, (state, action) => {
-        state.loadingByTask[action.meta.arg] = true;
+        const taskId =
+          typeof action.meta.arg === "string" ? action.meta.arg : action.meta.arg.taskId;
+        state.loadingByTask[taskId] = true;
+        state.taskRequests[taskId] = action.meta.requestId;
+        state.taskRequestVersions[taskId] = state.taskHistoryVersions[taskId] ?? 0;
       })
       .addCase(fetchTaskWorklogs.fulfilled, (state, action) => {
-        state.loadingByTask[action.payload.taskId] = false;
-        state.worklogsByTask[action.payload.taskId] = sortEntries(action.payload.worklogs);
+        const { taskId, worklogs, nextPageToken = "" } = action.payload;
+        if (state.taskRequests[taskId] && state.taskRequests[taskId] !== action.meta.requestId)
+          return;
+        state.loadingByTask[taskId] = false;
+        if ((state.taskRequestVersions[taskId] ?? 0) !== (state.taskHistoryVersions[taskId] ?? 0))
+          return;
+        state.taskLoadedVersions[taskId] = state.taskHistoryVersions[taskId] ?? 0;
+        const replace = action.payload.replace ?? typeof action.meta.arg === "string";
+        const previous = replace ? [] : (state.worklogsByTask[taskId] ?? []);
+        const byId = new Map([...previous, ...worklogs].map((entry) => [entry.id, entry]));
+        state.worklogsByTask[taskId] = sortEntries([...byId.values()]);
+        state.taskPageTokens[taskId] = nextPageToken;
       })
       .addCase(fetchTaskWorklogs.rejected, (state, action) => {
-        state.loadingByTask[action.meta.arg] = false;
+        const taskId =
+          typeof action.meta.arg === "string" ? action.meta.arg : action.meta.arg.taskId;
+        if (state.taskRequests[taskId] !== action.meta.requestId) return;
+        state.loadingByTask[taskId] = false;
+      })
+      .addCase(createWorklogRange.pending, (state) => {
+        state.rangeSaving = true;
+      })
+      .addCase(createWorklogRange.fulfilled, (state) => {
+        state.rangeSaving = false;
+      })
+      .addCase(createWorklogRange.rejected, (state) => {
+        state.rangeSaving = false;
       })
       .addCase(createWorklog.pending, (state) => {
         state.saving = true;
@@ -192,6 +239,7 @@ export const timeSlice = createSlice({
       .addCase(createWorklog.fulfilled, (state, action) => {
         state.saving = false;
         const { worklog } = action.payload;
+        invalidateTaskHistory(state, worklog.taskId);
         const current = state.worklogsByTask[worklog.taskId] ?? [];
         state.worklogsByTask[worklog.taskId] = sortEntries([worklog, ...current]);
         // An entry logged for someone else is theirs, not part of this person's week.
@@ -206,6 +254,7 @@ export const timeSlice = createSlice({
       .addCase(updateWorklog.fulfilled, (state, action) => {
         state.saving = false;
         const { worklog } = action.payload;
+        invalidateTaskHistory(state, worklog.taskId);
         const current = state.worklogsByTask[worklog.taskId] ?? [];
         state.worklogsByTask[worklog.taskId] = sortEntries(
           current.map((entry) => (entry.id === worklog.id ? worklog : entry)),
@@ -221,6 +270,7 @@ export const timeSlice = createSlice({
       })
       .addCase(deleteWorklog.fulfilled, (state, action) => {
         const { taskId, worklogId } = action.payload;
+        invalidateTaskHistory(state, taskId);
         const current = state.worklogsByTask[taskId];
         if (current) {
           state.worklogsByTask[taskId] = current.filter((entry) => entry.id !== worklogId);
@@ -229,6 +279,19 @@ export const timeSlice = createSlice({
       })
       .addCase(fetchTimePolicy.fulfilled, (state, action) => {
         state.policy = action.payload;
+      })
+      .addCase(saveTimePolicy.fulfilled, (state, action) => {
+        state.policy = action.payload;
+      })
+      .addCase(fetchReviewEligibility.pending, (state) => {
+        state.reviewEligibility.loading = true;
+      })
+      .addCase(fetchReviewEligibility.fulfilled, (state, action) => {
+        state.reviewEligibility = { eligible: action.payload, loaded: true, loading: false };
+      })
+      .addCase(fetchReviewEligibility.rejected, (state) => {
+        state.reviewEligibility.loading = false;
+        state.reviewEligibility.loaded = true;
       })
       .addCase(fetchActiveTimer.fulfilled, (state, action) => {
         state.activeTimer = action.payload;
@@ -383,7 +446,6 @@ export const timeSlice = createSlice({
 });
 
 export const timeReducer = timeSlice.reducer;
-export const { timePolicyLoaded } = timeSlice.actions;
 
 const EMPTY: Worklog[] = [];
 
@@ -397,7 +459,7 @@ export const selectWorklogsLoading = (taskId: string) => (state: RootState) =>
 
 export const selectTimePolicy = (state: RootState) => state.time.policy;
 
-export const selectTimeSaving = (state: RootState) => state.time.saving;
+export const selectTimeSaving = (state: RootState) => state.time.saving || state.time.rangeSaving;
 
 export const selectWeekWorklogs = (key: string) =>
   createSelector([selectTimeState], (state) => state.weeks[key] ?? EMPTY);
@@ -439,6 +501,8 @@ export const selectSheetsTouching = (from: string, to: string) =>
   });
 
 export const selectSheetBusy = (state: RootState) => state.time.sheetBusy;
+
+export const selectReviewEligibility = (state: RootState) => state.time.reviewEligibility;
 
 export const selectReview = (state: RootState) => state.time.review;
 

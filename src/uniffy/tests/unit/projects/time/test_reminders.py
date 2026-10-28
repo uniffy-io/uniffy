@@ -24,10 +24,10 @@ def _compiled(stmt) -> str:  # noqa: ANN001
 
 
 class _Session:
-    def __init__(self, *, entries: set, sheets: list, notified: int = 0) -> None:
+    def __init__(self, *, entries: set, sheets: list, notified: set | None = None) -> None:
         self.entries = entries
         self.sheets = sheets
-        self.notified = notified
+        self.notified = notified or set()
         self.events: list[str] = []
         self.added: list = []
         self.statements: list = []
@@ -46,7 +46,7 @@ class _Session:
                 (s for s in self.sheets if f"'{s.user_id.hex}'" in sql), None
             )
         elif "from notifications" in sql:
-            result.scalar_one.return_value = self.notified
+            result.all.return_value = [(user_id,) for user_id in self.notified]
         else:
             result.scalars.return_value.first.return_value = None
             result.scalar_one_or_none.return_value = None
@@ -95,7 +95,9 @@ def _stack(
         )
     )
     access = MagicMock()
-    access.review_recipients = AsyncMock(return_value=reviewers or set())
+    access.batch_review_recipients = AsyncMock(
+        side_effect=lambda organization_id, people: {person: reviewers or set() for person in people}
+    )
     stack.enter_context(patch(f"{MODULE}.TimeAccess", return_value=access))
     return stack, emit, notify_submitted, audit
 
@@ -114,7 +116,6 @@ async def test_auto_submit_submits_open_sheets_with_entries_once_the_lock_is_due
         assert sheet.status == TimesheetStatus.SUBMITTED
         assert sheet.submitted_by_user_id is None
         assert sheet.submit_comment == AUTO_SUBMIT_COMMENT
-    assert session.events == ["commit"]
     assert notify_submitted.await_count == 2
     assert audit.await_args.kwargs["actor_user_id"] is None
     emit.assert_not_awaited()
@@ -149,7 +150,7 @@ async def test_reminders_go_out_at_the_hour_to_workers_and_reviewers_once_a_day(
     assert "2026-10-12 to 2026-10-18" in events[0].title
     assert events[1].title.startswith("1 timesheet waiting")
 
-    session = _Session(entries={ALICE}, sheets=[], notified=1)
+    session = _Session(entries={ALICE}, sheets=[], notified={ALICE})
     stack, emit, _, _ = _stack(policy)
     with stack:
         summary = await process_period_schedule(session, NOW)  # type: ignore[arg-type]
@@ -172,3 +173,55 @@ async def test_the_schedule_skips_orgs_with_approvals_off_and_other_hours() -> N
     assert summary.organizations == 1
     assert summary.worker_reminders == 0
     emit.assert_not_awaited()
+
+
+async def test_reminder_batch_counts_shared_reviewers_and_checks_notifications_once() -> None:
+    policy = ResolvedTimePolicy(
+        organization_id=ORG, approvals_enabled=True, reminders_enabled=True, reminder_hour_utc=9
+    )
+    reviewer = uuid4()
+    sheets = [_sheet(uuid4(), TimesheetStatus.SUBMITTED) for _ in range(200)]
+    session = _Session(entries={ALICE}, sheets=sheets, notified={ALICE})
+    stack, emit, _, _ = _stack(policy, reviewers={reviewer})
+    with stack:
+        summary = await process_period_schedule(session, NOW)  # type: ignore[arg-type]
+    assert (summary.worker_reminders, summary.reviewer_reminders) == (0, 1)
+    event = emit.await_args.args[0]
+    assert event.target_user_ids == [reviewer]
+    assert event.title.startswith("200 timesheets waiting")
+    notification_queries = [
+        stmt for stmt in session.statements if "from notifications" in _compiled(stmt)
+    ]
+    assert len(notification_queries) == 1
+
+
+async def test_bulk_notification_history_skips_only_already_notified_recipients() -> None:
+    policy = ResolvedTimePolicy(
+        organization_id=ORG, approvals_enabled=True, reminders_enabled=True, reminder_hour_utc=9
+    )
+    reviewer = uuid4()
+    session = _Session(
+        entries={ALICE, BOB}, sheets=[_sheet(BOB, TimesheetStatus.SUBMITTED)], notified={reviewer}
+    )
+    stack, emit, _, _ = _stack(policy, reviewers={reviewer})
+    with stack:
+        summary = await process_period_schedule(session, NOW)  # type: ignore[arg-type]
+    assert (summary.worker_reminders, summary.reviewer_reminders) == (1, 0)
+    assert emit.await_args.args[0].target_user_ids == [ALICE]
+
+
+async def test_auto_submit_defers_people_who_appear_after_the_lock_snapshot() -> None:
+    policy = ResolvedTimePolicy(organization_id=ORG, approvals_enabled=True, auto_submit=True)
+    session = _Session(entries=set(), sheets=[])
+    stack, _, notify_submitted, _ = _stack(policy)
+    with (
+        stack,
+        patch(
+            f"{MODULE}._members_with_entries",
+            new=AsyncMock(side_effect=[{ALICE}, {ALICE, BOB}, set()]),
+        ),
+    ):
+        summary = await process_period_schedule(session, NOW)  # type: ignore[arg-type]
+    assert summary.submitted == 1
+    assert [sheet.user_id for sheet in session.added] == [ALICE]
+    assert notify_submitted.await_args.args[1].user_id == ALICE

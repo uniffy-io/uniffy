@@ -18,6 +18,7 @@ from uniffy.domains.projects.time.access import TimeAccess
 from uniffy.domains.projects.time.locks import period_row
 from uniffy.domains.projects.time.periods import period_for, periods_between
 from uniffy.domains.projects.time.policy import load_time_policy
+from uniffy.domains.projects.time.transactions import lock_time_organization
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,7 @@ class PeriodOperations:
 
     async def close(self, actor_id: UUID, organization_id: UUID, day: date) -> PeriodView:
         await self.access.require_timekeeping_admin(actor_id, organization_id)
+        await lock_time_organization(self.session, organization_id, exclusive=True)
         policy = await load_time_policy(self.session, organization_id)
         start, end = period_for(day, policy)
         now = datetime.now(UTC)
@@ -56,6 +58,7 @@ class PeriodOperations:
 
     async def reopen(self, actor_id: UUID, organization_id: UUID, day: date) -> PeriodView:
         await self.access.require_timekeeping_admin(actor_id, organization_id)
+        await lock_time_organization(self.session, organization_id, exclusive=True)
         policy = await load_time_policy(self.session, organization_id)
         start, end = period_for(day, policy)
         row = await period_row(self.session, organization_id, start)

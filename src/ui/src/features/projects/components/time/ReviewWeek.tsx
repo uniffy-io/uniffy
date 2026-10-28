@@ -53,8 +53,8 @@ import {
   type DayStatus,
 } from "@/features/projects/utils/timeWeek";
 import { graceActive, periodLabel } from "@/features/projects/utils/timesheet";
-import { StatusPill } from "./PeriodBanner";
-import { useTaskLabels } from "./useTaskLabels";
+import { StatusPill } from "@/features/projects/components/time/PeriodBanner";
+import { useTaskLabels } from "@/features/projects/components/time/useTaskLabels";
 
 const STATUS_COLOR: Record<DayStatus, string | undefined> = {
   none: undefined,
@@ -97,8 +97,9 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   const selectWorklogs = useMemo(() => selectPersonWeek(key), [key]);
   const worklogs = useAppSelector(selectWorklogs);
   const servedDays = useAppSelector(selectPersonWeekDays(key));
-  const [sheetStart, setSheetStart] = useState<string | null>(null);
-  const sheet = useAppSelector(selectPersonSheet(userId, sheetStart ?? ""));
+  const [loadedSheet, setLoadedSheet] = useState<{ day: string; periodStart: string } | null>(null);
+  const sheetStart = loadedSheet?.day === days[0] ? loadedSheet.periodStart : "";
+  const sheet = useAppSelector(selectPersonSheet(userId, sheetStart));
   const { subjects } = useSubjectResolver([userId]);
   const person = subjects[0];
   const [approveOpen, setApproveOpen] = useState(false);
@@ -113,9 +114,17 @@ export function ReviewWeek({ userId, initialDay }: ReviewWeekProps) {
   useEffect(() => {
     void dispatch(fetchPersonWorklogs({ userId, from: days[0], to: days[6] }));
     if (!policy?.approvalsEnabled) return;
-    void dispatch(fetchPersonTimesheet({ userId, day: days[0] })).then((result) => {
-      if (fetchPersonTimesheet.fulfilled.match(result)) setSheetStart(result.payload.periodStart);
+    let current = true;
+    const request = dispatch(fetchPersonTimesheet({ userId, day: days[0] }));
+    void request.then((result) => {
+      if (current && fetchPersonTimesheet.fulfilled.match(result)) {
+        setLoadedSheet({ day: days[0], periodStart: result.payload.periodStart });
+      }
     });
+    return () => {
+      current = false;
+      request.abort();
+    };
   }, [dispatch, userId, days, policy?.approvalsEnabled]);
 
   const rows = useMemo(() => buildWeekRows(worklogs, days, []), [worklogs, days]);

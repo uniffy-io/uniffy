@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events import NotificationEvent, emit_notification
@@ -33,6 +33,7 @@ from uniffy.domains.projects.time.policy import (
     load_time_policy,
 )
 from uniffy.domains.projects.time.timesheets import TimesheetOperations
+from uniffy.domains.projects.time.transactions import lock_time_people
 
 logger = logger.bind(component="projects.time.reminders")
 
@@ -85,26 +86,25 @@ async def _sheets_for(
     session: AsyncSession, organization_id: UUID, start: date
 ) -> dict[UUID, Timesheet]:
     result = await session.execute(
-        select(Timesheet).where(
-            Timesheet.organization_id == organization_id, Timesheet.period_start == start
-        )
+        select(Timesheet)
+        .where(Timesheet.organization_id == organization_id, Timesheet.period_start == start)
+        .execution_options(populate_existing=True)
     )
     return {sheet.user_id: sheet for sheet in result.scalars().all()}
 
 
-async def _notified_today(
-    session: AsyncSession, organization_id: UUID, user_id: UUID, now: datetime
-) -> bool:
+async def _notified_today(session: AsyncSession, organization_id: UUID, now: datetime) -> set[UUID]:
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     result = await session.execute(
-        select(func.count()).where(
+        select(Notification.user_id)
+        .where(
             Notification.organization_id == organization_id,
-            Notification.user_id == user_id,
             Notification.notification_type == NotificationType.TIMESHEET_REMINDER,
             Notification.created_at >= day_start,
         )
+        .distinct()
     )
-    return int(result.scalar_one()) > 0
+    return {row[0] for row in result.all()}
 
 
 async def _auto_submit(
@@ -113,13 +113,18 @@ async def _auto_submit(
     """Submit every open sheet with entries in each ended period whose lock date has passed."""
     today = now.date()
     submitted: list[Timesheet] = []
+    first_start = period_for(today - AUTO_SUBMIT_WINDOW, policy)[0]
+    people = await _members_with_entries(session, organization_id, first_start, today)
+    await lock_time_people(session, organization_id, people)
     start, end = previous_period(period_for(today, policy)[0], policy)
     while end >= today - AUTO_SUBMIT_WINDOW:
         if period_is_lock_due(end, today, policy) and not await period_is_closed(
             session, organization_id, start
         ):
             sheets = await _sheets_for(session, organization_id, start)
-            for user_id in sorted(await _members_with_entries(session, organization_id, start, end)):
+            for user_id in sorted(
+                people & await _members_with_entries(session, organization_id, start, end)
+            ):
                 sheet = sheets.get(user_id)
                 if sheet is not None and sheet.status != TimesheetStatus.OPEN:
                     continue
@@ -136,6 +141,7 @@ async def _auto_submit(
                 )
         start, end = previous_period(start, policy)
     if not submitted:
+        await session.commit()
         return 0
     await session.commit()
     for sheet in submitted:
@@ -156,6 +162,7 @@ async def _remind(
         session, organization_id, start - REMINDER_ACTIVITY_WINDOW, end
     )
     label = f"{start.isoformat()} to {end.isoformat()}"
+    notified = await _notified_today(session, organization_id, now)
     workers = 0
     for user_id in sorted(active):
         sheet = sheets.get(user_id)
@@ -164,7 +171,7 @@ async def _remind(
             TimesheetStatus.APPROVED,
         ):
             continue
-        if await _notified_today(session, organization_id, user_id, now):
+        if user_id in notified:
             continue
         await emit_notification(
             NotificationEvent(
@@ -185,14 +192,16 @@ async def _remind(
 
     access = TimeAccess(session)
     pending: dict[UUID, int] = {}
-    for sheet in sheets.values():
-        if sheet.status != TimesheetStatus.SUBMITTED:
-            continue
-        for reviewer_id in await access.review_recipients(organization_id, sheet.user_id):
+    submitted = [sheet for sheet in sheets.values() if sheet.status == TimesheetStatus.SUBMITTED]
+    recipients = await access.batch_review_recipients(
+        organization_id, [sheet.user_id for sheet in submitted]
+    )
+    for sheet in submitted:
+        for reviewer_id in recipients[sheet.user_id]:
             pending[reviewer_id] = pending.get(reviewer_id, 0) + 1
     reviewers = 0
     for reviewer_id, count in sorted(pending.items()):
-        if await _notified_today(session, organization_id, reviewer_id, now):
+        if reviewer_id in notified:
             continue
         noun = "timesheet" if count == 1 else "timesheets"
         await emit_notification(
@@ -225,6 +234,7 @@ async def process_period_schedule(
         workers = reviewers = 0
         if policy.reminders_enabled and now.hour == policy.reminder_hour_utc:
             workers, reviewers = await _remind(session, organization_id, policy, now)
+        await session.commit()
         summary = PeriodJobSummary(
             organizations=summary.organizations + 1,
             submitted=summary.submitted + submitted,

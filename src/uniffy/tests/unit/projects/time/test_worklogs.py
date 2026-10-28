@@ -147,7 +147,7 @@ async def test_create_inserts_recomputes_rollup_logs_activity_then_commits_and_p
     )
     env.audit.assert_not_awaited()
     assert env.session.events == ["commit", "publish"]
-    rollup_sql = next(s for s in map(_compiled, env.session.statements) if "update" in s)
+    rollup_sql = next(s for s in map(_compiled, env.session.statements) if s.startswith("update"))
     assert "sum(projects_worklogs.duration_minutes)" in rollup_sql
     assert "nullif" in rollup_sql
     assert "projects_worklogs.is_deleted is false" in rollup_sql
@@ -451,7 +451,7 @@ async def test_cleanup_refuses_a_locked_period_before_deleting_anything() -> Non
     ):
         await cleanup.stage_delete_for_tasks(session, ORG, [TASK_ID])  # type: ignore[arg-type]
     assert "2026-10-05" in exc_info.value.message
-    assert session.statements == []
+    assert not any(_compiled(statement).startswith("delete") for statement in session.statements)
 
 
 async def test_cleanup_hard_deletes_timers_and_worklogs_without_committing() -> None:

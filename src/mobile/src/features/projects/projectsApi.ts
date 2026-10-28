@@ -87,8 +87,10 @@ export const projectsApi = {
   createWorklog: (request: MessageInitShape<typeof CreateWorklogRequestSchema>) =>
     client.createWorklog(request),
 
-  listTaskWorklogs: (request: MessageInitShape<typeof ListTaskWorklogsRequestSchema>) =>
-    client.listTaskWorklogs(request),
+  listTaskWorklogs: (
+    request: MessageInitShape<typeof ListTaskWorklogsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listTaskWorklogs(request, { signal: options?.signal }),
 
   updateWorklog: (request: MessageInitShape<typeof UpdateWorklogRequestSchema>) =>
     client.updateWorklog(request),
@@ -126,8 +128,10 @@ export const projectsApi = {
   recallTimesheet: (request: MessageInitShape<typeof RecallTimesheetRequestSchema>) =>
     client.recallTimesheet(request),
 
-  listReviewTimesheets: (request: MessageInitShape<typeof ListReviewTimesheetsRequestSchema>) =>
-    client.listReviewTimesheets(request),
+  listReviewTimesheets: (
+    request: MessageInitShape<typeof ListReviewTimesheetsRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listReviewTimesheets(request, { signal: options?.signal }),
 
   approveTimesheet: (request: MessageInitShape<typeof ApproveTimesheetRequestSchema>) =>
     client.approveTimesheet(request),

@@ -19,7 +19,7 @@ import {
   MAX_SUGGESTIONS,
 } from "@/features/projects/utils/timeSuggestions";
 import { addDays, weekRangeKey, weekdayShort } from "@/features/projects/utils/timeWeek";
-import { useTaskLabels } from "./useTaskLabels";
+import { useTaskLabels } from "@/features/projects/components/time/useTaskLabels";
 
 const RECENT_DAYS = 14;
 

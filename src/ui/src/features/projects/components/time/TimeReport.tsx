@@ -65,7 +65,6 @@ const ROW_HEIGHT = 32;
 
 interface TimeReportProps {
   projectId: string;
-  /** The pane's title bar; the report adds its filter row underneath. */
   /** The page's header bar, given the report's controls to place beside the title. */
   renderHeader: (controls: ReactNode) => ReactNode;
 }

@@ -18,11 +18,11 @@ An entry belongs to the person whose time it is. You can change and delete your 
 
 Your manager and your team leads can log time on your behalf. The entry says who wrote it, the task's activity says the same, and nothing about that grants them a way into tasks they could not open before. An organization can switch logging for others off entirely.
 
-Deleting a task removes its entries from every total. Deleting an entry is final too, so Uniffy asks before it does either.
+Moving a task to trash keeps its time entries in your personal totals and review history. Permanently deleting the task removes those entries. Deleting an individual entry removes its minutes from totals.
 
 ## The timer
 
-You run one timer at a time. Start it from a task, pause it over lunch, and stop it when you are done. The stop writes an entry on the day you started, rounded the way your organization chose.
+You run one timer at a time. Start it from a task, pause it over lunch, and stop it when you are done. Stopping writes an entry on the selected day, rounded the way your organization chose. The stop dialog lets you adjust the duration and day. Its clock time stays tied to the original timer start.
 
 Start a timer on another task and the running one stops into an entry first. Forget a timer overnight and it pauses itself once it passes the organization's limit, so a timer never books a whole weekend to a task by accident.
 

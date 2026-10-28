@@ -29,6 +29,8 @@ from uniffy.domains.projects.time.policy import (
     load_time_policy,
     require_enabled,
 )
+from uniffy.domains.projects.time.projection import visible_content_ids
+from uniffy.domains.projects.time.transactions import lock_time_people
 from uniffy.domains.projects.time.worklogs import WorklogOperations, WorklogRow
 
 logger = logger.bind(component="projects.time.timers")
@@ -64,7 +66,7 @@ def stage_pause(timer: Timer, now: datetime, reason: TimerPauseReason | None = N
 @dataclass(frozen=True)
 class TimerRow:
     timer: Timer
-    project_id: UUID
+    project_id: UUID | None
     project_slug: str
     task_title: str
     task_number: int
@@ -90,6 +92,7 @@ class TimerOperations:
     async def _get(self, organization_id: UUID, user_id: UUID) -> TimerRow | None:
         result = await self.session.execute(
             select(Timer, Task.project_id, Project.slug, Task.title, Task.number)
+            .execution_options(populate_existing=True)
             .join(Task, Task.id == Timer.task_id)
             .join(Project, Project.id == Task.project_id)
             .where(Timer.organization_id == organization_id, Timer.user_id == user_id)
@@ -98,6 +101,12 @@ class TimerOperations:
         if row is None:
             return None
         timer, project_id, project_slug, task_title, task_number = row
+        visible = await visible_content_ids(
+            self.session, user_id, organization_id, ContentType.TASK, [timer.task_id]
+        )
+        if timer.task_id not in visible:
+            project_id = None
+            project_slug, task_title, task_number = "", "", 0
         return TimerRow(
             timer=timer,
             project_id=project_id,
@@ -130,6 +139,7 @@ class TimerOperations:
         require_enabled(policy)
         await self.access.require_active_actor(actor_id, organization_id)
         task = await self.access.require_task_view(actor_id, organization_id, task_id)
+        await lock_time_people(self.session, organization_id, [actor_id])
         replaced: StopResult | None = None
         existing = await self._get(organization_id, actor_id)
         if existing is not None:
@@ -167,6 +177,7 @@ class TimerOperations:
         work_date: date,
     ) -> StopResult | None:
         """Stop the person's timer into a worklog without committing; None when nothing runs."""
+        await lock_time_people(self.session, organization_id, [actor_id])
         row = await self._get(organization_id, actor_id)
         if row is None:
             return None
@@ -174,6 +185,7 @@ class TimerOperations:
 
     async def pause(self, actor_id: UUID, organization_id: UUID) -> TimerRow:
         await self.access.require_active_actor(actor_id, organization_id)
+        await lock_time_people(self.session, organization_id, [actor_id])
         row = await self._require(organization_id, actor_id)
         if row.timer.started_at is None:
             raise ValidationError("timer", "the timer is already paused")
@@ -186,6 +198,7 @@ class TimerOperations:
 
     async def resume(self, actor_id: UUID, organization_id: UUID) -> TimerRow:
         await self.access.require_active_actor(actor_id, organization_id)
+        await lock_time_people(self.session, organization_id, [actor_id])
         row = await self._require(organization_id, actor_id)
         timer = row.timer
         if timer.started_at is not None:
@@ -213,6 +226,7 @@ class TimerOperations:
         """Writes a timer-sourced worklog unless discarded; a discard works with tracking off."""
         policy = await load_time_policy(self.session, organization_id)
         await self.access.require_active_actor(actor_id, organization_id)
+        await lock_time_people(self.session, organization_id, [actor_id])
         row = await self._require(organization_id, actor_id)
         result = await self._stage_stop(
             row,
@@ -272,24 +286,40 @@ class TimerOperations:
         await self.session.delete(timer)
         await self.session.flush()
         if rollup is None:
-            current = await self.session.execute(
-                select(Task.time_spent_minutes).where(Task.id == task_id)
+            visible = await visible_content_ids(
+                self.session, actor_id, organization_id, ContentType.TASK, [task_id]
             )
-            rollup = current.scalar_one() or 0
+            rollup = 0
+            if task_id in visible:
+                current = await self.session.execute(
+                    select(Task.time_spent_minutes).where(Task.id == task_id)
+                )
+                rollup = current.scalar_one() or 0
         return StopResult(task_id=task_id, worklog=worklog, task_time_spent_minutes=rollup)
 
 
 async def pause_timers_past_limit(session: AsyncSession, now: datetime | None = None) -> int:
     """Pause every running timer past its organization's limit once and tell its owner."""
     now = now or datetime.now(UTC)
-    result = await session.execute(
-        select(Timer, Task.title)
-        .join(Task, Task.id == Timer.task_id)
-        .where(Timer.started_at.is_not(None), Timer.pause_reason.is_(None))
+    candidates = await session.execute(
+        select(Timer).where(Timer.started_at.is_not(None), Timer.pause_reason.is_(None))
     )
     policies: dict[UUID, ResolvedTimePolicy] = {}
-    paused: list[tuple[Timer, str, int]] = []
-    for timer, task_title in result.all():
+    paused: list[tuple[Timer, int]] = []
+    timers = candidates.scalars().all()
+    people: dict[UUID, set[UUID]] = {}
+    for timer in timers:
+        people.setdefault(timer.organization_id, set()).add(timer.user_id)
+    for organization_id in sorted(people):
+        await lock_time_people(session, organization_id, people[organization_id])
+    if not timers:
+        return 0
+    result = await session.execute(
+        select(Timer)
+        .execution_options(populate_existing=True)
+        .where(Timer.id.in_([timer.id for timer in timers]))
+    )
+    for timer in result.scalars().all():
         if timer.started_at is None or timer.pause_reason is not None:
             continue
         policy = policies.get(timer.organization_id)
@@ -299,11 +329,11 @@ async def pause_timers_past_limit(session: AsyncSession, now: datetime | None = 
         if elapsed_seconds(timer, now) < policy.max_timer_hours * SECONDS_PER_HOUR:
             continue
         stage_pause(timer, now, TimerPauseReason.LIMIT)
-        paused.append((timer, task_title, policy.max_timer_hours))
+        paused.append((timer, policy.max_timer_hours))
     if not paused:
         return 0
     await session.commit()
-    for timer, task_title, limit_hours in paused:
+    for timer, limit_hours in paused:
         await publish_notification(
             timer.user_id,
             timer_changed_payload(timer.organization_id),
@@ -314,7 +344,7 @@ async def pause_timers_past_limit(session: AsyncSession, now: datetime | None = 
                 notification_type=NotificationType.TIMER_LIMIT_REACHED,
                 organization_id=timer.organization_id,
                 actor_id=None,
-                title=f"Timer paused after {limit_hours}h: {task_title}",
+                title=f"Timer paused after {limit_hours}h",
                 body="Stop it to log the time, or resume if you are still working.",
                 source_urn=build_content_urn(ContentType.TASK, timer.task_id),
                 target_user_ids=[timer.user_id],

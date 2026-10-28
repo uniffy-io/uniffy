@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.settings_profile import SettingsProfile
+from uniffy.domains.projects.time.periods import validate_date_range
 from uniffy.domains.projects.time.policy import ResolvedTimePolicy
 from uniffy.domains.scheduling.calendar.availability import (
     MAX_FREE_BUSY_USERS,
@@ -97,6 +98,7 @@ def required_minutes_between(
 
 
 def days_between(start: date, end: date) -> list[date]:
+    validate_date_range(start, end)
     return [start + timedelta(days=offset) for offset in range((end - start).days + 1)]
 
 
@@ -183,7 +185,7 @@ def _windows(start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
     windows: list[tuple[datetime, datetime]] = []
     cursor = start
     while cursor < end:
-        window_end = min(cursor + FREE_BUSY_WINDOW, end)
+        window_end = cursor + min(FREE_BUSY_WINDOW, end - cursor)
         windows.append((cursor, window_end))
         cursor = window_end
     return windows
@@ -197,6 +199,7 @@ async def out_of_office_intervals(
     to_date: date,
 ) -> dict[UUID, list[BusyInterval]]:
     """Out-of-office spans per active member, read in free/busy sized chunks and windows."""
+    validate_date_range(from_date, to_date)
     intervals: dict[UUID, list[BusyInterval]] = {}
     active = await _active_members(session, organization_id, user_ids)
     if not active:
@@ -258,6 +261,7 @@ async def day_requirements_for(
     policy: ResolvedTimePolicy,
 ) -> dict[UUID, list[DayRequirement]]:
     """Per person and day: the minutes the policy expects once their days off are taken out."""
+    validate_date_range(from_date, to_date)
     schedules = await schedules_for_users(session, user_ids)
     off = await off_days_for(
         session, organization_id, user_ids, from_date, to_date, policy, schedules

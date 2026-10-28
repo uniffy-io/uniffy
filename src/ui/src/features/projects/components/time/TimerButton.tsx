@@ -11,8 +11,8 @@ import {
 } from "@/features/projects/store/timeSlice";
 import { pauseTimer, resumeTimer, startTimer } from "@/features/projects/store/timeThunks";
 import { formatClock } from "@/features/projects/utils/timerElapsed";
-import { LogTimeModal } from "./LogTimeModal";
-import { useTimerElapsed } from "./useTimerElapsed";
+import { LogTimeModal } from "@/features/projects/components/time/LogTimeModal";
+import { useTimerElapsed } from "@/features/projects/components/time/useTimerElapsed";
 
 const ICON_BUTTON =
   "flex items-center gap-1 px-2 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50";

@@ -50,7 +50,9 @@ import type {
   WeekEvent,
   Worklog,
   WorklogSource,
-} from "../types/time";
+} from "@/features/projects/types/time";
+
+export const TASK_WORKLOG_PAGE_SIZE = 50;
 
 const DAY_MS = 86_400_000;
 
@@ -279,21 +281,17 @@ export const timeApi = {
     return { taskId: response.taskId, taskTimeSpentMinutes: response.taskTimeSpentMinutes };
   },
 
-  /** Every live entry of a task; the server pages at 200 and caps at 500 per call. */
-  listTaskWorklogs: async (taskId: string, organizationId: string): Promise<Worklog[]> => {
-    const worklogs: Worklog[] = [];
-    let pageToken = "";
-    do {
-      const response = await timeClient.listTaskWorklogs({
-        organizationId,
-        taskId,
-        pageSize: 500,
-        pageToken,
-      });
-      worklogs.push(...response.worklogs.map(protoWorklogToFrontend));
-      pageToken = response.nextPageToken;
-    } while (pageToken);
-    return worklogs;
+  listTaskWorklogs: async (taskId: string, organizationId: string, pageToken = "") => {
+    const response = await timeClient.listTaskWorklogs({
+      organizationId,
+      taskId,
+      pageSize: TASK_WORKLOG_PAGE_SIZE,
+      pageToken,
+    });
+    return {
+      worklogs: response.worklogs.map(protoWorklogToFrontend),
+      nextPageToken: response.nextPageToken,
+    };
   },
 
   listUserWorklogs: async (

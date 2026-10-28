@@ -108,7 +108,7 @@ export function ApprovalsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={inbox.isRefetching}
+            refreshing={inbox.isRefetching && !inbox.isFetchingNextPage}
             onRefresh={() => void inbox.refetch()}
             tintColor={T.accent}
           />
@@ -116,7 +116,11 @@ export function ApprovalsScreen() {
       >
         <View style={styles.summaryRow}>
           <Text style={[styles.summary, { color: T.textBright }]} testID="approvals-waiting">
-            {waiting > 0 ? `${waiting} waiting for review` : "Nothing waiting"}
+            {inbox.hasNextPage
+              ? `${waiting} waiting in loaded results`
+              : waiting > 0
+                ? `${waiting} waiting for review`
+                : "Nothing waiting"}
             {data?.periodClosed ? <Text style={{ color: T.textDim }}> · closed</Text> : null}
           </Text>
           {!isCurrent && (
@@ -174,7 +178,9 @@ export function ApprovalsScreen() {
         {inbox.isLoading && !data ? (
           <ActivityIndicator style={{ padding: 24 }} color={T.accent} />
         ) : rows.length === 0 ? (
-          <Text style={[styles.empty, { color: T.textDim }]}>Nobody matches.</Text>
+          <Text style={[styles.empty, { color: T.textDim }]}>
+            {inbox.isError ? "" : "Nobody matches."}
+          </Text>
         ) : (
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
             {rows.map((row, index) => {
@@ -241,6 +247,24 @@ export function ApprovalsScreen() {
               );
             })}
           </View>
+        )}
+        {inbox.isError && (
+          <Text style={[styles.empty, { color: T.textDim }]}>
+            Could not load approvals. Pull down to retry.
+          </Text>
+        )}
+        {inbox.hasNextPage && (
+          <TouchableOpacity
+            onPress={() => void inbox.fetchNextPage()}
+            disabled={inbox.isFetching}
+            accessibilityRole="button"
+            accessibilityLabel="Load more people"
+            testID="approvals-load-more"
+          >
+            <Text style={[styles.empty, { color: T.accent }]}>
+              {inbox.isFetchingNextPage ? "Loading" : "Load more people"}
+            </Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
     </View>

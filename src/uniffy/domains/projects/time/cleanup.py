@@ -11,6 +11,7 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.projects.timer import Timer
 from uniffy.core.models.projects.worklog import Worklog
 from uniffy.domains.projects.time.locks import SheetLocks
+from uniffy.domains.projects.time.transactions import lock_time_organization
 
 
 async def stage_delete_for_tasks(
@@ -19,6 +20,7 @@ async def stage_delete_for_tasks(
     """Hard-delete worklogs and timers of tasks about to be removed; refuses locked periods."""
     if not task_ids:
         return
+    await lock_time_organization(session, organization_id, exclusive=True)
     locked = await SheetLocks(session).locked_periods_for_tasks(organization_id, task_ids)
     if locked:
         start, end = locked[0]

@@ -76,9 +76,12 @@ import {
   type WeekRow,
   type WeekRowRef,
 } from "@/features/projects/utils/timeWeek";
-import { LogTimeModal, type LogTimePrefill } from "./LogTimeModal";
-import { PeriodStatus } from "./PeriodBanner";
-import { TaskRail, type RailTask } from "./TaskRail";
+import {
+  LogTimeModal,
+  type LogTimePrefill,
+} from "@/features/projects/components/time/LogTimeModal";
+import { PeriodStatus } from "@/features/projects/components/time/PeriodBanner";
+import { TaskRail, type RailTask } from "@/features/projects/components/time/TaskRail";
 import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
 import { setCurrentProject } from "@/features/projects/store/projectsSlice";
 import {
@@ -88,9 +91,9 @@ import {
   selectSelectedTaskId,
   selectTask,
 } from "@/features/projects/store/projectsUiSlice";
-import { TimeCalendar, type EntryPatch } from "./TimeCalendar";
-import { TimeList } from "./TimeList";
-import { useTaskLabels } from "./useTaskLabels";
+import { TimeCalendar, type EntryPatch } from "@/features/projects/components/time/TimeCalendar";
+import { TimeList } from "@/features/projects/components/time/TimeList";
+import { useTaskLabels } from "@/features/projects/components/time/useTaskLabels";
 
 type WeekView = "calendar" | "list" | "timesheet";
 

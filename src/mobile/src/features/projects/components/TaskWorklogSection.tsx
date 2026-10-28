@@ -51,11 +51,12 @@ export function TaskWorklogSection({ taskId, taskTitle }: { taskId: string; task
   return (
     <View style={{ gap: 10 }} testID="task-worklogs">
       <Text style={[styles.sectionLabel, { color: T.textDim }]}>
-        TIME LOGGED{entries.length > 0 ? ` - ${entries.length}` : ""}
+        TIME LOGGED
+        {entries.length > 0 ? ` - ${entries.length}${worklogs.hasNextPage ? "+" : ""}` : ""}
       </Text>
       {entries.length === 0 ? (
         <Text style={[styles.emptyHint, { color: T.textDim }]}>
-          {worklogs.isLoading ? "Loading" : "No time logged yet"}
+          {worklogs.isLoading ? "Loading" : worklogs.isError ? "" : "No time logged yet"}
         </Text>
       ) : (
         <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
@@ -112,6 +113,19 @@ export function TaskWorklogSection({ taskId, taskTitle }: { taskId: string; task
               </TouchableOpacity>
             );
           })}
+          {(expanded || entries.length <= COLLAPSED_ROWS) && worklogs.hasNextPage && (
+            <TouchableOpacity
+              style={[styles.more, { borderTopColor: T.border }]}
+              onPress={() => void worklogs.fetchNextPage()}
+              disabled={worklogs.isFetching}
+              accessibilityRole="button"
+              testID="task-worklogs-load-more"
+            >
+              <Text style={[styles.moreLabel, { color: T.accent }]}>
+                {worklogs.isFetchingNextPage ? "Loading" : "Load more entries"}
+              </Text>
+            </TouchableOpacity>
+          )}
           {entries.length > COLLAPSED_ROWS && (
             <TouchableOpacity
               style={[styles.more, { borderTopColor: T.border }]}
@@ -119,13 +133,18 @@ export function TaskWorklogSection({ taskId, taskTitle }: { taskId: string; task
               testID="task-worklogs-more"
             >
               <Text style={[styles.moreLabel, { color: T.accent }]}>
-                {expanded ? "Show fewer" : `Show all ${entries.length}`}
+                {expanded ? "Show fewer" : `Show ${entries.length} loaded entries`}
               </Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
+      {worklogs.isError && (
+        <TouchableOpacity onPress={() => void worklogs.refetch()} testID="task-worklogs-retry">
+          <Text style={[styles.emptyHint, { color: T.accent }]}>Could not load entries. Retry</Text>
+        </TouchableOpacity>
+      )}
       <LogTimeSheet
         visible={editing !== null}
         onClose={() => setEditing(null)}

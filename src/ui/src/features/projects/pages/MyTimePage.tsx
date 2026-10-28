@@ -8,8 +8,8 @@ import { cn } from "@/shared/utils/cn";
 import { effectiveDayKey } from "@/shared/utils/dateFormatting";
 import { ApprovalsInbox } from "@/features/projects/components/time/ApprovalsInbox";
 import { MyTimeWeek } from "@/features/projects/components/time/MyTimeWeek";
-import { selectReview, selectTimePolicy } from "@/features/projects/store/timeSlice";
-import { fetchReviewTimesheets } from "@/features/projects/store/timeThunks";
+import { selectReviewEligibility, selectTimePolicy } from "@/features/projects/store/timeSlice";
+import { fetchReviewEligibility } from "@/features/projects/store/timeThunks";
 
 type Tab = "week" | "approvals";
 
@@ -27,18 +27,18 @@ export function MyTimePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const policy = useAppSelector(selectTimePolicy);
-  const review = useAppSelector(selectReview);
+  const eligibility = useAppSelector(selectReviewEligibility);
   const today = effectiveDayKey(new Date());
   const approvals = policy?.approvalsEnabled ?? false;
 
   // One probe of the inbox decides whether the Approvals tab exists for this person.
   useEffect(() => {
-    if (approvals && !review.loaded && !review.loading) {
-      void dispatch(fetchReviewTimesheets({ periodStart: today }));
+    if (approvals && !eligibility.loaded && !eligibility.loading) {
+      void dispatch(fetchReviewEligibility(today));
     }
-  }, [dispatch, approvals, review.loaded, review.loading, today]);
+  }, [dispatch, approvals, eligibility.loaded, eligibility.loading, today]);
 
-  const showApprovals = approvals && (review.rows.length > 0 || review.viewerIsTimekeepingAdmin);
+  const showApprovals = approvals && eligibility.eligible;
   const tab: Tab = showApprovals && searchParams.get("tab") === "approvals" ? "approvals" : "week";
   const setTab = (next: Tab) => {
     const params = new URLSearchParams(searchParams);
@@ -68,7 +68,11 @@ export function MyTimePage() {
         {tab === "approvals" ? (
           <ApprovalsInbox initialDay={searchParams.get("period") || today} headerExtra={tabs} />
         ) : (
-          <MyTimeWeek initialDay={searchParams.get("day") || undefined} headerExtra={tabs} />
+          <MyTimeWeek
+            key={searchParams.get("day") || "today"}
+            initialDay={searchParams.get("day") || undefined}
+            headerExtra={tabs}
+          />
         )}
       </div>
     </>

@@ -113,3 +113,41 @@ async def test_timekeeping_admin_is_org_admin_or_projects_domain_admin() -> None
         org_ops.require_org_admin = AsyncMock(return_value=MagicMock())
         domain_admin.return_value = False
         assert await access.is_timekeeping_admin(STRANGER, ORG)
+
+
+async def test_batch_review_recipients_bounds_queries_and_reuses_admin_fallback() -> None:
+    execute, _ = _capturing_session([])
+    session = MagicMock(execute=execute)
+    access = TimeAccess(session)
+    access.timekeeping_admins = AsyncMock(return_value={MANAGER})
+    subjects = [uuid4() for _ in range(1001)]
+
+    recipients = await access.batch_review_recipients(ORG, [*subjects, subjects[0]])
+
+    assert recipients == {subject: {MANAGER} for subject in subjects}
+    assert execute.await_count == 3
+    access.timekeeping_admins.assert_awaited_once_with(ORG)
+
+
+async def test_batch_review_recipients_keeps_named_reviewers_and_excludes_self_from_fallback() -> (
+    None
+):
+    execute, _ = _capturing_session([(SUBJECT, LEAD)])
+    session = MagicMock(execute=execute)
+    access = TimeAccess(session)
+    access.timekeeping_admins = AsyncMock(return_value={MANAGER, STRANGER})
+
+    assert await access.batch_review_recipients(ORG, [SUBJECT, STRANGER]) == {
+        SUBJECT: {LEAD},
+        STRANGER: {MANAGER},
+    }
+
+
+async def test_empty_reviewer_batch_does_no_io() -> None:
+    session = MagicMock(execute=AsyncMock())
+    access = TimeAccess(session)
+    access.timekeeping_admins = AsyncMock()
+
+    assert await access.batch_review_recipients(ORG, []) == {}
+    session.execute.assert_not_awaited()
+    access.timekeeping_admins.assert_not_awaited()

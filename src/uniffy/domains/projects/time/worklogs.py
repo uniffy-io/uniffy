@@ -32,7 +32,9 @@ from uniffy.domains.projects.time.policy import (
     load_time_policy,
     require_enabled,
 )
+from uniffy.domains.projects.time.projection import visible_content_ids
 from uniffy.domains.projects.time.timesheets import TimesheetOperations
+from uniffy.domains.projects.time.transactions import lock_time_people
 from uniffy.domains.settings.preferences import get_user_timezone
 
 logger = logger.bind(component="projects.time.worklogs")
@@ -115,6 +117,7 @@ class WorklogOperations:
     async def _get(self, organization_id: UUID, worklog_id: UUID) -> WorklogRow:
         result = await self.session.execute(
             select(Worklog, Task.project_id)
+            .execution_options(populate_existing=True)
             .join(Task, Task.id == Worklog.task_id)
             .where(
                 Worklog.id == worklog_id,
@@ -203,6 +206,10 @@ class WorklogOperations:
 
     async def stage_task_rollup(self, task_id: UUID) -> int:
         """Set the task's time spent to the sum of its live entries; NULL at zero. Never commits."""
+        # Wait for earlier writers before the aggregate statement takes its snapshot.
+        await self.session.execute(
+            select(Task.id).where(Task.id == task_id).with_for_update(key_share=True)
+        )
         live_sum = (
             select(func.nullif(func.coalesce(func.sum(Worklog.duration_minutes), 0), 0))
             .where(Worklog.task_id == task_id, Worklog.is_deleted.is_(False))
@@ -294,6 +301,8 @@ class WorklogOperations:
         if policy is None:
             policy = await load_time_policy(self.session, organization_id)
         require_enabled(policy)
+        await self.access.require_active_actor(actor_id, organization_id)
+        await lock_time_people(self.session, organization_id, [user_id or actor_id])
         task = await self.access.require_task_view(actor_id, organization_id, task_id)
         subject_id = user_id or actor_id
         on_behalf = subject_id != actor_id
@@ -363,15 +372,16 @@ class WorklogOperations:
         policy = await load_time_policy(self.session, organization_id)
         require_enabled(policy)
         row = await self._get(organization_id, worklog_id)
+        await lock_time_people(self.session, organization_id, [row.worklog.user_id])
+        row = await self._get(organization_id, worklog_id)
         worklog = row.worklog
         on_behalf = await self._require_own_or_reviewer(actor_id, organization_id, worklog)
         new_date = work_date or worklog.work_date
         new_minutes = duration_minutes if duration_minutes is not None else worklog.duration_minutes
         if worklog.source in CAPPED_SOURCES:
             _require_duration(new_minutes)
-            if work_date is not None:
-                zone = None if on_behalf else client_zone
-                _require_window(new_date, policy, *await self._today_of(worklog.user_id, zone))
+            zone = None if on_behalf else client_zone
+            _require_window(new_date, policy, *await self._today_of(worklog.user_id, zone))
             await self._require_daily_capacity(
                 organization_id, worklog.user_id, new_date, new_minutes, exclude_id=worklog.id
             )
@@ -426,6 +436,8 @@ class WorklogOperations:
     ) -> tuple[UUID, int]:
         """Soft delete; returns the task id and its new rollup."""
         policy = await load_time_policy(self.session, organization_id)
+        worklog = (await self._get(organization_id, worklog_id)).worklog
+        await lock_time_people(self.session, organization_id, [worklog.user_id])
         worklog = (await self._get(organization_id, worklog_id)).worklog
         on_behalf = await self._require_own_or_reviewer(actor_id, organization_id, worklog)
         override = await self._require_unlocked(
@@ -564,14 +576,30 @@ class WorklogOperations:
             key.asc() if group_by is AggregateGroupBy.DAY else minutes.desc()
         )
         result = await self.session.execute(query)
+        rows = result.all()
+        visible: set[UUID] | None = None
+        if user_id is not None and group_by in (AggregateGroupBy.TASK, AggregateGroupBy.PROJECT):
+            visible = await visible_content_ids(
+                self.session,
+                actor_id,
+                organization_id,
+                ContentType.TASK if group_by is AggregateGroupBy.TASK else ContentType.PROJECT,
+                (row.key for row in rows),
+            )
         return [
             AggregateRow(
                 key=row.key.isoformat() if isinstance(row.key, date) else str(row.key),
-                label=row.label.isoformat() if isinstance(row.label, date) else str(row.label),
+                label=(
+                    ""
+                    if visible is not None and row.key not in visible
+                    else row.label.isoformat()
+                    if isinstance(row.label, date)
+                    else str(row.label)
+                ),
                 minutes=int(row.minutes),
                 entries=int(row.entries),
             )
-            for row in result.all()
+            for row in rows
         ]
 
 

@@ -43,9 +43,9 @@ def sheet_is_locked(
 
 async def period_row(session: AsyncSession, organization_id: UUID, start: date) -> TimePeriod | None:
     result = await session.execute(
-        select(TimePeriod).where(
-            TimePeriod.organization_id == organization_id, TimePeriod.start_date == start
-        )
+        select(TimePeriod)
+        .execution_options(populate_existing=True)
+        .where(TimePeriod.organization_id == organization_id, TimePeriod.start_date == start)
     )
     return result.scalars().first()
 
@@ -59,7 +59,9 @@ async def sheet_row(
     session: AsyncSession, organization_id: UUID, user_id: UUID, start: date
 ) -> Timesheet | None:
     result = await session.execute(
-        select(Timesheet).where(
+        select(Timesheet)
+        .execution_options(populate_existing=True)
+        .where(
             Timesheet.organization_id == organization_id,
             Timesheet.user_id == user_id,
             Timesheet.period_start == start,

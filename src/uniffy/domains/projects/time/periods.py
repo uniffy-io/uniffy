@@ -2,10 +2,23 @@
 
 from datetime import date, timedelta
 
+from uniffy.core.errors import ValidationError
 from uniffy.domains.projects.time.policy import PeriodType, ResolvedTimePolicy
 from uniffy.domains.settings.preferences import WEEK_START_WEEKDAYS
 
 DAYS_PER_WEEK = 7
+MAX_RANGE_DAYS = 366
+MIN_TIME_DATE = date(2, 1, 1)
+MAX_TIME_DATE = date(9998, 12, 31)
+
+
+def validate_date_range(start: date, end: date) -> None:
+    if end < start:
+        raise ValidationError("to_date", "must not be before from_date")
+    if start < MIN_TIME_DATE or end > MAX_TIME_DATE:
+        raise ValidationError("date", "must be between years 2 and 9998")
+    if (end - start).days >= MAX_RANGE_DAYS:
+        raise ValidationError("to_date", f"range must not exceed {MAX_RANGE_DAYS} days")
 
 
 def week_start_for(day: date, week_start: str) -> date:
@@ -28,6 +41,7 @@ def _next_month_start(start: date, start_day: int) -> date:
 
 def period_for(day: date, policy: ResolvedTimePolicy) -> tuple[date, date]:
     """Inclusive start and end of the period containing ``day``."""
+    validate_date_range(day, day)
     if policy.period_type == PeriodType.MONTHLY:
         start = _month_period_start(day, policy.month_start_day)
         return start, _next_month_start(start, policy.month_start_day) - timedelta(days=1)
@@ -37,6 +51,7 @@ def period_for(day: date, policy: ResolvedTimePolicy) -> tuple[date, date]:
 
 def periods_between(start: date, end: date, policy: ResolvedTimePolicy) -> list[tuple[date, date]]:
     """Every period touching the inclusive range, in order."""
+    validate_date_range(start, end)
     periods: list[tuple[date, date]] = []
     cursor = start
     while cursor <= end:

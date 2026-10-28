@@ -279,7 +279,11 @@ export function MyTimeScreen() {
               <CheckSquareOffset size={18} color={T.accent} />
               <Text style={[styles.reviewLabel, { color: T.textBright }]}>Approvals</Text>
               <Text style={[styles.reviewCount, { color: waitingReviews ? T.accent : T.textDim }]}>
-                {waitingReviews > 0 ? `${waitingReviews} waiting` : "Nothing waiting"}
+                {inbox.hasNextPage
+                  ? "View all"
+                  : waitingReviews > 0
+                    ? `${waitingReviews} waiting`
+                    : "Nothing waiting"}
               </Text>
               <CaretRight size={14} color={T.textDim} weight="bold" />
             </TouchableOpacity>

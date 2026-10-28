@@ -1,69 +1,27 @@
 import { Alert } from "react-native";
 import {
-  keepPreviousData,
   useMutation,
-  useQuery,
+  useInfiniteQuery,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { TimePeriodStatus, TimesheetStatus } from "@uniffy/proto/projects/v1/time_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { projectsApi } from "@features/projects/projectsApi";
-import {
-  reviewRowToPlain,
-  type SerializedReviewRow,
-  type SerializedTimesheetStatus,
-} from "@features/projects/timeSerializer";
+import type { SerializedTimesheetStatus } from "@features/projects/timeSerializer";
 import { timesheetQueryKey } from "@features/projects/useMyTime";
 import { serverMessage } from "@features/projects/useProjectMutations";
+import { reviewInboxOptions, reviewInboxQueryKey } from "@features/projects/timeQueries";
 
-export function reviewInboxQueryKey(organizationId: string | null) {
-  return ["review-inbox", organizationId] as const;
-}
+export { reviewInboxQueryKey } from "@features/projects/timeQueries";
 
-const STATUS_FILTER: Record<SerializedTimesheetStatus, TimesheetStatus> = {
-  open: TimesheetStatus.OPEN,
-  submitted: TimesheetStatus.SUBMITTED,
-  approved: TimesheetStatus.APPROVED,
-  rejected: TimesheetStatus.REJECTED,
-};
-
-export interface ReviewInbox {
-  rows: SerializedReviewRow[];
-  periodStart: string;
-  periodEnd: string;
-  periodClosed: boolean;
-  viewerIsTimekeepingAdmin: boolean;
-}
-
-/** The people the caller reviews for the period holding `day`. */
 export function useReviewInbox(
   day: string,
   options: { status?: SerializedTimesheetStatus; query?: string; enabled?: boolean } = {},
 ) {
   const { organizationId } = useAuth();
-  const query = options.query?.trim() ?? "";
-  return useQuery({
-    queryKey: [...reviewInboxQueryKey(organizationId), day, options.status ?? "all", query],
-    queryFn: async (): Promise<ReviewInbox> => {
-      const response = await projectsApi.listReviewTimesheets({
-        organizationId: organizationId!,
-        periodStart: day,
-        status: options.status ? STATUS_FILTER[options.status] : undefined,
-        query,
-        pageSize: 200,
-      });
-      return {
-        rows: response.rows.map(reviewRowToPlain),
-        periodStart: response.period?.startDate ?? day,
-        periodEnd: response.period?.endDate ?? day,
-        periodClosed: response.period?.status === TimePeriodStatus.CLOSED,
-        viewerIsTimekeepingAdmin: response.viewerIsTimekeepingAdmin,
-      };
-    },
-    enabled: !!organizationId && options.enabled !== false,
-    placeholderData: keepPreviousData,
-  });
+  return useInfiniteQuery(
+    reviewInboxOptions(organizationId, day, options, projectsApi.listReviewTimesheets),
+  );
 }
 
 function refreshReview(queryClient: QueryClient, organizationId: string | null) {

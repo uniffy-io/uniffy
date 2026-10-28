@@ -108,15 +108,21 @@ class _Session:
         self.statements.append(stmt)
         sql = str(stmt.compile(compile_kwargs={"literal_binds": True})).lower()
         result = MagicMock()
+        if "pg_advisory_xact_lock" in sql:
+            return result
         if "projects_tasks.time_spent_minutes" in sql and "projects_timers" not in sql:
             result.scalar_one.return_value = self.rollup
         elif self.rows:
             current = self.rows.pop(0)
             result.first.return_value = current[0] if isinstance(current, list) else current
             result.all.return_value = current if isinstance(current, list) else [current]
+            result.scalars.return_value.all.return_value = (
+                current if isinstance(current, list) else [current]
+            )
         else:
             result.first.return_value = None
             result.all.return_value = []
+            result.scalars.return_value.all.return_value = []
         return result
 
     def add(self, obj) -> None:  # noqa: ANN001
@@ -155,6 +161,9 @@ def _env(rows: list, *, policy: ResolvedTimePolicy | None = None, rollup: int = 
         )
     )
     stack.enter_context(patch(f"{MODULE}.TimeAccess", return_value=access))
+    stack.enter_context(
+        patch(f"{MODULE}.visible_content_ids", new=AsyncMock(return_value={TASK_ID, OTHER_TASK_ID}))
+    )
     stack.enter_context(patch(f"{MODULE}.WorklogOperations", return_value=worklogs))
     stack.enter_context(patch(f"{MODULE}.publish_notification", new=notify))
     stack.enter_context(patch(f"{MODULE}.publish_content_changed", new=content))
@@ -295,7 +304,8 @@ async def test_get_active_checks_the_actor_and_reads_nothing_when_absent() -> No
 async def test_limit_pause_applies_once_and_notifies_the_owner() -> None:
     over = _timer(started_at=NOW - timedelta(hours=13), task_id=TASK_ID)
     under = _timer(started_at=NOW - timedelta(hours=1), task_id=OTHER_TASK_ID)
-    rows = [[(over, "Home feed"), (under, "Other")]]
+    candidates = [over, under]
+    rows = [candidates, candidates]
     with _env(rows) as stack:
         env = stack.env
         count = await pause_timers_past_limit(env.session, now=NOW)  # type: ignore[arg-type]
@@ -309,13 +319,13 @@ async def test_limit_pause_applies_once_and_notifies_the_owner() -> None:
     event = env.emitted.await_args.args[0]
     assert event.notification_type is NotificationType.TIMER_LIMIT_REACHED
     assert event.target_user_ids == [ACTOR]
-    assert "12h" in event.title and "Home feed" in event.title
+    assert "12h" in event.title and "Home feed" not in event.title
     lookup = str(env.session.statements[0].compile()).lower()
     assert "projects_timers.started_at is not null" in lookup
     assert "projects_timers.pause_reason is null" in lookup
 
     # The same rows again: the paused timer is skipped, nothing is sent twice.
-    with _env([[(over, "Home feed"), (under, "Other")]]) as stack:
+    with _env([candidates, candidates]) as stack:
         env = stack.env
         assert await pause_timers_past_limit(env.session, now=NOW) == 0  # type: ignore[arg-type]
     env.emitted.assert_not_awaited()

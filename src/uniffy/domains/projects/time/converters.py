@@ -90,7 +90,7 @@ def timer_to_proto(row: TimerRow) -> ProtoTimer:
     proto = ProtoTimer(
         id=str(timer.id),
         task_id=str(timer.task_id),
-        project_id=str(row.project_id),
+        project_id=str(row.project_id) if row.project_id is not None else "",
         description=timer.description,
         accumulated_seconds=timer.accumulated_seconds,
         pause_reason=(

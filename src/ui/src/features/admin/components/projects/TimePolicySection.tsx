@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowSquareOut, Kanban, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -11,9 +11,11 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { friendlyErrorMessage } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
-import { timeApi } from "@/features/projects/api/timeApi";
-import { timePolicyLoaded } from "@/features/projects/store/timeSlice";
-import { createInternalTimeProject } from "@/features/projects/store/timeThunks";
+import {
+  createInternalTimeProject,
+  fetchTimePolicy,
+  saveTimePolicy,
+} from "@/features/projects/store/timeThunks";
 import type { TimePeriodType, TimePolicy } from "@/features/projects/types/time";
 
 const ROUNDING_OPTIONS: SelectOption<number>[] = [1, 5, 6, 10, 15].map((minutes) => ({
@@ -53,11 +55,16 @@ function parseHolidays(text: string): string[] {
 
 export function TimePolicySection() {
   useDocumentTitle("Projects");
-  const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  return organizationId ? <TimePolicyForm key={organizationId} /> : null;
+}
+
+function TimePolicyForm() {
+  const dispatch = useAppDispatch();
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
   const isAdmin = role === "OWNER" || role === "ADMIN";
 
+  const mounted = useRef(false);
   const [form, setForm] = useState<TimePolicy | null>(null);
   const [holidaysText, setHolidaysText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -65,49 +72,40 @@ export function TimePolicySection() {
   const [creatingInternal, setCreatingInternal] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const policy = await timeApi.getTimePolicy(organizationId);
-      setForm(policy);
-      setHolidaysText(policy.holidays.join("\n"));
-    } catch (err) {
-      setError(
-        friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-          "Could not load the time policy",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
-
   useEffect(() => {
-    // eslint-disable-next-line react/react-compiler -- fetch on mount; reload raises the loading flag before awaiting the API
-    void reload();
-  }, [reload]);
+    let current = true;
+    mounted.current = true;
+    const request = dispatch(fetchTimePolicy());
+    void request.then((result) => {
+      if (!current) return;
+      if (fetchTimePolicy.fulfilled.match(result)) {
+        setForm(result.payload);
+        setHolidaysText(result.payload.holidays.join("\n"));
+      } else if (!result.meta.aborted) {
+        setError(friendlyErrorMessage(result.payload ?? "Could not load the time policy"));
+      }
+      setLoading(false);
+    });
+    return () => {
+      current = false;
+      mounted.current = false;
+      request.abort();
+    };
+  }, [dispatch]);
 
   const save = async () => {
-    if (!organizationId || !form || saving) return;
+    if (!form || saving) return;
     setSaving(true);
-    try {
-      const saved = await timeApi.updateTimePolicy(
-        { ...form, holidays: parseHolidays(holidaysText) },
-        organizationId,
-      );
-      setForm(saved);
-      setHolidaysText(saved.holidays.join("\n"));
-      dispatch(timePolicyLoaded(saved));
+    const result = await dispatch(
+      saveTimePolicy({ ...form, holidays: parseHolidays(holidaysText) }),
+    );
+    if (!mounted.current) return;
+    if (saveTimePolicy.fulfilled.match(result)) {
+      setForm(result.payload);
+      setHolidaysText(result.payload.holidays.join("\n"));
       toast.success("Time policy saved");
-    } catch (err) {
-      toast.error(
-        friendlyErrorMessage(err instanceof Error ? err.message : String(err)) ??
-          "Could not save the time policy",
-      );
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
   const update = <K extends keyof TimePolicy>(key: K, value: TimePolicy[K]) =>
