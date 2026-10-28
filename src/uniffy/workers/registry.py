@@ -98,6 +98,7 @@ from uniffy.domains.calls.jobs.contracts import (
     CALLS_JOB_REFS,
     CALLS_SCHEDULED_JOB_REFS,
     CLEANUP_ORPHAN_CALL_ROOMS_SCHEDULE,
+    MONITOR_CALLS_SCHEDULE,
     RECONCILE_CALLS_SCHEDULE,
 )
 from uniffy.domains.calls.jobs.jobs import (
@@ -105,6 +106,7 @@ from uniffy.domains.calls.jobs.jobs import (
     cleanup_orphan_call_rooms,
     reconcile_calls,
 )
+from uniffy.domains.calls.jobs.monitoring import CALLS_MONITORING_TIMEOUT_SECONDS, monitor_calls
 from uniffy.domains.chat.jobs.contracts import (
     AUTO_UNMUTE_CHANNELS_SCHEDULE,
     CHAT_JOB_REFS,
@@ -486,6 +488,7 @@ CORE_SCHEDULED_REGISTRATIONS = (
         expire_support_sessions,
         timeout=EXPIRE_SUPPORT_SESSIONS_JOB_TIMEOUT_SECONDS,
     ),
+    _bind_schedule(MONITOR_CALLS_SCHEDULE, monitor_calls, timeout=CALLS_MONITORING_TIMEOUT_SECONDS),
     _bind_schedule(
         RECONCILE_CALLS_SCHEDULE,
         reconcile_calls,

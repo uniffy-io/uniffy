@@ -27,6 +27,7 @@ from uniffy.domains.calls.livekit import (
     get_livekit_admin_client,
 )
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.telemetry import observe_maintenance
 from uniffy.domains.calls.tokens import parse_room_call_id
 from uniffy.infrastructure.database.session import open_session
 from uniffy.infrastructure.valkey.ops import get_ops_client
@@ -151,6 +152,7 @@ async def _evict_revoked_participants(session: AsyncSession, ops: CallOperations
     return evicted
 
 
+@observe_maintenance
 async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
     """Every 5 min: drop ghost participants, enforce duration/solo policies."""
     del ctx
@@ -164,6 +166,7 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
     ghosts = 0
     revoked = 0
     closed_rooms = 0
+    current_call_id = None
     try:
         client = get_livekit_admin_client()
         with client.stop_after_unavailable() as media:
@@ -177,105 +180,114 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                     closed_rooms = await _cleanup_orphan_rooms(session, client)
 
                 for call in active_calls:
-                    ops = CallOperations(session)
-                    now = datetime.now(UTC)
+                    current_call_id = str(call.id)
+                    with logger.contextualize(
+                        call_id=str(call.id), organization_id=str(call.organization_id)
+                    ):
+                        logger.info("Reconciling call")
+                        ops = CallOperations(session)
+                        now = datetime.now(UTC)
 
-                    org_end_reason = await _organization_end_reason(session, call)
-                    if org_end_reason is not None:
-                        if await ops.end_call_internal(call, org_end_reason):
+                        org_end_reason = await _organization_end_reason(session, call)
+                        if org_end_reason is not None:
+                            if await ops.end_call_internal(call, org_end_reason):
+                                ended += 1
+                            continue
+                        revoked += await _evict_revoked_participants(session, ops, call)
+                        if call.ended_at is not None:
                             ended += 1
-                        continue
-                    revoked += await _evict_revoked_participants(session, ops, call)
-                    if call.ended_at is not None:
-                        ended += 1
-                        continue
-
-                    max_minutes = DEFAULT_MAX_DURATION_MINUTES
-                    policy = await ops.get_org_policy(call.organization_id)
-                    if policy is not None:
-                        max_minutes = policy.max_duration_minutes
-                    if call.started_at < now - timedelta(minutes=max_minutes):
-                        if await ops.end_call_internal(call, CallEndReason.MAX_DURATION):
-                            ended += 1
-                        continue
-
-                    if not media.reachable:
-                        continue
-
-                    try:
-                        live = await client.list_participants(call.livekit_room_name)
-                        live_identities = {p.get("identity", "") for p in live}
-                    except LiveKitUnavailableError:
-                        continue
-                    except LiveKitApiError as exc:
-                        if exc.status_code == 404:
-                            live, live_identities = [], set()
-                        else:
-                            logger.warning(f"reconcile list_participants failed: {exc}")
                             continue
 
-                    grace_cutoff = now - timedelta(seconds=JOIN_GRACE_SECONDS)
-                    absence_cutoff = now - timedelta(seconds=ABSENCE_CONFIRM_SECONDS)
-                    for participant in await ops.list_active_participants(call.id):
-                        if participant.identity in live_identities:
-                            if participant.missing_since is not None:
-                                await ops.clear_absence(participant)
+                        max_minutes = DEFAULT_MAX_DURATION_MINUTES
+                        policy = await ops.get_org_policy(call.organization_id)
+                        if policy is not None:
+                            max_minutes = policy.max_duration_minutes
+                        if call.started_at < now - timedelta(minutes=max_minutes):
+                            if await ops.end_call_internal(call, CallEndReason.MAX_DURATION):
+                                ended += 1
                             continue
-                        if participant.joined_at > grace_cutoff:
-                            continue
-                        if participant.missing_since is None:
-                            await ops.record_absence(participant, now)
-                            continue
-                        if participant.missing_since < absence_cutoff:
-                            if await ops.retire_ghost_participant(call, participant, absence_cutoff):
-                                ghosts += 1
 
-                    if call.ended_at is not None:
-                        ended += 1
-                        continue
-
-                    db_active = {r.identity: r for r in await ops.list_active_participants(call.id)}
-                    await session.commit()  # no open transaction across the LiveKit remove HTTP
-                    for entry in live:
-                        identity = entry.get("identity", "")
-                        participant = db_active.get(identity)
-                        if not identity or (
-                            participant is not None
-                            and matches_media_session(
-                                entry, participant.token_jti, participant.session_jti
-                            )
-                        ):
+                        if not media.reachable:
                             continue
+
                         try:
-                            await MediaAdmission(session, client).evict_if_unauthorized(
-                                call.id, call.livekit_room_name, identity
-                            )
+                            live = await client.list_participants(call.livekit_room_name)
+                            live_identities = {p.get("identity", "") for p in live}
+                        except LiveKitUnavailableError:
+                            continue
                         except LiveKitApiError as exc:
-                            if exc.status_code != 404:
-                                logger.warning(
-                                    f"reconcile orphan remove failed for {identity}: {exc}"
+                            if exc.status_code == 404:
+                                live, live_identities = [], set()
+                            else:
+                                logger.warning(f"reconcile list_participants failed: {exc}")
+                                continue
+
+                        grace_cutoff = now - timedelta(seconds=JOIN_GRACE_SECONDS)
+                        absence_cutoff = now - timedelta(seconds=ABSENCE_CONFIRM_SECONDS)
+                        for participant in await ops.list_active_participants(call.id):
+                            if participant.identity in live_identities:
+                                if participant.missing_since is not None:
+                                    await ops.clear_absence(participant)
+                                continue
+                            if participant.joined_at > grace_cutoff:
+                                continue
+                            if participant.missing_since is None:
+                                await ops.record_absence(participant, now)
+                                continue
+                            if participant.missing_since < absence_cutoff:
+                                if await ops.retire_ghost_participant(
+                                    call, participant, absence_cutoff
+                                ):
+                                    ghosts += 1
+
+                        if call.ended_at is not None:
+                            ended += 1
+                            continue
+
+                        db_active = {
+                            r.identity: r for r in await ops.list_active_participants(call.id)
+                        }
+                        await session.commit()  # no open transaction across the LiveKit remove HTTP
+                        for entry in live:
+                            identity = entry.get("identity", "")
+                            participant = db_active.get(identity)
+                            if not identity or (
+                                participant is not None
+                                and matches_media_session(
+                                    entry, participant.token_jti, participant.session_jti
                                 )
+                            ):
+                                continue
+                            try:
+                                await MediaAdmission(session, client).evict_if_unauthorized(
+                                    call.id, call.livekit_room_name, identity
+                                )
+                            except LiveKitApiError as exc:
+                                if exc.status_code != 404:
+                                    logger.warning(
+                                        f"reconcile orphan remove failed for {identity}: {exc}"
+                                    )
 
-                    remaining = await ops.list_active_participants(call.id)
-                    if not remaining:
-                        if call.started_at < now - timedelta(seconds=JOIN_GRACE_SECONDS):
-                            if await ops.end_call_internal(call, CallEndReason.ALL_LEFT):
-                                ended += 1
-                        continue
+                        remaining = await ops.list_active_participants(call.id)
+                        if not remaining:
+                            if call.started_at < now - timedelta(seconds=JOIN_GRACE_SECONDS):
+                                if await ops.end_call_internal(call, CallEndReason.ALL_LEFT):
+                                    ended += 1
+                            continue
 
-                    await ops.reassign_host_if_absent(call)
+                        await ops.reassign_host_if_absent(call)
 
-                    if len(remaining) == 1:
-                        others_left = await session.execute(
-                            select(func.max(CallParticipant.left_at)).where(
-                                CallParticipant.call_id == call.id,
-                                CallParticipant.left_at.is_not(None),
+                        if len(remaining) == 1:
+                            others_left = await session.execute(
+                                select(func.max(CallParticipant.left_at)).where(
+                                    CallParticipant.call_id == call.id,
+                                    CallParticipant.left_at.is_not(None),
+                                )
                             )
-                        )
-                        solo_since = others_left.scalar_one_or_none() or call.started_at
-                        if solo_since < now - timedelta(minutes=SOLO_AUTO_END_MINUTES):
-                            if await ops.end_call_internal(call, CallEndReason.SOLO_TIMEOUT):
-                                ended += 1
+                            solo_since = others_left.scalar_one_or_none() or call.started_at
+                            if solo_since < now - timedelta(minutes=SOLO_AUTO_END_MINUTES):
+                                if await ops.end_call_internal(call, CallEndReason.SOLO_TIMEOUT):
+                                    ended += 1
 
         return {
             "status": "success",
@@ -286,12 +298,13 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
             "media_reachable": media.reachable,
         }
     except Exception as exc:
-        logger.exception(f"reconcile_calls failed: {exc}")
+        logger.bind(call_id=current_call_id).exception(f"reconcile_calls failed: {exc}")
         return {"status": "error", "error": str(exc)[:500]}
     finally:
         await _release_lock(_RECONCILE_LOCK, lock_token)
 
 
+@observe_maintenance
 async def cleanup_orphan_call_rooms(ctx: dict[str, Any]) -> dict[str, Any]:
     """Hourly: close LiveKit rooms whose Call row is gone or already ended."""
     del ctx
@@ -341,5 +354,7 @@ async def _cleanup_orphan_rooms(session: AsyncSession, client: LiveKitAdminClien
                 raise
             except LiveKitApiError as exc:
                 if exc.status_code != 404:
-                    logger.warning(f"orphan room delete failed for {name}: {exc}")
+                    logger.bind(call_id=str(parse_room_call_id(name))).warning(
+                        f"Orphan room delete failed: {exc}"
+                    )
     return closed

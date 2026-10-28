@@ -48,8 +48,10 @@ from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
+from uniffy.domains.calls.metrics import RINGS, RingOutcome
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.reader import CallReader, probe_call_media
+from uniffy.domains.calls.telemetry import call_context, observe_join
 from uniffy.domains.calls.turn import mint_turn_credentials
 from uniffy.infrastructure.database import open_session
 
@@ -107,6 +109,7 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
 
 
 class CallHandlers:
+    @call_context
     async def get_call_availability(
         self, request: GetCallAvailabilityRequest, ctx: RequestContext
     ) -> GetCallAvailabilityResponse:
@@ -117,6 +120,7 @@ class CallHandlers:
             availability = await probe_call_media()
         return GetCallAvailabilityResponse(availability=availability)
 
+    @call_context
     async def get_call_state(
         self, request: GetCallStateRequest, ctx: RequestContext
     ) -> GetCallStateResponse:
@@ -128,6 +132,8 @@ class CallHandlers:
             )
             return GetCallStateResponse(call=call_to_proto(call, []), can_moderate=can_moderate)
 
+    @call_context
+    @observe_join
     async def initiate_call(
         self, request: InitiateCallRequest, ctx: RequestContext
     ) -> InitiateCallResponse:
@@ -163,6 +169,8 @@ class CallHandlers:
             **ice_fields,
         )
 
+    @call_context
+    @observe_join
     async def join_call(self, request: JoinCallRequest, ctx: RequestContext) -> JoinCallResponse:
         user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -195,6 +203,7 @@ class CallHandlers:
             **ice_fields,
         )
 
+    @call_context
     async def leave_call(self, request: LeaveCallRequest, ctx: RequestContext) -> LeaveCallResponse:
         user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -210,6 +219,7 @@ class CallHandlers:
                 raise _map_domain_error("leave_call", exc) from exc
         return LeaveCallResponse(success=True)
 
+    @call_context
     async def end_call(self, request: EndCallRequest, ctx: RequestContext) -> EndCallResponse:
         user_id = current_user_id()
         organization_id = _parse_uuid(request.organization_id, "organization_id")
@@ -222,6 +232,7 @@ class CallHandlers:
                 raise _map_domain_error("end_call", exc) from exc
         return EndCallResponse(success=True)
 
+    @call_context
     async def refresh_call_token(
         self, request: RefreshCallTokenRequest, ctx: RequestContext
     ) -> RefreshCallTokenResponse:
@@ -239,6 +250,7 @@ class CallHandlers:
                 raise _map_domain_error("refresh_call_token", exc) from exc
         return RefreshCallTokenResponse(livekit_token=token.token)
 
+    @call_context
     async def get_active_call(
         self, request: GetActiveCallRequest, ctx: RequestContext
     ) -> GetActiveCallResponse:
@@ -259,6 +271,7 @@ class CallHandlers:
 
         return GetActiveCallResponse(call=call_to_proto(call, participants, profiles))
 
+    @call_context
     async def list_active_calls(
         self, request: ListActiveCallsRequest, ctx: RequestContext
     ) -> ListActiveCallsResponse:
@@ -278,6 +291,7 @@ class CallHandlers:
             calls=[call_to_proto(call, participants, profiles) for call, participants in found]
         )
 
+    @call_context
     async def decline_call(
         self, request: DeclineCallRequest, ctx: RequestContext
     ) -> DeclineCallResponse:
@@ -290,8 +304,11 @@ class CallHandlers:
             except Exception as exc:
                 raise _map_domain_error("decline_call", exc) from exc
         # Ring dismissal is local; this acknowledgement does not end the shared call.
+        RINGS.labels(RingOutcome.DECLINED).inc()
+        logger.info("Call ring declined")
         return DeclineCallResponse(success=True)
 
+    @call_context
     async def kick_participant(
         self, request: KickParticipantRequest, ctx: RequestContext
     ) -> KickParticipantResponse:
@@ -308,6 +325,7 @@ class CallHandlers:
                 raise _map_domain_error("kick_participant", exc) from exc
         return KickParticipantResponse(success=True)
 
+    @call_context
     async def mute_participant(
         self, request: MuteParticipantRequest, ctx: RequestContext
     ) -> MuteParticipantResponse:
@@ -324,6 +342,7 @@ class CallHandlers:
                 raise _map_domain_error("mute_participant", exc) from exc
         return MuteParticipantResponse(success=True)
 
+    @call_context
     async def get_org_call_policy(
         self, request: GetOrgCallPolicyRequest, ctx: RequestContext
     ) -> GetOrgCallPolicyResponse:
@@ -337,6 +356,7 @@ class CallHandlers:
                 raise _map_domain_error("get_org_call_policy", exc) from exc
         return GetOrgCallPolicyResponse(policy=org_policy_to_proto(policy))
 
+    @call_context
     async def update_org_call_policy(
         self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext
     ) -> UpdateOrgCallPolicyResponse:
@@ -365,6 +385,7 @@ class CallHandlers:
                 raise _map_domain_error("update_org_call_policy", exc) from exc
         return UpdateOrgCallPolicyResponse(policy=org_policy_to_proto(policy))
 
+    @call_context
     async def report_media_state(
         self, request: ReportMediaStateRequest, ctx: RequestContext
     ) -> ReportMediaStateResponse:

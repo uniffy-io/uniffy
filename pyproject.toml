@@ -72,6 +72,7 @@ dependencies = [
   "orjson>=3.12.0",
   # iCalendar (RFC 5545) serialization and parsing
   "icalendar>=7.3.0",
+  "aioice>=0.10.2",
 ]
 
 [dependency-groups]

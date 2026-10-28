@@ -12,6 +12,7 @@ from uniffy.domains.calls.livekit import (
     LiveKitApiError,
     LiveKitUnavailableError,
 )
+from uniffy.domains.calls.metrics import CIRCUIT_OPEN_UNTIL, CIRCUIT_OPENED
 
 CONFIG = LiveKitConfig(
     host="http://livekit:7880",
@@ -73,13 +74,17 @@ async def test_4xx_raises_without_tripping_breaker():
 
 
 async def test_breaker_opens_after_repeated_5xx():
+    before = CIRCUIT_OPENED._value.get()
     client = _client()
     client._http.post = AsyncMock(return_value=_response(500))
     for _ in range(BREAKER_FAILURE_THRESHOLD):
         with pytest.raises(LiveKitApiError):
             await client.list_rooms()
+    assert CIRCUIT_OPENED._value.get() == before + 1
+    assert CIRCUIT_OPEN_UNTIL._value.get() > 0
     with pytest.raises(LiveKitUnavailableError):
         await client.list_rooms()
+    assert CIRCUIT_OPENED._value.get() == before + 1
 
 
 async def test_transport_error_counts_as_failure():
