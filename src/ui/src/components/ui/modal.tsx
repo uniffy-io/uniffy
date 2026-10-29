@@ -11,6 +11,7 @@ const ANIMATION_MS = 150;
 const ModalLabelContext = createContext<string | undefined>(undefined);
 
 interface ModalProps {
+  ownerDocument?: Document;
   children: React.ReactNode;
   onClose: () => void;
   closeDisabled?: boolean;
@@ -38,17 +39,19 @@ export function Modal({
   className,
   ariaLabel,
   anchor = "center",
+  ownerDocument,
 }: ModalProps) {
   const [phase, setPhase] = useState<"entering" | "open" | "exiting">("entering");
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const titleId = useId();
 
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
+    const targetWindow = ownerDocument?.defaultView ?? window;
+    const raf = targetWindow.requestAnimationFrame(() => {
       setPhase("open");
     });
-    return () => cancelAnimationFrame(raf);
-  }, []);
+    return () => targetWindow.cancelAnimationFrame(raf);
+  }, [ownerDocument]);
 
   const requestClose = useCallback(() => {
     if (closeDisabled || phase === "exiting") return;
@@ -62,15 +65,16 @@ export function Modal({
     };
   }, []);
 
-  useOverlayEscape(requestClose);
+  useOverlayEscape(requestClose, true, ownerDocument);
 
   useEffect(() => {
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const targetDocument = ownerDocument ?? document;
+    const original = targetDocument.body.style.overflow;
+    targetDocument.body.style.setProperty("overflow", "hidden");
     return () => {
-      document.body.style.overflow = original;
+      targetDocument.body.style.setProperty("overflow", original);
     };
-  }, []);
+  }, [ownerDocument]);
 
   const isVisible = phase === "open";
 
@@ -110,7 +114,7 @@ export function Modal({
         <ModalLabelContext.Provider value={titleId}>{children}</ModalLabelContext.Provider>
       </div>
     </div>,
-    document.body,
+    (ownerDocument ?? document).fullscreenElement ?? (ownerDocument ?? document).body,
   );
 }
 

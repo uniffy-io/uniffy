@@ -3,6 +3,7 @@ import type { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
 import type { Room } from "livekit-client";
 
 export interface JoinMediaOptions {
+  townHall?: boolean;
   micEnabled: boolean;
   cameraEnabled: boolean;
 }

@@ -414,10 +414,14 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             event.payload.value.decided_at = ts
         return event
 
-    if event_type == evt.CALL_STARTED or event_type == evt.CALL_ENDED:
-        is_started = event_type == evt.CALL_STARTED
+    if event_type in (evt.CALL_STARTED, evt.CALL_ENDED, evt.CALL_UPDATED):
+        lifecycle_types = {
+            evt.CALL_STARTED: ChatEventType.CALL_STARTED,
+            evt.CALL_ENDED: ChatEventType.CALL_ENDED,
+            evt.CALL_UPDATED: ChatEventType.CALL_UPDATED,
+        }
         return ChatEvent(
-            event_type=(ChatEventType.CALL_STARTED if is_started else ChatEventType.CALL_ENDED),
+            event_type=lifecycle_types[event_type],
             timestamp=_now_ts(),
             channel_id=cid,
             payload=Oneof(
@@ -506,6 +510,7 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
                 value=CallHostChangedPayload(
                     call_id=payload.get("call_id", ""),
                     new_host_user_id=payload.get("new_host_user_id", ""),
+                    publishing_revision=payload.get("publishing_revision", 0),
                 ),
             ),
         )
@@ -562,6 +567,9 @@ def _build_call_proto(call: dict) -> ProtoCall:
         call_type=_CALL_TYPE_STR_TO_PROTO.get(call.get("call_type", ""), ProtoCallType.UNSPECIFIED),
         initiator_user_id=call.get("initiator_user_id", ""),
         host_user_id=call.get("host_user_id", ""),
+        town_hall=bool(call.get("town_hall", False)),
+        speaker_user_ids=call.get("speaker_user_ids", []),
+        publishing_revision=int(call.get("publishing_revision", 0)),
         participants=[_build_call_participant_proto(p) for p in call.get("participants", [])],
     )
     if call.get("started_at"):
@@ -757,6 +765,7 @@ _CHANNEL_EVENT_TYPES = {
     evt.AGENT_CONFIRMATION_REQUESTED,
     evt.AGENT_CONFIRMATION_RESOLVED,
     evt.CALL_STARTED,
+    evt.CALL_UPDATED,
     evt.CALL_ENDED,
     evt.CALL_PARTICIPANT_JOINED,
     evt.CALL_PARTICIPANT_LEFT,

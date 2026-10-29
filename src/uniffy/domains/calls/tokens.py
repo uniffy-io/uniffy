@@ -65,6 +65,7 @@ class LiveKitTokenMinter:
         device_id: str,
         display_name: str,
         max_participants: int,
+        can_publish: bool = True,
         device_label: str | None = None,
     ) -> MintedToken:
         now = int(time.time())
@@ -90,7 +91,7 @@ class LiveKitTokenMinter:
                 "room": livekit_room_name(organization_id, call_id),
                 "roomJoin": True,
                 "canSubscribe": True,
-                "canPublish": True,
+                "canPublish": can_publish,
                 "canPublishSources": PUBLISH_SOURCES,
             },
         }

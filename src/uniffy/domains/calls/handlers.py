@@ -39,6 +39,10 @@ from uniffy_proto.calls.v1.calls_pb import (
     ReportMediaStateResponse,
     SendCallReactionRequest,
     SendCallReactionResponse,
+    SetCallModeRequest,
+    SetCallModeResponse,
+    SetCallSpeakerRequest,
+    SetCallSpeakerResponse,
     SetHandRaisedRequest,
     SetHandRaisedResponse,
     UpdateOrgCallPolicyRequest,
@@ -49,12 +53,14 @@ from uniffy_proto.calls.v1.calls_pb import IceTransportPolicy as _ProtoIceTransp
 from uniffy.core.auth.principal import current_session_id, current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
+from uniffy.core.models.chat.channel import ChannelType
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto, participant_to_proto
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.metrics import RINGS, RingOutcome
 from uniffy.domains.calls.operations import CallOperations
 from uniffy.domains.calls.participation import CallParticipation
+from uniffy.domains.calls.publishing import CallPublishing, town_hall_allowed
 from uniffy.domains.calls.reader import CallReader, probe_call_media
 from uniffy.domains.calls.telemetry import call_context, observe_join
 from uniffy.domains.calls.turn import mint_turn_credentials
@@ -119,11 +125,23 @@ class CallHandlers:
         self, request: GetCallAvailabilityRequest, ctx: RequestContext
     ) -> GetCallAvailabilityResponse:
         organization_id = _parse_uuid(request.organization_id, "organization_id")
+        allowed = False
         async with open_session() as session:
-            availability = await CallReader(session).availability(current_user_id(), organization_id)
+            reader = CallReader(session)
+            availability = await reader.availability(current_user_id(), organization_id)
+            if request.channel_id:
+                channel = await reader.access.get_channel(
+                    _parse_uuid(request.channel_id, "channel_id"), organization_id
+                )
+                await reader.access.check_access(current_user_id(), organization_id, channel)
+                allowed = (
+                    channel.channel_type in (ChannelType.PUBLIC, ChannelType.PRIVATE)
+                    and not channel.is_archived
+                    and await town_hall_allowed(session, organization_id, channel.id)
+                )
         if request.check_media and availability == CallAvailability.READY:
             availability = await probe_call_media()
-        return GetCallAvailabilityResponse(availability=availability)
+        return GetCallAvailabilityResponse(availability=availability, town_hall_allowed=allowed)
 
     @call_context
     async def get_call_state(
@@ -158,6 +176,7 @@ class CallHandlers:
                     device_id,
                     device_label,
                     current_session_id(),
+                    town_hall=request.town_hall,
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
@@ -374,6 +393,14 @@ class CallHandlers:
                     user_id,
                     organization_id,
                     calls_enabled=request.calls_enabled,
+                    town_hall_enabled=request.town_hall_enabled
+                    if request.has_field("town_hall_enabled")
+                    else None,
+                    town_hall_channel_ids=tuple(
+                        str(_parse_uuid(uid, "channel_id")) for uid in request.town_hall_channel_ids
+                    )
+                    if request.has_field("town_hall_enabled")
+                    else None,
                     max_participants=request.max_participants,
                     max_duration_minutes=request.max_duration_minutes,
                     max_screen_share_quality_direct=ScreenShareQuality(
@@ -450,3 +477,40 @@ class CallHandlers:
                 reaction=request.reaction,
             )
         return SendCallReactionResponse()
+
+    async def set_call_mode(
+        self, request: SetCallModeRequest, ctx: RequestContext
+    ) -> SetCallModeResponse:
+        async with open_session() as session:
+            try:
+                call = await CallPublishing(session).set_mode(
+                    current_user_id(),
+                    _parse_uuid(request.organization_id, "organization_id"),
+                    _parse_uuid(request.call_id, "call_id"),
+                    town_hall=request.town_hall,
+                )
+                ops = CallOperations(session)
+                participants = await ops.list_active_participants(call.id)
+                profiles = await ops.resolve_profiles([p.user_id for p in participants])
+                return SetCallModeResponse(call=call_to_proto(call, participants, profiles))
+            except Exception as exc:
+                raise _map_domain_error("set_call_mode", exc) from exc
+
+    async def set_call_speaker(
+        self, request: SetCallSpeakerRequest, ctx: RequestContext
+    ) -> SetCallSpeakerResponse:
+        async with open_session() as session:
+            try:
+                call = await CallPublishing(session).set_speaker(
+                    current_user_id(),
+                    _parse_uuid(request.organization_id, "organization_id"),
+                    _parse_uuid(request.call_id, "call_id"),
+                    _parse_uuid(request.user_id, "user_id"),
+                    speaker=request.speaker,
+                )
+                ops = CallOperations(session)
+                participants = await ops.list_active_participants(call.id)
+                profiles = await ops.resolve_profiles([p.user_id for p in participants])
+                return SetCallSpeakerResponse(call=call_to_proto(call, participants, profiles))
+            except Exception as exc:
+                raise _map_domain_error("set_call_speaker", exc) from exc

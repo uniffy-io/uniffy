@@ -77,6 +77,11 @@ const (
 	// CallServiceSendCallReactionProcedure is the fully-qualified name of the CallService's
 	// SendCallReaction RPC.
 	CallServiceSendCallReactionProcedure = "/calls.v1.CallService/SendCallReaction"
+	// CallServiceSetCallModeProcedure is the fully-qualified name of the CallService's SetCallMode RPC.
+	CallServiceSetCallModeProcedure = "/calls.v1.CallService/SetCallMode"
+	// CallServiceSetCallSpeakerProcedure is the fully-qualified name of the CallService's
+	// SetCallSpeaker RPC.
+	CallServiceSetCallSpeakerProcedure = "/calls.v1.CallService/SetCallSpeaker"
 	// CallServiceReportMediaStateProcedure is the fully-qualified name of the CallService's
 	// ReportMediaState RPC.
 	CallServiceReportMediaStateProcedure = "/calls.v1.CallService/ReportMediaState"
@@ -110,6 +115,8 @@ type CallServiceClient interface {
 	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
 	SetHandRaised(context.Context, *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error)
 	SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error)
+	SetCallMode(context.Context, *connect.Request[v1.SetCallModeRequest]) (*connect.Response[v1.SetCallModeResponse], error)
+	SetCallSpeaker(context.Context, *connect.Request[v1.SetCallSpeakerRequest]) (*connect.Response[v1.SetCallSpeakerResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -224,6 +231,18 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(callServiceMethods.ByName("SendCallReaction")),
 			connect.WithClientOptions(opts...),
 		),
+		setCallMode: connect.NewClient[v1.SetCallModeRequest, v1.SetCallModeResponse](
+			httpClient,
+			baseURL+CallServiceSetCallModeProcedure,
+			connect.WithSchema(callServiceMethods.ByName("SetCallMode")),
+			connect.WithClientOptions(opts...),
+		),
+		setCallSpeaker: connect.NewClient[v1.SetCallSpeakerRequest, v1.SetCallSpeakerResponse](
+			httpClient,
+			baseURL+CallServiceSetCallSpeakerProcedure,
+			connect.WithSchema(callServiceMethods.ByName("SetCallSpeaker")),
+			connect.WithClientOptions(opts...),
+		),
 		reportMediaState: connect.NewClient[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse](
 			httpClient,
 			baseURL+CallServiceReportMediaStateProcedure,
@@ -251,6 +270,8 @@ type callServiceClient struct {
 	updateOrgCallPolicy *connect.Client[v1.UpdateOrgCallPolicyRequest, v1.UpdateOrgCallPolicyResponse]
 	setHandRaised       *connect.Client[v1.SetHandRaisedRequest, v1.SetHandRaisedResponse]
 	sendCallReaction    *connect.Client[v1.SendCallReactionRequest, v1.SendCallReactionResponse]
+	setCallMode         *connect.Client[v1.SetCallModeRequest, v1.SetCallModeResponse]
+	setCallSpeaker      *connect.Client[v1.SetCallSpeakerRequest, v1.SetCallSpeakerResponse]
 	reportMediaState    *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
 }
 
@@ -334,6 +355,16 @@ func (c *callServiceClient) SendCallReaction(ctx context.Context, req *connect.R
 	return c.sendCallReaction.CallUnary(ctx, req)
 }
 
+// SetCallMode calls calls.v1.CallService.SetCallMode.
+func (c *callServiceClient) SetCallMode(ctx context.Context, req *connect.Request[v1.SetCallModeRequest]) (*connect.Response[v1.SetCallModeResponse], error) {
+	return c.setCallMode.CallUnary(ctx, req)
+}
+
+// SetCallSpeaker calls calls.v1.CallService.SetCallSpeaker.
+func (c *callServiceClient) SetCallSpeaker(ctx context.Context, req *connect.Request[v1.SetCallSpeakerRequest]) (*connect.Response[v1.SetCallSpeakerResponse], error) {
+	return c.setCallSpeaker.CallUnary(ctx, req)
+}
+
 // ReportMediaState calls calls.v1.CallService.ReportMediaState.
 func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {
 	return c.reportMediaState.CallUnary(ctx, req)
@@ -367,6 +398,8 @@ type CallServiceHandler interface {
 	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
 	SetHandRaised(context.Context, *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error)
 	SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error)
+	SetCallMode(context.Context, *connect.Request[v1.SetCallModeRequest]) (*connect.Response[v1.SetCallModeResponse], error)
+	SetCallSpeaker(context.Context, *connect.Request[v1.SetCallSpeakerRequest]) (*connect.Response[v1.SetCallSpeakerResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -477,6 +510,18 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(callServiceMethods.ByName("SendCallReaction")),
 		connect.WithHandlerOptions(opts...),
 	)
+	callServiceSetCallModeHandler := connect.NewUnaryHandler(
+		CallServiceSetCallModeProcedure,
+		svc.SetCallMode,
+		connect.WithSchema(callServiceMethods.ByName("SetCallMode")),
+		connect.WithHandlerOptions(opts...),
+	)
+	callServiceSetCallSpeakerHandler := connect.NewUnaryHandler(
+		CallServiceSetCallSpeakerProcedure,
+		svc.SetCallSpeaker,
+		connect.WithSchema(callServiceMethods.ByName("SetCallSpeaker")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceReportMediaStateHandler := connect.NewUnaryHandler(
 		CallServiceReportMediaStateProcedure,
 		svc.ReportMediaState,
@@ -517,6 +562,10 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 			callServiceSetHandRaisedHandler.ServeHTTP(w, r)
 		case CallServiceSendCallReactionProcedure:
 			callServiceSendCallReactionHandler.ServeHTTP(w, r)
+		case CallServiceSetCallModeProcedure:
+			callServiceSetCallModeHandler.ServeHTTP(w, r)
+		case CallServiceSetCallSpeakerProcedure:
+			callServiceSetCallSpeakerHandler.ServeHTTP(w, r)
 		case CallServiceReportMediaStateProcedure:
 			callServiceReportMediaStateHandler.ServeHTTP(w, r)
 		default:
@@ -590,6 +639,14 @@ func (UnimplementedCallServiceHandler) SetHandRaised(context.Context, *connect.R
 
 func (UnimplementedCallServiceHandler) SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SendCallReaction is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) SetCallMode(context.Context, *connect.Request[v1.SetCallModeRequest]) (*connect.Response[v1.SetCallModeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SetCallMode is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) SetCallSpeaker(context.Context, *connect.Request[v1.SetCallSpeakerRequest]) (*connect.Response[v1.SetCallSpeakerResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SetCallSpeaker is not implemented"))
 }
 
 func (UnimplementedCallServiceHandler) ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {

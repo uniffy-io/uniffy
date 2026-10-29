@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calls_pb
-from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, SendCallReactionRequest, SendCallReactionResponse, SetHandRaisedRequest, SetHandRaisedResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
+from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, SendCallReactionRequest, SendCallReactionResponse, SetCallModeRequest, SetCallModeResponse, SetCallSpeakerRequest, SetCallSpeakerResponse, SetHandRaisedRequest, SetHandRaisedResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -105,6 +105,12 @@ class CallService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def send_call_reaction(self, request: SendCallReactionRequest, ctx: RequestContext[SendCallReactionRequest, SendCallReactionResponse], /) -> SendCallReactionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_call_mode(self, request: SetCallModeRequest, ctx: RequestContext[SetCallModeRequest, SetCallModeResponse], /) -> SetCallModeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_call_speaker(self, request: SetCallSpeakerRequest, ctx: RequestContext[SetCallSpeakerRequest, SetCallSpeakerResponse], /) -> SetCallSpeakerResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
@@ -293,6 +299,26 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.send_call_reaction,
+                ),
+                "/calls.v1.CallService/SetCallMode": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetCallMode",
+                        service_name="calls.v1.CallService",
+                        input=SetCallModeRequest,
+                        output=SetCallModeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_call_mode,
+                ),
+                "/calls.v1.CallService/SetCallSpeaker": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetCallSpeaker",
+                        service_name="calls.v1.CallService",
+                        input=SetCallSpeakerRequest,
+                        output=SetCallSpeakerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_call_speaker,
                 ),
                 "/calls.v1.CallService/ReportMediaState": Endpoint.unary(
                     method=MethodInfo(
@@ -669,6 +695,46 @@ class CallServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def set_call_mode(
+        self,
+        request: SetCallModeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCallModeResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCallMode",
+                service_name="calls.v1.CallService",
+                input=SetCallModeRequest,
+                output=SetCallModeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def set_call_speaker(
+        self,
+        request: SetCallSpeakerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCallSpeakerResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCallSpeaker",
+                service_name="calls.v1.CallService",
+                input=SetCallSpeakerRequest,
+                output=SetCallSpeakerResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def report_media_state(
         self,
         request: ReportMediaStateRequest,
@@ -773,6 +839,12 @@ class CallServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def send_call_reaction(self, request: SendCallReactionRequest, ctx: RequestContext[SendCallReactionRequest, SendCallReactionResponse], /) -> SendCallReactionResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def set_call_mode(self, request: SetCallModeRequest, ctx: RequestContext[SetCallModeRequest, SetCallModeResponse], /) -> SetCallModeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def set_call_speaker(self, request: SetCallSpeakerRequest, ctx: RequestContext[SetCallSpeakerRequest, SetCallSpeakerResponse], /) -> SetCallSpeakerResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
@@ -959,6 +1031,26 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.send_call_reaction,
+                ),
+                "/calls.v1.CallService/SetCallMode": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetCallMode",
+                        service_name="calls.v1.CallService",
+                        input=SetCallModeRequest,
+                        output=SetCallModeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_call_mode,
+                ),
+                "/calls.v1.CallService/SetCallSpeaker": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetCallSpeaker",
+                        service_name="calls.v1.CallService",
+                        input=SetCallSpeakerRequest,
+                        output=SetCallSpeakerResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_call_speaker,
                 ),
                 "/calls.v1.CallService/ReportMediaState": EndpointSync.unary(
                     method=MethodInfo(
@@ -1314,6 +1406,44 @@ class CallServiceClientSync(ConnectClientSync):
                 service_name="calls.v1.CallService",
                 input=SendCallReactionRequest,
                 output=SendCallReactionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_call_mode(
+        self,
+        request: SetCallModeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCallModeResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCallMode",
+                service_name="calls.v1.CallService",
+                input=SetCallModeRequest,
+                output=SetCallModeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_call_speaker(
+        self,
+        request: SetCallSpeakerRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetCallSpeakerResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetCallSpeaker",
+                service_name="calls.v1.CallService",
+                input=SetCallSpeakerRequest,
+                output=SetCallSpeakerResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -34,6 +34,7 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
       }
       return true;
     }
+    case ChatEventType.CALL_UPDATED:
     case ChatEventType.CALL_STARTED: {
       if (ce.payload.case === "callLifecycle" && ce.payload.value.call) {
         dispatch(callUpserted(callToPlain(ce.payload.value.call)));
@@ -100,6 +101,7 @@ export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boo
           hostChanged({
             callId: ce.payload.value.callId,
             newHostUserId: ce.payload.value.newHostUserId,
+            publishingRevision: ce.payload.value.publishingRevision,
           }),
         );
       }

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 
 export interface ConfirmDialogProps {
+  ownerDocument?: Document;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -24,6 +25,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   variant = "danger",
   loading = false,
+  ownerDocument,
 }: ConfirmDialogProps) {
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -40,7 +42,12 @@ export function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <Modal onClose={onClose} closeDisabled={loading} maxWidth="max-w-md">
+    <Modal
+      ownerDocument={ownerDocument}
+      onClose={onClose}
+      closeDisabled={loading}
+      maxWidth="max-w-md"
+    >
       <div data-testid="confirm-dialog" data-variant={variant}>
         <ModalHeader title={<span data-testid="confirm-dialog-title">{title}</span>} />
 

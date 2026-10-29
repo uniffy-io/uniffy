@@ -1,3 +1,4 @@
+import { keepPublishingPolicy } from "@/features/calls/utils/callPublishing";
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
@@ -75,6 +76,7 @@ function keepLatestHand(
 
 function mergeCallHands(previous: CallData | undefined, incoming: CallData): CallData {
   if (previous?.id !== incoming.id) return incoming;
+  incoming = keepPublishingPolicy(previous, incoming);
   const byIdentity = new Map(previous.participants.map((p) => [p.identity, p]));
   return {
     ...incoming,
@@ -175,9 +177,13 @@ const callsSlice = createSlice({
       if (!call) return;
       call.participants = call.participants.filter((x) => x.identity !== action.payload.identity);
     },
-    hostChanged(state, action: PayloadAction<{ callId: string; newHostUserId: string }>) {
+    hostChanged(
+      state,
+      action: PayloadAction<{ callId: string; newHostUserId: string; publishingRevision?: number }>,
+    ) {
       const call = findCallById(state, action.payload.callId);
-      if (call) call.hostUserId = action.payload.newHostUserId;
+      if (call && (action.payload.publishingRevision ?? 0) >= (call.publishingRevision ?? 0))
+        call.hostUserId = action.payload.newHostUserId;
     },
     ringReceived(state, action: PayloadAction<RingInvite>) {
       if (state.ringInvites.some((r) => r.callId === action.payload.callId)) return;

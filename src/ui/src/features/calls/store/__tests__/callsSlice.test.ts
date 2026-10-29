@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
-import { CallParticipantSchema } from "@uniffy/proto/calls/v1/calls_pb";
-import { participantToPlain } from "@/features/calls/api/callsConverters";
+import { CallSchema, CallParticipantSchema } from "@uniffy/proto/calls/v1/calls_pb";
+import { callToPlain, participantToPlain } from "@/features/calls/api/callsConverters";
 import { describe, expect, it } from "vitest";
 import {
   callsReducer,
@@ -410,4 +410,42 @@ it("does not restore a lowered hand from an older reconnect snapshot", () => {
     callsReducer(initial, activeCallsSynced([stale])).activeByChannel["chan-1"].participants[0]
       .handRaisedAt,
   ).toBeNull();
+});
+
+describe("call publishing snapshots", () => {
+  it("converts speaker policy from join and stream payloads", () => {
+    const snapshot = callToPlain(
+      create(CallSchema, {
+        townHall: true,
+        hostUserId: "host",
+        speakerUserIds: ["speaker"],
+        publishingRevision: 7,
+      }),
+    );
+    expect(snapshot).toMatchObject({
+      townHall: true,
+      hostUserId: "host",
+      speakerUserIds: ["speaker"],
+      publishingRevision: 7,
+    });
+  });
+  it("keeps demotion across delayed joins and reconnect snapshots", () => {
+    const current = call({ townHall: true, speakerUserIds: [], publishingRevision: 4 });
+    const stale = call({ townHall: false, speakerUserIds: ["u2"], publishingRevision: 3 });
+    let state = callsReducer(init(), callUpserted(current));
+    state = callsReducer(state, callUpserted(stale));
+    state = callsReducer(state, activeCallsSynced([stale]));
+    state = callsReducer(
+      state,
+      hostChanged({ callId: "call-1", newHostUserId: "departed", publishingRevision: 3 }),
+    );
+    expect(state.activeByChannel["chan-1"].hostUserId).toBe("u1");
+    expect(state.activeByChannel["chan-1"]).toMatchObject({
+      townHall: true,
+      speakerUserIds: [],
+      publishingRevision: 4,
+    });
+    state = callsReducer(state, callUpserted({ ...stale, publishingRevision: 5 }));
+    expect(state.activeByChannel["chan-1"].townHall).toBe(false);
+  });
 });

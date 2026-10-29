@@ -14,6 +14,7 @@ from uniffy.domains.calls.config import get_livekit_config
 from uniffy.domains.calls.livekit import get_livekit_admin_client
 from uniffy.domains.calls.metrics import WEBHOOK_EVENTS, WEBHOOK_VERIFICATION, MediaEvent, Outcome
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.publishing import CallPublishing
 from uniffy.domains.calls.tokens import LiveKitTokenMinter, parse_room_call_id
 from uniffy.infrastructure.database import open_session
 
@@ -75,9 +76,13 @@ class LiveKitWebhookProvider:
         if not identity:
             return
         async with open_session() as session:
-            await MediaAdmission(session, get_livekit_admin_client()).evict_if_unauthorized(
-                call_id, room_name, identity
-            )
+            evicted = await MediaAdmission(
+                session, get_livekit_admin_client()
+            ).evict_if_unauthorized(call_id, room_name, identity)
+            if not evicted:
+                call = await _load_call(session, call_id, room_name)
+                if call is not None and (call.publishing_revision > 0 or call.town_hall):
+                    await CallPublishing(session).sync(call_id)
 
     async def _on_participant_left(
         self, call_id: UUID, room_name: str, event: dict[str, Any]

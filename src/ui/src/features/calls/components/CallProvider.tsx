@@ -1,3 +1,4 @@
+import { AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
 import { useCallPopout } from "@/features/calls/hooks/useCallPopout";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -310,7 +311,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       let micEnabled = false;
       let cameraEnabled = false;
       try {
-        if (opts.micEnabled) {
+        if (opts.micEnabled && r.localParticipant.permissions?.canPublish !== false) {
           await r.localParticipant.setMicrophoneEnabled(true, {
             deviceId: prefs.audioInputId ?? undefined,
           });
@@ -320,7 +321,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         dispatch(feedbackChanged(callErrorMessage(error, "microphone")));
       }
       try {
-        if (opts.cameraEnabled) {
+        if (opts.cameraEnabled && r.localParticipant.permissions?.canPublish !== false) {
           await r.localParticipant.setCameraEnabled(true, {
             deviceId: prefs.videoInputId ?? undefined,
           });
@@ -445,6 +446,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           feedbackChanged(callErrorMessage(error, kind === "videoinput" ? "camera" : "microphone")),
         );
       });
+      r.on(RoomEvent.ParticipantPermissionsChanged, (_previous, participant) => {
+        if (roomRef.current !== r || !participant.isLocal) return;
+        if (participant.permissions?.canPublish === false) {
+          for (const publication of r.localParticipant.trackPublications.values()) {
+            if (publication.track) {
+              publication.track.stop();
+              void r.localParticipant.unpublishTrack(publication.track).catch(() => {});
+            }
+          }
+          dispatch(
+            localMediaChanged({ micEnabled: false, cameraEnabled: false, screenSharing: false }),
+          );
+          dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+          reportMediaState();
+        } else {
+          dispatch(feedbackChanged("You can speak now. Turn on your microphone when ready."));
+        }
+      });
       r.on(RoomEvent.LocalTrackPublished, (pub) => {
         if (roomRef.current !== r) return;
         if (pub.source === Track.Source.Microphone || pub.source === Track.Source.Camera) {
@@ -551,7 +570,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const joinChannelCall = useCallback(
     async (channelId: string, opts: JoinMediaOptions) => {
       if (!(await guardOtherTab())) return;
-      const result = await dispatch(initiateCall(channelId)).unwrap();
+      const result = await dispatch(initiateCall({ channelId, townHall: opts.townHall })).unwrap();
       dispatch(
         sessionConnecting({
           callId: result.call.id,
@@ -628,6 +647,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const toggleMic = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+      return;
+    }
     const enabled = r.localParticipant.isMicrophoneEnabled;
     try {
       await r.localParticipant.setMicrophoneEnabled(!enabled);
@@ -641,6 +664,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const toggleCamera = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+      return;
+    }
     const enabled = r.localParticipant.isCameraEnabled;
     try {
       await r.localParticipant.setCameraEnabled(!enabled);
@@ -654,6 +681,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const toggleScreenShare = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+      return;
+    }
     const enabled = r.localParticipant.isScreenShareEnabled;
     const tier = clampQuality(preferencesRef.current.screenShareQuality, screenShareCapRef.current);
     const cfg = screenShareConfig(tier);

@@ -64,7 +64,12 @@ export function CallShortcuts() {
   const hold = useMemo(
     () =>
       createHoldToTalk(async (enabled) => {
-        if (!room || room.state !== ConnectionState.Connected) return;
+        if (
+          !room ||
+          room.state !== ConnectionState.Connected ||
+          (enabled && room.localParticipant.permissions?.canPublish === false)
+        )
+          return;
         try {
           await room.localParticipant.setMicrophoneEnabled(enabled);
         } catch (error) {

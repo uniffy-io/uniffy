@@ -67,6 +67,8 @@ service CallService {
   rpc UpdateOrgCallPolicy(UpdateOrgCallPolicyRequest) returns (UpdateOrgCallPolicyResponse);
   rpc SetHandRaised(SetHandRaisedRequest) returns (SetHandRaisedResponse);
   rpc SendCallReaction(SendCallReactionRequest) returns (SendCallReactionResponse);
+  rpc SetCallMode(SetCallModeRequest) returns (SetCallModeResponse);
+  rpc SetCallSpeaker(SetCallSpeakerRequest) returns (SetCallSpeakerResponse);
   // The client reports its own mic/camera/screen state; this is the roster's
   // source of truth because LiveKit emits no mute webhook (a muted mic track
   // stays published, so mute state cannot be inferred server-side). Fans out
@@ -84,12 +86,14 @@ enum CallAvailability {
 
 message GetCallAvailabilityRequest {
   string organization_id = 1;
+  optional string channel_id = 3;
   // Probe media only when preparing to join, not for every call control render.
   bool check_media = 2;
 }
 
 message GetCallAvailabilityResponse {
   CallAvailability availability = 1;
+  bool town_hall_allowed = 2;
 }
 
 message GetCallStateRequest {
@@ -130,6 +134,9 @@ message Call {
   optional CallEndReason end_reason = 9;
   // Active participants only (left_at unset).
   repeated CallParticipant participants = 10;
+  bool town_hall = 11;
+  repeated string speaker_user_ids = 12;
+  int32 publishing_revision = 13;
 }
 
 message CallParticipant {
@@ -154,6 +161,7 @@ message InitiateCallRequest {
   // Client-generated stable UUID persisted in localStorage.
   string device_id = 3;
   optional string device_label = 4;
+  bool town_hall = 5;
 }
 
 message InitiateCallResponse {
@@ -285,6 +293,9 @@ message OrgCallPolicy {
   ScreenShareQuality max_screen_share_quality_direct = 5;
   ScreenShareQuality max_screen_share_quality_group = 6;
   ScreenShareQuality max_screen_share_quality_channel = 7;
+  bool town_hall_enabled = 8;
+  // Empty permits every channel. Direct conversations cannot host town halls.
+  repeated string town_hall_channel_ids = 9;
 }
 
 message GetOrgCallPolicyRequest {
@@ -303,6 +314,26 @@ message UpdateOrgCallPolicyRequest {
   ScreenShareQuality max_screen_share_quality_direct = 5;
   ScreenShareQuality max_screen_share_quality_group = 6;
   ScreenShareQuality max_screen_share_quality_channel = 7;
+  optional bool town_hall_enabled = 8;
+  repeated string town_hall_channel_ids = 9;
+}
+
+message SetCallModeRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  bool town_hall = 3;
+}
+message SetCallModeResponse {
+  Call call = 1;
+}
+message SetCallSpeakerRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string user_id = 3;
+  bool speaker = 4;
+}
+message SetCallSpeakerResponse {
+  Call call = 1;
 }
 
 message UpdateOrgCallPolicyResponse {

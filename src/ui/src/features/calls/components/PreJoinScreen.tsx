@@ -1,3 +1,5 @@
+import { fetchTownHallAllowed } from "@/features/calls/store/callsThunks";
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
 import { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
 import { callAvailabilityMessage, callErrorMessage } from "@/features/calls/utils/callErrors";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -116,6 +118,23 @@ function PreJoinContent() {
     channelId ? selectActiveCallForChannel(s, channelId) : null,
   );
   const preferences = useAppSelector(selectCallPreferences);
+  const userId = useAppSelector((s) => s.auth.user?.id ?? "");
+  const audience = !canPublishInCall(activeCall, userId);
+  const [townHall, setTownHall] = useState(false);
+  const [allowedChannel, setAllowedChannel] = useState<string | null>(null);
+  useEffect(() => {
+    if (!channelId || activeCall || callId) return;
+    let cancelled = false;
+    void dispatch(fetchTownHallAllowed(channelId))
+      .unwrap()
+      .then((allowed) => {
+        if (!cancelled) setAllowedChannel(allowed ? channelId : null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [channelId, activeCall, callId, dispatch]);
   const userName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
 
@@ -156,7 +175,7 @@ function PreJoinContent() {
   }, []);
 
   useEffect(() => {
-    if (!camOn) {
+    if (!camOn || audience) {
       stopCamStream();
       return;
     }
@@ -187,10 +206,10 @@ function PreJoinContent() {
       cancelled = true;
       stopCamStream();
     };
-  }, [camOn, preferences.videoInputId, refresh, stopCamStream]);
+  }, [camOn, audience, preferences.videoInputId, refresh, stopCamStream]);
 
   useEffect(() => {
-    if (!micOn) {
+    if (!micOn || audience) {
       // Stops the live capture tracks; the state clear is the bookkeeping half.
       // eslint-disable-next-line react/react-compiler -- releasing the mic must happen the moment micOn flips
       stopMicStream();
@@ -223,7 +242,7 @@ function PreJoinContent() {
       cancelled = true;
       stopMicStream();
     };
-  }, [micOn, preferences.audioInputId, refresh, stopMicStream]);
+  }, [micOn, audience, preferences.audioInputId, refresh, stopMicStream]);
 
   const close = useCallback(() => {
     // Reset the toggles so the acquire effects re-run their cleanup (flip
@@ -245,7 +264,7 @@ function PreJoinContent() {
     if (!channelId || !ready) return;
     setJoining(true);
     setJoinError(null);
-    const opts = { micEnabled: micOn, cameraEnabled: camOn };
+    const opts = { micEnabled: micOn && !audience, cameraEnabled: camOn && !audience, townHall };
     stopCamStream();
     stopMicStream();
     try {
@@ -275,6 +294,8 @@ function PreJoinContent() {
     callId,
     micOn,
     camOn,
+    audience,
+    townHall,
     joinCallById,
     joinChannelCall,
     dispatch,
@@ -298,6 +319,31 @@ function PreJoinContent() {
         />
 
         <ModalBody className="space-y-4">
+          {!activeCall && !callId && allowedChannel === channelId && (
+            <div className="space-y-1.5">
+              <Select
+                ariaLabel="Call mode"
+                value={townHall ? "town-hall" : "regular"}
+                options={[
+                  { value: "regular", label: "Regular call" },
+                  { value: "town-hall", label: "Town hall" },
+                ]}
+                onChange={(value) => setTownHall(value === "town-hall")}
+                triggerClassName="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                {townHall
+                  ? "You present. Others join as audience and can raise their hand to speak."
+                  : "Everyone can use their microphone, camera and screen sharing."}
+              </p>
+            </div>
+          )}
+          {audience && (
+            <p role="status" className="text-sm text-muted-foreground">
+              {AUDIENCE_MESSAGE}
+            </p>
+          )}
+
           <div className="relative aspect-video overflow-hidden rounded-lg bg-muted/60 border border-border/60 flex items-center justify-center">
             <video
               ref={videoRef}
@@ -314,6 +360,7 @@ function PreJoinContent() {
             <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
               <button
                 type="button"
+                disabled={audience}
                 onClick={() => setMicOn((v) => !v)}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border",
@@ -328,6 +375,7 @@ function PreJoinContent() {
               </button>
               <button
                 type="button"
+                disabled={audience}
                 onClick={() => setCamOn((v) => !v)}
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border",

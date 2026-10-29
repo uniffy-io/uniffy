@@ -1,3 +1,5 @@
+import { useAuth } from "@core/providers/AuthContext";
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import { CallReactionOverlay } from "@features/calls/components/CallReactionOverlay";
 import { CallParticipation } from "@features/calls/components/CallParticipation";
 import { CallChat } from "@features/calls/components/CallChat";
@@ -73,7 +75,17 @@ export function CallScreen() {
   const [rosterOpen, setRosterOpen] = useState(false);
   const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
-  const participants = useRoomParticipants(room);
+  const everyone = useRoomParticipants(room);
+  const participants = everyone.filter((p) =>
+    canPublishInCall(activeCall, p.identity.split(":")[0]),
+  );
+  const { user } = useAuth();
+  const audience = !canPublishInCall(activeCall, user?.id ?? "");
+  const audienceCount = new Set(
+    everyone
+      .filter((p) => !canPublishInCall(activeCall, p.identity.split(":")[0]))
+      .map((p) => p.identity.split(":")[0]),
+  ).size;
   const { channels } = useChannels();
   const [cameraFit] = useCameraFit();
   // Only the local view follows the preference; a remote tile is framed by
@@ -158,7 +170,7 @@ export function CallScreen() {
         ? "Reconnecting..."
         : elapsed;
   const solo =
-    participants.length === 1 &&
+    everyone.length === 1 &&
     session.status === "connected" &&
     session.connectedAtMs > 0 &&
     nowMs - session.connectedAtMs > SOLO_HINT_AFTER_MS;
@@ -205,10 +217,10 @@ export function CallScreen() {
             onPress={() => setRosterOpen(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel={`Participants, ${participants.length}`}
+            accessibilityLabel={`Participants, ${everyone.length}`}
           >
             <Users size={18} color={T.textDim} weight="bold" />
-            <Text style={[styles.rosterCount, { color: T.textDim }]}>{participants.length}</Text>
+            <Text style={[styles.rosterCount, { color: T.textDim }]}>{everyone.length}</Text>
           </TouchableOpacity>
         }
       />
@@ -369,6 +381,14 @@ export function CallScreen() {
         )}
       </View>
 
+      {activeCall?.townHall && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ color: T.textDim, fontSize: 12, paddingHorizontal: 18, paddingVertical: 6 }}
+        >
+          Town hall · {audienceCount} listening{audience ? ` · ${AUDIENCE_MESSAGE}` : " · Speaker"}
+        </Text>
+      )}
       <CallReactionOverlay />
       {chatOpen && session.channelId && (
         <View style={{ flex: 1, minHeight: 180, marginHorizontal: 10 }}>
@@ -404,7 +424,7 @@ export function CallScreen() {
       <CallParticipantsSheet
         visible={rosterOpen}
         onClose={() => setRosterOpen(false)}
-        participants={participants}
+        participants={everyone}
         canModerate={canModerate}
       />
     </KeyboardAvoidingView>

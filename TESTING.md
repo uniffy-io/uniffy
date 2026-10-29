@@ -518,6 +518,17 @@ releasing locks; timing sleeps alone are not evidence of contention. Assert comm
 fanout outcomes. Preserve coverage for both orders of rejoin versus ghost retirement, connected-token
 generation checks, and tenant-qualified webhook room names when changing lifecycle code.
 
+## Calls: town halls
+
+- [ ] Start a channel call as A with Town hall selected in pre-join. B joins as audience. Only A appears on stage. Audience can listen, use channel chat, react and raise a hand.
+- [ ] A allows B to speak from raised hands. Request clears across B's devices. Mic and camera stay off until B enables them.
+- [ ] A moves B to audience from Participants while B publishes audio, camera and screen. All outgoing tracks stop on every device. B stays connected and can hear A.
+- [ ] Switch regular call to town hall. Confirmation explains that only host stays a speaker. Switching back unlocks controls without enabling audience devices.
+- [ ] Refresh or reconnect each participant. Speaker roles and audience restrictions remain. Try a stale speaker token directly against SFU. Join webhook corrects its permission to current policy.
+- [ ] Disable town halls in org settings or limit allowed channels. Disallowed channels offer no start option and backend rejects direct enable requests. Existing calls retain their mode.
+- [ ] Verify host controls, hand approval and confirmation in fullscreen and popout. Check desktop and narrow mobile web for overflow.
+- [ ] On physical iOS and Android, join as audience, request to speak, accept promotion, enable mic/camera, then accept demotion while sharing screen. Background/foreground must not restore an audience camera. Promotion never starts capture.
+
 ## Calls: roster controls and recovery feedback
 
 Run with host A, ordinary participant B, and channel moderator C. Use a private test channel.

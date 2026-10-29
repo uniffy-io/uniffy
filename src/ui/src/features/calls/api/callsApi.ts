@@ -16,6 +16,8 @@ import {
   MuteParticipantRequestSchema,
   ReportMediaStateRequestSchema,
   SetHandRaisedRequestSchema,
+  SetCallModeRequestSchema,
+  SetCallSpeakerRequestSchema,
   SendCallReactionRequestSchema,
   GetOrgCallPolicyRequestSchema,
   UpdateOrgCallPolicyRequestSchema,
@@ -25,6 +27,10 @@ import type { MessageInitShape } from "@bufbuild/protobuf";
 const callsClient = createClient(CallService, unaryTransport);
 
 export const callsApi = {
+  setCallMode: (req: MessageInitShape<typeof SetCallModeRequestSchema>) =>
+    callsClient.setCallMode(req),
+  setCallSpeaker: (req: MessageInitShape<typeof SetCallSpeakerRequestSchema>) =>
+    callsClient.setCallSpeaker(req),
   getCallAvailability: (req: MessageInitShape<typeof GetCallAvailabilityRequestSchema>) =>
     callsClient.getCallAvailability(req),
   getCallState: (req: MessageInitShape<typeof GetCallStateRequestSchema>) =>

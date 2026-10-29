@@ -1,5 +1,13 @@
+import { canPublishInCall } from "@/features/calls/utils/callPublishing";
 import { useRef, useState } from "react";
-import { HandPalm, Smiley, ChatCircle, CaretDown, ArrowDown } from "@phosphor-icons/react";
+import {
+  HandPalm,
+  Smiley,
+  ChatCircle,
+  CaretDown,
+  ArrowDown,
+  Microphone,
+} from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { PortalMenu } from "@/components/ui/portal-menu";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
@@ -8,7 +16,11 @@ import { cn } from "@/shared/utils/cn";
 import { getDeviceId } from "@/shared/utils/deviceId";
 import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
 import { selectCallSession, selectSessionCall } from "@/features/calls/store/callsSlice";
-import { setHandRaised, sendCallReaction } from "@/features/calls/store/callsThunks";
+import {
+  setHandRaised,
+  sendCallReaction,
+  setCallSpeaker,
+} from "@/features/calls/store/callsThunks";
 import { selectMessagesForChannel } from "@/features/chat/store/chatMessagesSlice";
 import { callReactions } from "@/features/calls/utils/callReactions";
 
@@ -184,6 +196,29 @@ export function CallParticipation({
                 {p.displayName}
                 {p.identity === ownIdentity ? " (you)" : ""}
               </span>
+              {call.townHall && canModerate && !canPublishInCall(call, p.userId) && (
+                <button
+                  type="button"
+                  className={control}
+                  disabled={disabled}
+                  aria-label={`Allow ${p.displayName} to speak`}
+                  title="Allow to speak"
+                  onClick={async () => {
+                    setPending(true);
+                    try {
+                      await dispatch(
+                        setCallSpeaker({ callId: call.id, userId: p.userId, speaker: true }),
+                      ).unwrap();
+                    } catch {
+                      /* Shared thunk pipeline reports failures. */
+                    } finally {
+                      setPending(false);
+                    }
+                  }}
+                >
+                  <Microphone size={15} />
+                </button>
+              )}
               {(canModerate || p.identity === ownIdentity) && (
                 <button
                   type="button"

@@ -1,3 +1,4 @@
+import { AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import React, {
   createContext,
   useCallback,
@@ -537,6 +538,31 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         }));
         scheduleMediaReport();
       };
+      r.on(livekit.RoomEvent.ParticipantPermissionsChanged, (_previous, participant) => {
+        if (roomRef.current !== r || !participant.isLocal) return;
+        if (participant.permissions?.canPublish === false) {
+          cameraContinuityRef.current?.cancelRestore();
+          for (const publication of r.localParticipant.trackPublications.values()) {
+            if (publication.track) {
+              publication.track.stop();
+              void r.localParticipant.unpublishTrack(publication.track).catch(() => {});
+            }
+          }
+          setSession((prev) => ({
+            ...prev,
+            micEnabled: false,
+            cameraEnabled: false,
+            screenSharing: false,
+          }));
+          setFeedback(AUDIENCE_MESSAGE);
+          AccessibilityInfo.announceForAccessibility(AUDIENCE_MESSAGE);
+          scheduleMediaReport();
+        } else {
+          const message = "You can speak now. Turn on your microphone when ready.";
+          setFeedback(message);
+          AccessibilityInfo.announceForAccessibility(message);
+        }
+      });
       r.on(livekit.RoomEvent.MediaDevicesError, (error, kind) => {
         if (roomRef.current === r)
           setFeedback(callErrorMessage(error, kind === "videoinput" ? "camera" : "microphone"));
@@ -580,7 +606,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       scheduleTokenRefresh(join.livekitToken);
 
       // A second device joins force-muted server-side; honor it on connect.
-      const effectiveMic = media.mic && join.serverMicEnabled !== false;
+      const effectiveMic =
+        media.mic &&
+        join.serverMicEnabled !== false &&
+        r.localParticipant.permissions?.canPublish !== false;
       const secondDeviceMuted = media.mic && join.serverMicEnabled === false;
       // The lens chosen before joining is opened here; the Room's capture
       // defaults (resolution) merge underneath the per-call facing.
@@ -591,7 +620,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         setFeedback(callErrorMessage(error, "microphone"));
       }
       try {
-        if (media.camera) await r.localParticipant.setCameraEnabled(true, { facingMode: facing });
+        if (media.camera && r.localParticipant.permissions?.canPublish !== false)
+          await r.localParticipant.setCameraEnabled(true, { facingMode: facing });
       } catch (error) {
         setFeedback(callErrorMessage(error, "camera"));
       }
@@ -793,6 +823,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const toggleMic = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      setFeedback(AUDIENCE_MESSAGE);
+      return;
+    }
     const next = !r.localParticipant.isMicrophoneEnabled;
     try {
       await r.localParticipant.setMicrophoneEnabled(next);
@@ -812,6 +846,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     cameraContinuityRef.current?.cancelRestore();
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      setFeedback(AUDIENCE_MESSAGE);
+      return;
+    }
     const next = !r.localParticipant.isCameraEnabled;
     try {
       await r.localParticipant.setCameraEnabled(next);
@@ -826,6 +864,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const toggleScreenShare = useCallback(async () => {
     const r = roomRef.current;
     if (!r) return;
+    if (r.localParticipant.permissions?.canPublish === false) {
+      setFeedback(AUDIENCE_MESSAGE);
+      return;
+    }
     const next = !r.localParticipant.isScreenShareEnabled;
     const tier = clampQuality(
       await getScreenShareQuality(),
@@ -1030,6 +1072,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     );
     cameraContinuityRef.current = continuity;
     const subscription = AppState.addEventListener("change", (state) => {
+      if (room.localParticipant.permissions?.canPublish === false) continuity.cancelRestore();
       if (state === "active" || state === "background") void continuity.update(state === "active");
     });
     void continuity.update(AppState.currentState === "active");

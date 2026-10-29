@@ -35,6 +35,9 @@ export interface PlainParticipant {
 }
 
 export interface PlainCall {
+  townHall?: boolean;
+  speakerUserIds?: string[];
+  publishingRevision?: number;
   id: string;
   channelId: string;
   callType: CallKind;
@@ -108,6 +111,9 @@ export function callToPlain(proto: ProtoCall): PlainCall {
     callType: CALL_TYPE_MAP[proto.callType] ?? "CHANNEL",
     initiatorUserId: proto.initiatorUserId,
     hostUserId: proto.hostUserId,
+    townHall: proto.townHall,
+    speakerUserIds: [...proto.speakerUserIds],
+    publishingRevision: proto.publishingRevision,
     startedAtSeconds: tsToSeconds(proto.startedAt),
     participants: proto.participants.map(participantToPlain),
   };

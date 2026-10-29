@@ -16,6 +16,7 @@ from uniffy.core.models.login.user_session import UserSession
 from uniffy.core.types import SubjectType, generate_id
 from uniffy.domains.calls import config as calls_config
 from uniffy.domains.calls import operations as calls_operations
+from uniffy.domains.calls import publishing as calls_publishing
 from uniffy.domains.calls import webhook as calls_webhook
 from uniffy.domains.calls.jobs import jobs as calls_jobs
 from uniffy.domains.calls.livekit import MediaAvailability
@@ -41,6 +42,7 @@ def livekit(monkeypatch):
     client = MagicMock()
     client.stop_after_unavailable.side_effect = lambda: nullcontext(MediaAvailability())
     client.remove_participant = AsyncMock()
+    client.set_publishing = AsyncMock()
     client.mute_participant_microphone = AsyncMock(return_value=True)
     client.delete_room = AsyncMock()
     client.get_participant = AsyncMock()
@@ -53,6 +55,7 @@ def livekit(monkeypatch):
         }
     )
     monkeypatch.setattr(calls_operations, "get_livekit_admin_client", MagicMock(return_value=client))
+    monkeypatch.setattr(calls_publishing, "get_livekit_admin_client", lambda: client)
     monkeypatch.setattr(calls_webhook, "get_livekit_admin_client", lambda: client)
     monkeypatch.setattr(calls_jobs, "get_livekit_admin_client", lambda: client)
     return client

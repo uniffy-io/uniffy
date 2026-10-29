@@ -1,3 +1,4 @@
+import { useCallPublishing } from "@/features/calls/hooks/useCallPublishing";
 import { useFormattedKeybinding } from "@/features/settings/hooks/useKeyboardShortcuts";
 import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
 import { useRef, useState } from "react";
@@ -27,7 +28,7 @@ import {
 
 const controlBase = cn(
   "flex items-center justify-center rounded-lg border border-border/60 bg-muted/40",
-  "text-foreground transition-colors hover:bg-muted focus-ring",
+  "text-foreground transition-colors enabled:hover:bg-muted focus-ring disabled:opacity-40 disabled:cursor-not-allowed",
 );
 
 const controlClass = cn(controlBase, "h-9 px-2.5");
@@ -44,6 +45,7 @@ interface ControlsBarProps {
 
 export function ControlsBar({ compact = false, onToggleParticipants }: ControlsBarProps) {
   const dispatch = useAppDispatch();
+  const { canPublish } = useCallPublishing();
   const muteShortcut = useFormattedKeybinding("calls.mute");
   const cameraShortcut = useFormattedKeybinding("calls.camera");
   const leaveShortcut = useFormattedKeybinding("calls.leave");
@@ -74,6 +76,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
       <div className="flex items-center gap-1" data-testid="call-controls-bar">
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleMic()}
           className={cn(compactControlClass, !session.micEnabled && offClass)}
           aria-label={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
@@ -84,6 +87,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
         </button>
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleCamera()}
           className={cn(compactControlClass, !session.cameraEnabled && offClass)}
           aria-label={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
@@ -94,6 +98,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
         </button>
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleScreenShare()}
           className={cn(
             compactControlClass,
@@ -129,6 +134,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
       <div className="flex items-stretch">
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleMic()}
           className={cn(controlClass, "rounded-r-none", !session.micEnabled && offClass)}
           aria-label={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
@@ -163,6 +169,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
       <div className="flex items-stretch">
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleCamera()}
           className={cn(controlClass, "rounded-r-none", !session.cameraEnabled && offClass)}
           aria-label={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
@@ -197,6 +204,7 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
       <div className="flex items-stretch">
         <button
           type="button"
+          disabled={!canPublish}
           onClick={() => void toggleScreenShare()}
           className={cn(
             controlClass,

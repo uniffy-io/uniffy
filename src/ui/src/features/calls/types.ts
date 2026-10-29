@@ -25,6 +25,9 @@ export interface CallParticipantData {
 }
 
 export interface CallData {
+  townHall?: boolean;
+  speakerUserIds?: string[];
+  publishingRevision?: number;
   id: string;
   organizationId: string;
   channelId: string;
