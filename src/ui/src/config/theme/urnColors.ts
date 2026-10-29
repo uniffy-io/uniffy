@@ -6,6 +6,7 @@ export const URN_TYPE_HEX_COLORS: Record<UrnType, string> = {
   [UrnType.NOTE]: "#8b5cf6", // violet-500 (fallback, usually uses primary)
   [UrnType.FILE]: "#3b82f6", // blue-500
   [UrnType.FOLDER]: "#f59e0b", // amber-500
+  [UrnType.CALL]: "#8b5cf6",
   [UrnType.CHAT]: "#8b5cf6", // violet-500
   [UrnType.AGENT_CHAT]: "#06b6d4", // cyan-500 (matches AGENT)
   [UrnType.AGENT_FOLDER]: "#06b6d4", // cyan-500 (container of agent chats)
@@ -73,6 +74,15 @@ export const URN_TYPE_THEMES: Record<UrnType, UrnTypeTheme> = {
     border: "border-cyan-500/40 dark:border-cyan-500/20",
     borderHover: "hover:border-cyan-500/60 dark:hover:border-cyan-500/40",
     shadow: "shadow-cyan-500/50",
+  },
+  [UrnType.CALL]: {
+    iconBg: "bg-gradient-to-br from-violet-500 to-violet-600",
+    iconBoxAccent: "border border-primary/55 bg-primary/10 text-primary",
+    accentText: "text-violet-600 dark:text-violet-400",
+    badgeBg: "bg-violet-500/10",
+    border: "border-violet-500/40 dark:border-violet-500/20",
+    borderHover: "hover:border-violet-500/60 dark:hover:border-violet-500/40",
+    shadow: "shadow-violet-500/50",
   },
   [UrnType.CHAT]: {
     iconBg: "bg-gradient-to-br from-violet-500 to-violet-600",
@@ -227,6 +237,7 @@ const BRAND_RAMP_ORDER: readonly UrnType[] = [
   UrnType.CALENDAR_EVENT,
   UrnType.ROOM,
   UrnType.CHAT,
+  UrnType.CALL,
   UrnType.CHAT_MESSAGE,
   UrnType.AGENT_FOLDER,
   UrnType.AGENT_CHAT,

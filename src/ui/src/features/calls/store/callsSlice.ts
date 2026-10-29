@@ -26,6 +26,7 @@ export interface CallSessionState {
 
 export interface PrejoinTarget {
   channelId: string;
+  calendarEventId?: string;
   /** Set when answering a ring: join exactly this call, never start a new one. */
   callId: string | null;
 }
@@ -36,6 +37,8 @@ interface CallsState {
   ringInvites: RingInvite[];
   prejoin: PrejoinTarget | null;
   endedInfo: CallEndedInfo | null;
+  /** Call this tab ended for everyone; its own end is not news to this user. */
+  selfEndedCallId: string | null;
   feedback: string | null;
   reactions: CallReactionData[];
 }
@@ -56,6 +59,7 @@ const initialState: CallsState = {
   ringInvites: [],
   prejoin: null,
   endedInfo: null,
+  selfEndedCallId: null,
   feedback: null,
   reactions: [],
 };
@@ -131,7 +135,7 @@ const callsSlice = createSlice({
       const activeIds = new Set(action.payload.map((c) => c.id));
       state.ringInvites = state.ringInvites.filter((r) => activeIds.has(r.callId));
       // The session's call vanished while the stream was down: surface the
-      // ended modal unless the SDK disconnect already reset the session.
+      // ended notice unless the SDK disconnect already reset the session.
       const { callId, channelId, status } = state.session;
       if (callId && channelId && status !== "idle" && !activeIds.has(callId)) {
         state.endedInfo = { callId, channelId, reason: null };
@@ -194,10 +198,14 @@ const callsSlice = createSlice({
     ringDismissed(state, action: PayloadAction<string>) {
       state.ringInvites = state.ringInvites.filter((r) => r.callId !== action.payload);
     },
-    prejoinOpened(state, action: PayloadAction<{ channelId: string; callId?: string }>) {
+    prejoinOpened(
+      state,
+      action: PayloadAction<{ channelId: string; callId?: string; calendarEventId?: string }>,
+    ) {
       state.prejoin = {
         channelId: action.payload.channelId,
         callId: action.payload.callId ?? null,
+        calendarEventId: action.payload.calendarEventId,
       };
     },
     prejoinClosed(state) {
@@ -243,8 +251,8 @@ const callsSlice = createSlice({
     ) {
       Object.assign(state.session, action.payload);
     },
-    endedInfoCleared(state) {
-      state.endedInfo = null;
+    callEndRequested(state, action: PayloadAction<string | null>) {
+      state.selfEndedCallId = action.payload;
     },
     // Sign-out reset. The CallProvider tears the live Room down separately; this
     // only wipes the store so no roster, ring, or "live in call" chrome leaks
@@ -256,6 +264,7 @@ const callsSlice = createSlice({
         ringInvites: [],
         prejoin: null,
         endedInfo: null,
+        selfEndedCallId: null,
         feedback: null,
         reactions: [],
       };
@@ -284,7 +293,7 @@ export const {
   sessionDisconnected,
   sessionReset,
   localMediaChanged,
-  endedInfoCleared,
+  callEndRequested,
   clearCalls,
 } = callsSlice.actions;
 
@@ -300,6 +309,8 @@ export const selectRingInvites = (state: RootState) => state.calls.ringInvites;
 export const selectPrejoin = (state: RootState) => state.calls.prejoin;
 
 export const selectEndedInfo = (state: RootState) => state.calls.endedInfo;
+
+export const selectSelfEndedCallId = (state: RootState) => state.calls.selfEndedCallId;
 
 export const selectSessionCall = (state: RootState) => {
   const { callId } = state.calls.session;

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.models.files.attachment import Attachment
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.domains.calls.access import resolve_calls
 from uniffy.domains.chat.folders.access import resolve_agent_folders
 from uniffy.domains.chat.resources.access import resolve_chat_resources
 from uniffy.domains.directory.access import resolve_directory_resources
@@ -136,6 +137,8 @@ class ResourceAccessResolver:
             )
         if ContentType.TASK in grouped:
             decisions.update(await resolve_tasks(self.session, subject, grouped[ContentType.TASK]))
+        if ContentType.CALL in grouped:
+            decisions.update(await resolve_calls(self.session, subject, grouped[ContentType.CALL]))
         if CHAT_CONTENT_TYPES & grouped.keys():
             decisions.update(await resolve_chat_resources(self.session, subject, grouped))
         if ContentType.AGENT_FOLDER in grouped:

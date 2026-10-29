@@ -12,6 +12,7 @@ import {
   Robot,
   Tag,
   Timer,
+  Phone,
   User,
   UsersThree,
 } from "phosphor-react-native";
@@ -27,6 +28,7 @@ interface LibraryTypeConfig {
 }
 
 export const LIBRARY_TYPES: Record<UrnType, LibraryTypeConfig> = {
+  CALL: { label: "Call", labelPlural: "Calls", icon: Phone, contentType: ContentType.CALL },
   NOTE: { label: "Note", labelPlural: "Notes", icon: NotePencil, contentType: ContentType.NOTE },
   TAG: { label: "Tag", labelPlural: "Tags", icon: Tag, contentType: ContentType.TAG },
   FOLDER: {

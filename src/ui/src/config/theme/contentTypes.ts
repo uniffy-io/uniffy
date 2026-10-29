@@ -17,6 +17,7 @@ import {
   Robot,
   Tag as TagIcon,
   Timer,
+  Phone,
 } from "@phosphor-icons/react";
 import { UrnType } from "@/shared/utils/urnTypes";
 import { getUrnTypeTheme, getUrnTypeHexColor, type UrnTypeTheme } from "@/config/theme/urnColors";
@@ -67,6 +68,15 @@ export const CONTENT_TYPE_CONFIG: Record<UrnType, ContentTypeConfig> = {
     route: "chat",
     theme: getUrnTypeTheme(UrnType.AGENT_FOLDER),
     hexColor: getUrnTypeHexColor(UrnType.AGENT_FOLDER),
+  },
+  [UrnType.CALL]: {
+    type: UrnType.CALL,
+    icon: Phone,
+    label: "Call",
+    labelPlural: "Calls",
+    route: "calls",
+    theme: getUrnTypeTheme(UrnType.CALL),
+    hexColor: getUrnTypeHexColor(UrnType.CALL),
   },
   [UrnType.CHAT]: {
     type: UrnType.CHAT,

@@ -83,6 +83,7 @@ CONTENT_TYPE_TO_PROTO: dict[DomainContentType, ProtoContentType] = {
     DomainContentType.TAG: ProtoContentType.TAG,
     DomainContentType.TEAM: ProtoContentType.TEAM,
     DomainContentType.CALENDAR: ProtoContentType.CALENDAR,
+    DomainContentType.CALL: ProtoContentType.CALL,
 }
 
 CONTENT_TYPE_FROM_PROTO: dict[ProtoContentType, DomainContentType] = {

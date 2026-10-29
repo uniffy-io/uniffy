@@ -3,7 +3,7 @@
 from collections.abc import Collection
 from uuid import UUID
 
-from sqlalchemy import exists, select
+from sqlalchemy import Select, and_, exists, false, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import get_active_membership, is_active_member
@@ -185,6 +185,33 @@ class ChatAccessChecker:
             is_self_dm=channel.is_self_dm,
         ):
             raise PermissionDeniedError("access", "channel")
+
+    async def accessible_channels_statement(self, user_id: UUID, organization_id: UUID) -> Select:
+        query = select(ChatChannel.id).where(
+            ChatChannel.organization_id == organization_id,
+            ChatChannel.is_deleted.is_(False),
+        )
+        if not await self.is_org_member(user_id, organization_id):
+            return query.where(false())
+        membership = exists(
+            select(ChatChannelMember.channel_id).where(
+                ChatChannelMember.channel_id == ChatChannel.id,
+                ChatChannelMember.subject_type == SubjectType.USER,
+                ChatChannelMember.subject_id == user_id,
+            )
+        )
+        moderator = await self.is_org_admin(
+            user_id, organization_id
+        ) or await self.is_chat_domain_admin(user_id, organization_id)
+        return query.where(
+            or_(
+                and_(ChatChannel.is_self_dm.is_(True), ChatChannel.owner_id == user_id, membership),
+                and_(
+                    ChatChannel.is_self_dm.is_(False),
+                    or_(moderator, ChatChannel.channel_type == ChannelType.PUBLIC, membership),
+                ),
+            )
+        )
 
     async def filter_viewers(
         self,

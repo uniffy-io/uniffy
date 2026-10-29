@@ -41,6 +41,7 @@ _CONTENT_TYPE_TO_DOMAIN: dict[ContentType, DomainType] = {
     ContentType.FOLDER: DomainType.FILES,
     ContentType.CALENDAR_EVENT: DomainType.CALENDAR,
     ContentType.CALENDAR: DomainType.CALENDAR,
+    ContentType.CALL: DomainType.CHAT,
     ContentType.CHAT_MESSAGE: DomainType.CHAT,
     ContentType.CHAT: DomainType.CHAT,
     ContentType.PROJECT: DomainType.PROJECTS,

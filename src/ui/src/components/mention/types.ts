@@ -25,6 +25,9 @@ export interface MentionLiveState {
   /** Stripped, indexed snippet (~200 chars). Source of truth for the
    *  expanded card body so chips do not need a second hover-fetch. */
   description?: string;
+  callStartedAt?: string;
+  callEndedAt?: string;
+  callStatus?: string;
   updatedAt?: string;
   updatedByName?: string;
 

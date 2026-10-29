@@ -122,23 +122,6 @@ export function YouScreen() {
             <TouchableOpacity
               style={styles.settingRow}
               activeOpacity={0.7}
-              onPress={() => router.push("/you/calls" as Href)}
-            >
-              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
-                <Phone size={15} color={T.text} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.settingLabel, { color: T.textBright }]}>Calls</Text>
-                <Text style={[styles.settingSub, { color: T.textDim }]}>
-                  Ringtone, camera and join defaults
-                </Text>
-              </View>
-              <CaretRight size={15} color={T.textDim} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.settingRow}
-              activeOpacity={0.7}
               onPress={() => router.push("/you/notifications" as any)}
             >
               <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
@@ -157,7 +140,10 @@ export function YouScreen() {
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>APP</Text>
           <View style={[styles.sectionCard, { backgroundColor: T.surface, borderColor: T.border }]}>
             <TouchableOpacity
-              style={styles.settingRow}
+              style={[
+                styles.settingRow,
+                { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth },
+              ]}
               onPress={() => router.push("/you/appearance" as any)}
               activeOpacity={0.7}
             >
@@ -168,6 +154,23 @@ export function YouScreen() {
                 <Text style={[styles.settingLabel, { color: T.textBright }]}>Appearance</Text>
                 <Text style={[styles.settingSub, { color: T.textDim }]}>
                   Theme, colors & chat layout
+                </Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => router.push("/you/calls" as Href)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Phone size={15} color={T.text} weight="regular" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Calls</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>
+                  Ringtone, camera and join defaults
                 </Text>
               </View>
               <CaretRight size={15} color={T.textDim} weight="regular" />

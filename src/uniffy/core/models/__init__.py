@@ -21,7 +21,10 @@ from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.calls import (
     Call,
+    CallActivity,
     CallEndReason,
+    CallInvitation,
+    CallInvitationOutcome,
     CallParticipant,
     CallType,
 )
@@ -254,6 +257,9 @@ __all__ = [
     # Calls
     "Call",
     "CallEndReason",
+    "CallActivity",
+    "CallInvitation",
+    "CallInvitationOutcome",
     "CallParticipant",
     "CallType",
     # Tags

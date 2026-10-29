@@ -1,9 +1,10 @@
-import { CallModeControl } from "@/features/calls/components/CallModeControl";
+import { ArrowSquareIn } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { CallStatus } from "@/features/calls/components/CallStatus";
 import { canPublishInCall, AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
 import { useCallPublishing } from "@/features/calls/hooks/useCallPublishing";
 import { CallReactionOverlay } from "@/features/calls/components/CallReactionOverlay";
 import { useState } from "react";
-import { CallParticipation } from "@/features/calls/components/CallParticipation";
 import { CallChat } from "@/features/calls/components/CallChat";
 import { createPortal } from "react-dom";
 import { useAppSelector } from "@/app/hooks";
@@ -24,16 +25,12 @@ export function CallPopout() {
   if (!popoutWindow || popoutWindow.closed || !session.callId) return null;
   return createPortal(
     <div className="flex h-dvh flex-col gap-3 p-3" data-testid="call-popout">
-      <header className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <CallModeControl />
-        <span>{session.status === "reconnecting" ? "Reconnecting..." : "Live call"}</span>
-        <button
-          type="button"
-          className="min-h-11 text-primary hover:underline"
-          onClick={closePopout}
-        >
-          Return to tab
-        </button>
+      <header className="flex items-center justify-between gap-2">
+        <CallStatus />
+        <Button variant="ghost" size="sm" className="shrink-0" onClick={closePopout}>
+          <ArrowSquareIn size={14} />
+          Return call to tab
+        </Button>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
         <div className="relative min-h-24 min-w-0 flex-1">
@@ -63,17 +60,12 @@ export function CallPopout() {
         </p>
       )}
       {feedback && (
-        <p role="alert" className="text-sm text-muted-foreground">
+        <p role="alert" className="text-center text-sm text-muted-foreground">
           {feedback}
         </p>
       )}
       <footer className="flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <CallParticipation chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
-          <div className="[&_button]:size-11 md:[&_button]:size-9">
-            <ControlsBar compact />
-          </div>
-        </div>
+        <ControlsBar chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
         <p className="text-xs text-muted-foreground">
           Keep original tab open. Closing this window keeps call running.
         </p>

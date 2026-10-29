@@ -129,6 +129,7 @@ export function IncomingCallBanner() {
           <TouchableOpacity
             style={[styles.roundButton, { backgroundColor: T.red }]}
             onPress={() => decline(invite)}
+            hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel="Decline call"
           >
@@ -137,6 +138,7 @@ export function IncomingCallBanner() {
           <TouchableOpacity
             style={[styles.roundButton, { backgroundColor: T.green }]}
             onPress={() => accept(invite)}
+            hitSlop={4}
             accessibilityRole="button"
             accessibilityLabel="Accept call"
           >
@@ -177,6 +179,7 @@ const styles = StyleSheet.create({
   labels: { flex: 1, minWidth: 0 },
   caller: { fontSize: 14, fontFamily: FONT.semibold },
   channel: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
+  // 40pt to fit the banner; hitSlop on each button brings the target to 44.
   roundButton: {
     width: 40,
     height: 40,

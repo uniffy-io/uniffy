@@ -16,6 +16,8 @@ from uniffy_proto.calls.v1.calls_pb import (
     GetActiveCallResponse,
     GetCallAvailabilityRequest,
     GetCallAvailabilityResponse,
+    GetCallRecordRequest,
+    GetCallRecordResponse,
     GetCallStateRequest,
     GetCallStateResponse,
     GetOrgCallPolicyRequest,
@@ -31,10 +33,14 @@ from uniffy_proto.calls.v1.calls_pb import (
     LeaveCallResponse,
     ListActiveCallsRequest,
     ListActiveCallsResponse,
+    ListCallHistoryRequest,
+    ListCallHistoryResponse,
     MuteParticipantRequest,
     MuteParticipantResponse,
     RefreshCallTokenRequest,
     RefreshCallTokenResponse,
+    ReportCallActivityRequest,
+    ReportCallActivityResponse,
     ReportMediaStateRequest,
     ReportMediaStateResponse,
     SendCallReactionRequest,
@@ -54,8 +60,11 @@ from uniffy.core.auth.principal import current_session_id, current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.core.models.chat.channel import ChannelType
+from uniffy.domains.calls.activity import CallActivityOperations
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
 from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto, participant_to_proto
+from uniffy.domains.calls.history import CallHistoryReader
+from uniffy.domains.calls.invitations import CallInvitations
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.metrics import RINGS, RingOutcome
 from uniffy.domains.calls.operations import CallOperations
@@ -120,6 +129,52 @@ def _map_domain_error(operation: str, exc: Exception) -> ConnectError:
 
 
 class CallHandlers:
+    async def list_call_history(
+        self, request: ListCallHistoryRequest, ctx: RequestContext
+    ) -> ListCallHistoryResponse:
+        async with open_session() as session:
+            records, cursor = await CallHistoryReader(session).list_history(
+                current_user_id(),
+                _parse_uuid(request.organization_id, "organization_id"),
+                channel_id=_parse_uuid(request.channel_id, "channel_id")
+                if request.has_field("channel_id")
+                else None,
+                cursor=request.cursor,
+                page_size=request.page_size,
+            )
+            return ListCallHistoryResponse(records=records, next_cursor=cursor)
+
+    async def report_call_activity(
+        self, request: ReportCallActivityRequest, ctx: RequestContext
+    ) -> ReportCallActivityResponse:
+        async with open_session() as session:
+            return await CallActivityOperations(session).report(
+                current_user_id(),
+                _parse_uuid(request.organization_id, "organization_id"),
+                _parse_uuid(request.call_id, "call_id"),
+                current_session_id(),
+                _require_device_id(request.device_id),
+                _parse_uuid(request.participant_id, "participant_id")
+                if request.participant_id
+                else None,
+                list(request.chunks),
+            )
+
+    async def get_call_record(
+        self, request: GetCallRecordRequest, ctx: RequestContext
+    ) -> GetCallRecordResponse:
+        async with open_session() as session:
+            record, participants, cursor = await CallHistoryReader(session).get_record(
+                current_user_id(),
+                _parse_uuid(request.organization_id, "organization_id"),
+                _parse_uuid(request.call_id, "call_id"),
+                cursor=request.participant_cursor,
+                page_size=request.page_size,
+            )
+            return GetCallRecordResponse(
+                record=record, participants=participants, next_participant_cursor=cursor
+            )
+
     @call_context
     async def get_call_availability(
         self, request: GetCallAvailabilityRequest, ctx: RequestContext
@@ -177,6 +232,10 @@ class CallHandlers:
                     device_label,
                     current_session_id(),
                     town_hall=request.town_hall,
+                    title=request.title if request.has_field("title") else None,
+                    calendar_event_id=(
+                        request.calendar_event_id if request.has_field("calendar_event_id") else None
+                    ),
                 )
                 profiles = await ops.resolve_profiles([p.user_id for p in participants])
                 cap = await ops.resolve_screen_share_ceiling(organization_id, call.call_type)
@@ -324,10 +383,9 @@ class CallHandlers:
         call_id = _parse_uuid(request.call_id, "call_id")
         async with open_session() as session:
             try:
-                await CallReader(session).get_state(user_id, organization_id, call_id)
+                await CallInvitations(session).decline(user_id, organization_id, call_id)
             except Exception as exc:
                 raise _map_domain_error("decline_call", exc) from exc
-        # Ring dismissal is local; this acknowledgement does not end the shared call.
         RINGS.labels(RingOutcome.DECLINED).inc()
         logger.info("Call ring declined")
         return DeclineCallResponse(success=True)

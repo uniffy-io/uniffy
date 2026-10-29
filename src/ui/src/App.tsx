@@ -218,6 +218,10 @@ const ProjectSettingsPage = lazyImport(
   "ProjectSettingsPage",
 );
 const AgentsPage = lazyImport(loadAgentsPage, "AgentsPage");
+const CallHistoryPage = lazyImport(
+  () => import("@/features/calls/pages/CallHistoryPage"),
+  "CallHistoryPage",
+);
 const ChatPage = lazyImport(loadChatPage, "ChatPage");
 const UserSettingsPage = lazyImport(
   () => import("@/features/settings/pages/SettingsPage"),
@@ -1081,6 +1085,16 @@ export function App() {
                     }
                   />
 
+                  <Route
+                    path="/calls/:callId?"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <CallHistoryPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
                   {/* Chat routes */}
                   <Route
                     path="/chat/:channelId?"

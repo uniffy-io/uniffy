@@ -401,6 +401,8 @@ export function MessageCompose({
     [actions, standaloneSlash, editingMessage, runnableSkills, slashQuery],
   );
   const activeSlashIndex = slashHighlight < slashOptions.length ? slashHighlight : 0;
+  // Outside agent DMs a slash only means a command, so a plain "/word" stays text.
+  const slashMenuOpen = slashActive && (slashOptions.length > 0 || !!skillAgentId);
   const [isSending, setIsSending] = useState(false);
   const sendDisabled = isSending || hasPendingUploads || (isEmpty && !pendingInvokedSkill);
   const sendingRef = useRef(false);
@@ -1051,7 +1053,7 @@ export function MessageCompose({
           handleMentionClose();
           return;
         }
-        if (slashActive) {
+        if (slashMenuOpen) {
           return;
         }
         if (editingMessage) {
@@ -1101,6 +1103,7 @@ export function MessageCompose({
     [
       mentionActive,
       slashActive,
+      slashMenuOpen,
       slashOptions,
       activeSlashIndex,
       handleCommandSelect,
@@ -1271,7 +1274,7 @@ export function MessageCompose({
         data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
-        {slashActive && (
+        {slashMenuOpen && (
           <ComposerCommandMenu
             id={slashMenuId}
             options={slashOptions}
@@ -1369,9 +1372,11 @@ export function MessageCompose({
             aria-label={displayPlaceholder}
             aria-multiline="true"
             aria-autocomplete="list"
-            aria-controls={slashActive ? slashMenuId : undefined}
+            aria-controls={slashMenuOpen ? slashMenuId : undefined}
             aria-activedescendant={
-              slashActive && slashOptions.length ? `${slashMenuId}-${activeSlashIndex}` : undefined
+              slashMenuOpen && slashOptions.length
+                ? `${slashMenuId}-${activeSlashIndex}`
+                : undefined
             }
             onInput={handleInput}
             onKeyDown={handleKeyDown}

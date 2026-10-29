@@ -16,6 +16,7 @@ export function SheetRow({
   selected,
   trailing,
   accentColor,
+  accessibilityHint,
   onPress,
 }: {
   leading?: React.ReactNode;
@@ -27,6 +28,7 @@ export function SheetRow({
   /** Sits between the label and the check - a status pill, a count. */
   trailing?: React.ReactNode;
   accentColor?: string;
+  accessibilityHint?: string;
   onPress: () => void;
 }) {
   const T = useTheme();
@@ -40,6 +42,7 @@ export function SheetRow({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={subtitle ? `${title}, ${subtitle}` : title}
+      accessibilityHint={accessibilityHint}
     >
       {leading}
       <View style={styles.labels}>

@@ -75,7 +75,7 @@ export function EventPlaceSection({ event, canEdit, commit }: EventPlaceSectionP
         />
       </div>
 
-      {event.channelId && <EventMeetingJoin channelId={event.channelId} />}
+      {event.channelId && <EventMeetingJoin channelId={event.channelId} eventId={event.id} />}
 
       {canEdit && (
         <div>

@@ -1,11 +1,13 @@
 import { MultiSelect } from "@/components/ui/multi-select";
 import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
-import { fetchChannels } from "@/features/chat/store/chatThunks";
-import { useCallback, useEffect, useState } from "react";
+import { fetchChannels, fetchPublicChannels } from "@/features/chat/store/chatThunks";
+import type { ChatChannel } from "@/features/chat/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Phone, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
+import { Button } from "@/components/ui/button";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { friendlyErrorMessage } from "@/config";
 import { callsApi } from "@/features/calls/api/callsApi";
@@ -46,9 +48,14 @@ const QUALITY_CALL_TYPES: {
 export function CallsPolicySection() {
   useDocumentTitle("Calls");
   const dispatch = useAppDispatch();
-  const channels = useAppSelector(selectChannels);
+  const joinedChannels = useAppSelector(selectChannels);
+  const [publicChannels, setPublicChannels] = useState<ChatChannel[]>([]);
   useEffect(() => {
     void dispatch(fetchChannels());
+    void dispatch(fetchPublicChannels())
+      .unwrap()
+      .then(setPublicChannels)
+      .catch(() => {});
   }, [dispatch]);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
@@ -58,6 +65,23 @@ export function CallsPolicySection() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A restriction can name channels this admin has not joined or that were archived;
+  // they stay listed so the policy never reads as "All channels" while it is narrower.
+  const townHallOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const channel of [...publicChannels, ...joinedChannels]) {
+      if (
+        !channel.isArchived &&
+        (channel.channelType === "PUBLIC" || channel.channelType === "PRIVATE")
+      )
+        byId.set(channel.id, channel.name);
+    }
+    for (const id of form?.townHallChannelIds ?? []) {
+      if (!byId.has(id)) byId.set(id, "Channel you cannot see");
+    }
+    return [...byId].map(([value, label]) => ({ value, label }));
+  }, [publicChannels, joinedChannels, form?.townHallChannelIds]);
 
   const reload = useCallback(async () => {
     if (!organizationId) return;
@@ -155,7 +179,7 @@ export function CallsPolicySection() {
           Loading...
         </div>
       ) : (
-        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border">
+        <div className="rounded-xl bg-surface shadow-edge divide-y divide-border/60">
           <Row
             title="Calls enabled"
             description="Turn calling on or off for the whole organization."
@@ -168,39 +192,36 @@ export function CallsPolicySection() {
             />
           </Row>
 
-          <Row
-            title="Town halls"
-            description="Let hosts run calls with speakers and a listening audience. Applies when starting or switching call mode."
-          >
-            <ToggleSwitch
-              ariaLabel="Town halls enabled"
-              enabled={form.townHallEnabled}
-              onChange={(value) => update("townHallEnabled", value)}
-              disabled={disabled}
-            />
-          </Row>
-          {form.townHallEnabled && (
-            <div className="p-5 space-y-2">
-              <h3 className="text-sm font-semibold">Town-hall channels</h3>
-              <p className="text-xs text-muted-foreground">
-                Leave empty to allow all public and private channels.
-              </p>
-              <MultiSelect
-                value={form.townHallChannelIds}
-                onChange={(value) => update("townHallChannelIds", value)}
-                options={channels
-                  .filter(
-                    (c) =>
-                      !c.isArchived && (c.channelType === "PUBLIC" || c.channelType === "PRIVATE"),
-                  )
-                  .map((c) => ({ value: c.id, label: c.name }))}
+          <div>
+            <Row
+              title="Town halls"
+              description="Let hosts run calls with speakers and a listening audience. Applies when starting or switching call mode."
+            >
+              <ToggleSwitch
+                ariaLabel="Town halls enabled"
+                enabled={form.townHallEnabled}
+                onChange={(value) => update("townHallEnabled", value)}
                 disabled={disabled}
-                searchable
-                ariaLabel="Town-hall channels"
-                placeholder="All channels"
               />
-            </div>
-          )}
+            </Row>
+            {form.townHallEnabled && (
+              <div className="space-y-2 px-5 pb-5 pl-9">
+                <h3 className="text-sm font-semibold text-foreground">Town-hall channels</h3>
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to allow all public and private channels.
+                </p>
+                <MultiSelect
+                  value={form.townHallChannelIds}
+                  onChange={(value) => update("townHallChannelIds", value)}
+                  options={townHallOptions}
+                  disabled={disabled}
+                  searchable
+                  ariaLabel="Town-hall channels"
+                  placeholder="All channels"
+                />
+              </div>
+            )}
+          </div>
           <div className="p-5">
             <h3 className="text-sm font-semibold text-foreground">Screen-share quality policy</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -258,14 +279,9 @@ export function CallsPolicySection() {
       )}
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => void save()}
-          disabled={disabled || !form}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? "Saving..." : "Save changes"}
-        </button>
+        <Button size="lg" onClick={() => void save()} disabled={disabled || !form} loading={saving}>
+          Save changes
+        </Button>
         {!isAdmin && (
           <span className="text-xs text-muted-foreground">
             You need owner or admin role to change these settings.

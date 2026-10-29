@@ -127,6 +127,7 @@ from uniffy.domains.bookmarks.service import BookmarksServiceImpl
 from uniffy.domains.calls.channels import CallsLifecycle
 from uniffy.domains.calls.config import LiveKitConfigError
 from uniffy.domains.calls.handlers import CallHandlers
+from uniffy.domains.calls.registration import register_call_content
 from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 from uniffy.domains.chat.service import ChatServiceImpl
 from uniffy.domains.chat.streaming.handlers import ChatStreamHandlers
@@ -506,6 +507,7 @@ def create_app(
     register_task_realtime_adapter(search_indexer)
     register_event_realtime_adapter(search_indexer)
     register_note_content()
+    register_call_content()
     register_calendar_content()
     register_calendar_crypto()
     register_file_content()

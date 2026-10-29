@@ -1,14 +1,23 @@
 import { useAuth } from "@core/providers/AuthContext";
 import { MessageAttachments } from "@features/chat/components/MessageAttachments";
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, FlatList, Pressable, Text, TextInput, View } from "react-native";
-import { PaperPlaneTilt, X } from "phosphor-react-native";
+import {
+  AccessibilityInfo,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { PaperPlaneRight, X } from "phosphor-react-native";
 import { useMessages } from "@features/chat/useChat";
 import { useSendMessage, useDiscardFailedMessage } from "@features/chat/useChatMutations";
 import { useCall } from "@features/calls/CallContext";
 import { callErrorMessage } from "@features/calls/callErrors";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
 import { useTheme } from "@shared/hooks/useTheme";
+import { FONT } from "@theme/typography";
 
 export function CallChat({ channelId, onClose }: { channelId: string; onClose: () => void }) {
   const T = useTheme();
@@ -36,33 +45,36 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
       showFeedback(callErrorMessage(error));
     }
   };
+  const canSend = !!draft.trim() && !sendMessage.isPending;
   return (
-    <View style={{ flex: 1, backgroundColor: T.surface, borderRadius: 12, padding: 10 }}>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: T.text, fontWeight: "600" }}>Channel chat</Text>
-          <Text style={{ color: T.textDim, fontSize: 12 }}>
+    <View style={[styles.panel, { backgroundColor: T.surface, borderColor: T.border }]}>
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={[styles.title, { color: T.textBright }]}>Channel chat</Text>
+          <Text style={[styles.subtitle, { color: T.textDim }]}>
             Messages stay here after this call.
           </Text>
         </View>
-        <Pressable
-          style={{ minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+        <TouchableOpacity
+          style={styles.close}
+          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Close chat"
           onPress={onClose}
         >
-          <X size={20} color={T.text} />
-        </Pressable>
+          <X size={20} color={T.text} weight="bold" />
+        </TouchableOpacity>
       </View>
-      {isLoading && <Text style={{ color: T.textDim }}>Loading messages...</Text>}
+      {isLoading && <Text style={[styles.status, { color: T.textDim }]}>Loading messages...</Text>}
       {isError && (
-        <Pressable
+        <TouchableOpacity
           accessibilityRole="button"
+          activeOpacity={0.7}
           onPress={() => void refetch()}
-          style={{ minHeight: 44, justifyContent: "center" }}
+          style={styles.textButton}
         >
-          <Text style={{ color: T.accent }}>Retry loading messages</Text>
-        </Pressable>
+          <Text style={[styles.action, { color: T.accent }]}>Retry loading messages</Text>
+        </TouchableOpacity>
       )}
       <FlatList
         inverted
@@ -74,8 +86,8 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
             void loadOlder().catch((error) => showFeedback(callErrorMessage(error)));
         }}
         renderItem={({ item }) => (
-          <View style={{ paddingVertical: 8 }}>
-            <Text style={{ color: T.textDim, fontSize: 12 }}>{item.senderName}</Text>
+          <View style={styles.message}>
+            <Text style={[styles.sender, { color: T.textDim }]}>{item.senderName}</Text>
             <MarkdownRenderer content={item.isDeleted ? "Message deleted" : item.content} />
             {!item.isDeleted && organizationId && (
               <MessageAttachments
@@ -85,27 +97,29 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
               />
             )}
             {item.metadata.failed === "1" && (
-              <View style={{ flexDirection: "row", gap: 16 }}>
-                <Pressable
+              <View style={styles.failedActions}>
+                <TouchableOpacity
                   accessibilityRole="button"
+                  activeOpacity={0.7}
                   onPress={() => void send(item.content, item.id)}
-                  style={{ minHeight: 44, justifyContent: "center" }}
+                  style={styles.textButton}
                 >
-                  <Text style={{ color: T.accent }}>Retry send</Text>
-                </Pressable>
-                <Pressable
+                  <Text style={[styles.action, { color: T.accent }]}>Retry send</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   accessibilityRole="button"
+                  activeOpacity={0.7}
                   onPress={() => discard(item.id)}
-                  style={{ minHeight: 44, justifyContent: "center" }}
+                  style={styles.textButton}
                 >
-                  <Text style={{ color: T.textDim }}>Discard</Text>
-                </Pressable>
+                  <Text style={[styles.action, { color: T.textDim }]}>Discard</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
         )}
       />
-      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
+      <View style={styles.composer}>
         <TextInput
           multiline
           accessibilityLabel="Message channel"
@@ -114,28 +128,66 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
           value={draft}
           onChangeText={setDraft}
           editable={!sendMessage.isPending}
-          style={{
-            flex: 1,
-            color: T.text,
-            backgroundColor: T.pageBg,
-            borderColor: T.border,
-            borderWidth: 1,
-            borderRadius: 10,
-            minHeight: 44,
-            maxHeight: 100,
-            padding: 10,
-          }}
+          style={[
+            styles.input,
+            { color: T.textBright, backgroundColor: T.pageBg, borderColor: T.border },
+          ]}
         />
-        <Pressable
+        <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel="Send message"
-          disabled={sendMessage.isPending || !draft.trim()}
+          accessibilityState={{ disabled: !canSend }}
+          disabled={!canSend}
           onPress={() => void send(draft)}
-          style={{ minHeight: 44, minWidth: 44, alignItems: "center", justifyContent: "center" }}
+          activeOpacity={0.8}
+          // Drawn at the chat composer's 38pt; the slop keeps a 44pt target.
+          hitSlop={3}
+          style={[styles.send, { backgroundColor: canSend ? T.accent : T.surfaceHover }]}
         >
-          <PaperPlaneTilt size={22} color={T.accent} />
-        </Pressable>
+          <PaperPlaneRight size={18} color={canSend ? "#fff" : T.textDim} weight="fill" />
+        </TouchableOpacity>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  panel: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 10,
+  },
+  header: { flexDirection: "row", alignItems: "center" },
+  headerText: { flex: 1 },
+  title: { fontSize: 15, fontFamily: FONT.semibold },
+  subtitle: { fontSize: 12, fontFamily: FONT.regular, marginTop: 1 },
+  close: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  status: { fontSize: 13, fontFamily: FONT.regular, paddingVertical: 8 },
+  textButton: { minHeight: 44, justifyContent: "center" },
+  action: { fontSize: 13, fontFamily: FONT.medium },
+  message: { paddingVertical: 8 },
+  sender: { fontSize: 12, fontFamily: FONT.medium, marginBottom: 2 },
+  failedActions: { flexDirection: "row", gap: 16 },
+  composer: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingTop: 6 },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 100,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    fontFamily: FONT.regular,
+  },
+  // Centred on a single-line field, then pinned to its bottom as it grows.
+  send: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginBottom: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.search import SearchIndexer
-from uniffy.core.search.engine import SearchTerm, all_of
+from uniffy.core.search.engine import SearchTerm, all_of, any_of
+from uniffy.domains.calls.search import stage_channel_history_refresh
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 
 logger = logger.bind(component="chat.search")
@@ -42,6 +43,7 @@ async def record_chat_search_acl_refresh(
         )
     )
     await session.execute(stmt)
+    await stage_channel_history_refresh(session, channel_id)
 
 
 async def enqueue_chat_search_acl_refresh(channel_id: UUID) -> None:
@@ -56,10 +58,10 @@ async def enqueue_chat_search_acl_refresh(channel_id: UUID) -> None:
 
 
 async def remove_channel_message_documents(search_indexer: SearchIndexer, channel_id: UUID) -> None:
-    """Drop every chat_message doc of a deleted channel so global search stops returning it."""
+    """Remove search documents whose access derives from this channel."""
     await search_indexer.remove_by_filter(
         all_of(
-            SearchTerm("entity_type", "chat_message"),
+            any_of(SearchTerm("entity_type", "chat_message"), SearchTerm("entity_type", "call")),
             SearchTerm("metadata.channel_id", str(channel_id)),
         )
     )

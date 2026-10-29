@@ -1534,6 +1534,14 @@ export function ChatConversationScreen() {
             setDetailsOpen(false);
             setContextAgentId(agentId);
           }}
+          onShowCallHistory={
+            channel.isAgentDm || channel.isSelfDm
+              ? undefined
+              : () => {
+                  setDetailsOpen(false);
+                  router.push(`/calls?channelId=${channel.id}`);
+                }
+          }
           memorySubject={hasAgentMemory ? memorySubject : undefined}
           isMemoryModerator={isMemoryModerator}
           onMoveToCategory={(categoryId) => moveChannelToCategory.mutate({ channelId, categoryId })}

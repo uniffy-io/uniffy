@@ -8,7 +8,7 @@ import {
   MagnifyingGlassPlus,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
-import { getInitials } from "@/components/subject/utils";
+import { SubjectAvatarById } from "@/components/subject";
 
 interface ParticipantTileProps {
   participant: Participant;
@@ -19,6 +19,8 @@ interface ParticipantTileProps {
   onClick?: () => void;
   /** Wheel/drag/double-click zoom into the video (screen shares only). */
   zoomable?: boolean;
+  /** Filmstrip tile: a smaller avatar so it clears the name chip. */
+  compact?: boolean;
 }
 
 interface ZoomState {
@@ -45,6 +47,7 @@ export function ParticipantTile({
   className,
   onClick,
   zoomable = false,
+  compact = false,
 }: ParticipantTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const zoomRef = useRef<HTMLDivElement>(null);
@@ -180,10 +183,10 @@ export function ParticipantTile({
   return (
     <div
       className={cn(
-        "relative flex items-center justify-center overflow-hidden rounded-lg bg-muted/60 border border-border/60",
+        "relative flex items-center justify-center overflow-hidden rounded-lg bg-card shadow-edge",
         "transition-shadow duration-150",
-        speaking && "ring-2 ring-emerald-400/80",
-        onClick && "cursor-pointer hover:border-primary/60",
+        speaking && "ring-2 ring-green-500/80",
+        onClick && "focus-ring cursor-pointer hover:shadow-edge-strong",
         className,
       )}
       data-testid="call-participant-tile"
@@ -235,9 +238,13 @@ export function ParticipantTile({
         />
       </div>
       {!hasVideo && (
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary text-lg font-semibold">
-          {getInitials(name)}
-        </div>
+        <SubjectAvatarById
+          userId={participant.identity.split(":")[0]}
+          displayName={name}
+          size={compact ? "md" : "lg"}
+          className={compact ? undefined : "h-14 w-14 text-lg"}
+          maxScale={compact ? 1 : 1.5}
+        />
       )}
 
       <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center gap-1.5 pointer-events-none">
@@ -272,7 +279,7 @@ export function ParticipantTile({
               e.stopPropagation();
               stepZoom(-1);
             }}
-            className="flex h-5 w-5 items-center justify-center rounded text-white/80 hover:bg-white/15 disabled:opacity-40"
+            className="focus-ring flex h-5 w-5 items-center justify-center rounded text-white/80 hover:bg-white/15 disabled:opacity-40 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             disabled={!zoomed}
             aria-label="Zoom out"
           >
@@ -285,7 +292,7 @@ export function ParticipantTile({
               setZoom(ZOOM_FIT);
             }}
             className={cn(
-              "min-w-9 rounded px-1 text-center text-[10px] font-medium tabular-nums text-white/90",
+              "focus-ring min-w-9 rounded px-1 text-center text-[10px] font-medium tabular-nums text-white/90 pointer-coarse:min-h-11",
               zoomed && "hover:bg-white/15",
             )}
             disabled={!zoomed}
@@ -300,7 +307,7 @@ export function ParticipantTile({
               e.stopPropagation();
               stepZoom(1);
             }}
-            className="flex h-5 w-5 items-center justify-center rounded text-white/80 hover:bg-white/15 disabled:opacity-40"
+            className="focus-ring flex h-5 w-5 items-center justify-center rounded text-white/80 hover:bg-white/15 disabled:opacity-40 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             disabled={zoom.scale >= ZOOM_MAX}
             aria-label="Zoom in"
           >

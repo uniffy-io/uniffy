@@ -194,6 +194,8 @@ export function getTypeFilterLabel(type: SearchResultType): string {
       return "Calendars";
     case SearchResultType.CALENDAR_EVENT:
       return "Events";
+    case SearchResultType.CALL:
+      return "Calls";
     case SearchResultType.CHAT:
       return "Chats";
     case SearchResultType.AGENT_CHAT:
@@ -233,6 +235,8 @@ export function getTypeFilterKeyword(type: SearchResultType): string {
       return "calendars";
     case SearchResultType.CALENDAR_EVENT:
       return "calendar";
+    case SearchResultType.CALL:
+      return "call";
     case SearchResultType.CHAT:
       return "chat";
     case SearchResultType.AGENT_CHAT:

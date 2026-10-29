@@ -334,6 +334,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: channelsKey });
       return;
     case ChatEventType.CHANNEL_UPDATED: {
+      void queryClient.invalidateQueries({ queryKey: ["calls", "history", orgId] });
       void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
       void queryClient.resetQueries({ queryKey: channelKey });
       void queryClient.invalidateQueries({ queryKey: channelsKey });
@@ -343,6 +344,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
     case ChatEventType.MEMBERS_REMOVED:
     case ChatEventType.MEMBER_LEFT:
     case ChatEventType.MEMBER_JOINED:
+      void queryClient.invalidateQueries({ queryKey: ["calls", "history", orgId] });
       void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
       // An agent-only change carries no user_ids, so the roster and the member
       // count refresh off the event type alone. The list refetch is what makes
@@ -470,6 +472,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: approvalsKey(orgId, channelId) });
       break;
     case "member":
+      void queryClient.invalidateQueries({ queryKey: ["calls", "history", orgId] });
       void queryClient.invalidateQueries({ queryKey: ["chat", "members", orgId, channelId] });
       void queryClient.invalidateQueries({ queryKey: channelsKey });
       break;
@@ -478,6 +481,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       void queryClient.invalidateQueries({ queryKey: msgKey });
       break;
     case "callLifecycle": {
+      void queryClient.invalidateQueries({ queryKey: ["calls", "history", orgId] });
       const call = ce.payload.value.call;
       if (!call) break;
       if (ce.eventType === ChatEventType.CALL_ENDED) {

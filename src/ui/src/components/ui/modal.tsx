@@ -5,6 +5,7 @@ import { cn } from "@/shared/utils/cn";
 import { dialogShellClass } from "@/components/ui/popover";
 import { ButtonSizeContext } from "@/components/ui/buttonSize";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { overlayRoot } from "@/shared/utils/overlayRoot";
 
 const ANIMATION_MS = 150;
 
@@ -114,7 +115,7 @@ export function Modal({
         <ModalLabelContext.Provider value={titleId}>{children}</ModalLabelContext.Provider>
       </div>
     </div>,
-    (ownerDocument ?? document).fullscreenElement ?? (ownerDocument ?? document).body,
+    overlayRoot(ownerDocument),
   );
 }
 

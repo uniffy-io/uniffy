@@ -2,8 +2,7 @@ import { useAuth } from "@core/providers/AuthContext";
 import { useActiveCall } from "@features/calls/useCallsState";
 import { canPublishInCall, AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import React, { useEffect, useState } from "react";
-import { View, TouchableOpacity, StyleSheet, Platform, Alert } from "react-native";
-import * as Haptics from "expo-haptics";
+import { View, StyleSheet, Alert } from "react-native";
 import {
   Microphone,
   MicrophoneSlash,
@@ -19,12 +18,8 @@ import { useAudioOutputs } from "@features/calls/useAudioOutputs";
 import { isScreenSharePermitted } from "@features/calls/callPermissions";
 import { AudioRouteIcon, AudioRouteSheet } from "@features/calls/components/AudioRouteSheet";
 import { ScreenShareQualitySheet } from "@features/calls/components/ScreenShareQualitySheet";
+import { ControlButton } from "@features/calls/components/ControlButton";
 import type { ThemeColors } from "@theme/theme";
-
-function tick() {
-  if (Platform.OS === "web") return;
-  Haptics.selectionAsync().catch(() => {});
-}
 
 export function CallControls({
   T,
@@ -61,25 +56,13 @@ export function CallControls({
     void isScreenSharePermitted().then(setCanShareScreen);
   }, []);
 
-  // Full-screen controls are flat icons so six of them fit any phone width;
-  // the dock keeps its circular buttons for contrast against chat content.
-  const buttonStyle = compact
-    ? [styles.button, styles.buttonCompact, { backgroundColor: T.surface, borderColor: T.border }]
-    : [styles.button, styles.buttonFlat];
-
   return (
     <>
-      <View style={[styles.row, compact && styles.rowCompact]}>
-        <TouchableOpacity
-          style={[buttonStyle, !canPublish && { opacity: 0.4 }]}
-          onPress={() => {
-            tick();
-            void toggleMic();
-          }}
-          activeOpacity={0.7}
-          accessibilityRole="button"
+      <View style={styles.row}>
+        <ControlButton
+          compact={compact}
           disabled={!canPublish}
-          accessibilityState={{ disabled: !canPublish }}
+          onPress={() => void toggleMic()}
           accessibilityHint={!canPublish ? AUDIENCE_MESSAGE : undefined}
           accessibilityLabel={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
         >
@@ -88,17 +71,11 @@ export function CallControls({
           ) : (
             <MicrophoneSlash size={size} color={T.red} weight="fill" />
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[buttonStyle, !canPublish && { opacity: 0.4 }]}
-          onPress={() => {
-            tick();
-            void toggleCamera();
-          }}
-          activeOpacity={0.7}
-          accessibilityRole="button"
+        </ControlButton>
+        <ControlButton
+          compact={compact}
           disabled={!canPublish}
-          accessibilityState={{ disabled: !canPublish }}
+          onPress={() => void toggleCamera()}
           accessibilityHint={!canPublish ? AUDIENCE_MESSAGE : undefined}
           accessibilityLabel={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
         >
@@ -107,28 +84,16 @@ export function CallControls({
           ) : (
             <VideoCameraSlash size={size} color={T.textDim} weight="fill" />
           )}
-        </TouchableOpacity>
+        </ControlButton>
         {!compact && session.cameraEnabled ? (
-          <TouchableOpacity
-            style={buttonStyle}
-            onPress={() => void flipCamera()}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Flip camera"
-          >
+          <ControlButton onPress={() => void flipCamera()} accessibilityLabel="Flip camera">
             <CameraRotate size={size} color={T.text} weight="bold" />
-          </TouchableOpacity>
+          </ControlButton>
         ) : null}
         {!compact && canShareScreen && canPublish ? (
-          <TouchableOpacity
-            style={buttonStyle}
-            onPress={() => {
-              tick();
-              void toggleScreenShare();
-            }}
+          <ControlButton
+            onPress={() => void toggleScreenShare()}
             onLongPress={() => setQualityOpen(true)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
             accessibilityLabel={session.screenSharing ? "Stop sharing screen" : "Share screen"}
             accessibilityHint="Press and hold to choose the share quality"
           >
@@ -137,34 +102,23 @@ export function CallControls({
             ) : (
               <Monitor size={size} color={T.text} weight="bold" />
             )}
-          </TouchableOpacity>
+          </ControlButton>
         ) : null}
         {!compact ? (
-          <TouchableOpacity
-            style={buttonStyle}
+          <ControlButton
             onPress={() => setRouteOpen(true)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
             accessibilityLabel={
               activeRoute ? `Audio output: ${activeRoute.label}` : "Choose audio output"
             }
           >
             <AudioRouteIcon routeId={activeRoute?.id} size={size} color={T.text} />
-          </TouchableOpacity>
+          </ControlButton>
         ) : null}
-        <TouchableOpacity
-          style={
-            compact
-              ? [
-                  styles.button,
-                  styles.buttonCompact,
-                  styles.leaveButton,
-                  { backgroundColor: T.red },
-                ]
-              : [styles.button, styles.buttonFlat]
-          }
+        <ControlButton
+          compact={compact}
+          style={compact && [styles.leaveCompact, { backgroundColor: T.red }]}
+          activeOpacity={0.8}
           onPress={() => {
-            tick();
             // Hosts choose between leaving and ending for everyone (web parity);
             // everyone else leaves immediately.
             if (canModerate && !compact) {
@@ -181,8 +135,6 @@ export function CallControls({
             }
             void leaveCall();
           }}
-          activeOpacity={0.8}
-          accessibilityRole="button"
           accessibilityLabel="Leave call"
         >
           <PhoneDisconnect
@@ -190,7 +142,7 @@ export function CallControls({
             color={compact ? "#ffffff" : T.red}
             weight="fill"
           />
-        </TouchableOpacity>
+        </ControlButton>
       </View>
       <ScreenShareQualitySheet visible={qualityOpen} onClose={() => setQualityOpen(false)} />
       <AudioRouteSheet visible={routeOpen} onClose={() => setRouteOpen(false)} />
@@ -200,20 +152,5 @@ export function CallControls({
 
 const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  rowCompact: { gap: 8 },
-  button: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonFlat: { borderWidth: 0 },
-  buttonCompact: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  leaveButton: { borderWidth: 0 },
+  leaveCompact: { borderWidth: 0 },
 });

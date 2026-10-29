@@ -1,3 +1,4 @@
+import { startActivityReporter } from "@/features/calls/utils/activityReporter";
 import { AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
 import { useCallPopout } from "@/features/calls/hooks/useCallPopout";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -17,6 +18,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   callUpserted,
   callEnded,
+  callEndRequested,
   feedbackChanged,
   sessionTerminated,
   clearCalls,
@@ -57,7 +59,11 @@ import { CallContext } from "@/features/calls/components/callContext";
 import { clampQuality, screenShareConfig } from "@/features/calls/utils/screenShareQuality";
 import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 import type { CallJoinResult } from "@/features/calls/store/callsThunks";
-import type { CallContextValue, JoinMediaOptions } from "@/features/calls/components/callContext";
+import type {
+  CallContextValue,
+  JoinMediaOptions,
+  CallStartOptions,
+} from "@/features/calls/components/callContext";
 
 const TOKEN_REFRESH_LEAD_MS = 10 * 60 * 1000;
 const REJOIN_WINDOW_MS = 90_000;
@@ -176,6 +182,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
   const [room, setRoom] = useState<Room | null>(null);
   const roomRef = useRef<Room | null>(null);
+  const stopActivityRef = useRef<(() => void) | null>(null);
   const tokenRef = useRef<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,6 +221,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const teardown = useCallback(async () => {
+    stopActivityRef.current?.();
+    stopActivityRef.current = null;
     clearRefreshTimer();
     if (reportTimerRef.current) {
       clearTimeout(reportTimerRef.current);
@@ -529,6 +538,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       everConnectedRef.current = true;
       connectedAtRef.current = Date.now();
       setRoom(r);
+      const activityOrg = orgIdRef.current;
+      if (activityOrg)
+        stopActivityRef.current = startActivityReporter({
+          report: (participantId, chunks) =>
+            callsApi.reportCallActivity({
+              organizationId: activityOrg,
+              callId: result.call.id,
+              deviceId: getDeviceId(),
+              participantId,
+              chunks,
+            }),
+          sample: () => ({
+            connected: r.state === ConnectionState.Connected,
+            speaking: r.localParticipant.isMicrophoneEnabled && r.localParticipant.isSpeaking,
+          }),
+        });
       dispatch(sessionConnected());
       scheduleTokenRefresh(result.livekitToken, result.call.id);
       await publishInitialMedia(r, opts);
@@ -568,9 +593,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [probeOtherTab, requestFocus]);
 
   const joinChannelCall = useCallback(
-    async (channelId: string, opts: JoinMediaOptions) => {
+    async (channelId: string, opts: JoinMediaOptions, start?: CallStartOptions) => {
       if (!(await guardOtherTab())) return;
-      const result = await dispatch(initiateCall({ channelId, townHall: opts.townHall })).unwrap();
+      const result = await dispatch(
+        initiateCall({ channelId, townHall: opts.townHall, ...start }),
+      ).unwrap();
       dispatch(
         sessionConnecting({
           callId: result.call.id,
@@ -630,12 +657,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const endCurrentCall = useCallback(async () => {
     const { callId, channelId } = sessionRef.current;
     if (!callId || !channelId) return;
+    // The room deletion and the CALL_ENDED event can both land before the RPC
+    // returns; marking the call first keeps them from notifying its own ender.
+    dispatch(callEndRequested(callId));
     try {
       await dispatch(endCallThunk({ callId, channelId })).unwrap();
       clearCallMarkers();
       dispatch(sessionReset());
       await teardown();
     } catch {
+      dispatch(callEndRequested(null));
       /* Rejected thunk surfaces the failure. */
     }
   }, [dispatch, teardown]);
@@ -870,7 +901,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // endedInfo is set when the call ended or vanished from a resync. A genuine
   // end also fires SDK Disconnected, which tears the room down, but a resync
   // -driven end (stale snapshot / org switch) does not - so disconnect here too,
-  // otherwise the room keeps transmitting behind the "Call ended" modal. Keyed on
+  // otherwise the room keeps transmitting after the call ended. Keyed on
   // the reactive `room` (not roomRef) so a rejoin that reconnects a room AFTER
   // endedInfo was set is still torn down; a fresh join is safe because
   // sessionConnecting clears endedInfo before `room` becomes non-null.

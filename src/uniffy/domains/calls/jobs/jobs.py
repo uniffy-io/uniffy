@@ -19,6 +19,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.login.user_session import UserSession
 from uniffy.domains.calls.admission import MediaAdmission, matches_media_session
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config
+from uniffy.domains.calls.jobs.history import flush_call_history as flush_call_history
 from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import (
     LiveKitAdminClient,

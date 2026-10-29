@@ -1,3 +1,4 @@
+import { startActivityReporter } from "@features/calls/activityReporter";
 import { AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import React, {
   createContext,
@@ -32,7 +33,6 @@ import { useChatStream } from "@features/chat/useChatStream";
 import { createCameraContinuity } from "@features/calls/cameraContinuity";
 import { useRoomParticipants } from "@features/calls/useRoomParticipants";
 import { useCallAvailability } from "@features/calls/useCallAvailability";
-import { CallFeedback } from "@features/calls/components/CallFeedback";
 import { callErrorMessage, MODERATOR_MUTED_COPY } from "@features/calls/callErrors";
 import { getPreferredAudioOutput, getScreenShareQuality } from "@features/calls/callPrefs";
 import { clampQuality, screenShareConfig } from "@features/calls/screenShareQuality";
@@ -101,6 +101,11 @@ export interface CallEndedInfo {
   channelId: string;
 }
 
+export interface CallStartOptions {
+  calendarEventId?: string;
+  title?: string;
+}
+
 export interface JoinMediaOptions {
   mic: boolean;
   camera: boolean;
@@ -111,6 +116,7 @@ export interface JoinMediaOptions {
 /** What the pre-join is asking about. One at a time, owned here like the call itself. */
 export interface PrejoinTarget {
   channelId: string;
+  calendarEventId?: string;
   /** Shown in the header; the pre-join falls back to the channel list when unset. */
   channelName?: string;
   /** Join this specific call (ring accept); otherwise start or join via the channel. */
@@ -122,6 +128,8 @@ interface CallContextValue {
   callsDisabledMessage: string | null;
   retryAvailability: () => void;
   showFeedback: (message: string) => void;
+  feedback: string | null;
+  clearFeedback: () => void;
   session: CallSession;
   room: Room | null;
   endedInfo: CallEndedInfo | null;
@@ -137,7 +145,11 @@ interface CallContextValue {
   restoreCall: () => Promise<void>;
   dismissRestore: () => void;
   clearEndedInfo: () => void;
-  joinChannelCall: (channelId: string, media: JoinMediaOptions) => Promise<void>;
+  joinChannelCall: (
+    channelId: string,
+    media: JoinMediaOptions,
+    start?: CallStartOptions,
+  ) => Promise<void>;
   joinCallById: (callId: string, channelId: string, media: JoinMediaOptions) => Promise<void>;
   leaveCall: () => Promise<void>;
   endCallForAll: () => Promise<void>;
@@ -217,6 +229,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     },
   }).data;
   const roomRef = useRef<Room | null>(null);
+  const stopActivityRef = useRef<(() => void) | null>(null);
   const cameraContinuityRef = useRef<ReturnType<typeof createCameraContinuity> | null>(null);
   const sessionRef = useRef<CallSession>(IDLE_SESSION);
   const orgRef = useRef<string | null>(organizationId);
@@ -252,6 +265,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const teardownRoom = useCallback(async () => {
+    stopActivityRef.current?.();
+    stopActivityRef.current = null;
     const current = roomRef.current;
     roomRef.current = null;
     setRoom(null);
@@ -628,6 +643,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       facingModeRef.current = facing;
 
       setRoom(r);
+      const activityOrg = orgRef.current;
+      const activityDevice = await getDeviceId();
+      if (roomRef.current !== r || orgRef.current !== activityOrg) return;
+      if (activityOrg)
+        stopActivityRef.current = startActivityReporter({
+          report: (participantId, chunks) =>
+            callsApi.reportCallActivity({
+              organizationId: activityOrg,
+              callId: join.callId,
+              deviceId: activityDevice,
+              participantId,
+              chunks,
+            }),
+          sample: () => ({
+            connected: r.state === "connected",
+            speaking: r.localParticipant.isMicrophoneEnabled && r.localParticipant.isSpeaking,
+          }),
+        });
       setSession({
         status: "connected",
         callId: join.callId,
@@ -701,12 +734,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   );
 
   const joinChannelCall = useCallback(
-    async (channelId: string, media: JoinMediaOptions) => {
+    async (channelId: string, media: JoinMediaOptions, start?: CallStartOptions) => {
       await startJoin(
         async () => {
           const org = orgRef.current;
           if (!org) throw new Error("No organization selected");
           const response = await callsApi.initiateCall({
+            ...start,
             organizationId: org,
             channelId,
             deviceId: await getDeviceId(),
@@ -1171,12 +1205,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       AccessibilityInfo.announceForAccessibility("You are the only person in the call.");
   }, [session.status, participantCount]);
 
+  const clearFeedback = useCallback(() => setFeedback(null), []);
+
   const value = useMemo<CallContextValue>(
     () => ({
       available: availability.available,
       callsDisabledMessage,
       retryAvailability,
       showFeedback: setFeedback,
+      feedback,
+      clearFeedback,
       session,
       room,
       endedInfo,
@@ -1204,6 +1242,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       availability.available,
       retryAvailability,
       callsDisabledMessage,
+      feedback,
+      clearFeedback,
       session,
       room,
       endedInfo,
@@ -1228,12 +1268,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     ],
   );
 
-  return (
-    <CallContext.Provider value={value}>
-      {children}
-      <CallFeedback message={feedback} onDismiss={() => setFeedback(null)} />
-    </CallContext.Provider>
-  );
+  return <CallContext.Provider value={value}>{children}</CallContext.Provider>;
 }
 
 export function useCall(): CallContextValue {

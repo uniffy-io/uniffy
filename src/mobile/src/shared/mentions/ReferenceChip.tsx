@@ -8,6 +8,7 @@ import {
   Kanban,
   Robot,
   User,
+  Phone,
   UsersThree,
 } from "phosphor-react-native";
 import type { Domain } from "@core/types";
@@ -25,7 +26,7 @@ const DOMAIN_ICONS: Record<Domain, React.ComponentType<any>> = {
 
 export const DOMAIN_ICON: Record<Domain, React.ComponentType<any>> = DOMAIN_ICONS;
 
-export type ReferenceChipKind = Domain | "user" | "group";
+export type ReferenceChipKind = Domain | "user" | "group" | "call";
 
 type ReferenceChipProps = {
   domain: ReferenceChipKind;
@@ -38,7 +39,14 @@ export function ReferenceChip({ domain, label, onPress }: ReferenceChipProps) {
   const isSubject = domain === "user" || domain === "group";
   const color = domain === "user" ? T.green : T.accent;
   const softColor = isSubject ? color + "22" : T.accentSoft;
-  const IconComponent = isSubject ? (domain === "user" ? User : UsersThree) : DOMAIN_ICONS[domain];
+  const IconComponent =
+    domain === "call"
+      ? Phone
+      : isSubject
+        ? domain === "user"
+          ? User
+          : UsersThree
+        : DOMAIN_ICONS[domain];
 
   return (
     <TouchableOpacity

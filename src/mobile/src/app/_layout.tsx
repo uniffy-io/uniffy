@@ -44,6 +44,7 @@ import { CallScreen } from "@features/calls/components/CallScreen";
 import { PreJoinScreen } from "@features/calls/components/PreJoinScreen";
 import { IncomingCallBanner } from "@features/calls/components/IncomingCallBanner";
 import { CallEndedNotice } from "@features/calls/components/CallEndedNotice";
+import { CallFeedback } from "@features/calls/components/CallFeedback";
 import { CallRestorePrompt } from "@features/calls/components/CallRestorePrompt";
 import { LoginSplash } from "@shared/components/LoginSplash";
 import { BRAND } from "@theme/theme";
@@ -307,6 +308,7 @@ function RootLayoutNav() {
         {showAppChrome && <AtOverlay />}
         {showAppChrome && <IncomingCallBanner />}
         {showAppChrome && <CallEndedNotice />}
+        {showAppChrome && <CallFeedback />}
         {showAppChrome && <CallRestorePrompt />}
         {loginSplashVisible && (
           <LoginSplash

@@ -6,6 +6,7 @@ const TYPE_LABELS: Partial<Record<SearchResultType, string>> = {
   [SearchResultType.FILE]: "File",
   [SearchResultType.FOLDER]: "Folder",
   [SearchResultType.CHAT]: "Chat",
+  [SearchResultType.CALL]: "Call",
   [SearchResultType.AGENT_CHAT]: "Agent Chat",
   [SearchResultType.AGENT_FOLDER]: "Agent Chat Folder",
   [SearchResultType.CHAT_MESSAGE]: "Message",
@@ -27,6 +28,7 @@ const TYPE_DOMAINS: Partial<Record<SearchResultType, Domain>> = {
   [SearchResultType.FILE]: "files",
   [SearchResultType.FOLDER]: "files",
   [SearchResultType.CHAT]: "chat",
+  [SearchResultType.CALL]: "chat",
   [SearchResultType.AGENT_CHAT]: "chat",
   [SearchResultType.AGENT_FOLDER]: "chat",
   [SearchResultType.CHAT_MESSAGE]: "chat",
@@ -54,6 +56,7 @@ export type UrnType =
   | "CALENDAR"
   | "CALENDAR_EVENT"
   | "ROOM"
+  | "CALL"
   | "CHAT"
   | "CHAT_MESSAGE"
   | "AGENT_FOLDER"
@@ -73,6 +76,7 @@ const URN_TYPES: ReadonlySet<string> = new Set<UrnType>([
   "CALENDAR",
   "CALENDAR_EVENT",
   "ROOM",
+  "CALL",
   "CHAT",
   "CHAT_MESSAGE",
   "AGENT_FOLDER",
@@ -113,6 +117,8 @@ export function nativeRouteFor(
       return `/files/${id}`;
     case SearchResultType.FOLDER:
       return `/files?folder=${id}`;
+    case SearchResultType.CALL:
+      return `/calls/${id}`;
     case SearchResultType.CHAT:
     case SearchResultType.AGENT_CHAT:
       return `/chat/${id}`;

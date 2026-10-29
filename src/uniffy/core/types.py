@@ -48,6 +48,7 @@ class ContentType(str, Enum):
     NOTE = "NOTE"
     FILE = "FILE"
     FOLDER = "FOLDER"
+    CALL = "CALL"
     CALENDAR_EVENT = "CALENDAR_EVENT"
     CHAT_MESSAGE = "CHAT_MESSAGE"
     USER = "USER"

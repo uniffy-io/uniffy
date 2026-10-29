@@ -518,12 +518,31 @@ releasing locks; timing sleeps alone are not evidence of contention. Assert comm
 fanout outcomes. Preserve coverage for both orders of rejoin versus ghost retirement, connected-token
 generation checks, and tenant-qualified webhook room names when changing lifecycle code.
 
+## Calls: history and references
+
+- [ ] Start and end a call with two users. Open Call history from chat, then channel history from its header. Personal history contains calls started, attended or received. Channel history includes accessible calls in that conversation.
+- [ ] Decline one invitation and ignore another until it expires or the call ends. History shows Declined and Missed. Join after declining or missing: attendance appears without rewriting that invitation outcome.
+- [ ] Open a summary after leaving or ending a call. Check date, duration and people. Joining on two devices shows one person. Load more works for both history and attendance.
+- [ ] Copy a call link and reference. Open the link directly, paste the reference into chat or a note, and confirm calls stay absent from search and mention suggestions. The pasted reference preview shows the call title and time. Live references update when the call ends.
+- [ ] Remove a member from a private channel. Their history, direct record and resolved reference lose access. Deactivated and foreign-organization members get no call metadata. Archived channels keep readable history; deleted channels do not.
+- [ ] Stop search indexing, end a call, then restore search. Pending reference projections recover without changing the call record. Calls remain absent from search, including explicit call-type queries.
+- [ ] Repeat history, summary, reference navigation and copy actions on native mobile. Confirm calls stay absent from search. Check desktop, 375px mobile web, 768px and 1024px layouts for clipping and usable controls.
+
+## Calls: speaking activity
+
+- [ ] Join from web and native. Speak in turns, include a short overlap, then mute both microphones. End the call and inspect Speaking activity. Talk time includes overlap per person; muted time is quiet when observed.
+- [ ] Select timeline points by mouse, tap and keyboard arrows. Details show time ranges, speaking, quiet and unavailable seconds. Narrow layouts keep names, timeline and talk time readable at 375px, 768px and 1024px in both themes.
+- [ ] Disconnect or suspend one client, then reconnect. Missing samples remain unavailable. Joining on two devices never doubles one person's talk time. Rejoining leaves attendance gaps visible.
+- [ ] Retry an activity upload and send concurrent batches. Stored samples and talk time stay unchanged for duplicate seconds. Reject reports for another user, session, device or organization, malformed masks and future data.
+- [ ] Leave normally and open the summary. A final batch may arrive after leaving. Historical calls without samples show activity unavailable, not zero speech. Calls remain absent from search.
+- [ ] Revoke private channel access or deactivate membership. Both activity writes and summary reads fail. No raw audio is retained. Native background capture is best-effort and reports gaps when its timer is suspended.
+
 ## Calls: town halls
 
 - [ ] Start a channel call as A with Town hall selected in pre-join. B joins as audience. Only A appears on stage. Audience can listen, use channel chat, react and raise a hand.
 - [ ] A allows B to speak from raised hands. Request clears across B's devices. Mic and camera stay off until B enables them.
 - [ ] A moves B to audience from Participants while B publishes audio, camera and screen. All outgoing tracks stop on every device. B stays connected and can hear A.
-- [ ] Switch regular call to town hall. Confirmation explains that only host stays a speaker. Switching back unlocks controls without enabling audience devices.
+- [ ] Choose regular call or town hall before starting. Active call mode is a read-only label in the main view and popout. API requests to change it are rejected; speaker promotion and demotion still work in town halls.
 - [ ] Refresh or reconnect each participant. Speaker roles and audience restrictions remain. Try a stale speaker token directly against SFU. Join webhook corrects its permission to current policy.
 - [ ] Disable town halls in org settings or limit allowed channels. Disallowed channels offer no start option and backend rejects direct enable requests. Existing calls retain their mode.
 - [ ] Verify host controls, hand approval and confirmation in fullscreen and popout. Check desktop and narrow mobile web for overflow.

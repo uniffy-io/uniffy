@@ -80,13 +80,17 @@ export const syncActiveCalls = createAsyncThunk(
 export const initiateCall = createAsyncThunk(
   "calls/initiateCall",
   async (
-    target: string | { channelId: string; townHall?: boolean },
+    target:
+      | string
+      | { channelId: string; townHall?: boolean; calendarEventId?: string; title?: string },
     { getState, dispatch },
   ): Promise<CallJoinResult> => {
     const channelId = typeof target === "string" ? target : target.channelId;
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.initiateCall({
       townHall: typeof target === "string" ? false : target.townHall,
+      calendarEventId: typeof target === "string" ? undefined : target.calendarEventId,
+      title: typeof target === "string" ? undefined : target.title,
       organizationId,
       channelId,
       deviceId: getDeviceId(),
@@ -243,14 +247,6 @@ export const sendCallReaction = createAsyncThunk(
   },
 );
 
-export const setCallMode = createAsyncThunk(
-  "calls/setCallMode",
-  async ({ callId, townHall }: { callId: string; townHall: boolean }, { getState, dispatch }) => {
-    const organizationId = getOrganizationId(getState() as RootState);
-    const result = await callsApi.setCallMode({ organizationId, callId, townHall });
-    if (result.call) dispatch(callUpserted(callToPlain(result.call)));
-  },
-);
 export const setCallSpeaker = createAsyncThunk(
   "calls/setCallSpeaker",
   async (

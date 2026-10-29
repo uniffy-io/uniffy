@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useCall } from "@/features/calls/components/callContext";
 import { callAvailabilityMessage } from "@/features/calls/utils/callErrors";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
@@ -17,6 +18,7 @@ import {
   LinkSimple,
   Gauge,
   Phone,
+  ClockCounterClockwise,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useTagsByIds } from "@/features/tags/store/selectors";
@@ -37,6 +39,7 @@ import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { AgentContextBar } from "@/features/chat/components/channel/AgentContextBar";
 import { ChannelAgentsPopover } from "@/features/chat/components/channel/ChannelAgentsPopover";
 import { CustomStatusDisplay } from "@/features/presence/components/CustomStatusDisplay";
+import { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
 import { cn } from "@/shared/utils/cn";
 import { formatDateFull } from "@/shared/utils/dateFormatting";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
@@ -60,7 +63,7 @@ import {
 } from "@/features/calls/store/callsSlice";
 
 const headerButtonClass = cn(
-  "group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
+  "focus-ring group/btn relative flex items-center justify-center h-7 w-7 rounded-md",
   "border border-border-strong bg-transparent text-muted-foreground",
   "transition-all duration-300 ease-out",
   "hover:border-border-strong hover:bg-muted hover:text-primary",
@@ -70,7 +73,7 @@ const headerButtonActiveClass =
   "text-primary bg-primary/10 border-primary/50 hover:border-primary/50 hover:bg-primary/10";
 
 const headerChipClass = cn(
-  "group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
+  "focus-ring group/btn flex items-center gap-1 h-7 px-1.5 rounded-md",
   "border border-border-strong bg-transparent text-xs text-muted-foreground",
   "transition-all duration-300 ease-out",
   "hover:border-border-strong hover:bg-muted hover:text-primary",
@@ -86,7 +89,10 @@ interface ChannelHeaderProps {
 
 export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: ChannelHeaderProps) {
   const { availability } = useCall();
-  const callUnavailable = callAvailabilityMessage(availability);
+  const callUnavailableMessage = callAvailabilityMessage(availability);
+  // Still checking reads as a normal call button; a known refusal reads as disabled.
+  const callsUnavailable =
+    availability !== CallAvailability.READY && availability !== CallAvailability.UNSPECIFIED;
   const dispatch = useAppDispatch();
   const defaultActiveChannel = useAppSelector(selectActiveChannel);
   const channelFromId = useAppSelector((state) =>
@@ -324,11 +330,11 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
           <button
             type="button"
             onClick={handleNameClick}
-            className="flex items-center gap-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
+            className="flex min-w-0 items-center gap-1 text-[15px] font-semibold tracking-[-0.01em] text-foreground cursor-pointer hover:text-foreground/80 transition-colors"
             data-testid="chat-channel-name"
-            title={isAgentDm ? "Click to rename" : undefined}
+            title={isAgentDm ? "Click to rename" : headerName}
           >
-            <span>{headerName}</span>
+            <span className="truncate">{headerName}</span>
             {dmPeerUserId && (
               <CustomStatusDisplay userId={dmPeerUserId} className="text-sm" compact />
             )}
@@ -352,6 +358,16 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
         <div className="flex-1" />
 
         <div className="flex items-center gap-1.5">
+          {!isAgentDm && !isSelfDm && !isMobile && (
+            <Link
+              to={`/calls?channelId=${activeChannel.id}`}
+              className={headerButtonClass}
+              title="Call history"
+              aria-label="Channel call history"
+            >
+              <ClockCounterClockwise size={16} />
+            </Link>
+          )}
           {!isAgentDm && !isSelfDm && !inCallHere && (
             <button
               type="button"
@@ -359,14 +375,25 @@ export function ChannelHeader({ channelId, showCloseButton, onClose, bare }: Cha
               className={cn(
                 activeCall ? headerChipClass : headerButtonClass,
                 activeCall &&
-                  "text-emerald-500 border-emerald-500/40 hover:text-emerald-500 hover:border-emerald-500/60",
+                  "border-green-600/40 text-green-600 hover:border-green-600/60 hover:text-green-600 dark:border-green-400/40 dark:text-green-400 dark:hover:border-green-400/60 dark:hover:text-green-400",
+                callsUnavailable && "opacity-40",
               )}
               aria-label={
-                callUnavailable ? "Calls unavailable" : activeCall ? "Join live call" : "Start call"
+                callsUnavailable
+                  ? "Calls unavailable"
+                  : activeCall
+                    ? "Join live call"
+                    : "Start call"
               }
-              title={callUnavailable ?? (activeCall ? "Join live call" : "Start call")}
+              title={
+                callsUnavailable
+                  ? (callUnavailableMessage ?? undefined)
+                  : activeCall
+                    ? "Join live call"
+                    : "Start call"
+              }
               data-testid="chat-channel-call-button"
-              data-state={callUnavailable ? "unavailable" : activeCall ? "live" : "idle"}
+              data-state={callsUnavailable ? "unavailable" : activeCall ? "live" : "idle"}
             >
               <Phone size={16} weight={activeCall ? "fill" : "regular"} />
               {activeCall && (

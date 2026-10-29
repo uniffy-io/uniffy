@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Provider } from "react-redux";
@@ -68,7 +69,10 @@ function renderHeader(init: Parameters<typeof create<typeof ChatChannelSchema>>[
   );
   store.dispatch(setActiveChannel("dm"));
   return renderToStaticMarkup(
-    createElement(Provider, { store, children: createElement(ChannelHeader) }),
+    createElement(Provider, {
+      store,
+      children: createElement(MemoryRouter, {}, createElement(ChannelHeader)),
+    }),
   );
 }
 
@@ -115,6 +119,17 @@ it.each([
     const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
     expect(html).toContain('data-state="unavailable"');
     expect(html).toContain(message);
+  } finally {
+    calls.availability = CallAvailability.READY;
+  }
+});
+
+it("keeps the normal call button while availability is still being checked", () => {
+  calls.availability = CallAvailability.UNSPECIFIED;
+  try {
+    const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
+    expect(html).toContain('data-state="idle"');
+    expect(html).not.toContain("Calls unavailable");
   } finally {
     calls.availability = CallAvailability.READY;
   }

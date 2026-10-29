@@ -1,9 +1,12 @@
 import { MessageAttachments } from "@/features/chat/components/channel/MessageAttachments";
 import { useEffect, useRef, useState } from "react";
-import { PaperPlaneTilt, X } from "@phosphor-icons/react";
+import { PaperPlaneRight, X } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { controlShellClass, controlTextClass } from "@/components/ui/input";
+import { PaneIconButton } from "@/components/ui/pane-header";
+import { formatSmartDateTime } from "@/shared/utils/dateFormatting";
+import { cn } from "@/shared/utils/cn";
 import { MessageContent } from "@/features/chat/components/channel/MessageContent";
 import {
   selectMessagesForChannel,
@@ -51,18 +54,20 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
   };
   return (
     <section
-      className="flex h-full min-h-0 flex-col bg-surface"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-surface shadow-edge"
       aria-label="Channel chat"
       data-testid="call-chat"
     >
       <header className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h3 className="text-sm font-medium">Channel chat</h3>
-          <p className="text-xs text-muted-foreground">Messages stay here after this call.</p>
+          <p className="truncate text-xs text-muted-foreground">
+            Messages stay here after this call.
+          </p>
         </div>
-        <Button variant="ghost" className="size-11" aria-label="Close chat" onClick={onClose}>
-          <X size={18} />
-        </Button>
+        <PaneIconButton aria-label="Close chat" title="Close chat" onClick={onClose}>
+          <X size={16} />
+        </PaneIconButton>
       </header>
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {hasMore && (
@@ -91,8 +96,13 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
         >
           {messages.map((m) => (
             <article key={m.id} className="break-words text-sm">
-              <p className="mb-1 text-xs font-medium text-muted-foreground">
-                {m.senderName || "Participant"}
+              <p className="mb-1 flex items-baseline gap-1.5 text-xs">
+                <span className="font-medium text-muted-foreground">
+                  {m.senderName || "Participant"}
+                </span>
+                <time dateTime={m.createdAt} className="text-subtle-foreground">
+                  {formatSmartDateTime(m.createdAt)}
+                </time>
               </p>
               <MessageContent content={m.isDeleted ? "Message deleted" : m.content} />
               {!m.isDeleted && organizationId && m.attachments && (
@@ -103,34 +113,45 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
         </div>
       </div>
       <form
-        className="flex items-end gap-2 border-t border-border/60 p-3"
+        className="border-t border-border/60 p-2"
         onSubmit={(e) => {
           e.preventDefault();
           void send();
         }}
       >
-        <Textarea
-          aria-label="Message channel"
-          placeholder="Message channel..."
-          value={draft}
-          disabled={sending}
-          rows={2}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <Button
-          type="submit"
-          className="size-11 shrink-0"
-          disabled={sending || !draft.trim()}
-          aria-label="Send message"
-        >
-          <PaperPlaneTilt size={18} />
-        </Button>
+        <div className={cn(controlShellClass, "focus-ring-within flex items-end gap-1 p-1")}>
+          <textarea
+            aria-label="Message channel"
+            placeholder="Message channel..."
+            value={draft}
+            disabled={sending}
+            rows={2}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                void send();
+              }
+            }}
+            className={cn(
+              controlTextClass,
+              "min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 outline-none",
+            )}
+          />
+          <button
+            type="submit"
+            disabled={sending || !draft.trim()}
+            aria-label="Send message"
+            className={cn(
+              "focus-ring shrink-0 rounded-md p-1.5 transition-colors pointer-coarse:min-h-11 pointer-coarse:min-w-11",
+              sending || !draft.trim()
+                ? "cursor-not-allowed text-subtle-foreground"
+                : "text-primary hover:bg-primary/10",
+            )}
+          >
+            <PaperPlaneRight size={18} />
+          </button>
+        </div>
       </form>
     </section>
   );

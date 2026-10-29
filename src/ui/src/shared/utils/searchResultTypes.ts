@@ -5,6 +5,7 @@ export const SEARCH_RESULT_TYPE_TO_URN_TYPE: Record<number, UrnType> = {
   [SearchResultType.NOTE]: UrnType.NOTE,
   [SearchResultType.FILE]: UrnType.FILE,
   [SearchResultType.FOLDER]: UrnType.FOLDER,
+  [SearchResultType.CALL]: UrnType.CALL,
   [SearchResultType.CHAT]: UrnType.CHAT,
   [SearchResultType.AGENT_CHAT]: UrnType.AGENT_CHAT,
   [SearchResultType.AGENT_FOLDER]: UrnType.AGENT_FOLDER,
