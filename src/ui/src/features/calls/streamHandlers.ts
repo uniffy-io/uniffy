@@ -7,6 +7,7 @@ import {
 } from "@/features/calls/api/callsConverters";
 import {
   callUpserted,
+  reactionReceived,
   feedbackChanged,
   callEnded,
   participantUpserted,
@@ -25,6 +26,14 @@ import type { AppDispatch } from "@/app/store";
  */
 export function handleCallStreamEvent(ce: ChatEvent, dispatch: AppDispatch): boolean {
   switch (ce.eventType) {
+    case ChatEventType.CALL_REACTION: {
+      if (ce.payload.case === "callReaction" && ce.payload.value.expiresAt) {
+        const r = ce.payload.value;
+        const expiresAt = Number(r.expiresAt!.seconds) * 1000 + r.expiresAt!.nanos / 1e6;
+        if (expiresAt > Date.now()) dispatch(reactionReceived({ ...r, expiresAt }));
+      }
+      return true;
+    }
     case ChatEventType.CALL_STARTED: {
       if (ce.payload.case === "callLifecycle" && ce.payload.value.call) {
         dispatch(callUpserted(callToPlain(ce.payload.value.call)));

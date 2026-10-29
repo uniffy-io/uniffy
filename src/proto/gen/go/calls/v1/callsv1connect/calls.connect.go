@@ -71,6 +71,12 @@ const (
 	// CallServiceUpdateOrgCallPolicyProcedure is the fully-qualified name of the CallService's
 	// UpdateOrgCallPolicy RPC.
 	CallServiceUpdateOrgCallPolicyProcedure = "/calls.v1.CallService/UpdateOrgCallPolicy"
+	// CallServiceSetHandRaisedProcedure is the fully-qualified name of the CallService's SetHandRaised
+	// RPC.
+	CallServiceSetHandRaisedProcedure = "/calls.v1.CallService/SetHandRaised"
+	// CallServiceSendCallReactionProcedure is the fully-qualified name of the CallService's
+	// SendCallReaction RPC.
+	CallServiceSendCallReactionProcedure = "/calls.v1.CallService/SendCallReaction"
 	// CallServiceReportMediaStateProcedure is the fully-qualified name of the CallService's
 	// ReportMediaState RPC.
 	CallServiceReportMediaStateProcedure = "/calls.v1.CallService/ReportMediaState"
@@ -102,6 +108,8 @@ type CallServiceClient interface {
 	// role, not the content permission system (this is an org-level power).
 	GetOrgCallPolicy(context.Context, *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error)
 	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
+	SetHandRaised(context.Context, *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error)
+	SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -204,6 +212,18 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(callServiceMethods.ByName("UpdateOrgCallPolicy")),
 			connect.WithClientOptions(opts...),
 		),
+		setHandRaised: connect.NewClient[v1.SetHandRaisedRequest, v1.SetHandRaisedResponse](
+			httpClient,
+			baseURL+CallServiceSetHandRaisedProcedure,
+			connect.WithSchema(callServiceMethods.ByName("SetHandRaised")),
+			connect.WithClientOptions(opts...),
+		),
+		sendCallReaction: connect.NewClient[v1.SendCallReactionRequest, v1.SendCallReactionResponse](
+			httpClient,
+			baseURL+CallServiceSendCallReactionProcedure,
+			connect.WithSchema(callServiceMethods.ByName("SendCallReaction")),
+			connect.WithClientOptions(opts...),
+		),
 		reportMediaState: connect.NewClient[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse](
 			httpClient,
 			baseURL+CallServiceReportMediaStateProcedure,
@@ -229,6 +249,8 @@ type callServiceClient struct {
 	muteParticipant     *connect.Client[v1.MuteParticipantRequest, v1.MuteParticipantResponse]
 	getOrgCallPolicy    *connect.Client[v1.GetOrgCallPolicyRequest, v1.GetOrgCallPolicyResponse]
 	updateOrgCallPolicy *connect.Client[v1.UpdateOrgCallPolicyRequest, v1.UpdateOrgCallPolicyResponse]
+	setHandRaised       *connect.Client[v1.SetHandRaisedRequest, v1.SetHandRaisedResponse]
+	sendCallReaction    *connect.Client[v1.SendCallReactionRequest, v1.SendCallReactionResponse]
 	reportMediaState    *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
 }
 
@@ -302,6 +324,16 @@ func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, req *connec
 	return c.updateOrgCallPolicy.CallUnary(ctx, req)
 }
 
+// SetHandRaised calls calls.v1.CallService.SetHandRaised.
+func (c *callServiceClient) SetHandRaised(ctx context.Context, req *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error) {
+	return c.setHandRaised.CallUnary(ctx, req)
+}
+
+// SendCallReaction calls calls.v1.CallService.SendCallReaction.
+func (c *callServiceClient) SendCallReaction(ctx context.Context, req *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error) {
+	return c.sendCallReaction.CallUnary(ctx, req)
+}
+
 // ReportMediaState calls calls.v1.CallService.ReportMediaState.
 func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {
 	return c.reportMediaState.CallUnary(ctx, req)
@@ -333,6 +365,8 @@ type CallServiceHandler interface {
 	// role, not the content permission system (this is an org-level power).
 	GetOrgCallPolicy(context.Context, *connect.Request[v1.GetOrgCallPolicyRequest]) (*connect.Response[v1.GetOrgCallPolicyResponse], error)
 	UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error)
+	SetHandRaised(context.Context, *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error)
+	SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -431,6 +465,18 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(callServiceMethods.ByName("UpdateOrgCallPolicy")),
 		connect.WithHandlerOptions(opts...),
 	)
+	callServiceSetHandRaisedHandler := connect.NewUnaryHandler(
+		CallServiceSetHandRaisedProcedure,
+		svc.SetHandRaised,
+		connect.WithSchema(callServiceMethods.ByName("SetHandRaised")),
+		connect.WithHandlerOptions(opts...),
+	)
+	callServiceSendCallReactionHandler := connect.NewUnaryHandler(
+		CallServiceSendCallReactionProcedure,
+		svc.SendCallReaction,
+		connect.WithSchema(callServiceMethods.ByName("SendCallReaction")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceReportMediaStateHandler := connect.NewUnaryHandler(
 		CallServiceReportMediaStateProcedure,
 		svc.ReportMediaState,
@@ -467,6 +513,10 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 			callServiceGetOrgCallPolicyHandler.ServeHTTP(w, r)
 		case CallServiceUpdateOrgCallPolicyProcedure:
 			callServiceUpdateOrgCallPolicyHandler.ServeHTTP(w, r)
+		case CallServiceSetHandRaisedProcedure:
+			callServiceSetHandRaisedHandler.ServeHTTP(w, r)
+		case CallServiceSendCallReactionProcedure:
+			callServiceSendCallReactionHandler.ServeHTTP(w, r)
 		case CallServiceReportMediaStateProcedure:
 			callServiceReportMediaStateHandler.ServeHTTP(w, r)
 		default:
@@ -532,6 +582,14 @@ func (UnimplementedCallServiceHandler) GetOrgCallPolicy(context.Context, *connec
 
 func (UnimplementedCallServiceHandler) UpdateOrgCallPolicy(context.Context, *connect.Request[v1.UpdateOrgCallPolicyRequest]) (*connect.Response[v1.UpdateOrgCallPolicyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.UpdateOrgCallPolicy is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) SetHandRaised(context.Context, *connect.Request[v1.SetHandRaisedRequest]) (*connect.Response[v1.SetHandRaisedResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SetHandRaised is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) SendCallReaction(context.Context, *connect.Request[v1.SendCallReactionRequest]) (*connect.Response[v1.SendCallReactionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SendCallReaction is not implemented"))
 }
 
 func (UnimplementedCallServiceHandler) ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {

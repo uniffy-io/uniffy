@@ -18,6 +18,7 @@ interface MenuPosition {
   minWidth: number;
   /** False until the menu has been measured and flipped/clamped to fit the viewport. */
   ready: boolean;
+  ownerDocument: Document;
 }
 
 export type MenuAnchor =
@@ -26,6 +27,7 @@ export type MenuAnchor =
 
 type PortalMenuProps = MenuAnchor & {
   open: boolean;
+  autoFocus?: boolean;
   onClose: () => void;
   children: ReactNode;
   /** Horizontal alignment relative to the trigger. Default: 'right'. */
@@ -39,6 +41,7 @@ const VIEWPORT_MARGIN = 8;
 
 export function PortalMenu({
   open,
+  autoFocus = false,
   onClose,
   triggerRef,
   position: anchorPoint,
@@ -65,6 +68,7 @@ export function PortalMenu({
       left,
       minWidth: MENU_WIDTH,
       ready: false,
+      ownerDocument: trigger?.ownerDocument ?? document,
     });
   }, [open, triggerRef, align, anchorX, anchorY, isPointAnchor]);
 
@@ -75,6 +79,7 @@ export function PortalMenu({
     const trigger = triggerRef?.current;
     const menu = menuRef.current;
     if ((!trigger && !isPointAnchor) || !menu) return;
+    const ownerWindow = menu.ownerDocument.defaultView ?? window;
     const measure = () => {
       const rect = trigger?.getBoundingClientRect();
       const menuHeight = menu.offsetHeight;
@@ -82,7 +87,7 @@ export function PortalMenu({
       const bottom = anchorY ?? rect!.bottom;
       const topEdge = anchorY ?? rect!.top;
       const gap = isPointAnchor ? 0 : 4;
-      const spaceBelow = window.innerHeight - bottom;
+      const spaceBelow = ownerWindow.innerHeight - bottom;
       const spaceAbove = topEdge;
       let top: number;
       if (spaceBelow < menuHeight + VIEWPORT_MARGIN && spaceAbove > spaceBelow) {
@@ -90,7 +95,7 @@ export function PortalMenu({
       } else {
         top = Math.max(
           VIEWPORT_MARGIN,
-          Math.min(bottom + gap, window.innerHeight - menuHeight - VIEWPORT_MARGIN),
+          Math.min(bottom + gap, ownerWindow.innerHeight - menuHeight - VIEWPORT_MARGIN),
         );
       }
       // Re-anchor horizontally against the measured width (className may widen the
@@ -98,7 +103,7 @@ export function PortalMenu({
       const rawLeft = anchorX ?? (align === "right" ? rect!.right - menuWidth : rect!.left);
       const left = Math.max(
         VIEWPORT_MARGIN,
-        Math.min(rawLeft, window.innerWidth - menuWidth - VIEWPORT_MARGIN),
+        Math.min(rawLeft, ownerWindow.innerWidth - menuWidth - VIEWPORT_MARGIN),
       );
       setPosition((p) =>
         p && (!p.ready || p.top !== top || p.left !== left) ? { ...p, top, left, ready: true } : p,
@@ -107,12 +112,12 @@ export function PortalMenu({
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(menu);
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, true);
+    ownerWindow.addEventListener("resize", measure);
+    ownerWindow.addEventListener("scroll", measure, true);
     return () => {
       observer.disconnect();
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure, true);
+      ownerWindow.removeEventListener("resize", measure);
+      ownerWindow.removeEventListener("scroll", measure, true);
     };
   }, [open, hasPosition, triggerRef, align, anchorX, anchorY, isPointAnchor]);
 
@@ -124,11 +129,18 @@ export function PortalMenu({
       if (triggerRef?.current?.contains(target)) return;
       onClose();
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const ownerDocument = triggerRef?.current?.ownerDocument ?? document;
+    ownerDocument.addEventListener("mousedown", handleClickOutside);
+    return () => ownerDocument.removeEventListener("mousedown", handleClickOutside);
   }, [open, onClose, triggerRef]);
 
-  useOverlayEscape(onClose, open);
+  const ready = position?.ready ?? false;
+  useEffect(() => {
+    if (open && ready && autoFocus)
+      menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+  }, [open, ready, autoFocus]);
+
+  useOverlayEscape(onClose, open, position?.ownerDocument);
 
   if (!open || !position) return null;
 
@@ -148,6 +160,6 @@ export function PortalMenu({
     >
       {children}
     </div>,
-    document.body,
+    position.ownerDocument.fullscreenElement ?? position.ownerDocument.body,
   );
 }

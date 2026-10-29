@@ -30,6 +30,8 @@ export interface PlainParticipant {
   micEnabled: boolean;
   cameraEnabled: boolean;
   screenSharing: boolean;
+  handRaisedAt?: string | null;
+  handRevision?: number;
 }
 
 export interface PlainCall {
@@ -86,10 +88,16 @@ export function participantToPlain(proto: ProtoCallParticipant): PlainParticipan
     identity: proto.identity,
     displayName: proto.displayName,
     avatarUrl: proto.avatarUrl ?? null,
-    joinedAtSeconds: tsToSeconds(proto.joinedAt),
+    joinedAtSeconds: tsToSeconds(proto.joinedAt) + (proto.joinedAt?.nanos ?? 0) / 1e9,
     micEnabled: proto.micEnabled,
     cameraEnabled: proto.cameraEnabled,
     screenSharing: proto.screenSharing,
+    handRaisedAt: proto.handRaisedAt
+      ? new Date(
+          Number(proto.handRaisedAt.seconds) * 1000 + proto.handRaisedAt.nanos / 1e6,
+        ).toISOString()
+      : null,
+    handRevision: proto.handRevision,
   };
 }
 

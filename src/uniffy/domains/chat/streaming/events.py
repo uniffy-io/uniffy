@@ -31,6 +31,7 @@ CALL_ENDED = "call_ended"
 CALL_PARTICIPANT_JOINED = "call_participant_joined"
 CALL_PARTICIPANT_LEFT = "call_participant_left"
 CALL_PARTICIPANT_STATE = "call_participant_state"
+CALL_REACTION = "call_reaction"
 CALL_RING = "call_ring"
 CALL_HOST_CHANGED = "call_host_changed"
 

@@ -380,6 +380,27 @@ direct media), nothing changes anywhere.
       browser. Fallback stays in a separate window, with no always-on-top guarantee. Blocking
       popups shows feedback and keeps embedded call usable. Repeated clicks focus existing window.
 
+## Calls: participation and channel chat
+
+Run with host A and participant B. Repeat on web, iOS and Android, with keyboard,
+VoiceOver and TalkBack. Check web at 375px, 768px and 1024px, full screen and pop-out.
+
+- [ ] Send each reaction while muted. Both clients show sender name and reaction, announce it,
+      and remove it after five seconds. Reconnect must not replay expired reactions.
+- [ ] Raise B's hand, then A's. Both clients show B first. Raising twice keeps original position.
+      Lower and raise again moves that participant to end. Host can lower B's hand; B cannot lower A's.
+- [ ] Reconnect with hand raised. Snapshot restores queue. Leave or remove participant and confirm
+      their hand disappears. Joining again starts with hand lowered.
+- [ ] Open Chat in full-screen call, pop-out and native call screen. Send text and Markdown link.
+      Other participant sees message in same channel. Close call, reopen channel and reload.
+      Both messages remain. Navigate original web tab elsewhere while pop-out chat stays live.
+- [ ] Scroll to earlier messages. Fail send and retry without losing text. Incoming messages,
+      hand changes and reactions are announced without moving keyboard focus.
+- [ ] On native, open keyboard while chat is visible. Composer stays above keyboard and call audio
+      continues. Close chat and return to video without disconnecting.
+- [ ] Try participation from another org, session or device that has not joined. Requests fail.
+      Send more than five reactions in ten seconds. Excess requests fail without affecting audio.
+
 ## Calls: mobile client
 
 The phone carries the controls a phone can reasonably offer. Needs a dev build on each platform

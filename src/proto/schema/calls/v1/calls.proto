@@ -65,6 +65,8 @@ service CallService {
   // role, not the content permission system (this is an org-level power).
   rpc GetOrgCallPolicy(GetOrgCallPolicyRequest) returns (GetOrgCallPolicyResponse);
   rpc UpdateOrgCallPolicy(UpdateOrgCallPolicyRequest) returns (UpdateOrgCallPolicyResponse);
+  rpc SetHandRaised(SetHandRaisedRequest) returns (SetHandRaisedResponse);
+  rpc SendCallReaction(SendCallReactionRequest) returns (SendCallReactionResponse);
   // The client reports its own mic/camera/screen state; this is the roster's
   // source of truth because LiveKit emits no mute webhook (a muted mic track
   // stays published, so mute state cannot be inferred server-side). Fans out
@@ -142,6 +144,8 @@ message CallParticipant {
   bool mic_enabled = 8;
   bool camera_enabled = 9;
   bool screen_sharing = 10;
+  optional google.protobuf.Timestamp hand_raised_at = 11;
+  int32 hand_revision = 12;
 }
 
 message InitiateCallRequest {
@@ -304,3 +308,29 @@ message UpdateOrgCallPolicyRequest {
 message UpdateOrgCallPolicyResponse {
   OrgCallPolicy policy = 1;
 }
+
+message SetHandRaisedRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+  bool raised = 4;
+  // Omit for own hand. Hosts and moderators may lower another identity's hand.
+  optional string identity = 5;
+}
+message SetHandRaisedResponse {
+  CallParticipant participant = 1;
+}
+enum CallReaction {
+  CALL_REACTION_UNSPECIFIED = 0;
+  CALL_REACTION_AGREE = 1;
+  CALL_REACTION_APPLAUSE = 2;
+  CALL_REACTION_LOVE = 3;
+  CALL_REACTION_CELEBRATE = 4;
+}
+message SendCallReactionRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+  CallReaction reaction = 4;
+}
+message SendCallReactionResponse {}

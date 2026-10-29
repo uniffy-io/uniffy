@@ -20,6 +20,8 @@ export interface CallParticipantData {
   micEnabled: boolean;
   cameraEnabled: boolean;
   screenSharing: boolean;
+  handRaisedAt?: string | null;
+  handRevision?: number;
 }
 
 export interface CallData {
@@ -63,4 +65,13 @@ export interface CallEndedInfo {
   callId: string;
   channelId: string;
   reason: CallEndReason | "KICKED" | "DISPLACED" | null;
+}
+
+export interface CallReactionData {
+  id: string;
+  callId: string;
+  userId: string;
+  displayName: string;
+  reaction: import("@uniffy/proto/calls/v1/calls_pb").CallReaction;
+  expiresAt: number;
 }

@@ -32,6 +32,7 @@ import {
   upsertActiveCall,
   removeActiveCall,
   applyParticipantEvent,
+  pushCallReaction,
   setCallHost,
   pushRingInvite,
   recordEndedCall,
@@ -490,6 +491,15 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       } else {
         upsertActiveCall(queryClient, orgId, callToPlain(call));
       }
+      break;
+    }
+    case "callReaction": {
+      const r = ce.payload.value;
+      if (r.expiresAt)
+        pushCallReaction(queryClient, orgId, {
+          ...r,
+          expiresAt: Number(r.expiresAt.seconds) * 1000 + r.expiresAt.nanos / 1e6,
+        });
       break;
     }
     case "callParticipant": {

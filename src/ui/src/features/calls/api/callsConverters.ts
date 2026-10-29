@@ -42,10 +42,16 @@ export function participantToPlain(p: ProtoCallParticipant): CallParticipantData
     displayName: p.displayName,
     avatarUrl: p.avatarUrl ?? null,
     deviceLabel: p.deviceLabel ?? null,
-    joinedAt: timestampToIso(p.joinedAt),
+    joinedAt: p.joinedAt
+      ? new Date(Number(p.joinedAt.seconds) * 1000 + p.joinedAt.nanos / 1e6).toISOString()
+      : null,
     micEnabled: p.micEnabled,
     cameraEnabled: p.cameraEnabled,
     screenSharing: p.screenSharing,
+    handRaisedAt: p.handRaisedAt
+      ? new Date(Number(p.handRaisedAt.seconds) * 1000 + p.handRaisedAt.nanos / 1e6).toISOString()
+      : null,
+    handRevision: p.handRevision,
   };
 }
 

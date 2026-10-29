@@ -37,6 +37,10 @@ from uniffy_proto.calls.v1.calls_pb import (
     RefreshCallTokenResponse,
     ReportMediaStateRequest,
     ReportMediaStateResponse,
+    SendCallReactionRequest,
+    SendCallReactionResponse,
+    SetHandRaisedRequest,
+    SetHandRaisedResponse,
     UpdateOrgCallPolicyRequest,
     UpdateOrgCallPolicyResponse,
 )
@@ -46,10 +50,11 @@ from uniffy.core.auth.principal import current_session_id, current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calls import ScreenShareQuality
 from uniffy.domains.calls.config import LiveKitConfigError, get_livekit_config, get_turn_config
-from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto
+from uniffy.domains.calls.converters import call_to_proto, org_policy_to_proto, participant_to_proto
 from uniffy.domains.calls.livekit import LiveKitUnavailableError
 from uniffy.domains.calls.metrics import RINGS, RingOutcome
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.participation import CallParticipation
 from uniffy.domains.calls.reader import CallReader, probe_call_media
 from uniffy.domains.calls.telemetry import call_context, observe_join
 from uniffy.domains.calls.turn import mint_turn_credentials
@@ -408,3 +413,40 @@ class CallHandlers:
             except Exception as exc:
                 raise _map_domain_error("report_media_state", exc) from exc
         return ReportMediaStateResponse(success=True)
+
+    async def set_hand_raised(
+        self, request: SetHandRaisedRequest, ctx: RequestContext
+    ) -> SetHandRaisedResponse:
+        async with open_session() as session:
+            participation = CallParticipation(session)
+            participant = await participation.set_hand(
+                current_user_id(),
+                _parse_uuid(request.organization_id, "organization_id"),
+                _parse_uuid(request.call_id, "call_id"),
+                _require_device_id(request.device_id),
+                current_session_id(),
+                raised=request.raised,
+                identity=request.identity or None,
+            )
+            profile = await participation.calls.chat.resolve_profile(participant.user_id)
+            return SetHandRaisedResponse(
+                participant=participant_to_proto(
+                    participant,
+                    profile.display_name,
+                    profile.avatar_url,
+                )
+            )
+
+    async def send_call_reaction(
+        self, request: SendCallReactionRequest, ctx: RequestContext
+    ) -> SendCallReactionResponse:
+        async with open_session() as session:
+            await CallParticipation(session).react(
+                current_user_id(),
+                _parse_uuid(request.organization_id, "organization_id"),
+                _parse_uuid(request.call_id, "call_id"),
+                _require_device_id(request.device_id),
+                current_session_id(),
+                reaction=request.reaction,
+            )
+        return SendCallReactionResponse()

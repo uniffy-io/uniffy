@@ -67,7 +67,10 @@ def participant_to_proto(
         mic_enabled=participant.mic_enabled,
         camera_enabled=participant.camera_enabled,
         screen_sharing=participant.screen_sharing,
+        hand_revision=participant.hand_revision,
     )
+    if participant.hand_raised_at is not None:
+        proto.hand_raised_at = _ts(participant.hand_raised_at)
     return proto
 
 
@@ -133,6 +136,10 @@ def participant_to_event_dict(
         "mic_enabled": participant.mic_enabled,
         "camera_enabled": participant.camera_enabled,
         "screen_sharing": participant.screen_sharing,
+        "hand_raised_at": participant.hand_raised_at.isoformat()
+        if participant.hand_raised_at
+        else None,
+        "hand_revision": participant.hand_revision,
     }
 
 

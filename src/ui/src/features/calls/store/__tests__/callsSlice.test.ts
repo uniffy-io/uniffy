@@ -1,3 +1,6 @@
+import { create } from "@bufbuild/protobuf";
+import { CallParticipantSchema } from "@uniffy/proto/calls/v1/calls_pb";
+import { participantToPlain } from "@/features/calls/api/callsConverters";
 import { describe, expect, it } from "vitest";
 import {
   callsReducer,
@@ -330,4 +333,81 @@ describe("terminal event ordering", () => {
       ).feedback,
     ).toBeNull();
   });
+});
+
+describe("hand ordering", () => {
+  it("keeps a lowered hand when an older media update arrives", () => {
+    let state = callsReducer(
+      init(),
+      callUpserted(call({ participants: [participant({ handRaisedAt: null, handRevision: 2 })] })),
+    );
+    state = callsReducer(
+      state,
+      participantUpserted({
+        callId: "call-1",
+        participant: participant({
+          handRaisedAt: "2026-07-08T10:01:00.000Z",
+          handRevision: 1,
+          cameraEnabled: true,
+        }),
+      }),
+    );
+    expect(state.activeByChannel["chan-1"].participants[0]).toMatchObject({
+      handRaisedAt: null,
+      handRevision: 2,
+      cameraEnabled: true,
+    });
+  });
+  it("does not inherit a hand from a departed device session", () => {
+    let state = callsReducer(
+      init(),
+      callUpserted(
+        call({
+          participants: [
+            participant({ handRaisedAt: "2026-07-08T10:01:00.000Z", handRevision: 3 }),
+          ],
+        }),
+      ),
+    );
+    state = callsReducer(
+      state,
+      participantUpserted({
+        callId: "call-1",
+        participant: participant({
+          joinedAt: "2026-07-08T11:00:00.000Z",
+          handRaisedAt: null,
+          handRevision: 0,
+        }),
+      }),
+    );
+    expect(state.activeByChannel["chan-1"].participants[0].handRaisedAt).toBeNull();
+  });
+});
+
+it("preserves subsecond raise order", () => {
+  const first = participantToPlain(
+    create(CallParticipantSchema, { handRaisedAt: { seconds: 100n, nanos: 100000000 } }),
+  );
+  const second = participantToPlain(
+    create(CallParticipantSchema, { handRaisedAt: { seconds: 100n, nanos: 250000000 } }),
+  );
+  expect(first.handRaisedAt! < second.handRaisedAt!).toBe(true);
+});
+
+it("does not restore a lowered hand from an older reconnect snapshot", () => {
+  const initial = callsReducer(
+    init(),
+    callUpserted(call({ participants: [participant({ handRaisedAt: null, handRevision: 2 })] })),
+  );
+  const stale = call({
+    participants: [participant({ handRaisedAt: "2026-07-08T10:01:00.000Z", handRevision: 1 })],
+  });
+  expect(
+    callsReducer(initial, callUpserted(stale)).activeByChannel["chan-1"].participants[0]
+      .handRaisedAt,
+  ).toBeNull();
+  expect(
+    callsReducer(initial, activeCallsSynced([stale])).activeByChannel["chan-1"].participants[0]
+      .handRaisedAt,
+  ).toBeNull();
 });
