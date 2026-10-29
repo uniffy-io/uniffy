@@ -7,11 +7,7 @@ import { useEffect, useId } from "react";
 const stack: string[] = [];
 
 /** Closes this overlay on Escape while it is the topmost registered layer. */
-export function useOverlayEscape(
-  onEscape: () => void,
-  active = true,
-  ownerDocument: Document = document,
-) {
+export function useOverlayEscape(onEscape: () => void, active = true, ownerDocument?: Document) {
   const id = useId();
 
   useEffect(() => {
@@ -30,7 +26,8 @@ export function useOverlayEscape(
       if (stack[stack.length - 1] !== id) return;
       onEscape();
     }
-    ownerDocument.addEventListener("keydown", handleKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", handleKeyDown);
+    const targetDocument = ownerDocument ?? document;
+    targetDocument.addEventListener("keydown", handleKeyDown);
+    return () => targetDocument.removeEventListener("keydown", handleKeyDown);
   }, [active, id, onEscape, ownerDocument]);
 }
