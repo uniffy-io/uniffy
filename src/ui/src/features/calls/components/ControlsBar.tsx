@@ -122,7 +122,10 @@ export function ControlsBar({ compact = false, onToggleParticipants }: ControlsB
   }
 
   return (
-    <div className="flex items-center gap-1.5" data-testid="call-controls-bar">
+    <div
+      className="order-last flex w-full min-w-0 flex-none flex-wrap items-center gap-1.5 md:order-none md:w-auto"
+      data-testid="call-controls-bar"
+    >
       <div className="flex items-stretch">
         <button
           type="button"

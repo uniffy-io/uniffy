@@ -28,10 +28,28 @@ export function lastEndedCallKey(orgId: string) {
   return ["calls", "lastEnded", orgId];
 }
 
+function keepLatestHand(
+  previous: PlainParticipant | undefined,
+  incoming: PlainParticipant,
+): PlainParticipant {
+  return previous?.joinedAtSeconds === incoming.joinedAtSeconds &&
+    (previous?.handRevision ?? 0) > (incoming.handRevision ?? 0)
+    ? { ...incoming, handRaisedAt: previous?.handRaisedAt, handRevision: previous?.handRevision }
+    : incoming;
+}
+function mergeCallHands(previous: PlainCall | undefined, incoming: PlainCall): PlainCall {
+  if (previous?.id !== incoming.id) return incoming;
+  const byIdentity = new Map(previous.participants.map((p) => [p.identity, p]));
+  return {
+    ...incoming,
+    participants: incoming.participants.map((p) => keepLatestHand(byIdentity.get(p.identity), p)),
+  };
+}
+
 export function upsertActiveCall(qc: QueryClient, orgId: string, call: PlainCall) {
   qc.setQueryData<ActiveCallsMap>(activeCallsKey(orgId), (old) => ({
     ...old,
-    [call.channelId]: call,
+    [call.channelId]: mergeCallHands(old?.[call.channelId], call),
   }));
 }
 
@@ -60,6 +78,8 @@ export function applyParticipantEvent(
   qc.setQueryData<ActiveCallsMap>(activeCallsKey(orgId), (old) => {
     const call = old?.[channelId];
     if (!call || call.id !== callId) return old ?? {};
+    const previous = call.participants.find((p) => p.identity === participant.identity);
+    participant = keepLatestHand(previous, participant);
     const rest = call.participants.filter((p) => p.identity !== participant.identity);
     const participants = kind === "left" ? rest : [...rest, participant];
     return { ...old, [channelId]: { ...call, participants } };
@@ -96,7 +116,8 @@ export function recordEndedCall(qc: QueryClient, orgId: string, ended: LastEnded
 /** Full snapshot replace from ListActiveCalls; prunes rings for dead calls. */
 export function syncActiveCalls(qc: QueryClient, orgId: string, calls: PlainCall[]) {
   const map: ActiveCallsMap = {};
-  for (const call of calls) map[call.channelId] = call;
+  const previous = qc.getQueryData<ActiveCallsMap>(activeCallsKey(orgId));
+  for (const call of calls) map[call.channelId] = mergeCallHands(previous?.[call.channelId], call);
   qc.setQueryData<ActiveCallsMap>(activeCallsKey(orgId), map);
   const alive = new Set(calls.map((c) => c.id));
   qc.setQueryData<RingInvite[]>(ringInvitesKey(orgId), (old) =>
@@ -139,4 +160,36 @@ export interface ModeratorMute {
 
 export function moderatorMuteKey(orgId: string) {
   return ["calls", "moderatorMute", orgId];
+}
+
+export interface CallReactionData {
+  id: string;
+  callId: string;
+  userId: string;
+  displayName: string;
+  reaction: import("@uniffy/proto/calls/v1/calls_pb").CallReaction;
+  expiresAt: number;
+}
+export function reactionsKey(orgId: string) {
+  return ["calls", "reactions", orgId];
+}
+export function pushCallReaction(qc: QueryClient, orgId: string, reaction: CallReactionData) {
+  if (reaction.expiresAt <= Date.now()) return;
+  qc.setQueryData<CallReactionData[]>(reactionsKey(orgId), (old) =>
+    [
+      ...(old ?? []).filter((r) => r.expiresAt > Date.now() && r.id !== reaction.id),
+      reaction,
+    ].slice(-5),
+  );
+}
+export function useCallReactions() {
+  const { organizationId } = useAuth();
+  return (
+    useQuery<CallReactionData[]>({
+      queryKey: reactionsKey(organizationId ?? ""),
+      queryFn: () => [],
+      enabled: false,
+      staleTime: Infinity,
+    }).data ?? []
+  );
 }

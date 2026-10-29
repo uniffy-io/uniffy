@@ -1,3 +1,7 @@
+import { CallReactionOverlay } from "@/features/calls/components/CallReactionOverlay";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
+import { CallParticipation } from "@/features/calls/components/CallParticipation";
+import { CallChat } from "@/features/calls/components/CallChat";
 import { CallPopoutButton } from "@/features/calls/components/CallPopoutButton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Track } from "livekit-client";
@@ -164,6 +168,7 @@ function ReconnectingChip() {
 }
 
 function CallViewInner({ channelId }: { channelId: string }) {
+  const { isMobile } = useBreakpoint();
   const dispatch = useAppDispatch();
   const session = useAppSelector(selectCallSession);
   const call = useAppSelector((s) => selectActiveCallForChannel(s, channelId));
@@ -172,6 +177,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
   const persistedHeight = useAppSelector((s) => s.callPreferences.viewHeightPx ?? null);
   const { room, popoutWindow, closePopout } = useCall();
   const participants = useRoomParticipants(room);
+  const [chatOpen, setChatOpen] = useState(false);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [showSoloPrompt, setShowSoloPrompt] = useState(false);
@@ -244,10 +250,15 @@ function CallViewInner({ channelId }: { channelId: string }) {
       className={cn(
         "flex flex-col border-b border-border/60",
         isFullscreen ? "h-full bg-background" : "bg-background/60",
-        !isFullscreen && (collapsed ? "h-12" : height === null && "h-[40%] min-h-[220px]"),
+        !isFullscreen &&
+          (collapsed
+            ? "h-12"
+            : isMobile
+              ? "h-auto shrink-0"
+              : height === null && "h-[40%] min-h-[220px]"),
       )}
       style={
-        !isFullscreen && !collapsed && height !== null
+        !isMobile && !isFullscreen && !collapsed && height !== null
           ? {
               height: `${height}px`,
               minHeight: `${MIN_HEIGHT_PX}px`,
@@ -267,7 +278,18 @@ function CallViewInner({ channelId }: { channelId: string }) {
           Live call - {call?.participants.length ?? participants.length} in
           {session.status === "reconnecting" && <ReconnectingChip />}
         </div>
-        <div className="flex items-center gap-2">
+        <div
+          className={cn(
+            "flex min-w-0 flex-wrap items-center gap-2 md:w-auto",
+            !collapsed && "w-full",
+          )}
+        >
+          {!collapsed && !popoutWindow && (
+            <CallParticipation
+              chatOpen={chatOpen}
+              onToggleChat={isFullscreen ? () => setChatOpen(!chatOpen) : undefined}
+            />
+          )}
           <CallPopoutButton />
           {!collapsed && <ControlsBar onToggleParticipants={() => setParticipantsOpen(true)} />}
           {!collapsed && (
@@ -296,41 +318,58 @@ function CallViewInner({ channelId }: { channelId: string }) {
       </div>
 
       {!collapsed && (
-        <div className="relative flex-1 min-h-0 px-3 pb-3">
-          {popoutWindow ? (
-            <div className="flex h-full items-center justify-center text-sm">
-              <button
-                type="button"
-                className="min-h-11 text-primary hover:underline"
-                onClick={closePopout}
-              >
-                Return call to this tab
-              </button>
-            </div>
-          ) : (
-            <CallGrid
-              participants={participants}
-              nameFor={(p) => rosterByIdentity.get(p.identity)}
-            />
+        <div
+          className={cn(
+            "flex min-h-0 flex-col gap-3 px-3 pb-3 sm:flex-row",
+            isMobile && !isFullscreen ? "h-32 shrink-0" : "flex-1",
           )}
-          {showSoloPrompt && (
-            <div role="status" className="absolute inset-x-0 bottom-6 flex justify-center">
-              <div className={cn(popoverShellClass, "px-3 py-2 text-xs text-muted-foreground")}>
-                You are the only one here. The call ends automatically after 5 minutes alone.
+        >
+          <div className="relative min-h-0 min-w-0 flex-1">
+            {popoutWindow ? (
+              <div className="flex h-full items-center justify-center text-sm">
                 <button
                   type="button"
-                  onClick={() => setShowSoloPrompt(false)}
-                  className="ml-2 text-primary hover:underline"
+                  className="min-h-11 text-primary hover:underline"
+                  onClick={closePopout}
                 >
-                  Dismiss
+                  Return call to this tab
                 </button>
               </div>
+            ) : (
+              <CallGrid
+                participants={participants}
+                nameFor={(p) => rosterByIdentity.get(p.identity)}
+              />
+            )}
+            {!popoutWindow && <CallReactionOverlay />}
+            {showSoloPrompt && (
+              <div role="status" className="absolute inset-x-0 bottom-6 flex justify-center">
+                <div className={cn(popoverShellClass, "px-3 py-2 text-xs text-muted-foreground")}>
+                  You are the only one here. The call ends automatically after 5 minutes alone.
+                  <button
+                    type="button"
+                    onClick={() => setShowSoloPrompt(false)}
+                    className="ml-2 text-primary hover:underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {isFullscreen && chatOpen && session.channelId && (
+            <div className="h-1/2 min-h-48 sm:h-full sm:w-80">
+              <CallChat
+                key={session.channelId}
+                channelId={session.channelId}
+                onClose={() => setChatOpen(false)}
+              />
             </div>
           )}
         </div>
       )}
 
-      {!collapsed && !isFullscreen && (
+      {!isMobile && !collapsed && !isFullscreen && (
         <div
           onPointerDown={onResizeStart}
           className="h-1 shrink-0 cursor-row-resize transition-colors hover:bg-primary/40"

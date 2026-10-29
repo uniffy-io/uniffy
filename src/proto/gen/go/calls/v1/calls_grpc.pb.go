@@ -33,6 +33,8 @@ const (
 	CallService_MuteParticipant_FullMethodName     = "/calls.v1.CallService/MuteParticipant"
 	CallService_GetOrgCallPolicy_FullMethodName    = "/calls.v1.CallService/GetOrgCallPolicy"
 	CallService_UpdateOrgCallPolicy_FullMethodName = "/calls.v1.CallService/UpdateOrgCallPolicy"
+	CallService_SetHandRaised_FullMethodName       = "/calls.v1.CallService/SetHandRaised"
+	CallService_SendCallReaction_FullMethodName    = "/calls.v1.CallService/SendCallReaction"
 	CallService_ReportMediaState_FullMethodName    = "/calls.v1.CallService/ReportMediaState"
 )
 
@@ -72,6 +74,8 @@ type CallServiceClient interface {
 	// role, not the content permission system (this is an org-level power).
 	GetOrgCallPolicy(ctx context.Context, in *GetOrgCallPolicyRequest, opts ...grpc.CallOption) (*GetOrgCallPolicyResponse, error)
 	UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgCallPolicyResponse, error)
+	SetHandRaised(ctx context.Context, in *SetHandRaisedRequest, opts ...grpc.CallOption) (*SetHandRaisedResponse, error)
+	SendCallReaction(ctx context.Context, in *SendCallReactionRequest, opts ...grpc.CallOption) (*SendCallReactionResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -227,6 +231,26 @@ func (c *callServiceClient) UpdateOrgCallPolicy(ctx context.Context, in *UpdateO
 	return out, nil
 }
 
+func (c *callServiceClient) SetHandRaised(ctx context.Context, in *SetHandRaisedRequest, opts ...grpc.CallOption) (*SetHandRaisedResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetHandRaisedResponse)
+	err := c.cc.Invoke(ctx, CallService_SetHandRaised_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *callServiceClient) SendCallReaction(ctx context.Context, in *SendCallReactionRequest, opts ...grpc.CallOption) (*SendCallReactionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendCallReactionResponse)
+	err := c.cc.Invoke(ctx, CallService_SendCallReaction_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMediaStateRequest, opts ...grpc.CallOption) (*ReportMediaStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReportMediaStateResponse)
@@ -273,6 +297,8 @@ type CallServiceServer interface {
 	// role, not the content permission system (this is an org-level power).
 	GetOrgCallPolicy(context.Context, *GetOrgCallPolicyRequest) (*GetOrgCallPolicyResponse, error)
 	UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*UpdateOrgCallPolicyResponse, error)
+	SetHandRaised(context.Context, *SetHandRaisedRequest) (*SetHandRaisedResponse, error)
+	SendCallReaction(context.Context, *SendCallReactionRequest) (*SendCallReactionResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -329,6 +355,12 @@ func (UnimplementedCallServiceServer) GetOrgCallPolicy(context.Context, *GetOrgC
 }
 func (UnimplementedCallServiceServer) UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*UpdateOrgCallPolicyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateOrgCallPolicy not implemented")
+}
+func (UnimplementedCallServiceServer) SetHandRaised(context.Context, *SetHandRaisedRequest) (*SetHandRaisedResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetHandRaised not implemented")
+}
+func (UnimplementedCallServiceServer) SendCallReaction(context.Context, *SendCallReactionRequest) (*SendCallReactionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendCallReaction not implemented")
 }
 func (UnimplementedCallServiceServer) ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportMediaState not implemented")
@@ -606,6 +638,42 @@ func _CallService_UpdateOrgCallPolicy_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CallService_SetHandRaised_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetHandRaisedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).SetHandRaised(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_SetHandRaised_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).SetHandRaised(ctx, req.(*SetHandRaisedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CallService_SendCallReaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendCallReactionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).SendCallReaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_SendCallReaction_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).SendCallReaction(ctx, req.(*SendCallReactionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CallService_ReportMediaState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportMediaStateRequest)
 	if err := dec(in); err != nil {
@@ -686,6 +754,14 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateOrgCallPolicy",
 			Handler:    _CallService_UpdateOrgCallPolicy_Handler,
+		},
+		{
+			MethodName: "SetHandRaised",
+			Handler:    _CallService_SetHandRaised_Handler,
+		},
+		{
+			MethodName: "SendCallReaction",
+			Handler:    _CallService_SendCallReaction_Handler,
 		},
 		{
 			MethodName: "ReportMediaState",

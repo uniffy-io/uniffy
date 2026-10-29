@@ -15,6 +15,8 @@ import {
   KickParticipantRequestSchema,
   MuteParticipantRequestSchema,
   ReportMediaStateRequestSchema,
+  SetHandRaisedRequestSchema,
+  SendCallReactionRequestSchema,
 } from "@uniffy/proto/calls/v1/calls_pb";
 import { transport } from "@core/api/transport";
 
@@ -41,6 +43,10 @@ export const callsApi = {
     client.kickParticipant(req),
   muteParticipant: (req: MessageInitShape<typeof MuteParticipantRequestSchema>) =>
     client.muteParticipant(req),
+  setHandRaised: (req: MessageInitShape<typeof SetHandRaisedRequestSchema>) =>
+    client.setHandRaised(req),
+  sendCallReaction: (req: MessageInitShape<typeof SendCallReactionRequestSchema>) =>
+    client.sendCallReaction(req),
   reportMediaState: (req: MessageInitShape<typeof ReportMediaStateRequestSchema>) =>
     client.reportMediaState(req),
 };

@@ -1,7 +1,19 @@
+import { CallReactionOverlay } from "@features/calls/components/CallReactionOverlay";
+import { CallParticipation } from "@features/calls/components/CallParticipation";
+import { CallChat } from "@features/calls/components/CallChat";
 import { useCallModeration } from "@features/calls/useCallModeration";
 import { useParticipantActions } from "@features/calls/useParticipantActions";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TouchableOpacity } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TouchableOpacity,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MicrophoneSlash, PushPinSlash, Users } from "phosphor-react-native";
 import { loadLivekitClient } from "@features/calls/livekit";
@@ -57,6 +69,7 @@ export function CallScreen() {
   const [gridSize, setGridSize] = useState({ width: 0, height: 0 });
   const [pipStage, setPipStage] = useState({ width: 0, height: 0 });
   const [pinned, setPinned] = useState<FocusTarget | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const { session, room, setMinimized } = useCall();
   const activeCall = useActiveCall(session.channelId ?? undefined);
@@ -176,7 +189,10 @@ export function CallScreen() {
   const heroParticipant = remoteParticipant ?? localParticipant;
 
   return (
-    <View style={[styles.root, { backgroundColor: T.pageBg }]}>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={[styles.root, { backgroundColor: T.pageBg }]}
+    >
       <DomainHeader
         title={channelTitle}
         subtitle={status}
@@ -353,6 +369,17 @@ export function CallScreen() {
         )}
       </View>
 
+      <CallReactionOverlay />
+      {chatOpen && session.channelId && (
+        <View style={{ flex: 1, minHeight: 180, marginHorizontal: 10 }}>
+          <CallChat
+            key={session.channelId}
+            channelId={session.channelId}
+            onClose={() => setChatOpen(false)}
+          />
+        </View>
+      )}
+
       {solo ? (
         <View style={styles.soloWrap}>
           <Text style={[styles.soloText, { color: T.textDim }]}>
@@ -370,6 +397,7 @@ export function CallScreen() {
           blurIntensity={48}
           solidColor={T.surface}
         />
+        <CallParticipation chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
         <CallControls T={T} canModerate={canModerate} />
       </View>
 
@@ -379,7 +407,7 @@ export function CallScreen() {
         participants={participants}
         canModerate={canModerate}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

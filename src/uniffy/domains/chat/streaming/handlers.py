@@ -18,6 +18,7 @@ from uniffy_proto.calls.v1.calls_pb import (
 from uniffy_proto.calls.v1.calls_pb import (
     CallParticipant as ProtoCallParticipant,
 )
+from uniffy_proto.calls.v1.calls_pb import CallReaction
 from uniffy_proto.calls.v1.calls_pb import (
     CallType as ProtoCallType,
 )
@@ -44,6 +45,7 @@ from uniffy_proto.chat.v1.chat_stream_pb import (
     CallHostChangedPayload,
     CallLifecyclePayload,
     CallParticipantEventPayload,
+    CallReactionPayload,
     CallRingPayload,
     ChatEvent,
     ChatEventType,
@@ -451,6 +453,24 @@ def _payload_to_channel_event(payload: dict) -> ChatEvent | None:
             ),
         )
 
+    if event_type == evt.CALL_REACTION:
+        return ChatEvent(
+            event_type=ChatEventType.CALL_REACTION,
+            timestamp=_now_ts(),
+            channel_id=cid,
+            payload=Oneof(
+                field="call_reaction",
+                value=CallReactionPayload(
+                    call_id=payload["call_id"],
+                    id=payload["id"],
+                    user_id=payload["user_id"],
+                    display_name=payload["display_name"],
+                    reaction=CallReaction(payload["reaction"]),
+                    expires_at=datetime_to_timestamp(datetime.fromisoformat(payload["expires_at"])),
+                ),
+            ),
+        )
+
     if event_type == evt.CALL_RING:
         event = ChatEvent(
             event_type=ChatEventType.CALL_RING,
@@ -521,7 +541,12 @@ def _build_call_participant_proto(participant: dict) -> ProtoCallParticipant:
         mic_enabled=bool(participant.get("mic_enabled", True)),
         camera_enabled=bool(participant.get("camera_enabled", False)),
         screen_sharing=bool(participant.get("screen_sharing", False)),
+        hand_revision=int(participant.get("hand_revision", 0)),
     )
+    if participant.get("hand_raised_at"):
+        proto.hand_raised_at = datetime_to_timestamp(
+            datetime.fromisoformat(participant["hand_raised_at"])
+        )
     if participant.get("joined_at"):
         ts = Timestamp()
         ts = datetime_to_timestamp(datetime.fromisoformat(participant["joined_at"]))
@@ -736,6 +761,7 @@ _CHANNEL_EVENT_TYPES = {
     evt.CALL_PARTICIPANT_JOINED,
     evt.CALL_PARTICIPANT_LEFT,
     evt.CALL_PARTICIPANT_STATE,
+    evt.CALL_REACTION,
     evt.CALL_RING,
     evt.CALL_HOST_CHANGED,
 }

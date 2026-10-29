@@ -15,6 +15,8 @@ import {
   KickParticipantRequestSchema,
   MuteParticipantRequestSchema,
   ReportMediaStateRequestSchema,
+  SetHandRaisedRequestSchema,
+  SendCallReactionRequestSchema,
   GetOrgCallPolicyRequestSchema,
   UpdateOrgCallPolicyRequestSchema,
 } from "@uniffy/proto/calls/v1/calls_pb";
@@ -44,6 +46,10 @@ export const callsApi = {
     callsClient.kickParticipant(req),
   muteParticipant: (req: MessageInitShape<typeof MuteParticipantRequestSchema>) =>
     callsClient.muteParticipant(req),
+  setHandRaised: (req: MessageInitShape<typeof SetHandRaisedRequestSchema>) =>
+    callsClient.setHandRaised(req),
+  sendCallReaction: (req: MessageInitShape<typeof SendCallReactionRequestSchema>) =>
+    callsClient.sendCallReaction(req),
   reportMediaState: (req: MessageInitShape<typeof ReportMediaStateRequestSchema>) =>
     callsClient.reportMediaState(req),
   getOrgCallPolicy: (req: MessageInitShape<typeof GetOrgCallPolicyRequestSchema>) =>

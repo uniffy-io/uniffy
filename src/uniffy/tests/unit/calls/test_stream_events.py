@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime
 
+from uniffy_proto.calls.v1.calls_pb import CallReaction
 from uniffy_proto.calls.v1.calls_pb import CallType as ProtoCallType
 from uniffy_proto.chat.v1.chat_stream_pb import ChatEventType
 
@@ -12,18 +13,22 @@ from uniffy.domains.chat.streaming.handlers import (
     _payload_to_channel_event,
 )
 
+CHANNEL_ID = "chan-1"
+USER_ID = "u1"
+DISPLAY_NAME = "Alice"
+
 
 def _wire(event_type: str, payload: dict) -> dict:
     """Mimic publish_channel_event_to_members' JSON envelope."""
-    return {"_type": event_type, "channel_id": "chan-1", **payload}
+    return {"_type": event_type, "channel_id": CHANNEL_ID, **payload}
 
 
-def _participant_dict(user_id: str = "u1") -> dict:
+def _participant_dict(user_id: str = USER_ID) -> dict:
     return {
         "user_id": user_id,
         "device_id": "d1",
         "identity": f"{user_id}:d1",
-        "display_name": "Alice",
+        "display_name": DISPLAY_NAME,
         "avatar_url": "",
         "device_label": "Chrome",
         "joined_at": datetime.now(UTC).isoformat(),
@@ -34,14 +39,14 @@ def _participant_dict(user_id: str = "u1") -> dict:
 
 
 def test_call_events_route_as_channel_events():
-    """The stream loop only converts types in _CHANNEL_EVENT_TYPES; a call
-    event missing from that set is silently dropped before conversion."""
+    """Events missing from the routing set are silently dropped before conversion."""
     for event_name in (
         evt.CALL_STARTED,
         evt.CALL_ENDED,
         evt.CALL_PARTICIPANT_JOINED,
         evt.CALL_PARTICIPANT_LEFT,
         evt.CALL_PARTICIPANT_STATE,
+        evt.CALL_REACTION,
         evt.CALL_RING,
         evt.CALL_HOST_CHANGED,
     ):
@@ -53,10 +58,10 @@ def test_call_started_carries_snapshot():
     call = {
         "call_id": call_id,
         "organization_id": str(generate_id()),
-        "channel_id": "chan-1",
+        "channel_id": CHANNEL_ID,
         "call_type": "CHANNEL",
-        "initiator_user_id": "u1",
-        "host_user_id": "u1",
+        "initiator_user_id": USER_ID,
+        "host_user_id": USER_ID,
         "started_at": datetime.now(UTC).isoformat(),
         "participants": [_participant_dict()],
     }
@@ -64,20 +69,20 @@ def test_call_started_carries_snapshot():
         _wire(evt.CALL_STARTED, evt.build_call_lifecycle_payload(call))
     )
     assert event.event_type == ChatEventType.CALL_STARTED
-    assert event.channel_id == "chan-1"
+    assert event.channel_id == CHANNEL_ID
     assert event.payload.value.call.id == call_id
     assert event.payload.value.call.call_type == ProtoCallType.CHANNEL
-    assert event.payload.value.call.participants[0].identity == "u1:d1"
+    assert event.payload.value.call.participants[0].identity == f"{USER_ID}:d1"
 
 
 def test_call_ended_maps_end_reason():
     call = {
         "call_id": str(generate_id()),
         "organization_id": str(generate_id()),
-        "channel_id": "chan-1",
+        "channel_id": CHANNEL_ID,
         "call_type": "DIRECT",
-        "initiator_user_id": "u1",
-        "host_user_id": "u1",
+        "initiator_user_id": USER_ID,
+        "host_user_id": USER_ID,
         "started_at": datetime.now(UTC).isoformat(),
         "ended_at": datetime.now(UTC).isoformat(),
         "end_reason": "ALL_LEFT",
@@ -110,7 +115,7 @@ def test_call_ring_payload():
         channel_name="Q1 Planning",
         call_type="GROUP_DM",
         caller_user_id=caller_id,
-        caller_name="Alice",
+        caller_name=DISPLAY_NAME,
         caller_avatar_url=None,
         expires_at=datetime.now(UTC),
     )
@@ -118,7 +123,7 @@ def test_call_ring_payload():
     assert event.event_type == ChatEventType.CALL_RING
     assert event.payload.value.call_id == str(call_id)
     assert event.payload.value.call_type == ProtoCallType.GROUP_DM
-    assert event.payload.value.caller_name == "Alice"
+    assert event.payload.value.caller_name == DISPLAY_NAME
     assert event.payload.value.has_field("expires_at")
 
 
@@ -137,3 +142,38 @@ def test_moderator_mute_is_distinct_from_self_mute():
         )
         event = _payload_to_channel_event(_wire(evt.CALL_PARTICIPANT_STATE, payload))
         assert event.payload.value.moderator_muted is muted_by_moderator
+
+
+def test_hand_state_survives_stream_conversion():
+    participant = _participant_dict()
+    participant.update(hand_raised_at="2026-10-29T11:00:00.123456+00:00", hand_revision=3)
+    event = _payload_to_channel_event(
+        _wire(
+            evt.CALL_PARTICIPANT_STATE,
+            evt.build_call_participant_payload(generate_id(), participant, 2),
+        )
+    )
+    assert event.payload.value.participant.hand_raised_at.nanos == 123456000
+    assert event.payload.value.participant.hand_revision == 3
+
+
+def test_reaction_retains_sender_and_expiry():
+    event = _payload_to_channel_event(
+        _wire(
+            evt.CALL_REACTION,
+            {
+                "call_id": "call-1",
+                "id": "reaction-1",
+                "user_id": USER_ID,
+                "display_name": DISPLAY_NAME,
+                "reaction": int(CallReaction.AGREE),
+                "expires_at": "2026-10-29T11:00:00+00:00",
+            },
+        )
+    )
+    assert event.event_type == ChatEventType.CALL_REACTION
+    assert event.channel_id == CHANNEL_ID
+    assert event.payload.value.user_id == USER_ID
+    assert event.payload.value.display_name == DISPLAY_NAME
+    assert event.payload.value.reaction == CallReaction.AGREE
+    assert event.payload.value.expires_at is not None

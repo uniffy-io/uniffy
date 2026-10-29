@@ -1,3 +1,7 @@
+import { CallReactionOverlay } from "@/features/calls/components/CallReactionOverlay";
+import { useState } from "react";
+import { CallParticipation } from "@/features/calls/components/CallParticipation";
+import { CallChat } from "@/features/calls/components/CallChat";
 import { createPortal } from "react-dom";
 import { useAppSelector } from "@/app/hooks";
 import { useCall } from "@/features/calls/components/callContext";
@@ -7,6 +11,7 @@ import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants"
 import { selectCallSession, selectSessionCall } from "@/features/calls/store/callsSlice";
 
 export function CallPopout() {
+  const [chatOpen, setChatOpen] = useState(false);
   const { room, popoutWindow, closePopout } = useCall();
   const participants = useRoomParticipants(room);
   const call = useAppSelector(selectSessionCall);
@@ -14,7 +19,7 @@ export function CallPopout() {
   const feedback = useAppSelector((s) => s.calls.feedback);
   if (!popoutWindow || popoutWindow.closed || !session.callId) return null;
   return createPortal(
-    <div className="flex h-screen flex-col gap-3 p-3" data-testid="call-popout">
+    <div className="flex h-dvh flex-col gap-3 p-3" data-testid="call-popout">
       <header className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span>{session.status === "reconnecting" ? "Reconnecting..." : "Live call"}</span>
         <button
@@ -25,21 +30,38 @@ export function CallPopout() {
           Return to tab
         </button>
       </header>
-      <div className="min-h-0 flex-1">
-        <CallGrid
-          participants={participants}
-          nameFor={(p) =>
-            call?.participants.find((member) => member.identity === p.identity)?.displayName
-          }
-        />
+      <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
+        <div className="relative min-h-24 min-w-0 flex-1">
+          <CallGrid
+            participants={participants}
+            nameFor={(p) =>
+              call?.participants.find((member) => member.identity === p.identity)?.displayName
+            }
+          />
+          <CallReactionOverlay />
+        </div>
+        {chatOpen && session.channelId && (
+          <div className="h-1/2 min-h-48 sm:h-full sm:w-80">
+            <CallChat
+              key={session.channelId}
+              channelId={session.channelId}
+              onClose={() => setChatOpen(false)}
+            />
+          </div>
+        )}
       </div>
       {feedback && (
         <p role="alert" className="text-sm text-muted-foreground">
           {feedback}
         </p>
       )}
-      <footer className="flex flex-col items-center gap-2 [&_button]:size-11">
-        <ControlsBar compact />
+      <footer className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2">
+          <CallParticipation chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
+          <div className="[&_button]:size-11 md:[&_button]:size-9">
+            <ControlsBar compact />
+          </div>
+        </div>
         <p className="text-xs text-muted-foreground">
           Keep original tab open. Closing this window keeps call running.
         </p>

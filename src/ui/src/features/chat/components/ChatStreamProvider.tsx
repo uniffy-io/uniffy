@@ -25,6 +25,7 @@ import {
   fetchMembers,
   fetchChannel,
   fetchChannels,
+  fetchMessages,
   fetchUnreadCounts,
   fetchThreadsInbox,
   fetchDrafts,
@@ -80,6 +81,7 @@ interface LiveChannels {
   activeChannelId: string | null;
   splitChannelId: string | null;
   threadChannelId: string | null;
+  callChannelId: string | null;
   /** Channels the user marked unread; auto-mark-read stays off until reopened. */
   manualUnread: Record<string, true>;
 }
@@ -95,7 +97,8 @@ function handleChannelEvent(
   const ce = event.payload.value;
   const channelId = ce.channelId;
   const isPane = channelId === live.activeChannelId || channelId === live.splitChannelId;
-  const isLive = isPane || channelId === live.threadChannelId;
+  const isCall = channelId === live.callChannelId;
+  const isLive = isPane || isCall || channelId === live.threadChannelId;
 
   if (handleCallStreamEvent(ce, dispatch)) return;
 
@@ -243,7 +246,7 @@ function handleChannelEvent(
         }
         if (msg.rootId) {
           dispatch(appendThreadMessage({ rootMessageId: msg.rootId, message: msg }));
-        } else if (isPane) {
+        } else if (isPane || isCall) {
           dispatch(appendMessage({ channelId, message: msg }));
           // Viewing this channel live: mark the new message read so it never
           // surfaces as unread. Unread is time-based (last_read_at = now), so
@@ -490,6 +493,7 @@ function usePersistentChatStream() {
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
   const splitChannelId = useAppSelector((state) => state.chatChannels.splitChannelId);
+  const callChannelId = useAppSelector((state) => state.calls.session.channelId);
   const threadChannelId = useAppSelector(selectActiveThreadChannelId);
   const currentUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const channelIds = useAppSelector((state) => state.chatChannels.ids);
@@ -503,6 +507,8 @@ function usePersistentChatStream() {
   channelIdRef.current = activeChannelId;
   const splitChannelIdRef = useRef(splitChannelId);
   splitChannelIdRef.current = splitChannelId;
+  const callChannelIdRef = useRef(callChannelId);
+  callChannelIdRef.current = callChannelId;
   const threadChannelIdRef = useRef(threadChannelId);
   threadChannelIdRef.current = threadChannelId;
   const userIdRef = useRef(currentUserId);
@@ -577,6 +583,8 @@ function usePersistentChatStream() {
           void dispatch(syncActiveCalls());
           void dispatch(fetchDrafts());
           dispatch(invalidateArchivedChannels({ clear: true }));
+          if (reconnecting && callChannelIdRef.current)
+            void dispatch(fetchMessages({ channelId: callChannelIdRef.current }));
           if (reconnecting) {
             // Badges, cursors, and divider targets only move on events, so the
             // gap is closed from the snapshot as well as from the channel list.
@@ -672,6 +680,7 @@ function usePersistentChatStream() {
                     activeChannelId: channelIdRef.current,
                     splitChannelId: splitChannelIdRef.current,
                     threadChannelId: threadChannelIdRef.current,
+                    callChannelId: callChannelIdRef.current,
                     manualUnread: manualUnreadRef.current,
                   },
                   userIdRef.current,

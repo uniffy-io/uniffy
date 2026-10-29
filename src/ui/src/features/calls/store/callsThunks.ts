@@ -1,15 +1,24 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { callsApi } from "@/features/calls/api/callsApi";
-import { callToPlain, iceServersToPlain } from "@/features/calls/api/callsConverters";
+import {
+  callToPlain,
+  iceServersToPlain,
+  participantToPlain,
+} from "@/features/calls/api/callsConverters";
 import {
   activeCallsSynced,
+  participantUpserted,
   callCleared,
   callEnded,
   callUpserted,
   ringDismissed,
 } from "@/features/calls/store/callsSlice";
 import { getDeviceId, getDeviceLabel } from "@/shared/utils/deviceId";
-import { ScreenShareQuality, IceTransportPolicy } from "@uniffy/proto/calls/v1/calls_pb";
+import {
+  CallReaction,
+  ScreenShareQuality,
+  IceTransportPolicy,
+} from "@uniffy/proto/calls/v1/calls_pb";
 import type { CallData, IceServerData } from "@/features/calls/types";
 import type { RootState } from "@/app/store";
 
@@ -198,5 +207,33 @@ export const muteParticipant = createAsyncThunk(
   async ({ callId, identity }: { callId: string; identity: string }, { getState }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.muteParticipant({ organizationId, callId, identity });
+  },
+);
+
+export const setHandRaised = createAsyncThunk(
+  "calls/setHandRaised",
+  async (
+    { callId, raised, identity }: { callId: string; raised: boolean; identity?: string },
+    { getState, dispatch },
+  ) => {
+    const organizationId = getOrganizationId(getState() as RootState);
+    const result = await callsApi.setHandRaised({
+      organizationId,
+      callId,
+      deviceId: getDeviceId(),
+      raised,
+      identity,
+    });
+    if (result.participant)
+      dispatch(
+        participantUpserted({ callId, participant: participantToPlain(result.participant) }),
+      );
+  },
+);
+export const sendCallReaction = createAsyncThunk(
+  "calls/sendCallReaction",
+  async ({ callId, reaction }: { callId: string; reaction: CallReaction }, { getState }) => {
+    const organizationId = getOrganizationId(getState() as RootState);
+    await callsApi.sendCallReaction({ organizationId, callId, deviceId: getDeviceId(), reaction });
   },
 );

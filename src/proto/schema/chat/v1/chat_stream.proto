@@ -67,6 +67,7 @@ enum ChatEventType {
   // recipients hydrate through GetChannel so every client applies the same
   // row the channel list would have loaded.
   CHAT_EVENT_TYPE_CHANNEL_CREATED = 33;
+  CHAT_EVENT_TYPE_CALL_REACTION = 34;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -112,6 +113,7 @@ message ChatEvent {
     CallHostChangedPayload call_host_changed = 26;
     // AGENT_THINKING_DELTA
     AgentThinkingDeltaPayload agent_thinking_delta = 27;
+    CallReactionPayload call_reaction = 28;
   }
 }
 
@@ -358,4 +360,13 @@ message MentionReceivedPayload {
   string sender_name = 5;
   // First 200 chars of message content (plaintext)
   string preview = 6;
+}
+
+message CallReactionPayload {
+  string call_id = 1;
+  string id = 2;
+  string user_id = 3;
+  string display_name = 4;
+  calls.v1.CallReaction reaction = 5;
+  google.protobuf.Timestamp expires_at = 6;
 }

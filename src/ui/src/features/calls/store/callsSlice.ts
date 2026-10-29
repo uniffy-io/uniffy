@@ -3,6 +3,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 import type {
   CallData,
+  CallReactionData,
   CallParticipantData,
   CallEndReason,
   CallEndedInfo,
@@ -35,6 +36,7 @@ interface CallsState {
   prejoin: PrejoinTarget | null;
   endedInfo: CallEndedInfo | null;
   feedback: string | null;
+  reactions: CallReactionData[];
 }
 
 const idleSession: CallSessionState = {
@@ -54,16 +56,43 @@ const initialState: CallsState = {
   prejoin: null,
   endedInfo: null,
   feedback: null,
+  reactions: [],
 };
 
 function findCallById(state: CallsState, callId: string): CallData | undefined {
   return Object.values(state.activeByChannel).find((c) => c.id === callId);
 }
 
+function keepLatestHand(
+  previous: CallParticipantData | undefined,
+  incoming: CallParticipantData,
+): CallParticipantData {
+  return previous?.joinedAt === incoming.joinedAt &&
+    (previous?.handRevision ?? 0) > (incoming.handRevision ?? 0)
+    ? { ...incoming, handRaisedAt: previous?.handRaisedAt, handRevision: previous?.handRevision }
+    : incoming;
+}
+
+function mergeCallHands(previous: CallData | undefined, incoming: CallData): CallData {
+  if (previous?.id !== incoming.id) return incoming;
+  const byIdentity = new Map(previous.participants.map((p) => [p.identity, p]));
+  return {
+    ...incoming,
+    participants: incoming.participants.map((p) => keepLatestHand(byIdentity.get(p.identity), p)),
+  };
+}
+
 const callsSlice = createSlice({
   name: "calls",
   initialState,
   reducers: {
+    reactionReceived(state, action: PayloadAction<CallReactionData>) {
+      if (state.session.callId !== action.payload.callId) return;
+      state.reactions = [
+        ...state.reactions.filter((r) => r.expiresAt > Date.now() && r.id !== action.payload.id),
+        action.payload,
+      ].slice(-5);
+    },
     feedbackChanged(state, action: PayloadAction<string | null>) {
       state.feedback = action.payload;
     },
@@ -81,16 +110,21 @@ const callsSlice = createSlice({
       if (call.endedAt) {
         delete state.activeByChannel[call.channelId];
       } else {
-        state.activeByChannel[call.channelId] = call;
+        state.activeByChannel[call.channelId] = mergeCallHands(
+          state.activeByChannel[call.channelId],
+          call,
+        );
       }
     },
     callCleared(state, action: PayloadAction<string>) {
       delete state.activeByChannel[action.payload];
     },
     activeCallsSynced(state, action: PayloadAction<CallData[]>) {
+      const previous = state.activeByChannel;
       state.activeByChannel = {};
       for (const call of action.payload) {
-        if (!call.endedAt) state.activeByChannel[call.channelId] = call;
+        if (!call.endedAt)
+          state.activeByChannel[call.channelId] = mergeCallHands(previous[call.channelId], call);
       }
       const activeIds = new Set(action.payload.map((c) => c.id));
       state.ringInvites = state.ringInvites.filter((r) => activeIds.has(r.callId));
@@ -131,7 +165,7 @@ const callsSlice = createSlice({
       const p = action.payload.participant;
       const idx = call.participants.findIndex((x) => x.identity === p.identity);
       if (idx >= 0) {
-        call.participants[idx] = p;
+        call.participants[idx] = keepLatestHand(call.participants[idx], p);
       } else {
         call.participants.push(p);
       }
@@ -217,12 +251,14 @@ const callsSlice = createSlice({
         prejoin: null,
         endedInfo: null,
         feedback: null,
+        reactions: [],
       };
     },
   },
 });
 
 export const {
+  reactionReceived,
   feedbackChanged,
   sessionTerminated,
   callUpserted,

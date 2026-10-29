@@ -142,6 +142,8 @@ class CallParticipant(SQLModel, table=True):
     mic_enabled: bool = Field(default=True, nullable=False)
     camera_enabled: bool = Field(default=False, nullable=False)
     screen_sharing: bool = Field(default=False, nullable=False)
+    hand_raised_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True)))
+    hand_revision: int = Field(default=0, nullable=False)
 
     @property
     def is_active(self) -> bool:

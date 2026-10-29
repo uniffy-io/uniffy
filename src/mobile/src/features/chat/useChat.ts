@@ -386,6 +386,8 @@ export function useMessages(channelId: string | undefined) {
   return {
     data,
     isLoading: headQuery.isLoading,
+    isError: headQuery.isError,
+    refetch: headQuery.refetch,
     loadOlder,
     isLoadingOlder,
   };

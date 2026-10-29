@@ -74,6 +74,7 @@ const (
 	// recipients hydrate through GetChannel so every client applies the same
 	// row the channel list would have loaded.
 	ChatEventType_CHAT_EVENT_TYPE_CHANNEL_CREATED ChatEventType = 33
+	ChatEventType_CHAT_EVENT_TYPE_CALL_REACTION   ChatEventType = 34
 )
 
 // Enum value maps for ChatEventType.
@@ -108,6 +109,7 @@ var (
 		31: "CHAT_EVENT_TYPE_AGENT_THINKING_DELTA",
 		32: "CHAT_EVENT_TYPE_MEMBER_UPDATED",
 		33: "CHAT_EVENT_TYPE_CHANNEL_CREATED",
+		34: "CHAT_EVENT_TYPE_CALL_REACTION",
 	}
 	ChatEventType_value = map[string]int32{
 		"CHAT_EVENT_TYPE_UNSPECIFIED":                  0,
@@ -139,6 +141,7 @@ var (
 		"CHAT_EVENT_TYPE_AGENT_THINKING_DELTA":         31,
 		"CHAT_EVENT_TYPE_MEMBER_UPDATED":               32,
 		"CHAT_EVENT_TYPE_CHANNEL_CREATED":              33,
+		"CHAT_EVENT_TYPE_CALL_REACTION":                34,
 	}
 )
 
@@ -312,6 +315,7 @@ type ChatEvent struct {
 	//	*ChatEvent_CallRing
 	//	*ChatEvent_CallHostChanged
 	//	*ChatEvent_AgentThinkingDelta
+	//	*ChatEvent_CallReaction
 	Payload       isChatEvent_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -537,6 +541,15 @@ func (x *ChatEvent) GetAgentThinkingDelta() *AgentThinkingDeltaPayload {
 	return nil
 }
 
+func (x *ChatEvent) GetCallReaction() *CallReactionPayload {
+	if x != nil {
+		if x, ok := x.Payload.(*ChatEvent_CallReaction); ok {
+			return x.CallReaction
+		}
+	}
+	return nil
+}
+
 type isChatEvent_Payload interface {
 	isChatEvent_Payload()
 }
@@ -629,6 +642,10 @@ type ChatEvent_AgentThinkingDelta struct {
 	AgentThinkingDelta *AgentThinkingDeltaPayload `protobuf:"bytes,27,opt,name=agent_thinking_delta,json=agentThinkingDelta,proto3,oneof"`
 }
 
+type ChatEvent_CallReaction struct {
+	CallReaction *CallReactionPayload `protobuf:"bytes,28,opt,name=call_reaction,json=callReaction,proto3,oneof"`
+}
+
 func (*ChatEvent_Message) isChatEvent_Payload() {}
 
 func (*ChatEvent_MessageDeleted) isChatEvent_Payload() {}
@@ -664,6 +681,8 @@ func (*ChatEvent_CallRing) isChatEvent_Payload() {}
 func (*ChatEvent_CallHostChanged) isChatEvent_Payload() {}
 
 func (*ChatEvent_AgentThinkingDelta) isChatEvent_Payload() {}
+
+func (*ChatEvent_CallReaction) isChatEvent_Payload() {}
 
 type MessageDeletedPayload struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2349,11 +2368,95 @@ func (x *MentionReceivedPayload) GetPreview() string {
 	return ""
 }
 
+type CallReactionPayload struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	UserId        string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,4,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	Reaction      v1.CallReaction        `protobuf:"varint,5,opt,name=reaction,proto3,enum=calls.v1.CallReaction" json:"reaction,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CallReactionPayload) Reset() {
+	*x = CallReactionPayload{}
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallReactionPayload) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallReactionPayload) ProtoMessage() {}
+
+func (x *CallReactionPayload) ProtoReflect() protoreflect.Message {
+	mi := &file_chat_v1_chat_stream_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallReactionPayload.ProtoReflect.Descriptor instead.
+func (*CallReactionPayload) Descriptor() ([]byte, []int) {
+	return file_chat_v1_chat_stream_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CallReactionPayload) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *CallReactionPayload) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CallReactionPayload) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CallReactionPayload) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CallReactionPayload) GetReaction() v1.CallReaction {
+	if x != nil {
+		return x.Reaction
+	}
+	return v1.CallReaction(0)
+}
+
+func (x *CallReactionPayload) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
+}
+
 var File_chat_v1_chat_stream_proto protoreflect.FileDescriptor
 
 const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\n" +
-	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x14calls/v1/calls.proto\x1a\x12chat/v1/chat.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc5\v\n" +
+	"\x19chat/v1/chat_stream.proto\x12\achat.v1\x1a\x14calls/v1/calls.proto\x1a\x12chat/v1/chat.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8a\f\n" +
 	"\tChatEvent\x125\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x16.chat.v1.ChatEventTypeR\teventType\x128\n" +
@@ -2378,7 +2481,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x10call_participant\x18\x18 \x01(\v2$.chat.v1.CallParticipantEventPayloadH\x00R\x0fcallParticipant\x127\n" +
 	"\tcall_ring\x18\x19 \x01(\v2\x18.chat.v1.CallRingPayloadH\x00R\bcallRing\x12M\n" +
 	"\x11call_host_changed\x18\x1a \x01(\v2\x1f.chat.v1.CallHostChangedPayloadH\x00R\x0fcallHostChanged\x12V\n" +
-	"\x14agent_thinking_delta\x18\x1b \x01(\v2\".chat.v1.AgentThinkingDeltaPayloadH\x00R\x12agentThinkingDeltaB\t\n" +
+	"\x14agent_thinking_delta\x18\x1b \x01(\v2\".chat.v1.AgentThinkingDeltaPayloadH\x00R\x12agentThinkingDelta\x12C\n" +
+	"\rcall_reaction\x18\x1c \x01(\v2\x1c.chat.v1.CallReactionPayloadH\x00R\fcallReactionB\t\n" +
 	"\apayload\"q\n" +
 	"\x15MessageDeletedPayload\x12\x1d\n" +
 	"\n" +
@@ -2545,7 +2649,15 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\tsender_id\x18\x04 \x01(\tR\bsenderId\x12\x1f\n" +
 	"\vsender_name\x18\x05 \x01(\tR\n" +
 	"senderName\x12\x18\n" +
-	"\apreview\x18\x06 \x01(\tR\apreview*\xd1\b\n" +
+	"\apreview\x18\x06 \x01(\tR\apreview\"\xe9\x01\n" +
+	"\x13CallReactionPayload\x12\x17\n" +
+	"\acall_id\x18\x01 \x01(\tR\x06callId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x122\n" +
+	"\breaction\x18\x05 \x01(\x0e2\x16.calls.v1.CallReactionR\breaction\x129\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt*\xf4\b\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -2576,7 +2688,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"!CHAT_EVENT_TYPE_CALL_HOST_CHANGED\x10\x1e\x12(\n" +
 	"$CHAT_EVENT_TYPE_AGENT_THINKING_DELTA\x10\x1f\x12\"\n" +
 	"\x1eCHAT_EVENT_TYPE_MEMBER_UPDATED\x10 \x12#\n" +
-	"\x1fCHAT_EVENT_TYPE_CHANNEL_CREATED\x10!*\xb1\x02\n" +
+	"\x1fCHAT_EVENT_TYPE_CHANNEL_CREATED\x10!\x12!\n" +
+	"\x1dCHAT_EVENT_TYPE_CALL_REACTION\x10\"*\xb1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +
@@ -2601,7 +2714,7 @@ func file_chat_v1_chat_stream_proto_rawDescGZIP() []byte {
 }
 
 var file_chat_v1_chat_stream_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
+var file_chat_v1_chat_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(ChatEventType)(0),                        // 0: chat.v1.ChatEventType
 	(UserChatEventType)(0),                    // 1: chat.v1.UserChatEventType
@@ -2629,24 +2742,26 @@ var file_chat_v1_chat_stream_proto_goTypes = []any{
 	(*UnreadCountPayload)(nil),                // 23: chat.v1.UnreadCountPayload
 	(*ThreadActivityPayload)(nil),             // 24: chat.v1.ThreadActivityPayload
 	(*MentionReceivedPayload)(nil),            // 25: chat.v1.MentionReceivedPayload
-	(*timestamppb.Timestamp)(nil),             // 26: google.protobuf.Timestamp
-	(*ChatMessage)(nil),                       // 27: chat.v1.ChatMessage
-	(*ChatChannel)(nil),                       // 28: chat.v1.ChatChannel
-	(ChannelRole)(0),                          // 29: chat.v1.ChannelRole
-	(AgentConfirmationDecision)(0),            // 30: chat.v1.AgentConfirmationDecision
-	(*v1.Call)(nil),                           // 31: calls.v1.Call
-	(*v1.CallParticipant)(nil),                // 32: calls.v1.CallParticipant
-	(v1.CallType)(0),                          // 33: calls.v1.CallType
+	(*CallReactionPayload)(nil),               // 26: chat.v1.CallReactionPayload
+	(*timestamppb.Timestamp)(nil),             // 27: google.protobuf.Timestamp
+	(*ChatMessage)(nil),                       // 28: chat.v1.ChatMessage
+	(*ChatChannel)(nil),                       // 29: chat.v1.ChatChannel
+	(ChannelRole)(0),                          // 30: chat.v1.ChannelRole
+	(AgentConfirmationDecision)(0),            // 31: chat.v1.AgentConfirmationDecision
+	(*v1.Call)(nil),                           // 32: calls.v1.Call
+	(*v1.CallParticipant)(nil),                // 33: calls.v1.CallParticipant
+	(v1.CallType)(0),                          // 34: calls.v1.CallType
+	(v1.CallReaction)(0),                      // 35: calls.v1.CallReaction
 }
 var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	0,  // 0: chat.v1.ChatEvent.event_type:type_name -> chat.v1.ChatEventType
-	26, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
-	27, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
+	27, // 1: chat.v1.ChatEvent.timestamp:type_name -> google.protobuf.Timestamp
+	28, // 2: chat.v1.ChatEvent.message:type_name -> chat.v1.ChatMessage
 	4,  // 3: chat.v1.ChatEvent.message_deleted:type_name -> chat.v1.MessageDeletedPayload
 	5,  // 4: chat.v1.ChatEvent.reaction:type_name -> chat.v1.ReactionPayload
 	6,  // 5: chat.v1.ChatEvent.typing:type_name -> chat.v1.TypingPayload
 	7,  // 6: chat.v1.ChatEvent.member:type_name -> chat.v1.MemberPayload
-	28, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
+	29, // 7: chat.v1.ChatEvent.channel_updated:type_name -> chat.v1.ChatChannel
 	9,  // 8: chat.v1.ChatEvent.thread_updated:type_name -> chat.v1.ThreadUpdatedPayload
 	10, // 9: chat.v1.ChatEvent.agent_typing:type_name -> chat.v1.AgentTypingPayload
 	11, // 10: chat.v1.ChatEvent.agent_token_delta:type_name -> chat.v1.AgentTokenDeltaPayload
@@ -2659,33 +2774,36 @@ var file_chat_v1_chat_stream_proto_depIdxs = []int32{
 	18, // 17: chat.v1.ChatEvent.call_ring:type_name -> chat.v1.CallRingPayload
 	19, // 18: chat.v1.ChatEvent.call_host_changed:type_name -> chat.v1.CallHostChangedPayload
 	12, // 19: chat.v1.ChatEvent.agent_thinking_delta:type_name -> chat.v1.AgentThinkingDeltaPayload
-	26, // 20: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
-	29, // 21: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
-	26, // 22: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	2,  // 23: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
-	26, // 24: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
-	30, // 25: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
-	26, // 26: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
-	31, // 27: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
-	32, // 28: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
-	33, // 29: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
-	26, // 30: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
-	1,  // 31: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
-	26, // 32: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
-	23, // 33: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
-	24, // 34: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
-	25, // 35: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
-	3,  // 36: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
-	22, // 37: chat.v1.StreamUserChatEventsResponse.draft_changed:type_name -> chat.v1.DraftChangedPayload
-	26, // 38: chat.v1.DraftChangedPayload.updated_at:type_name -> google.protobuf.Timestamp
-	26, // 39: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
-	20, // 40: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
-	21, // 41: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
-	41, // [41:42] is the sub-list for method output_type
-	40, // [40:41] is the sub-list for method input_type
-	40, // [40:40] is the sub-list for extension type_name
-	40, // [40:40] is the sub-list for extension extendee
-	0,  // [0:40] is the sub-list for field type_name
+	26, // 20: chat.v1.ChatEvent.call_reaction:type_name -> chat.v1.CallReactionPayload
+	27, // 21: chat.v1.MessageDeletedPayload.deleted_at:type_name -> google.protobuf.Timestamp
+	30, // 22: chat.v1.MemberPayload.role:type_name -> chat.v1.ChannelRole
+	27, // 23: chat.v1.ThreadUpdatedPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	2,  // 24: chat.v1.AgentToolCallPayload.status:type_name -> chat.v1.AgentToolCallPayload.Status
+	27, // 25: chat.v1.AgentConfirmationRequestedPayload.expires_at:type_name -> google.protobuf.Timestamp
+	31, // 26: chat.v1.AgentConfirmationResolvedPayload.decision:type_name -> chat.v1.AgentConfirmationDecision
+	27, // 27: chat.v1.AgentConfirmationResolvedPayload.decided_at:type_name -> google.protobuf.Timestamp
+	32, // 28: chat.v1.CallLifecyclePayload.call:type_name -> calls.v1.Call
+	33, // 29: chat.v1.CallParticipantEventPayload.participant:type_name -> calls.v1.CallParticipant
+	34, // 30: chat.v1.CallRingPayload.call_type:type_name -> calls.v1.CallType
+	27, // 31: chat.v1.CallRingPayload.expires_at:type_name -> google.protobuf.Timestamp
+	1,  // 32: chat.v1.StreamUserChatEventsResponse.event_type:type_name -> chat.v1.UserChatEventType
+	27, // 33: chat.v1.StreamUserChatEventsResponse.timestamp:type_name -> google.protobuf.Timestamp
+	23, // 34: chat.v1.StreamUserChatEventsResponse.unread_count:type_name -> chat.v1.UnreadCountPayload
+	24, // 35: chat.v1.StreamUserChatEventsResponse.thread_activity:type_name -> chat.v1.ThreadActivityPayload
+	25, // 36: chat.v1.StreamUserChatEventsResponse.mention_received:type_name -> chat.v1.MentionReceivedPayload
+	3,  // 37: chat.v1.StreamUserChatEventsResponse.channel_event:type_name -> chat.v1.ChatEvent
+	22, // 38: chat.v1.StreamUserChatEventsResponse.draft_changed:type_name -> chat.v1.DraftChangedPayload
+	27, // 39: chat.v1.DraftChangedPayload.updated_at:type_name -> google.protobuf.Timestamp
+	27, // 40: chat.v1.ThreadActivityPayload.last_reply_at:type_name -> google.protobuf.Timestamp
+	35, // 41: chat.v1.CallReactionPayload.reaction:type_name -> calls.v1.CallReaction
+	27, // 42: chat.v1.CallReactionPayload.expires_at:type_name -> google.protobuf.Timestamp
+	20, // 43: chat.v1.ChatStreamService.StreamUserChatEvents:input_type -> chat.v1.StreamUserChatEventsRequest
+	21, // 44: chat.v1.ChatStreamService.StreamUserChatEvents:output_type -> chat.v1.StreamUserChatEventsResponse
+	44, // [44:45] is the sub-list for method output_type
+	43, // [43:44] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_chat_v1_chat_stream_proto_init() }
@@ -2713,6 +2831,7 @@ func file_chat_v1_chat_stream_proto_init() {
 		(*ChatEvent_CallRing)(nil),
 		(*ChatEvent_CallHostChanged)(nil),
 		(*ChatEvent_AgentThinkingDelta)(nil),
+		(*ChatEvent_CallReaction)(nil),
 	}
 	file_chat_v1_chat_stream_proto_msgTypes[4].OneofWrappers = []any{}
 	file_chat_v1_chat_stream_proto_msgTypes[7].OneofWrappers = []any{}
@@ -2733,7 +2852,7 @@ func file_chat_v1_chat_stream_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_chat_v1_chat_stream_proto_rawDesc), len(file_chat_v1_chat_stream_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   23,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

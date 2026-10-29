@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calls_pb
-from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
+from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, SendCallReactionRequest, SendCallReactionResponse, SetHandRaisedRequest, SetHandRaisedResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -99,6 +99,12 @@ class CallService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def update_org_call_policy(self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext[UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse], /) -> UpdateOrgCallPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_hand_raised(self, request: SetHandRaisedRequest, ctx: RequestContext[SetHandRaisedRequest, SetHandRaisedResponse], /) -> SetHandRaisedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def send_call_reaction(self, request: SendCallReactionRequest, ctx: RequestContext[SendCallReactionRequest, SendCallReactionResponse], /) -> SendCallReactionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
@@ -267,6 +273,26 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.update_org_call_policy,
+                ),
+                "/calls.v1.CallService/SetHandRaised": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetHandRaised",
+                        service_name="calls.v1.CallService",
+                        input=SetHandRaisedRequest,
+                        output=SetHandRaisedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.set_hand_raised,
+                ),
+                "/calls.v1.CallService/SendCallReaction": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SendCallReaction",
+                        service_name="calls.v1.CallService",
+                        input=SendCallReactionRequest,
+                        output=SendCallReactionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.send_call_reaction,
                 ),
                 "/calls.v1.CallService/ReportMediaState": Endpoint.unary(
                     method=MethodInfo(
@@ -603,6 +629,46 @@ class CallServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def set_hand_raised(
+        self,
+        request: SetHandRaisedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetHandRaisedResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetHandRaised",
+                service_name="calls.v1.CallService",
+                input=SetHandRaisedRequest,
+                output=SetHandRaisedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def send_call_reaction(
+        self,
+        request: SendCallReactionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SendCallReactionResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SendCallReaction",
+                service_name="calls.v1.CallService",
+                input=SendCallReactionRequest,
+                output=SendCallReactionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def report_media_state(
         self,
         request: ReportMediaStateRequest,
@@ -701,6 +767,12 @@ class CallServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def update_org_call_policy(self, request: UpdateOrgCallPolicyRequest, ctx: RequestContext[UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse], /) -> UpdateOrgCallPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def set_hand_raised(self, request: SetHandRaisedRequest, ctx: RequestContext[SetHandRaisedRequest, SetHandRaisedResponse], /) -> SetHandRaisedResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def send_call_reaction(self, request: SendCallReactionRequest, ctx: RequestContext[SendCallReactionRequest, SendCallReactionResponse], /) -> SendCallReactionResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
@@ -867,6 +939,26 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.update_org_call_policy,
+                ),
+                "/calls.v1.CallService/SetHandRaised": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetHandRaised",
+                        service_name="calls.v1.CallService",
+                        input=SetHandRaisedRequest,
+                        output=SetHandRaisedResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.set_hand_raised,
+                ),
+                "/calls.v1.CallService/SendCallReaction": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SendCallReaction",
+                        service_name="calls.v1.CallService",
+                        input=SendCallReactionRequest,
+                        output=SendCallReactionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.send_call_reaction,
                 ),
                 "/calls.v1.CallService/ReportMediaState": EndpointSync.unary(
                     method=MethodInfo(
@@ -1184,6 +1276,44 @@ class CallServiceClientSync(ConnectClientSync):
                 service_name="calls.v1.CallService",
                 input=UpdateOrgCallPolicyRequest,
                 output=UpdateOrgCallPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_hand_raised(
+        self,
+        request: SetHandRaisedRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetHandRaisedResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetHandRaised",
+                service_name="calls.v1.CallService",
+                input=SetHandRaisedRequest,
+                output=SetHandRaisedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def send_call_reaction(
+        self,
+        request: SendCallReactionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SendCallReactionResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SendCallReaction",
+                service_name="calls.v1.CallService",
+                input=SendCallReactionRequest,
+                output=SendCallReactionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,
