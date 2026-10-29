@@ -527,7 +527,7 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
       break;
     case "callHostChanged": {
       const p = ce.payload.value;
-      setCallHost(queryClient, orgId, p.callId, p.newHostUserId);
+      setCallHost(queryClient, orgId, p.callId, p.newHostUserId, p.publishingRevision);
       break;
     }
     default:

@@ -355,6 +355,7 @@ func (CallReaction) EnumDescriptor() ([]byte, []int) {
 type GetCallAvailabilityRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	ChannelId      *string                `protobuf:"bytes,3,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
 	// Probe media only when preparing to join, not for every call control render.
 	CheckMedia    bool `protobuf:"varint,2,opt,name=check_media,json=checkMedia,proto3" json:"check_media,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -398,6 +399,13 @@ func (x *GetCallAvailabilityRequest) GetOrganizationId() string {
 	return ""
 }
 
+func (x *GetCallAvailabilityRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
 func (x *GetCallAvailabilityRequest) GetCheckMedia() bool {
 	if x != nil {
 		return x.CheckMedia
@@ -406,10 +414,11 @@ func (x *GetCallAvailabilityRequest) GetCheckMedia() bool {
 }
 
 type GetCallAvailabilityResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Availability  CallAvailability       `protobuf:"varint,1,opt,name=availability,proto3,enum=calls.v1.CallAvailability" json:"availability,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Availability    CallAvailability       `protobuf:"varint,1,opt,name=availability,proto3,enum=calls.v1.CallAvailability" json:"availability,omitempty"`
+	TownHallAllowed bool                   `protobuf:"varint,2,opt,name=town_hall_allowed,json=townHallAllowed,proto3" json:"town_hall_allowed,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetCallAvailabilityResponse) Reset() {
@@ -447,6 +456,13 @@ func (x *GetCallAvailabilityResponse) GetAvailability() CallAvailability {
 		return x.Availability
 	}
 	return CallAvailability_CALL_AVAILABILITY_UNSPECIFIED
+}
+
+func (x *GetCallAvailabilityResponse) GetTownHallAllowed() bool {
+	if x != nil {
+		return x.TownHallAllowed
+	}
+	return false
 }
 
 type GetCallStateRequest struct {
@@ -628,9 +644,12 @@ type Call struct {
 	EndedAt         *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=ended_at,json=endedAt,proto3,oneof" json:"ended_at,omitempty"`
 	EndReason       *CallEndReason         `protobuf:"varint,9,opt,name=end_reason,json=endReason,proto3,enum=calls.v1.CallEndReason,oneof" json:"end_reason,omitempty"`
 	// Active participants only (left_at unset).
-	Participants  []*CallParticipant `protobuf:"bytes,10,rep,name=participants,proto3" json:"participants,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Participants       []*CallParticipant `protobuf:"bytes,10,rep,name=participants,proto3" json:"participants,omitempty"`
+	TownHall           bool               `protobuf:"varint,11,opt,name=town_hall,json=townHall,proto3" json:"town_hall,omitempty"`
+	SpeakerUserIds     []string           `protobuf:"bytes,12,rep,name=speaker_user_ids,json=speakerUserIds,proto3" json:"speaker_user_ids,omitempty"`
+	PublishingRevision int32              `protobuf:"varint,13,opt,name=publishing_revision,json=publishingRevision,proto3" json:"publishing_revision,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Call) Reset() {
@@ -731,6 +750,27 @@ func (x *Call) GetParticipants() []*CallParticipant {
 		return x.Participants
 	}
 	return nil
+}
+
+func (x *Call) GetTownHall() bool {
+	if x != nil {
+		return x.TownHall
+	}
+	return false
+}
+
+func (x *Call) GetSpeakerUserIds() []string {
+	if x != nil {
+		return x.SpeakerUserIds
+	}
+	return nil
+}
+
+func (x *Call) GetPublishingRevision() int32 {
+	if x != nil {
+		return x.PublishingRevision
+	}
+	return 0
 }
 
 type CallParticipant struct {
@@ -873,6 +913,7 @@ type InitiateCallRequest struct {
 	// Client-generated stable UUID persisted in localStorage.
 	DeviceId      string  `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
 	DeviceLabel   *string `protobuf:"bytes,4,opt,name=device_label,json=deviceLabel,proto3,oneof" json:"device_label,omitempty"`
+	TownHall      bool    `protobuf:"varint,5,opt,name=town_hall,json=townHall,proto3" json:"town_hall,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -933,6 +974,13 @@ func (x *InitiateCallRequest) GetDeviceLabel() string {
 		return *x.DeviceLabel
 	}
 	return ""
+}
+
+func (x *InitiateCallRequest) GetTownHall() bool {
+	if x != nil {
+		return x.TownHall
+	}
+	return false
 }
 
 type InitiateCallResponse struct {
@@ -2115,8 +2163,11 @@ type OrgCallPolicy struct {
 	MaxScreenShareQualityDirect  ScreenShareQuality `protobuf:"varint,5,opt,name=max_screen_share_quality_direct,json=maxScreenShareQualityDirect,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_direct,omitempty"`
 	MaxScreenShareQualityGroup   ScreenShareQuality `protobuf:"varint,6,opt,name=max_screen_share_quality_group,json=maxScreenShareQualityGroup,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_group,omitempty"`
 	MaxScreenShareQualityChannel ScreenShareQuality `protobuf:"varint,7,opt,name=max_screen_share_quality_channel,json=maxScreenShareQualityChannel,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_channel,omitempty"`
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	TownHallEnabled              bool               `protobuf:"varint,8,opt,name=town_hall_enabled,json=townHallEnabled,proto3" json:"town_hall_enabled,omitempty"`
+	// Empty permits every channel. Direct conversations cannot host town halls.
+	TownHallChannelIds []string `protobuf:"bytes,9,rep,name=town_hall_channel_ids,json=townHallChannelIds,proto3" json:"town_hall_channel_ids,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *OrgCallPolicy) Reset() {
@@ -2196,6 +2247,20 @@ func (x *OrgCallPolicy) GetMaxScreenShareQualityChannel() ScreenShareQuality {
 		return x.MaxScreenShareQualityChannel
 	}
 	return ScreenShareQuality_SCREEN_SHARE_QUALITY_UNSPECIFIED
+}
+
+func (x *OrgCallPolicy) GetTownHallEnabled() bool {
+	if x != nil {
+		return x.TownHallEnabled
+	}
+	return false
+}
+
+func (x *OrgCallPolicy) GetTownHallChannelIds() []string {
+	if x != nil {
+		return x.TownHallChannelIds
+	}
+	return nil
 }
 
 type GetOrgCallPolicyRequest struct {
@@ -2295,6 +2360,8 @@ type UpdateOrgCallPolicyRequest struct {
 	MaxScreenShareQualityDirect  ScreenShareQuality     `protobuf:"varint,5,opt,name=max_screen_share_quality_direct,json=maxScreenShareQualityDirect,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_direct,omitempty"`
 	MaxScreenShareQualityGroup   ScreenShareQuality     `protobuf:"varint,6,opt,name=max_screen_share_quality_group,json=maxScreenShareQualityGroup,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_group,omitempty"`
 	MaxScreenShareQualityChannel ScreenShareQuality     `protobuf:"varint,7,opt,name=max_screen_share_quality_channel,json=maxScreenShareQualityChannel,proto3,enum=calls.v1.ScreenShareQuality" json:"max_screen_share_quality_channel,omitempty"`
+	TownHallEnabled              *bool                  `protobuf:"varint,8,opt,name=town_hall_enabled,json=townHallEnabled,proto3,oneof" json:"town_hall_enabled,omitempty"`
+	TownHallChannelIds           []string               `protobuf:"bytes,9,rep,name=town_hall_channel_ids,json=townHallChannelIds,proto3" json:"town_hall_channel_ids,omitempty"`
 	unknownFields                protoimpl.UnknownFields
 	sizeCache                    protoimpl.SizeCache
 }
@@ -2378,6 +2445,236 @@ func (x *UpdateOrgCallPolicyRequest) GetMaxScreenShareQualityChannel() ScreenSha
 	return ScreenShareQuality_SCREEN_SHARE_QUALITY_UNSPECIFIED
 }
 
+func (x *UpdateOrgCallPolicyRequest) GetTownHallEnabled() bool {
+	if x != nil && x.TownHallEnabled != nil {
+		return *x.TownHallEnabled
+	}
+	return false
+}
+
+func (x *UpdateOrgCallPolicyRequest) GetTownHallChannelIds() []string {
+	if x != nil {
+		return x.TownHallChannelIds
+	}
+	return nil
+}
+
+type SetCallModeRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CallId         string                 `protobuf:"bytes,2,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	TownHall       bool                   `protobuf:"varint,3,opt,name=town_hall,json=townHall,proto3" json:"town_hall,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetCallModeRequest) Reset() {
+	*x = SetCallModeRequest{}
+	mi := &file_calls_v1_calls_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCallModeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCallModeRequest) ProtoMessage() {}
+
+func (x *SetCallModeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCallModeRequest.ProtoReflect.Descriptor instead.
+func (*SetCallModeRequest) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *SetCallModeRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetCallModeRequest) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *SetCallModeRequest) GetTownHall() bool {
+	if x != nil {
+		return x.TownHall
+	}
+	return false
+}
+
+type SetCallModeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Call          *Call                  `protobuf:"bytes,1,opt,name=call,proto3" json:"call,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCallModeResponse) Reset() {
+	*x = SetCallModeResponse{}
+	mi := &file_calls_v1_calls_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCallModeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCallModeResponse) ProtoMessage() {}
+
+func (x *SetCallModeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCallModeResponse.ProtoReflect.Descriptor instead.
+func (*SetCallModeResponse) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *SetCallModeResponse) GetCall() *Call {
+	if x != nil {
+		return x.Call
+	}
+	return nil
+}
+
+type SetCallSpeakerRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CallId         string                 `protobuf:"bytes,2,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	UserId         string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Speaker        bool                   `protobuf:"varint,4,opt,name=speaker,proto3" json:"speaker,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetCallSpeakerRequest) Reset() {
+	*x = SetCallSpeakerRequest{}
+	mi := &file_calls_v1_calls_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCallSpeakerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCallSpeakerRequest) ProtoMessage() {}
+
+func (x *SetCallSpeakerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCallSpeakerRequest.ProtoReflect.Descriptor instead.
+func (*SetCallSpeakerRequest) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *SetCallSpeakerRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *SetCallSpeakerRequest) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *SetCallSpeakerRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *SetCallSpeakerRequest) GetSpeaker() bool {
+	if x != nil {
+		return x.Speaker
+	}
+	return false
+}
+
+type SetCallSpeakerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Call          *Call                  `protobuf:"bytes,1,opt,name=call,proto3" json:"call,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCallSpeakerResponse) Reset() {
+	*x = SetCallSpeakerResponse{}
+	mi := &file_calls_v1_calls_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCallSpeakerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCallSpeakerResponse) ProtoMessage() {}
+
+func (x *SetCallSpeakerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCallSpeakerResponse.ProtoReflect.Descriptor instead.
+func (*SetCallSpeakerResponse) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *SetCallSpeakerResponse) GetCall() *Call {
+	if x != nil {
+		return x.Call
+	}
+	return nil
+}
+
 type UpdateOrgCallPolicyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Policy        *OrgCallPolicy         `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
@@ -2387,7 +2684,7 @@ type UpdateOrgCallPolicyResponse struct {
 
 func (x *UpdateOrgCallPolicyResponse) Reset() {
 	*x = UpdateOrgCallPolicyResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[33]
+	mi := &file_calls_v1_calls_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2399,7 +2696,7 @@ func (x *UpdateOrgCallPolicyResponse) String() string {
 func (*UpdateOrgCallPolicyResponse) ProtoMessage() {}
 
 func (x *UpdateOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[33]
+	mi := &file_calls_v1_calls_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2412,7 +2709,7 @@ func (x *UpdateOrgCallPolicyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateOrgCallPolicyResponse.ProtoReflect.Descriptor instead.
 func (*UpdateOrgCallPolicyResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{33}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *UpdateOrgCallPolicyResponse) GetPolicy() *OrgCallPolicy {
@@ -2436,7 +2733,7 @@ type SetHandRaisedRequest struct {
 
 func (x *SetHandRaisedRequest) Reset() {
 	*x = SetHandRaisedRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[34]
+	mi := &file_calls_v1_calls_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2448,7 +2745,7 @@ func (x *SetHandRaisedRequest) String() string {
 func (*SetHandRaisedRequest) ProtoMessage() {}
 
 func (x *SetHandRaisedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[34]
+	mi := &file_calls_v1_calls_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2461,7 +2758,7 @@ func (x *SetHandRaisedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetHandRaisedRequest.ProtoReflect.Descriptor instead.
 func (*SetHandRaisedRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{34}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SetHandRaisedRequest) GetOrganizationId() string {
@@ -2508,7 +2805,7 @@ type SetHandRaisedResponse struct {
 
 func (x *SetHandRaisedResponse) Reset() {
 	*x = SetHandRaisedResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[35]
+	mi := &file_calls_v1_calls_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2520,7 +2817,7 @@ func (x *SetHandRaisedResponse) String() string {
 func (*SetHandRaisedResponse) ProtoMessage() {}
 
 func (x *SetHandRaisedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[35]
+	mi := &file_calls_v1_calls_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2533,7 +2830,7 @@ func (x *SetHandRaisedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetHandRaisedResponse.ProtoReflect.Descriptor instead.
 func (*SetHandRaisedResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{35}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SetHandRaisedResponse) GetParticipant() *CallParticipant {
@@ -2555,7 +2852,7 @@ type SendCallReactionRequest struct {
 
 func (x *SendCallReactionRequest) Reset() {
 	*x = SendCallReactionRequest{}
-	mi := &file_calls_v1_calls_proto_msgTypes[36]
+	mi := &file_calls_v1_calls_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2567,7 +2864,7 @@ func (x *SendCallReactionRequest) String() string {
 func (*SendCallReactionRequest) ProtoMessage() {}
 
 func (x *SendCallReactionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[36]
+	mi := &file_calls_v1_calls_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2580,7 +2877,7 @@ func (x *SendCallReactionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCallReactionRequest.ProtoReflect.Descriptor instead.
 func (*SendCallReactionRequest) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{36}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *SendCallReactionRequest) GetOrganizationId() string {
@@ -2619,7 +2916,7 @@ type SendCallReactionResponse struct {
 
 func (x *SendCallReactionResponse) Reset() {
 	*x = SendCallReactionResponse{}
-	mi := &file_calls_v1_calls_proto_msgTypes[37]
+	mi := &file_calls_v1_calls_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2631,7 +2928,7 @@ func (x *SendCallReactionResponse) String() string {
 func (*SendCallReactionResponse) ProtoMessage() {}
 
 func (x *SendCallReactionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_calls_v1_calls_proto_msgTypes[37]
+	mi := &file_calls_v1_calls_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2644,20 +2941,24 @@ func (x *SendCallReactionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCallReactionResponse.ProtoReflect.Descriptor instead.
 func (*SendCallReactionResponse) Descriptor() ([]byte, []int) {
-	return file_calls_v1_calls_proto_rawDescGZIP(), []int{37}
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{41}
 }
 
 var File_calls_v1_calls_proto protoreflect.FileDescriptor
 
 const file_calls_v1_calls_proto_rawDesc = "" +
 	"\n" +
-	"\x14calls/v1/calls.proto\x12\bcalls.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"f\n" +
+	"\x14calls/v1/calls.proto\x12\bcalls.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x99\x01\n" +
 	"\x1aGetCallAvailabilityRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1f\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\"\n" +
+	"\n" +
+	"channel_id\x18\x03 \x01(\tH\x00R\tchannelId\x88\x01\x01\x12\x1f\n" +
 	"\vcheck_media\x18\x02 \x01(\bR\n" +
-	"checkMedia\"]\n" +
+	"checkMediaB\r\n" +
+	"\v_channel_id\"\x89\x01\n" +
 	"\x1bGetCallAvailabilityResponse\x12>\n" +
-	"\favailability\x18\x01 \x01(\x0e2\x1a.calls.v1.CallAvailabilityR\favailability\"W\n" +
+	"\favailability\x18\x01 \x01(\x0e2\x1a.calls.v1.CallAvailabilityR\favailability\x12*\n" +
+	"\x11town_hall_allowed\x18\x02 \x01(\bR\x0ftownHallAllowed\"W\n" +
 	"\x13GetCallStateRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\"]\n" +
@@ -2671,7 +2972,7 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"credential\x18\x03 \x01(\tH\x01R\n" +
 	"credential\x88\x01\x01B\v\n" +
 	"\t_usernameB\r\n" +
-	"\v_credential\"\xec\x03\n" +
+	"\v_credential\"\xe4\x04\n" +
 	"\x04Call\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x1d\n" +
@@ -2687,7 +2988,10 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\n" +
 	"end_reason\x18\t \x01(\x0e2\x17.calls.v1.CallEndReasonH\x01R\tendReason\x88\x01\x01\x12=\n" +
 	"\fparticipants\x18\n" +
-	" \x03(\v2\x19.calls.v1.CallParticipantR\fparticipantsB\v\n" +
+	" \x03(\v2\x19.calls.v1.CallParticipantR\fparticipants\x12\x1b\n" +
+	"\ttown_hall\x18\v \x01(\bR\btownHall\x12(\n" +
+	"\x10speaker_user_ids\x18\f \x03(\tR\x0espeakerUserIds\x12/\n" +
+	"\x13publishing_revision\x18\r \x01(\x05R\x12publishingRevisionB\v\n" +
 	"\t_ended_atB\r\n" +
 	"\v_end_reason\"\x99\x04\n" +
 	"\x0fCallParticipant\x12\x17\n" +
@@ -2708,13 +3012,14 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\rhand_revision\x18\f \x01(\x05R\fhandRevisionB\r\n" +
 	"\v_avatar_urlB\x0f\n" +
 	"\r_device_labelB\x11\n" +
-	"\x0f_hand_raised_at\"\xb3\x01\n" +
+	"\x0f_hand_raised_at\"\xd0\x01\n" +
 	"\x13InitiateCallRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12&\n" +
-	"\fdevice_label\x18\x04 \x01(\tH\x00R\vdeviceLabel\x88\x01\x01B\x0f\n" +
+	"\fdevice_label\x18\x04 \x01(\tH\x00R\vdeviceLabel\x88\x01\x01\x12\x1b\n" +
+	"\ttown_hall\x18\x05 \x01(\bR\btownHallB\x0f\n" +
 	"\r_device_label\"\xfc\x02\n" +
 	"\x14InitiateCallResponse\x12\"\n" +
 	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\x12\x15\n" +
@@ -2793,7 +3098,7 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x0ecamera_enabled\x18\x05 \x01(\bR\rcameraEnabled\x12%\n" +
 	"\x0escreen_sharing\x18\x06 \x01(\bR\rscreenSharing\"4\n" +
 	"\x18ReportMediaStateResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xe6\x03\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xc5\x04\n" +
 	"\rOrgCallPolicy\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
 	"\rcalls_enabled\x18\x02 \x01(\bR\fcallsEnabled\x12)\n" +
@@ -2801,11 +3106,13 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n" +
 	"\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n" +
 	"\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n" +
-	" max_screen_share_quality_channel\x18\a \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel\"B\n" +
+	" max_screen_share_quality_channel\x18\a \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel\x12*\n" +
+	"\x11town_hall_enabled\x18\b \x01(\bR\x0ftownHallEnabled\x121\n" +
+	"\x15town_hall_channel_ids\x18\t \x03(\tR\x12townHallChannelIds\"B\n" +
 	"\x17GetOrgCallPolicyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"K\n" +
 	"\x18GetOrgCallPolicyResponse\x12/\n" +
-	"\x06policy\x18\x01 \x01(\v2\x17.calls.v1.OrgCallPolicyR\x06policy\"\xf3\x03\n" +
+	"\x06policy\x18\x01 \x01(\v2\x17.calls.v1.OrgCallPolicyR\x06policy\"\xed\x04\n" +
 	"\x1aUpdateOrgCallPolicyRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12#\n" +
 	"\rcalls_enabled\x18\x02 \x01(\bR\fcallsEnabled\x12)\n" +
@@ -2813,7 +3120,23 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x14max_duration_minutes\x18\x04 \x01(\x05R\x12maxDurationMinutes\x12b\n" +
 	"\x1fmax_screen_share_quality_direct\x18\x05 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1bmaxScreenShareQualityDirect\x12`\n" +
 	"\x1emax_screen_share_quality_group\x18\x06 \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1amaxScreenShareQualityGroup\x12d\n" +
-	" max_screen_share_quality_channel\x18\a \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel\"N\n" +
+	" max_screen_share_quality_channel\x18\a \x01(\x0e2\x1c.calls.v1.ScreenShareQualityR\x1cmaxScreenShareQualityChannel\x12/\n" +
+	"\x11town_hall_enabled\x18\b \x01(\bH\x00R\x0ftownHallEnabled\x88\x01\x01\x121\n" +
+	"\x15town_hall_channel_ids\x18\t \x03(\tR\x12townHallChannelIdsB\x14\n" +
+	"\x12_town_hall_enabled\"s\n" +
+	"\x12SetCallModeRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n" +
+	"\ttown_hall\x18\x03 \x01(\bR\btownHall\"9\n" +
+	"\x13SetCallModeResponse\x12\"\n" +
+	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\"\x8c\x01\n" +
+	"\x15SetCallSpeakerRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x17\n" +
+	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x18\n" +
+	"\aspeaker\x18\x04 \x01(\bR\aspeaker\"<\n" +
+	"\x16SetCallSpeakerResponse\x12\"\n" +
+	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\"N\n" +
 	"\x1bUpdateOrgCallPolicyResponse\x12/\n" +
 	"\x06policy\x18\x01 \x01(\v2\x17.calls.v1.OrgCallPolicyR\x06policy\"\xbb\x01\n" +
 	"\x14SetHandRaisedRequest\x12'\n" +
@@ -2865,7 +3188,7 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x13CALL_REACTION_AGREE\x10\x01\x12\x1a\n" +
 	"\x16CALL_REACTION_APPLAUSE\x10\x02\x12\x16\n" +
 	"\x12CALL_REACTION_LOVE\x10\x03\x12\x1b\n" +
-	"\x17CALL_REACTION_CELEBRATE\x10\x042\xa0\v\n" +
+	"\x17CALL_REACTION_CELEBRATE\x10\x042\xc1\f\n" +
 	"\vCallService\x12b\n" +
 	"\x13GetCallAvailability\x12$.calls.v1.GetCallAvailabilityRequest\x1a%.calls.v1.GetCallAvailabilityResponse\x12M\n" +
 	"\fGetCallState\x12\x1d.calls.v1.GetCallStateRequest\x1a\x1e.calls.v1.GetCallStateResponse\x12M\n" +
@@ -2882,7 +3205,9 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x10GetOrgCallPolicy\x12!.calls.v1.GetOrgCallPolicyRequest\x1a\".calls.v1.GetOrgCallPolicyResponse\x12b\n" +
 	"\x13UpdateOrgCallPolicy\x12$.calls.v1.UpdateOrgCallPolicyRequest\x1a%.calls.v1.UpdateOrgCallPolicyResponse\x12P\n" +
 	"\rSetHandRaised\x12\x1e.calls.v1.SetHandRaisedRequest\x1a\x1f.calls.v1.SetHandRaisedResponse\x12Y\n" +
-	"\x10SendCallReaction\x12!.calls.v1.SendCallReactionRequest\x1a\".calls.v1.SendCallReactionResponse\x12Y\n" +
+	"\x10SendCallReaction\x12!.calls.v1.SendCallReactionRequest\x1a\".calls.v1.SendCallReactionResponse\x12J\n" +
+	"\vSetCallMode\x12\x1c.calls.v1.SetCallModeRequest\x1a\x1d.calls.v1.SetCallModeResponse\x12S\n" +
+	"\x0eSetCallSpeaker\x12\x1f.calls.v1.SetCallSpeakerRequest\x1a .calls.v1.SetCallSpeakerResponse\x12Y\n" +
 	"\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a\".calls.v1.ReportMediaStateResponseB7Z5github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3"
 
 var (
@@ -2898,7 +3223,7 @@ func file_calls_v1_calls_proto_rawDescGZIP() []byte {
 }
 
 var file_calls_v1_calls_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_calls_v1_calls_proto_goTypes = []any{
 	(CallType)(0),                       // 0: calls.v1.CallType
 	(CallEndReason)(0),                  // 1: calls.v1.CallEndReason
@@ -2939,23 +3264,27 @@ var file_calls_v1_calls_proto_goTypes = []any{
 	(*GetOrgCallPolicyRequest)(nil),     // 36: calls.v1.GetOrgCallPolicyRequest
 	(*GetOrgCallPolicyResponse)(nil),    // 37: calls.v1.GetOrgCallPolicyResponse
 	(*UpdateOrgCallPolicyRequest)(nil),  // 38: calls.v1.UpdateOrgCallPolicyRequest
-	(*UpdateOrgCallPolicyResponse)(nil), // 39: calls.v1.UpdateOrgCallPolicyResponse
-	(*SetHandRaisedRequest)(nil),        // 40: calls.v1.SetHandRaisedRequest
-	(*SetHandRaisedResponse)(nil),       // 41: calls.v1.SetHandRaisedResponse
-	(*SendCallReactionRequest)(nil),     // 42: calls.v1.SendCallReactionRequest
-	(*SendCallReactionResponse)(nil),    // 43: calls.v1.SendCallReactionResponse
-	(*timestamppb.Timestamp)(nil),       // 44: google.protobuf.Timestamp
+	(*SetCallModeRequest)(nil),          // 39: calls.v1.SetCallModeRequest
+	(*SetCallModeResponse)(nil),         // 40: calls.v1.SetCallModeResponse
+	(*SetCallSpeakerRequest)(nil),       // 41: calls.v1.SetCallSpeakerRequest
+	(*SetCallSpeakerResponse)(nil),      // 42: calls.v1.SetCallSpeakerResponse
+	(*UpdateOrgCallPolicyResponse)(nil), // 43: calls.v1.UpdateOrgCallPolicyResponse
+	(*SetHandRaisedRequest)(nil),        // 44: calls.v1.SetHandRaisedRequest
+	(*SetHandRaisedResponse)(nil),       // 45: calls.v1.SetHandRaisedResponse
+	(*SendCallReactionRequest)(nil),     // 46: calls.v1.SendCallReactionRequest
+	(*SendCallReactionResponse)(nil),    // 47: calls.v1.SendCallReactionResponse
+	(*timestamppb.Timestamp)(nil),       // 48: google.protobuf.Timestamp
 }
 var file_calls_v1_calls_proto_depIdxs = []int32{
 	3,  // 0: calls.v1.GetCallAvailabilityResponse.availability:type_name -> calls.v1.CallAvailability
 	11, // 1: calls.v1.GetCallStateResponse.call:type_name -> calls.v1.Call
 	0,  // 2: calls.v1.Call.call_type:type_name -> calls.v1.CallType
-	44, // 3: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
-	44, // 4: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
+	48, // 3: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
+	48, // 4: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
 	1,  // 5: calls.v1.Call.end_reason:type_name -> calls.v1.CallEndReason
 	12, // 6: calls.v1.Call.participants:type_name -> calls.v1.CallParticipant
-	44, // 7: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
-	44, // 8: calls.v1.CallParticipant.hand_raised_at:type_name -> google.protobuf.Timestamp
+	48, // 7: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
+	48, // 8: calls.v1.CallParticipant.hand_raised_at:type_name -> google.protobuf.Timestamp
 	11, // 9: calls.v1.InitiateCallResponse.call:type_name -> calls.v1.Call
 	2,  // 10: calls.v1.InitiateCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
 	10, // 11: calls.v1.InitiateCallResponse.ice_servers:type_name -> calls.v1.IceServer
@@ -2973,48 +3302,54 @@ var file_calls_v1_calls_proto_depIdxs = []int32{
 	2,  // 23: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
 	2,  // 24: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
 	2,  // 25: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
-	35, // 26: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
-	12, // 27: calls.v1.SetHandRaisedResponse.participant:type_name -> calls.v1.CallParticipant
-	5,  // 28: calls.v1.SendCallReactionRequest.reaction:type_name -> calls.v1.CallReaction
-	6,  // 29: calls.v1.CallService.GetCallAvailability:input_type -> calls.v1.GetCallAvailabilityRequest
-	8,  // 30: calls.v1.CallService.GetCallState:input_type -> calls.v1.GetCallStateRequest
-	13, // 31: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
-	15, // 32: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
-	17, // 33: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
-	19, // 34: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
-	21, // 35: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
-	23, // 36: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
-	25, // 37: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
-	27, // 38: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
-	29, // 39: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
-	31, // 40: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
-	36, // 41: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
-	38, // 42: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
-	40, // 43: calls.v1.CallService.SetHandRaised:input_type -> calls.v1.SetHandRaisedRequest
-	42, // 44: calls.v1.CallService.SendCallReaction:input_type -> calls.v1.SendCallReactionRequest
-	33, // 45: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
-	7,  // 46: calls.v1.CallService.GetCallAvailability:output_type -> calls.v1.GetCallAvailabilityResponse
-	9,  // 47: calls.v1.CallService.GetCallState:output_type -> calls.v1.GetCallStateResponse
-	14, // 48: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
-	16, // 49: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
-	18, // 50: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
-	20, // 51: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
-	22, // 52: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
-	24, // 53: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
-	26, // 54: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
-	28, // 55: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
-	30, // 56: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
-	32, // 57: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
-	37, // 58: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
-	39, // 59: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
-	41, // 60: calls.v1.CallService.SetHandRaised:output_type -> calls.v1.SetHandRaisedResponse
-	43, // 61: calls.v1.CallService.SendCallReaction:output_type -> calls.v1.SendCallReactionResponse
-	34, // 62: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
-	46, // [46:63] is the sub-list for method output_type
-	29, // [29:46] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	11, // 26: calls.v1.SetCallModeResponse.call:type_name -> calls.v1.Call
+	11, // 27: calls.v1.SetCallSpeakerResponse.call:type_name -> calls.v1.Call
+	35, // 28: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
+	12, // 29: calls.v1.SetHandRaisedResponse.participant:type_name -> calls.v1.CallParticipant
+	5,  // 30: calls.v1.SendCallReactionRequest.reaction:type_name -> calls.v1.CallReaction
+	6,  // 31: calls.v1.CallService.GetCallAvailability:input_type -> calls.v1.GetCallAvailabilityRequest
+	8,  // 32: calls.v1.CallService.GetCallState:input_type -> calls.v1.GetCallStateRequest
+	13, // 33: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
+	15, // 34: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
+	17, // 35: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
+	19, // 36: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
+	21, // 37: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
+	23, // 38: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
+	25, // 39: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
+	27, // 40: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
+	29, // 41: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
+	31, // 42: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
+	36, // 43: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
+	38, // 44: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
+	44, // 45: calls.v1.CallService.SetHandRaised:input_type -> calls.v1.SetHandRaisedRequest
+	46, // 46: calls.v1.CallService.SendCallReaction:input_type -> calls.v1.SendCallReactionRequest
+	39, // 47: calls.v1.CallService.SetCallMode:input_type -> calls.v1.SetCallModeRequest
+	41, // 48: calls.v1.CallService.SetCallSpeaker:input_type -> calls.v1.SetCallSpeakerRequest
+	33, // 49: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
+	7,  // 50: calls.v1.CallService.GetCallAvailability:output_type -> calls.v1.GetCallAvailabilityResponse
+	9,  // 51: calls.v1.CallService.GetCallState:output_type -> calls.v1.GetCallStateResponse
+	14, // 52: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
+	16, // 53: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
+	18, // 54: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
+	20, // 55: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
+	22, // 56: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
+	24, // 57: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
+	26, // 58: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
+	28, // 59: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
+	30, // 60: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
+	32, // 61: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
+	37, // 62: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
+	43, // 63: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
+	45, // 64: calls.v1.CallService.SetHandRaised:output_type -> calls.v1.SetHandRaisedResponse
+	47, // 65: calls.v1.CallService.SendCallReaction:output_type -> calls.v1.SendCallReactionResponse
+	40, // 66: calls.v1.CallService.SetCallMode:output_type -> calls.v1.SetCallModeResponse
+	42, // 67: calls.v1.CallService.SetCallSpeaker:output_type -> calls.v1.SetCallSpeakerResponse
+	34, // 68: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
+	50, // [50:69] is the sub-list for method output_type
+	31, // [31:50] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_calls_v1_calls_proto_init() }
@@ -3022,20 +3357,22 @@ func file_calls_v1_calls_proto_init() {
 	if File_calls_v1_calls_proto != nil {
 		return
 	}
+	file_calls_v1_calls_proto_msgTypes[0].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[4].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[5].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[6].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[7].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[9].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[18].OneofWrappers = []any{}
-	file_calls_v1_calls_proto_msgTypes[34].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[32].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[38].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_calls_v1_calls_proto_rawDesc), len(file_calls_v1_calls_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   38,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -68,6 +68,7 @@ enum ChatEventType {
   // row the channel list would have loaded.
   CHAT_EVENT_TYPE_CHANNEL_CREATED = 33;
   CHAT_EVENT_TYPE_CALL_REACTION = 34;
+  CHAT_EVENT_TYPE_CALL_UPDATED = 35;
 }
 
 // ChatEvent is a single channel-level event delivered through the unified stream.
@@ -279,6 +280,7 @@ message CallRingPayload {
 message CallHostChangedPayload {
   string call_id = 1;
   string new_host_user_id = 2;
+  int32 publishing_revision = 3;
 }
 
 // USER-LEVEL EVENT STREAMING

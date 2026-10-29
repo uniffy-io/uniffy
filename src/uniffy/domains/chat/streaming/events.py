@@ -26,6 +26,7 @@ AGENT_TOOL_CALL = "agent_tool_call"
 AGENT_CONFIRMATION_REQUESTED = "agent_confirmation_requested"
 AGENT_CONFIRMATION_RESOLVED = "agent_confirmation_resolved"
 
+CALL_UPDATED = "call_updated"
 CALL_STARTED = "call_started"
 CALL_ENDED = "call_ended"
 CALL_PARTICIPANT_JOINED = "call_participant_joined"
@@ -296,10 +297,13 @@ def build_call_ring_payload(
     }
 
 
-def build_call_host_changed_payload(call_id: UUID, new_host_user_id: UUID) -> dict[str, Any]:
+def build_call_host_changed_payload(
+    call_id: UUID, new_host_user_id: UUID, publishing_revision: int = 0
+) -> dict[str, Any]:
     return {
         "call_id": str(call_id),
         "new_host_user_id": str(new_host_user_id),
+        "publishing_revision": publishing_revision,
     }
 
 

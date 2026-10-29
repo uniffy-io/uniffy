@@ -79,9 +79,14 @@ export const syncActiveCalls = createAsyncThunk(
 
 export const initiateCall = createAsyncThunk(
   "calls/initiateCall",
-  async (channelId: string, { getState, dispatch }): Promise<CallJoinResult> => {
+  async (
+    target: string | { channelId: string; townHall?: boolean },
+    { getState, dispatch },
+  ): Promise<CallJoinResult> => {
+    const channelId = typeof target === "string" ? target : target.channelId;
     const organizationId = getOrganizationId(getState() as RootState);
     const res = await callsApi.initiateCall({
+      townHall: typeof target === "string" ? false : target.townHall,
       organizationId,
       channelId,
       deviceId: getDeviceId(),
@@ -235,5 +240,32 @@ export const sendCallReaction = createAsyncThunk(
   async ({ callId, reaction }: { callId: string; reaction: CallReaction }, { getState }) => {
     const organizationId = getOrganizationId(getState() as RootState);
     await callsApi.sendCallReaction({ organizationId, callId, deviceId: getDeviceId(), reaction });
+  },
+);
+
+export const setCallMode = createAsyncThunk(
+  "calls/setCallMode",
+  async ({ callId, townHall }: { callId: string; townHall: boolean }, { getState, dispatch }) => {
+    const organizationId = getOrganizationId(getState() as RootState);
+    const result = await callsApi.setCallMode({ organizationId, callId, townHall });
+    if (result.call) dispatch(callUpserted(callToPlain(result.call)));
+  },
+);
+export const setCallSpeaker = createAsyncThunk(
+  "calls/setCallSpeaker",
+  async (
+    { callId, userId, speaker }: { callId: string; userId: string; speaker: boolean },
+    { getState, dispatch },
+  ) => {
+    const organizationId = getOrganizationId(getState() as RootState);
+    const result = await callsApi.setCallSpeaker({ organizationId, callId, userId, speaker });
+    if (result.call) dispatch(callUpserted(callToPlain(result.call)));
+  },
+);
+export const fetchTownHallAllowed = createAsyncThunk(
+  "calls/fetchTownHallAllowed",
+  async (channelId: string, { getState }) => {
+    const organizationId = getOrganizationId(getState() as RootState);
+    return (await callsApi.getCallAvailability({ organizationId, channelId })).townHallAllowed;
   },
 );

@@ -27,6 +27,7 @@ from uniffy.domains.calls.livekit import (
     get_livekit_admin_client,
 )
 from uniffy.domains.calls.operations import CallOperations
+from uniffy.domains.calls.publishing import CallPublishing
 from uniffy.domains.calls.telemetry import observe_maintenance
 from uniffy.domains.calls.tokens import parse_room_call_id
 from uniffy.infrastructure.database.session import open_session
@@ -276,6 +277,9 @@ async def reconcile_calls(ctx: dict[str, Any]) -> dict[str, Any]:
                             continue
 
                         await ops.reassign_host_if_absent(call)
+                        if call.town_hall or call.publishing_revision > 0:
+                            with suppress(LiveKitApiError):
+                                await CallPublishing(session).sync(call.id)
 
                         if len(remaining) == 1:
                             others_left = await session.execute(

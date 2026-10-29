@@ -1,5 +1,6 @@
+import { canPublishInCall } from "@/features/calls/utils/callPublishing";
 import { useState } from "react";
-import { MicrophoneSlash, UserMinus } from "@phosphor-icons/react";
+import { MicrophoneSlash, UserMinus, Microphone, Ear } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { SUBJECT_TYPE } from "@/components/subject/types";
@@ -10,7 +11,11 @@ import { useCall } from "@/features/calls/components/callContext";
 import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
 import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
 import { selectSessionCall } from "@/features/calls/store/callsSlice";
-import { kickParticipant, muteParticipant } from "@/features/calls/store/callsThunks";
+import {
+  kickParticipant,
+  muteParticipant,
+  setCallSpeaker,
+} from "@/features/calls/store/callsThunks";
 
 export function CallParticipants({ onClose }: { onClose: () => void }) {
   "use no memo";
@@ -47,7 +52,12 @@ export function CallParticipants({ onClose }: { onClose: () => void }) {
             {participants.map((participant) => {
               const row = call?.participants.find((p) => p.identity === participant.identity);
               const name = row?.displayName || participant.name || "Participant";
+              const speaker = canPublishInCall(
+                call,
+                row?.userId ?? participant.identity.split(":")[0],
+              );
               const state = [
+                call?.townHall ? (speaker ? "Speaker" : "Audience") : null,
                 participant.isMicrophoneEnabled ? "Microphone on" : "Muted",
                 participant.isSpeaking ? "Speaking" : null,
                 participant.isScreenShareEnabled ? "Sharing screen" : null,
@@ -78,6 +88,36 @@ export function CallParticipants({ onClose }: { onClose: () => void }) {
                   </div>
                   {canModerate && !participant.isLocal && (
                     <div className="flex gap-1">
+                      {call?.townHall && row && row.userId !== call.hostUserId && (
+                        <Button
+                          variant="ghost"
+                          className="min-h-11 min-w-11"
+                          disabled={pending !== null}
+                          title={speaker ? "Move to audience" : "Allow to speak"}
+                          aria-label={
+                            speaker ? `Move ${name} to audience` : `Allow ${name} to speak`
+                          }
+                          onClick={async () => {
+                            setPending(participant.identity);
+                            try {
+                              await dispatch(
+                                setCallSpeaker({
+                                  callId: call.id,
+                                  userId: row.userId,
+                                  speaker: !speaker,
+                                }),
+                              ).unwrap();
+                            } catch {
+                              /* Shared thunk pipeline reports failures. */
+                            } finally {
+                              setPending(null);
+                            }
+                          }}
+                        >
+                          {speaker ? <Ear size={18} /> : <Microphone size={18} />}
+                        </Button>
+                      )}
+
                       <Button
                         variant="ghost"
                         className="min-h-11 min-w-11"

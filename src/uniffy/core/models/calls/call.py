@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -60,6 +61,11 @@ class Call(SQLModel, table=True):
     livekit_room_name: str = Field(max_length=120, nullable=False, unique=True)
     # Capacity stays fixed for this call, including media room recreation.
     max_participants: int = Field(default=50, nullable=False)
+    town_hall: bool = Field(default=False, nullable=False)
+    speaker_user_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSONB, nullable=False, server_default="[]")
+    )
+    publishing_revision: int = Field(default=0, nullable=False)
     started_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         sa_column=Column(DateTime(timezone=True), nullable=False),

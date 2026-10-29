@@ -1,3 +1,6 @@
+import { useAuth } from "@core/providers/AuthContext";
+import { useActiveCall } from "@features/calls/useCallsState";
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import React, { useEffect, useState } from "react";
 import { View, TouchableOpacity, StyleSheet, Platform, Alert } from "react-native";
 import * as Haptics from "expo-haptics";
@@ -41,6 +44,9 @@ export function CallControls({
     leaveCall,
     endCallForAll,
   } = useCall();
+  const { user } = useAuth();
+  const call = useActiveCall(session.channelId ?? undefined);
+  const canPublish = canPublishInCall(call, user?.id ?? "");
   const [qualityOpen, setQualityOpen] = useState(false);
   const [routeOpen, setRouteOpen] = useState(false);
   // Gated on what the installed binary can actually do: an Android client built
@@ -65,13 +71,16 @@ export function CallControls({
     <>
       <View style={[styles.row, compact && styles.rowCompact]}>
         <TouchableOpacity
-          style={buttonStyle}
+          style={[buttonStyle, !canPublish && { opacity: 0.4 }]}
           onPress={() => {
             tick();
             void toggleMic();
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          disabled={!canPublish}
+          accessibilityState={{ disabled: !canPublish }}
+          accessibilityHint={!canPublish ? AUDIENCE_MESSAGE : undefined}
           accessibilityLabel={session.micEnabled ? "Mute microphone" : "Unmute microphone"}
         >
           {session.micEnabled ? (
@@ -81,13 +90,16 @@ export function CallControls({
           )}
         </TouchableOpacity>
         <TouchableOpacity
-          style={buttonStyle}
+          style={[buttonStyle, !canPublish && { opacity: 0.4 }]}
           onPress={() => {
             tick();
             void toggleCamera();
           }}
           activeOpacity={0.7}
           accessibilityRole="button"
+          disabled={!canPublish}
+          accessibilityState={{ disabled: !canPublish }}
+          accessibilityHint={!canPublish ? AUDIENCE_MESSAGE : undefined}
           accessibilityLabel={session.cameraEnabled ? "Turn camera off" : "Turn camera on"}
         >
           {session.cameraEnabled ? (
@@ -107,7 +119,7 @@ export function CallControls({
             <CameraRotate size={size} color={T.text} weight="bold" />
           </TouchableOpacity>
         ) : null}
-        {!compact && canShareScreen ? (
+        {!compact && canShareScreen && canPublish ? (
           <TouchableOpacity
             style={buttonStyle}
             onPress={() => {

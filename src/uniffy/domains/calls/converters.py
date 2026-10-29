@@ -88,6 +88,9 @@ def call_to_proto(
         call_type=CALL_TYPE_TO_PROTO.get(call.call_type, ProtoCallType.UNSPECIFIED),
         initiator_user_id=str(call.initiator_user_id),
         host_user_id=str(call.host_user_id),
+        town_hall=call.town_hall,
+        speaker_user_ids=call.speaker_user_ids,
+        publishing_revision=call.publishing_revision,
         started_at=_ts(call.started_at),
         participants=[
             participant_to_proto(
@@ -111,6 +114,8 @@ def org_policy_to_proto(policy: ResolvedCallPolicy) -> ProtoOrgCallPolicy:
     return ProtoOrgCallPolicy(
         organization_id=str(policy.organization_id),
         calls_enabled=policy.calls_enabled,
+        town_hall_enabled=policy.town_hall_enabled,
+        town_hall_channel_ids=list(policy.town_hall_channel_ids),
         max_participants=policy.max_participants,
         max_duration_minutes=policy.max_duration_minutes,
         # ScreenShareQuality ints match the proto enum values by construction.
@@ -156,6 +161,9 @@ def call_to_event_dict(
         "call_type": call.call_type.value,
         "initiator_user_id": str(call.initiator_user_id),
         "host_user_id": str(call.host_user_id),
+        "town_hall": call.town_hall,
+        "speaker_user_ids": call.speaker_user_ids,
+        "publishing_revision": call.publishing_revision,
         "started_at": call.started_at.isoformat(),
         "participants": [
             participant_to_event_dict(

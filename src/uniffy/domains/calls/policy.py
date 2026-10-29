@@ -1,8 +1,4 @@
-"""Per-org call policy backed by the generic ``org_settings`` KV store.
-
-Stored as one JSON blob under ``namespace='calls'``, ``key='policy'``. An absent
-row means every field takes its built-in default.
-"""
+"""Per-org call policy backed by the shared settings store."""
 
 from __future__ import annotations
 
@@ -28,6 +24,8 @@ class ResolvedCallPolicy:
     """Effective per-org call policy; field names mirror the proto message."""
 
     organization_id: UUID
+    town_hall_enabled: bool = True
+    town_hall_channel_ids: tuple[str, ...] = ()
     calls_enabled: bool = DEFAULT_CALLS_ENABLED
     max_participants: int = DEFAULT_MAX_PARTICIPANTS
     max_duration_minutes: int = DEFAULT_MAX_DURATION_MINUTES
@@ -39,6 +37,8 @@ class ResolvedCallPolicy:
 def _from_blob(organization_id: UUID, blob: dict) -> ResolvedCallPolicy:
     return ResolvedCallPolicy(
         organization_id=organization_id,
+        town_hall_enabled=bool(blob.get("town_hall_enabled", True)),
+        town_hall_channel_ids=tuple(blob.get("town_hall_channel_ids", [])),
         calls_enabled=bool(blob.get("calls_enabled", DEFAULT_CALLS_ENABLED)),
         max_participants=int(blob.get("max_participants", DEFAULT_MAX_PARTICIPANTS)),
         max_duration_minutes=int(blob.get("max_duration_minutes", DEFAULT_MAX_DURATION_MINUTES)),
@@ -76,6 +76,8 @@ async def save_call_policy(
         key=POLICY_KEY,
         value={
             "calls_enabled": policy.calls_enabled,
+            "town_hall_enabled": policy.town_hall_enabled,
+            "town_hall_channel_ids": list(policy.town_hall_channel_ids),
             "max_participants": policy.max_participants,
             "max_duration_minutes": policy.max_duration_minutes,
             "max_screen_share_quality_direct": policy.max_screen_share_quality_direct,

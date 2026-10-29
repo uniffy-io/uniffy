@@ -48,6 +48,7 @@ from uniffy.domains.calls.policy import (
     load_call_policy,
     save_call_policy,
 )
+from uniffy.domains.calls.publishing import CallPublishing, can_publish, town_hall_allowed
 from uniffy.domains.calls.telemetry import call_context
 from uniffy.domains.calls.tokens import (
     LiveKitTokenMinter,
@@ -112,6 +113,8 @@ class CallOperations:
         device_id: str,
         device_label: str | None = None,
         auth_session_id: UUID | None = None,
+        *,
+        town_hall: bool = False,
     ) -> tuple[Call, list[CallParticipant], MintedToken, bool]:
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
@@ -129,7 +132,14 @@ class CallOperations:
             )
             return existing, participants, token, True
 
+        if town_hall and (
+            channel.channel_type not in (ChannelType.PUBLIC, ChannelType.PRIVATE)
+            or not await town_hall_allowed(self.session, organization_id, channel_id)
+        ):
+            raise PermissionDeniedError("town hall", "Town halls are not enabled for this channel")
+
         call = Call(
+            town_hall=town_hall,
             organization_id=organization_id,
             channel_id=channel_id,
             call_type=_CHANNEL_TYPE_TO_CALL_TYPE[channel.channel_type],
@@ -241,6 +251,9 @@ class CallOperations:
     ) -> MintedToken:
         call = await self._get_call(call_id, organization_id, require_active=True)
         await self._require_live_auth_session(user_id, auth_session_id)
+        await self.session.refresh(call, with_for_update=True)
+        if call.ended_at is not None:
+            raise ValidationError("call", "Call has ended")
         identity = participant_identity(user_id, device_id)
         participant = await self.get_active_participant(call_id, identity)
         if participant is None:
@@ -257,6 +270,7 @@ class CallOperations:
             device_id=device_id,
             display_name=info.display_name,
             max_participants=call.max_participants,
+            can_publish=can_publish(call, user_id),
             device_label=participant.device_label,
         )
         # session_jti stays put: the live SFU session keeps emitting its original
@@ -419,10 +433,13 @@ class CallOperations:
     ) -> None:
         """LiveKit emits no mute webhook, so roster state follows authorized client reports."""
         call = await self._get_call(call_id, organization_id)
+        await self.session.refresh(call, with_for_update=True)
         channel = await self.access.get_channel(call.channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
         if call.ended_at is not None:
             return
+        if not can_publish(call, user_id):
+            mic_enabled = camera_enabled = screen_sharing = False
         participant = await self.get_active_participant(
             call_id, participant_identity(user_id, device_id)
         )
@@ -844,23 +861,28 @@ class CallOperations:
                 Call.host_user_id.not_in(active_user_ids),
                 next_host.is_not(None),
             )
-            .values(host_user_id=next_host)
-            .returning(Call.host_user_id)
+            .values(host_user_id=next_host, publishing_revision=Call.publishing_revision + 1)
+            .returning(Call.host_user_id, Call.town_hall, Call.publishing_revision)
             .execution_options(synchronize_session=False)
         )
-        new_host = res.scalar_one_or_none()
-        if new_host is None:
+        changed = res.one_or_none()
+        if changed is None:
             await self.session.commit()
             return
+        new_host, town_hall, revision = changed
         set_committed_value(call, "host_user_id", new_host)
+        set_committed_value(call, "town_hall", town_hall)
+        set_committed_value(call, "publishing_revision", revision)
         await self.session.commit()
         member_ids = await self.call_recipient_ids(call)
         await self.chat.publish(
             member_ids,
             chat_events.CALL_HOST_CHANGED,
-            chat_events.build_call_host_changed_payload(call.id, new_host),
+            chat_events.build_call_host_changed_payload(call.id, new_host, revision),
             channel_id=call.channel_id,
         )
+        if call.town_hall:
+            await CallPublishing(self.session).sync_and_publish(call.id)
 
     async def record_absence(self, participant: CallParticipant, when: datetime) -> None:
         await self._set_missing_since(participant, when)
@@ -974,6 +996,7 @@ class CallOperations:
             device_id=device_id,
             display_name=info.display_name,
             max_participants=call.max_participants,
+            can_publish=can_publish(call, user_id),
             device_label=device_label,
         )
 
@@ -996,7 +1019,7 @@ class CallOperations:
             token_jti=token.jti,
             session_jti=token.jti,
             # Second device joins muted; the client honors this on connect.
-            mic_enabled=user_devices == 0,
+            mic_enabled=user_devices == 0 and can_publish(call, user_id),
         )
         self.session.add(participant)
         try:
@@ -1212,14 +1235,45 @@ class CallOperations:
         max_screen_share_quality_direct: ScreenShareQuality,
         max_screen_share_quality_group: ScreenShareQuality,
         max_screen_share_quality_channel: ScreenShareQuality,
+        town_hall_enabled: bool | None = None,
+        town_hall_channel_ids: tuple[str, ...] | None = None,
     ) -> ResolvedCallPolicy:
         await self._require_org_admin(user_id, organization_id)
         if not 1 <= max_participants <= 1000:
             raise ValidationError("max_participants", "Must be between 1 and 1000")
         if not 1 <= max_duration_minutes <= 1440:
             raise ValidationError("max_duration_minutes", "Must be between 1 and 1440")
+        previous = await self.get_org_policy(organization_id) or ResolvedCallPolicy(organization_id)
+        allowed_ids = (
+            town_hall_channel_ids
+            if town_hall_channel_ids is not None
+            else previous.town_hall_channel_ids
+        )
+        allowed_ids = tuple(sorted(set(allowed_ids)))
+        if len(allowed_ids) > 1000:
+            raise ValidationError("town_hall_channel_ids", "Choose at most 1000 channels")
+        if allowed_ids and town_hall_channel_ids is not None:
+            valid_ids = set(
+                await self.session.scalars(
+                    select(ChatChannel.id).where(
+                        ChatChannel.organization_id == organization_id,
+                        ChatChannel.id.in_([UUID(value) for value in allowed_ids]),
+                        ChatChannel.channel_type.in_((ChannelType.PUBLIC, ChannelType.PRIVATE)),
+                        ChatChannel.is_archived.is_(False),
+                        ChatChannel.is_deleted.is_(False),
+                    )
+                )
+            )
+            if valid_ids != {UUID(value) for value in allowed_ids}:
+                raise ValidationError(
+                    "channel", "Choose active public or private channels in this organization"
+                )
         policy = ResolvedCallPolicy(
             organization_id=organization_id,
+            town_hall_enabled=town_hall_enabled
+            if town_hall_enabled is not None
+            else previous.town_hall_enabled,
+            town_hall_channel_ids=allowed_ids,
             calls_enabled=calls_enabled,
             max_participants=max_participants,
             max_duration_minutes=max_duration_minutes,

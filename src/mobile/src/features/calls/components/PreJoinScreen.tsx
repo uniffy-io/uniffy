@@ -1,3 +1,4 @@
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@features/calls/callPublishing";
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -72,6 +73,7 @@ function PreJoinContent({
   } = useCall();
   const channelId = prejoinTarget?.channelId;
   const activeCall = useActiveCall(channelId);
+  const audience = !canPublishInCall(activeCall, user?.id ?? "");
   const { channels } = useChannels();
   const channel = channels.find((c) => c.id === channelId);
   const channelName = prejoinTarget?.channelName ?? channel?.displayName ?? "this channel";
@@ -120,7 +122,7 @@ function PreJoinContent({
   // the user in the call with no camera and no message. A failed join brings
   // the preview back.
   useEffect(() => {
-    if (!cameraOn || inCall || joining) return;
+    if (!cameraOn || audience || inCall || joining) return;
     let cancelled = false;
     let created: LocalVideoTrack | null = null;
     void (async () => {
@@ -151,7 +153,7 @@ function PreJoinContent({
       void created?.stop();
       setPreviewTrack(null);
     };
-  }, [cameraOn, facing, inCall, joining]);
+  }, [cameraOn, audience, facing, inCall, joining]);
 
   const others = (activeCall?.participants ?? []).filter((p) => p.userId !== user?.id);
 
@@ -160,16 +162,20 @@ function PreJoinContent({
     setJoining(true);
     setError(null);
     try {
-      const granted = await ensureCallPermissions({ mic: micOn, camera: cameraOn });
+      const granted = await ensureCallPermissions({
+        mic: micOn && !audience,
+        camera: cameraOn && !audience,
+      });
       const media = {
-        mic: micOn && granted.micGranted,
-        camera: cameraOn && granted.cameraGranted,
+        mic: !audience && micOn && granted.micGranted,
+        camera: !audience && cameraOn && granted.cameraGranted,
         facing,
       };
-      if (micOn && !granted.micGranted) {
+      if (!audience && micOn && !granted.micGranted) {
         showFeedback(callErrorMessage(null, "microphone"));
       }
-      if (cameraOn && !granted.cameraGranted) showFeedback(callErrorMessage(null, "camera"));
+      if (!audience && cameraOn && !granted.cameraGranted)
+        showFeedback(callErrorMessage(null, "camera"));
       joinedRef.current = true;
       // The live map wins over the id captured at open time: a call that started
       // while this screen was up is the one to join.
@@ -191,6 +197,11 @@ function PreJoinContent({
 
   return (
     <View style={[styles.root, { backgroundColor: T.pageBg }]}>
+      {audience && (
+        <Text accessibilityLiveRegion="polite" style={{ color: T.textDim, padding: 12 }}>
+          {AUDIENCE_MESSAGE}
+        </Text>
+      )}
       <DomainHeader
         title={activeCall ? "Join call" : "Start call"}
         subtitle={channelName}
@@ -286,6 +297,8 @@ function PreJoinContent({
             onPress={() => setMicOn((v) => !v)}
             activeOpacity={0.7}
             accessibilityRole="button"
+            disabled={audience}
+            accessibilityHint={audience ? AUDIENCE_MESSAGE : undefined}
             accessibilityLabel={micOn ? "Join with microphone off" : "Join with microphone on"}
           >
             {micOn ? (
@@ -305,6 +318,8 @@ function PreJoinContent({
             onPress={() => setCameraOn((v) => !v)}
             activeOpacity={0.7}
             accessibilityRole="button"
+            disabled={audience}
+            accessibilityHint={audience ? AUDIENCE_MESSAGE : undefined}
             accessibilityLabel={cameraOn ? "Join with camera off" : "Join with camera on"}
           >
             {cameraOn ? (

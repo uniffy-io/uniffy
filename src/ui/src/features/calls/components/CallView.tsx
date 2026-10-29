@@ -1,3 +1,6 @@
+import { CallModeControl } from "@/features/calls/components/CallModeControl";
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
+import { useCallPublishing } from "@/features/calls/hooks/useCallPublishing";
 import { CallReactionOverlay } from "@/features/calls/components/CallReactionOverlay";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { CallParticipation } from "@/features/calls/components/CallParticipation";
@@ -177,6 +180,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
   const persistedHeight = useAppSelector((s) => s.callPreferences.viewHeightPx ?? null);
   const { room, popoutWindow, closePopout } = useCall();
   const participants = useRoomParticipants(room);
+  const { canPublish } = useCallPublishing();
   const [chatOpen, setChatOpen] = useState(false);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -276,6 +280,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
           Live call - {call?.participants.length ?? participants.length} in
+          <CallModeControl />
           {session.status === "reconnecting" && <ReconnectingChip />}
         </div>
         <div
@@ -317,6 +322,11 @@ function CallViewInner({ channelId }: { channelId: string }) {
         </div>
       </div>
 
+      {!collapsed && !canPublish && (
+        <p role="status" className="px-3 pb-2 text-xs text-muted-foreground">
+          {AUDIENCE_MESSAGE}
+        </p>
+      )}
       {!collapsed && (
         <div
           className={cn(
@@ -337,7 +347,9 @@ function CallViewInner({ channelId }: { channelId: string }) {
               </div>
             ) : (
               <CallGrid
-                participants={participants}
+                participants={participants.filter((p) =>
+                  canPublishInCall(call, p.identity.split(":")[0]),
+                )}
                 nameFor={(p) => rosterByIdentity.get(p.identity)}
               />
             )}

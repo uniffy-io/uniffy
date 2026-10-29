@@ -39,6 +39,14 @@ function keepLatestHand(
 }
 function mergeCallHands(previous: PlainCall | undefined, incoming: PlainCall): PlainCall {
   if (previous?.id !== incoming.id) return incoming;
+  if ((previous.publishingRevision ?? 0) > (incoming.publishingRevision ?? 0))
+    incoming = {
+      ...incoming,
+      townHall: previous.townHall,
+      speakerUserIds: previous.speakerUserIds,
+      publishingRevision: previous.publishingRevision,
+      hostUserId: previous.hostUserId,
+    };
   const byIdentity = new Map(previous.participants.map((p) => [p.identity, p]));
   return {
     ...incoming,
@@ -86,12 +94,19 @@ export function applyParticipantEvent(
   });
 }
 
-export function setCallHost(qc: QueryClient, orgId: string, callId: string, hostUserId: string) {
+export function setCallHost(
+  qc: QueryClient,
+  orgId: string,
+  callId: string,
+  hostUserId: string,
+  publishingRevision = 0,
+) {
   qc.setQueryData<ActiveCallsMap>(activeCallsKey(orgId), (old) => {
     if (!old) return old ?? {};
     const entry = Object.entries(old).find(([, c]) => c.id === callId);
     if (!entry) return old;
     const [channelId, call] = entry;
+    if (publishingRevision < (call.publishingRevision ?? 0)) return old;
     return { ...old, [channelId]: { ...call, hostUserId } };
   });
 }

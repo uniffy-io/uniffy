@@ -171,6 +171,27 @@ class LiveKitAdminClient:
     async def remove_participant(self, room: str, identity: str) -> None:
         await self._call("RemoveParticipant", {"room": room, "identity": identity}, room=room)
 
+    async def set_publishing(self, room: str, identity: str, *, allowed: bool) -> None:
+        await self._call(
+            "UpdateParticipant",
+            {
+                "room": room,
+                "identity": identity,
+                "permission": {
+                    "canSubscribe": True,
+                    "canPublish": allowed,
+                    "canPublishData": True,
+                    "canPublishSources": [
+                        "CAMERA",
+                        "MICROPHONE",
+                        "SCREEN_SHARE",
+                        "SCREEN_SHARE_AUDIO",
+                    ],
+                },
+            },
+            room=room,
+        )
+
     async def mute_published_track(
         self, room: str, identity: str, track_sid: str, muted: bool = True
     ) -> None:

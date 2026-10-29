@@ -75,6 +75,7 @@ const (
 	// row the channel list would have loaded.
 	ChatEventType_CHAT_EVENT_TYPE_CHANNEL_CREATED ChatEventType = 33
 	ChatEventType_CHAT_EVENT_TYPE_CALL_REACTION   ChatEventType = 34
+	ChatEventType_CHAT_EVENT_TYPE_CALL_UPDATED    ChatEventType = 35
 )
 
 // Enum value maps for ChatEventType.
@@ -110,6 +111,7 @@ var (
 		32: "CHAT_EVENT_TYPE_MEMBER_UPDATED",
 		33: "CHAT_EVENT_TYPE_CHANNEL_CREATED",
 		34: "CHAT_EVENT_TYPE_CALL_REACTION",
+		35: "CHAT_EVENT_TYPE_CALL_UPDATED",
 	}
 	ChatEventType_value = map[string]int32{
 		"CHAT_EVENT_TYPE_UNSPECIFIED":                  0,
@@ -142,6 +144,7 @@ var (
 		"CHAT_EVENT_TYPE_MEMBER_UPDATED":               32,
 		"CHAT_EVENT_TYPE_CHANNEL_CREATED":              33,
 		"CHAT_EVENT_TYPE_CALL_REACTION":                34,
+		"CHAT_EVENT_TYPE_CALL_UPDATED":                 35,
 	}
 )
 
@@ -1777,11 +1780,12 @@ func (x *CallRingPayload) GetExpiresAt() *timestamppb.Timestamp {
 }
 
 type CallHostChangedPayload struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CallId        string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
-	NewHostUserId string                 `protobuf:"bytes,2,opt,name=new_host_user_id,json=newHostUserId,proto3" json:"new_host_user_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	CallId             string                 `protobuf:"bytes,1,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	NewHostUserId      string                 `protobuf:"bytes,2,opt,name=new_host_user_id,json=newHostUserId,proto3" json:"new_host_user_id,omitempty"`
+	PublishingRevision int32                  `protobuf:"varint,3,opt,name=publishing_revision,json=publishingRevision,proto3" json:"publishing_revision,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *CallHostChangedPayload) Reset() {
@@ -1826,6 +1830,13 @@ func (x *CallHostChangedPayload) GetNewHostUserId() string {
 		return x.NewHostUserId
 	}
 	return ""
+}
+
+func (x *CallHostChangedPayload) GetPublishingRevision() int32 {
+	if x != nil {
+		return x.PublishingRevision
+	}
+	return 0
 }
 
 type StreamUserChatEventsRequest struct {
@@ -2592,10 +2603,11 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x11caller_avatar_url\x18\x06 \x01(\tH\x00R\x0fcallerAvatarUrl\x88\x01\x01\x129\n" +
 	"\n" +
 	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAtB\x14\n" +
-	"\x12_caller_avatar_url\"Z\n" +
+	"\x12_caller_avatar_url\"\x8b\x01\n" +
 	"\x16CallHostChangedPayload\x12\x17\n" +
 	"\acall_id\x18\x01 \x01(\tR\x06callId\x12'\n" +
-	"\x10new_host_user_id\x18\x02 \x01(\tR\rnewHostUserId\"F\n" +
+	"\x10new_host_user_id\x18\x02 \x01(\tR\rnewHostUserId\x12/\n" +
+	"\x13publishing_revision\x18\x03 \x01(\x05R\x12publishingRevision\"F\n" +
 	"\x1bStreamUserChatEventsRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xf9\x03\n" +
 	"\x1cStreamUserChatEventsResponse\x129\n" +
@@ -2657,7 +2669,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x04 \x01(\tR\vdisplayName\x122\n" +
 	"\breaction\x18\x05 \x01(\x0e2\x16.calls.v1.CallReactionR\breaction\x129\n" +
 	"\n" +
-	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt*\xf4\b\n" +
+	"expires_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt*\x96\t\n" +
 	"\rChatEventType\x12\x1f\n" +
 	"\x1bCHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_MESSAGE_CREATED\x10\x01\x12#\n" +
@@ -2689,7 +2701,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"$CHAT_EVENT_TYPE_AGENT_THINKING_DELTA\x10\x1f\x12\"\n" +
 	"\x1eCHAT_EVENT_TYPE_MEMBER_UPDATED\x10 \x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_CHANNEL_CREATED\x10!\x12!\n" +
-	"\x1dCHAT_EVENT_TYPE_CALL_REACTION\x10\"*\xb1\x02\n" +
+	"\x1dCHAT_EVENT_TYPE_CALL_REACTION\x10\"\x12 \n" +
+	"\x1cCHAT_EVENT_TYPE_CALL_UPDATED\x10#*\xb1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +

@@ -35,6 +35,8 @@ const (
 	CallService_UpdateOrgCallPolicy_FullMethodName = "/calls.v1.CallService/UpdateOrgCallPolicy"
 	CallService_SetHandRaised_FullMethodName       = "/calls.v1.CallService/SetHandRaised"
 	CallService_SendCallReaction_FullMethodName    = "/calls.v1.CallService/SendCallReaction"
+	CallService_SetCallMode_FullMethodName         = "/calls.v1.CallService/SetCallMode"
+	CallService_SetCallSpeaker_FullMethodName      = "/calls.v1.CallService/SetCallSpeaker"
 	CallService_ReportMediaState_FullMethodName    = "/calls.v1.CallService/ReportMediaState"
 )
 
@@ -76,6 +78,8 @@ type CallServiceClient interface {
 	UpdateOrgCallPolicy(ctx context.Context, in *UpdateOrgCallPolicyRequest, opts ...grpc.CallOption) (*UpdateOrgCallPolicyResponse, error)
 	SetHandRaised(ctx context.Context, in *SetHandRaisedRequest, opts ...grpc.CallOption) (*SetHandRaisedResponse, error)
 	SendCallReaction(ctx context.Context, in *SendCallReactionRequest, opts ...grpc.CallOption) (*SendCallReactionResponse, error)
+	SetCallMode(ctx context.Context, in *SetCallModeRequest, opts ...grpc.CallOption) (*SetCallModeResponse, error)
+	SetCallSpeaker(ctx context.Context, in *SetCallSpeakerRequest, opts ...grpc.CallOption) (*SetCallSpeakerResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -251,6 +255,26 @@ func (c *callServiceClient) SendCallReaction(ctx context.Context, in *SendCallRe
 	return out, nil
 }
 
+func (c *callServiceClient) SetCallMode(ctx context.Context, in *SetCallModeRequest, opts ...grpc.CallOption) (*SetCallModeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetCallModeResponse)
+	err := c.cc.Invoke(ctx, CallService_SetCallMode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *callServiceClient) SetCallSpeaker(ctx context.Context, in *SetCallSpeakerRequest, opts ...grpc.CallOption) (*SetCallSpeakerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetCallSpeakerResponse)
+	err := c.cc.Invoke(ctx, CallService_SetCallSpeaker_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMediaStateRequest, opts ...grpc.CallOption) (*ReportMediaStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReportMediaStateResponse)
@@ -299,6 +323,8 @@ type CallServiceServer interface {
 	UpdateOrgCallPolicy(context.Context, *UpdateOrgCallPolicyRequest) (*UpdateOrgCallPolicyResponse, error)
 	SetHandRaised(context.Context, *SetHandRaisedRequest) (*SetHandRaisedResponse, error)
 	SendCallReaction(context.Context, *SendCallReactionRequest) (*SendCallReactionResponse, error)
+	SetCallMode(context.Context, *SetCallModeRequest) (*SetCallModeResponse, error)
+	SetCallSpeaker(context.Context, *SetCallSpeakerRequest) (*SetCallSpeakerResponse, error)
 	// The client reports its own mic/camera/screen state; this is the roster's
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
@@ -361,6 +387,12 @@ func (UnimplementedCallServiceServer) SetHandRaised(context.Context, *SetHandRai
 }
 func (UnimplementedCallServiceServer) SendCallReaction(context.Context, *SendCallReactionRequest) (*SendCallReactionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendCallReaction not implemented")
+}
+func (UnimplementedCallServiceServer) SetCallMode(context.Context, *SetCallModeRequest) (*SetCallModeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetCallMode not implemented")
+}
+func (UnimplementedCallServiceServer) SetCallSpeaker(context.Context, *SetCallSpeakerRequest) (*SetCallSpeakerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetCallSpeaker not implemented")
 }
 func (UnimplementedCallServiceServer) ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportMediaState not implemented")
@@ -674,6 +706,42 @@ func _CallService_SendCallReaction_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CallService_SetCallMode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCallModeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).SetCallMode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_SetCallMode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).SetCallMode(ctx, req.(*SetCallModeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CallService_SetCallSpeaker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCallSpeakerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).SetCallSpeaker(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_SetCallSpeaker_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).SetCallSpeaker(ctx, req.(*SetCallSpeakerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CallService_ReportMediaState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportMediaStateRequest)
 	if err := dec(in); err != nil {
@@ -762,6 +830,14 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendCallReaction",
 			Handler:    _CallService_SendCallReaction_Handler,
+		},
+		{
+			MethodName: "SetCallMode",
+			Handler:    _CallService_SetCallMode_Handler,
+		},
+		{
+			MethodName: "SetCallSpeaker",
+			Handler:    _CallService_SetCallSpeaker_Handler,
 		},
 		{
 			MethodName: "ReportMediaState",

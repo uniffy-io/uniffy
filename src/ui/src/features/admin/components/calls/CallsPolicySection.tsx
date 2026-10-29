@@ -1,8 +1,11 @@
+import { MultiSelect } from "@/components/ui/multi-select";
+import { selectChannels } from "@/features/chat/store/chatChannelsSlice";
+import { fetchChannels } from "@/features/chat/store/chatThunks";
 import { useCallback, useEffect, useState } from "react";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Phone, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
-import { useAppSelector } from "@/app/hooks";
+import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { friendlyErrorMessage } from "@/config";
 import { callsApi } from "@/features/calls/api/callsApi";
@@ -11,6 +14,8 @@ import { Select, type SelectOption } from "@/components/ui/select";
 import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 
 interface PolicyForm {
+  townHallEnabled: boolean;
+  townHallChannelIds: string[];
   callsEnabled: boolean;
   maxParticipants: number;
   maxDurationMinutes: number;
@@ -40,6 +45,11 @@ const QUALITY_CALL_TYPES: {
 
 export function CallsPolicySection() {
   useDocumentTitle("Calls");
+  const dispatch = useAppDispatch();
+  const channels = useAppSelector(selectChannels);
+  useEffect(() => {
+    void dispatch(fetchChannels());
+  }, [dispatch]);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const role = useAppSelector((state) => state.auth.currentOrganizationRole);
   const isAdmin = role === "OWNER" || role === "ADMIN";
@@ -60,6 +70,8 @@ export function CallsPolicySection() {
         policy
           ? {
               callsEnabled: policy.callsEnabled,
+              townHallEnabled: policy.townHallEnabled,
+              townHallChannelIds: [...policy.townHallChannelIds],
               maxParticipants: policy.maxParticipants,
               maxDurationMinutes: policy.maxDurationMinutes,
               maxScreenShareQualityDirect: policy.maxScreenShareQualityDirect,
@@ -92,6 +104,8 @@ export function CallsPolicySection() {
       if (policy) {
         setForm({
           callsEnabled: policy.callsEnabled,
+          townHallEnabled: policy.townHallEnabled,
+          townHallChannelIds: [...policy.townHallChannelIds],
           maxParticipants: policy.maxParticipants,
           maxDurationMinutes: policy.maxDurationMinutes,
           maxScreenShareQualityDirect: policy.maxScreenShareQualityDirect,
@@ -147,12 +161,46 @@ export function CallsPolicySection() {
             description="Turn calling on or off for the whole organization."
           >
             <ToggleSwitch
+              ariaLabel="Calls enabled"
               enabled={form.callsEnabled}
               onChange={(v) => update("callsEnabled", v)}
               disabled={disabled}
             />
           </Row>
 
+          <Row
+            title="Town halls"
+            description="Let hosts run calls with speakers and a listening audience. Applies when starting or switching call mode."
+          >
+            <ToggleSwitch
+              ariaLabel="Town halls enabled"
+              enabled={form.townHallEnabled}
+              onChange={(value) => update("townHallEnabled", value)}
+              disabled={disabled}
+            />
+          </Row>
+          {form.townHallEnabled && (
+            <div className="p-5 space-y-2">
+              <h3 className="text-sm font-semibold">Town-hall channels</h3>
+              <p className="text-xs text-muted-foreground">
+                Leave empty to allow all public and private channels.
+              </p>
+              <MultiSelect
+                value={form.townHallChannelIds}
+                onChange={(value) => update("townHallChannelIds", value)}
+                options={channels
+                  .filter(
+                    (c) =>
+                      !c.isArchived && (c.channelType === "PUBLIC" || c.channelType === "PRIVATE"),
+                  )
+                  .map((c) => ({ value: c.id, label: c.name }))}
+                disabled={disabled}
+                searchable
+                ariaLabel="Town-hall channels"
+                placeholder="All channels"
+              />
+            </div>
+          )}
           <div className="p-5">
             <h3 className="text-sm font-semibold text-foreground">Screen-share quality policy</h3>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">

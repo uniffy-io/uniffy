@@ -1,3 +1,6 @@
+import { CallModeControl } from "@/features/calls/components/CallModeControl";
+import { canPublishInCall, AUDIENCE_MESSAGE } from "@/features/calls/utils/callPublishing";
+import { useCallPublishing } from "@/features/calls/hooks/useCallPublishing";
 import { CallReactionOverlay } from "@/features/calls/components/CallReactionOverlay";
 import { useState } from "react";
 import { CallParticipation } from "@/features/calls/components/CallParticipation";
@@ -11,6 +14,7 @@ import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants"
 import { selectCallSession, selectSessionCall } from "@/features/calls/store/callsSlice";
 
 export function CallPopout() {
+  const { canPublish } = useCallPublishing();
   const [chatOpen, setChatOpen] = useState(false);
   const { room, popoutWindow, closePopout } = useCall();
   const participants = useRoomParticipants(room);
@@ -21,6 +25,7 @@ export function CallPopout() {
   return createPortal(
     <div className="flex h-dvh flex-col gap-3 p-3" data-testid="call-popout">
       <header className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <CallModeControl />
         <span>{session.status === "reconnecting" ? "Reconnecting..." : "Live call"}</span>
         <button
           type="button"
@@ -33,7 +38,9 @@ export function CallPopout() {
       <div className="flex min-h-0 flex-1 flex-col gap-3 sm:flex-row">
         <div className="relative min-h-24 min-w-0 flex-1">
           <CallGrid
-            participants={participants}
+            participants={participants.filter((p) =>
+              canPublishInCall(call, p.identity.split(":")[0]),
+            )}
             nameFor={(p) =>
               call?.participants.find((member) => member.identity === p.identity)?.displayName
             }
@@ -50,6 +57,11 @@ export function CallPopout() {
           </div>
         )}
       </div>
+      {!canPublish && (
+        <p role="status" className="text-xs text-muted-foreground">
+          {AUDIENCE_MESSAGE}
+        </p>
+      )}
       {feedback && (
         <p role="alert" className="text-sm text-muted-foreground">
           {feedback}

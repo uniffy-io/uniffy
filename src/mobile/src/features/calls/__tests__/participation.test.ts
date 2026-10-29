@@ -8,6 +8,7 @@ import {
   reactionsKey,
   upsertActiveCall,
   syncActiveCalls,
+  setCallHost,
 } from "@features/calls/useCallsState";
 import type { PlainCall } from "@features/calls/callsSerializer";
 vi.mock("@core/providers/AuthContext", () => ({ useAuth: vi.fn() }));
@@ -93,4 +94,30 @@ describe("call participation cache", () => {
       pushCallReaction(qc, "org", { ...reaction, id: String(i), expiresAt: Date.now() + 5000 });
     expect(qc.getQueryData(reactionsKey("org"))).toHaveLength(5);
   });
+});
+
+it("keeps audience roles when a stale call snapshot arrives", () => {
+  const qc = new QueryClient();
+  upsertActiveCall(qc, "org", {
+    ...call,
+    townHall: true,
+    speakerUserIds: [],
+    publishingRevision: 4,
+  });
+  syncActiveCalls(qc, "org", [
+    { ...call, townHall: false, speakerUserIds: ["user"], publishingRevision: 3 },
+  ]);
+  setCallHost(qc, "org", "call", "departed", 3);
+  expect(
+    qc.getQueryData<Record<string, PlainCall>>(activeCallsKey("org"))?.channel.hostUserId,
+  ).toBe("host");
+  expect(qc.getQueryData<Record<string, PlainCall>>(activeCallsKey("org"))?.channel).toMatchObject({
+    townHall: true,
+    speakerUserIds: [],
+    publishingRevision: 4,
+  });
+  upsertActiveCall(qc, "org", { ...call, townHall: false, publishingRevision: 5 });
+  expect(qc.getQueryData<Record<string, PlainCall>>(activeCallsKey("org"))?.channel.townHall).toBe(
+    false,
+  );
 });
