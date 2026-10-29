@@ -12,6 +12,7 @@ import { AccountSection } from "@/features/settings/components/AccountSection";
 import { SecuritySection } from "@/features/settings/components/SecuritySection";
 import { AgentsSection } from "@/features/settings/components/AgentsSection";
 import { OrganizationMembershipSection } from "@/features/settings/components/OrganizationMembershipSection";
+import { CallsSection } from "@/features/calls/components/CallsSection";
 import { useSettings } from "@/features/settings/hooks/useSettings";
 
 export function SettingsPage() {
@@ -46,6 +47,8 @@ export function SettingsPage() {
     switch (activeSection) {
       case "appearance":
         return <AppearanceSection />;
+      case "calls":
+        return <CallsSection />;
       case "shortcuts":
         return <KeyboardShortcutsSection />;
       case "notifications":

@@ -4,6 +4,7 @@ import {
   Buildings,
   Devices,
   Bell,
+  Phone,
   ShieldCheck,
   Moon,
   Question,
@@ -13,7 +14,7 @@ import {
   CaretRight,
 } from "phosphor-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useAuth } from "@core/providers/AuthContext";
 import { useMyOrganizations } from "@features/auth/useMyOrganizations";
@@ -116,6 +117,23 @@ export function YouScreen() {
                 </Text>
               </View>
               <CaretRight size={15} color={T.textDim} weight="regular" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              activeOpacity={0.7}
+              onPress={() => router.push("/you/calls" as Href)}
+            >
+              <View style={[styles.settingIcon, { backgroundColor: T.surfaceHover }]}>
+                <Phone size={15} color={T.text} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.settingLabel, { color: T.textBright }]}>Calls</Text>
+                <Text style={[styles.settingSub, { color: T.textDim }]}>
+                  Ringtone, camera and join defaults
+                </Text>
+              </View>
+              <CaretRight size={15} color={T.textDim} />
             </TouchableOpacity>
 
             <TouchableOpacity

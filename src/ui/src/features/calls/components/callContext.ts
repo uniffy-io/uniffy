@@ -9,6 +9,9 @@ export interface JoinMediaOptions {
 
 export interface CallContextValue {
   room: Room | null;
+  popoutWindow: Window | null;
+  openPopout: () => Promise<void>;
+  closePopout: () => void;
   availability: CallAvailability;
   checkAvailability: (checkMedia?: boolean) => Promise<CallAvailability>;
   joinChannelCall: (channelId: string, opts: JoinMediaOptions) => Promise<void>;

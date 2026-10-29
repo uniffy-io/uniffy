@@ -105,7 +105,7 @@ function DeviceSelect({
   );
 }
 
-export function PreJoinScreen() {
+function PreJoinContent() {
   const dispatch = useAppDispatch();
   const { joinChannelCall, joinCallById, availability, checkAvailability } = useCall();
   const prejoin = useAppSelector(selectPrejoin);
@@ -119,8 +119,8 @@ export function PreJoinScreen() {
   const userName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
 
-  const [micOn, setMicOn] = useState(false);
-  const [camOn, setCamOn] = useState(false);
+  const [micOn, setMicOn] = useState(!(preferences.joinMuted ?? true));
+  const [camOn, setCamOn] = useState(preferences.cameraOn ?? false);
   const [micError, setMicError] = useState<string | null>(null);
   const [camError, setCamError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -148,11 +148,11 @@ export function PreJoinScreen() {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
+  const micStreamRef = useRef<MediaStream | null>(null);
   const stopMicStream = useCallback(() => {
-    setMicStream((s) => {
-      s?.getTracks().forEach((t) => t.stop());
-      return null;
-    });
+    micStreamRef.current?.getTracks().forEach((track) => track.stop());
+    micStreamRef.current = null;
+    setMicStream(null);
   }, []);
 
   useEffect(() => {
@@ -208,6 +208,7 @@ export function PreJoinScreen() {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+        micStreamRef.current = stream;
         setMicStream(stream);
         setMicError(null);
         void refresh();
@@ -255,8 +256,6 @@ export function PreJoinScreen() {
       } else {
         await joinChannelCall(channelId, opts);
       }
-      // Reset toggles so a later reopen starts fresh (mic/cam off) rather than
-      // showing a stale "ON" with no preview stream.
       setMicOn(false);
       setCamOn(false);
       setCheckedTarget(null);
@@ -446,4 +445,10 @@ export function PreJoinScreen() {
       </div>
     </Modal>
   );
+}
+
+export function PreJoinScreen() {
+  const target = useAppSelector(selectPrejoin);
+  if (!target) return null;
+  return <PreJoinContent key={`${target.channelId}:${target.callId ?? "new"}`} />;
 }

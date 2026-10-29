@@ -1,6 +1,6 @@
 /** ContentEditable compose; mention chips serialize back to `[[[label|urn]]]` on send. */
 
-import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState, useId } from "react";
 import {
   Plus,
   Smiley,
@@ -18,7 +18,15 @@ import { cn } from "@/shared/utils/cn";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ChatMentionPopup } from "@/features/agents/components/chat/ChatMentionPopup";
-import { SkillSlashPopup } from "@/features/agents/components/chat/SkillSlashPopup";
+import { ComposerCommandMenu } from "@/features/chat/components/compose/ComposerCommandMenu";
+import {
+  composerActions,
+  composerOptions,
+  isStandaloneCommand,
+  matchComposerAction,
+  type ComposerCommandHandlers,
+  type ComposerOption,
+} from "@/features/chat/utils/composerCommands";
 import { computeSlashToken } from "@/features/agents/utils/slashCommands";
 import {
   matchChatSkillCommand,
@@ -88,6 +96,7 @@ interface PendingBroadcastSend {
 }
 
 interface MessageComposeProps {
+  commandHandlers?: ComposerCommandHandlers;
   channelName: string;
   /** Enables channel-aware toolbar extras (agent DM model picker). */
   channelId?: string;
@@ -262,6 +271,7 @@ export function MessageCompose({
   placeholder,
   organizationId,
   onSend,
+  commandHandlers,
   sendOption,
   onTyping,
   replyTo,
@@ -369,6 +379,10 @@ export function MessageCompose({
   // Track slash tokens against the caret's text node, like mentions.
   const [slashActive, setSlashActive] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
+  const [slashHighlight, setSlashHighlight] = useState(0);
+  const [standaloneSlash, setStandaloneSlash] = useState(false);
+  const slashMenuId = useId();
+  const actions = useMemo(() => composerActions(commandHandlers ?? {}), [commandHandlers]);
   const slashStartNodeRef = useRef<Node | null>(null);
   const slashStartOffsetRef = useRef(0);
   const slashEndOffsetRef = useRef(0);
@@ -377,6 +391,16 @@ export function MessageCompose({
     name: string;
   } | null>(null);
   const runnableSkills = useAppSelector(selectRunnableSkillsForAgent(skillAgentId, "chat"));
+  const slashOptions = useMemo(
+    () =>
+      composerOptions(
+        standaloneSlash && !editingMessage ? actions : [],
+        runnableSkills,
+        slashQuery,
+      ),
+    [actions, standaloneSlash, editingMessage, runnableSkills, slashQuery],
+  );
+  const activeSlashIndex = slashHighlight < slashOptions.length ? slashHighlight : 0;
   const [isSending, setIsSending] = useState(false);
   const sendDisabled = isSending || hasPendingUploads || (isEmpty && !pendingInvokedSkill);
   const sendingRef = useRef(false);
@@ -632,10 +656,15 @@ export function MessageCompose({
       }
     }
 
-    if (!skillAgentId) return;
+    if (editingMessage || (!skillAgentId && actions.length === 0)) {
+      if (slashActive) closeSlash();
+      return;
+    }
 
     const token = computeSlashToken(textBefore);
-    if (!token) {
+    const standalone =
+      !!token && isStandaloneCommand(serializeToMarkdown(editorRef.current!), token.query);
+    if (!token || (!standalone && !skillAgentId)) {
       if (slashActive) closeSlash();
       return;
     }
@@ -643,6 +672,8 @@ export function MessageCompose({
     slashStartOffsetRef.current = token.start;
     slashEndOffsetRef.current = offset;
     setSlashQuery(token.query);
+    setStandaloneSlash(standalone);
+    setSlashHighlight(0);
     setSlashActive(true);
   }, [
     updateState,
@@ -650,6 +681,8 @@ export function MessageCompose({
     mentionActive,
     onTyping,
     skillAgentId,
+    actions,
+    editingMessage,
     slashActive,
     closeSlash,
   ]);
@@ -751,6 +784,29 @@ export function MessageCompose({
     [closeSlash, updateState, emitDraftChange],
   );
 
+  const handleCommandSelect = useCallback(
+    (option: ComposerOption) => {
+      if (option.kind === "skill") {
+        handleSlashSelect(option.skill);
+        return;
+      }
+      const el = editorRef.current;
+      if (!el || sendingRef.current) return;
+      const content = serializeToMarkdown(el);
+      if (!isStandaloneCommand(content, slashQuery) && !matchComposerAction(content, [option])) {
+        closeSlash();
+        return;
+      }
+      if (!commandHandlers?.[option.id]?.()) return;
+      el.innerHTML = "";
+      setPendingInvokedSkill(null);
+      closeSlash();
+      updateState();
+      emitDraftChange();
+    },
+    [commandHandlers, slashQuery, handleSlashSelect, closeSlash, updateState, emitDraftChange],
+  );
+
   const handleSlashClose = useCallback(() => {
     closeSlash();
     editorRef.current?.focus();
@@ -801,6 +857,12 @@ export function MessageCompose({
       }
       el.innerHTML = "";
       updateState();
+      return;
+    }
+
+    const action = matchComposerAction(trimmed, actions);
+    if (action) {
+      handleCommandSelect(action);
       return;
     }
 
@@ -860,6 +922,8 @@ export function MessageCompose({
     performSend(content, fileIds, metadata);
   }, [
     performSend,
+    actions,
+    handleCommandSelect,
     updateState,
     pendingFiles,
     hasPendingUploads,
@@ -899,6 +963,7 @@ export function MessageCompose({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.nativeEvent.isComposing) return;
       // Backspace after a chip deletes it; contentEditable=false elements aren't auto-removed.
       if (e.key === "Backspace" && !e.shiftKey) {
         const sel = window.getSelection();
@@ -960,12 +1025,23 @@ export function MessageCompose({
         return;
       }
 
-      // The slash popup's own document listener turns Enter into a selection and
-      // Escape into a close; the composer only has to not send / not cancel.
-      if (slashActive && e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        return;
+      if (slashActive && slashOptions.length > 0 && !e.shiftKey) {
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          setSlashHighlight(
+            (activeSlashIndex + (e.key === "ArrowDown" ? 1 : -1) + slashOptions.length) %
+              slashOptions.length,
+          );
+          return;
+        }
+        if (e.key === "Enter" || e.key === "Tab") {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCommandSelect(slashOptions[activeSlashIndex]);
+          return;
+        }
       }
+      if (e.key === "Tab" && slashActive) closeSlash();
 
       // An Escape consumed here must not also reach the document listeners of
       // the overlays under the composer (thread slide-over, dialogs).
@@ -1025,6 +1101,10 @@ export function MessageCompose({
     [
       mentionActive,
       slashActive,
+      slashOptions,
+      activeSlashIndex,
+      handleCommandSelect,
+      closeSlash,
       handleSend,
       handleMentionClose,
       updateState,
@@ -1191,11 +1271,13 @@ export function MessageCompose({
         data-mode={editingMessage ? "edit" : replyTo ? "reply" : "normal"}
         data-variant={variant}
       >
-        {slashActive && !!skillAgentId && (
-          <SkillSlashPopup
-            skills={runnableSkills}
-            query={slashQuery}
-            onSelect={handleSlashSelect}
+        {slashActive && (
+          <ComposerCommandMenu
+            id={slashMenuId}
+            options={slashOptions}
+            activeIndex={activeSlashIndex}
+            onHighlight={setSlashHighlight}
+            onSelect={handleCommandSelect}
             onClose={handleSlashClose}
           />
         )}
@@ -1286,6 +1368,11 @@ export function MessageCompose({
             role="textbox"
             aria-label={displayPlaceholder}
             aria-multiline="true"
+            aria-autocomplete="list"
+            aria-controls={slashActive ? slashMenuId : undefined}
+            aria-activedescendant={
+              slashActive && slashOptions.length ? `${slashMenuId}-${activeSlashIndex}` : undefined
+            }
             onInput={handleInput}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}

@@ -38,7 +38,7 @@ import {
 } from "@features/calls/livekit";
 import { AudioRouteIcon } from "@features/calls/components/AudioRouteSheet";
 import { useAudioOutputs } from "@features/calls/useAudioOutputs";
-import { useCameraFit } from "@features/calls/callPrefs";
+import { useCameraFit, getJoinMediaPreferences } from "@features/calls/callPrefs";
 import { ZoomableStage } from "@features/calls/components/ZoomableStage";
 import { useChannels } from "@features/chat/useChat";
 import { Avatar } from "@shared/components/Avatar";
@@ -51,7 +51,11 @@ import { FONT } from "@theme/typography";
 // on iOS, so the camera preview cannot live in a BottomSheet. Nothing may be
 // stacked over it either - a Modal above the preview detaches its video surface
 // for good, which is why the audio routes are an inline list.
-export function PreJoinScreen() {
+function PreJoinContent({
+  defaults,
+}: {
+  defaults: Awaited<ReturnType<typeof getJoinMediaPreferences>>;
+}) {
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -77,9 +81,9 @@ export function PreJoinScreen() {
   const inCall = session.status !== "idle";
   const busyElsewhere = inCall && session.channelId !== channelId;
 
-  const [micOn, setMicOn] = useState(false);
-  const [cameraOn, setCameraOn] = useState(false);
-  const [facing, setFacing] = useState<"user" | "environment">("user");
+  const [micOn, setMicOn] = useState(defaults.mic);
+  const [cameraOn, setCameraOn] = useState(defaults.camera);
+  const [facing, setFacing] = useState<"user" | "environment">(defaults.facing);
   const [previewTrack, setPreviewTrack] = useState<LocalVideoTrack | null>(null);
   const [routeOpen, setRouteOpen] = useState(false);
   // Routes are only enumerable once the audio session is actually running, so the
@@ -504,3 +508,20 @@ const styles = StyleSheet.create({
   },
   joinLabel: { fontSize: 15, fontFamily: FONT.semibold, color: "#ffffff" },
 });
+
+export function PreJoinScreen() {
+  const [defaults, setDefaults] = useState<Awaited<
+    ReturnType<typeof getJoinMediaPreferences>
+  > | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getJoinMediaPreferences().then((value) => {
+      if (active) setDefaults(value);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (!defaults) return <ActivityIndicator accessibilityLabel="Loading call preferences" />;
+  return <PreJoinContent defaults={defaults} />;
+}

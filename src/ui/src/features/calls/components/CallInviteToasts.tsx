@@ -1,3 +1,4 @@
+import { useFormattedKeybinding } from "@/features/settings/hooks/useKeyboardShortcuts";
 import { useEffect } from "react";
 import { Phone, PhoneDisconnect } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
@@ -66,6 +67,8 @@ function useRingtone(active: boolean) {
 }
 
 function InviteCard({ invite }: { invite: RingInvite }) {
+  const answerBinding = useFormattedKeybinding("calls.answer");
+  const declineBinding = useFormattedKeybinding("calls.decline");
   const dispatch = useAppDispatch();
 
   useEffect(() => {
@@ -112,6 +115,7 @@ function InviteCard({ invite }: { invite: RingInvite }) {
         type="button"
         onClick={() => void dispatch(declineCall(invite.callId))}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+        title={`Decline (${declineBinding})`}
         aria-label="Decline call"
         data-testid="call-invite-decline"
       >
@@ -126,6 +130,7 @@ function InviteCard({ invite }: { invite: RingInvite }) {
           dispatch(prejoinOpened({ channelId: invite.channelId, callId: invite.callId }));
         }}
         className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600"
+        title={`Answer (${answerBinding})`}
         aria-label="Accept call"
         data-testid="call-invite-accept"
       >

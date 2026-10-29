@@ -1,3 +1,4 @@
+import { CallPopoutButton } from "@/features/calls/components/CallPopoutButton";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Track } from "livekit-client";
 import type { Participant } from "livekit-client";
@@ -42,7 +43,7 @@ function sameTarget(a: FocusTarget | null, b: FocusTarget): boolean {
   return !!a && a.identity === b.identity && a.source === b.source;
 }
 
-function CallGrid({
+export function CallGrid({
   participants,
   nameFor,
 }: {
@@ -169,7 +170,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
   // ?? null: pre-existing persisted state may lack the field (redux-persist
   // replaces the slice wholesale on rehydrate).
   const persistedHeight = useAppSelector((s) => s.callPreferences.viewHeightPx ?? null);
-  const { room } = useCall();
+  const { room, popoutWindow, closePopout } = useCall();
   const participants = useRoomParticipants(room);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -267,6 +268,7 @@ function CallViewInner({ channelId }: { channelId: string }) {
           {session.status === "reconnecting" && <ReconnectingChip />}
         </div>
         <div className="flex items-center gap-2">
+          <CallPopoutButton />
           {!collapsed && <ControlsBar onToggleParticipants={() => setParticipantsOpen(true)} />}
           {!collapsed && (
             <button
@@ -295,7 +297,22 @@ function CallViewInner({ channelId }: { channelId: string }) {
 
       {!collapsed && (
         <div className="relative flex-1 min-h-0 px-3 pb-3">
-          <CallGrid participants={participants} nameFor={(p) => rosterByIdentity.get(p.identity)} />
+          {popoutWindow ? (
+            <div className="flex h-full items-center justify-center text-sm">
+              <button
+                type="button"
+                className="min-h-11 text-primary hover:underline"
+                onClick={closePopout}
+              >
+                Return call to this tab
+              </button>
+            </div>
+          ) : (
+            <CallGrid
+              participants={participants}
+              nameFor={(p) => rosterByIdentity.get(p.identity)}
+            />
+          )}
           {showSoloPrompt && (
             <div role="status" className="absolute inset-x-0 bottom-6 flex justify-center">
               <div className={cn(popoverShellClass, "px-3 py-2 text-xs text-muted-foreground")}>

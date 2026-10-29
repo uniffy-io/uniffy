@@ -155,3 +155,46 @@ export function setPreferredAudioOutput(deviceId: string | null): Promise<void> 
 export function usePreferredAudioOutput(): [string | null, (deviceId: string | null) => void] {
   return usePref(audioOutputPref);
 }
+
+const joinMutedPref = definePref<boolean>(
+  "uniffy_call_join_muted",
+  true,
+  (raw) => raw !== "false",
+  String,
+);
+const cameraOnPref = definePref<boolean>(
+  "uniffy_call_camera_on",
+  false,
+  (raw) => raw === "true",
+  String,
+);
+const cameraFacingPref = definePref<"user" | "environment">(
+  "uniffy_call_camera_facing",
+  "user",
+  (raw) => (raw === "environment" ? "environment" : "user"),
+  String,
+);
+
+export function useJoinMuted(): [boolean, (value: boolean) => void] {
+  return usePref(joinMutedPref);
+}
+
+export function useCameraOn(): [boolean, (value: boolean) => void] {
+  return usePref(cameraOnPref);
+}
+
+export function usePreferredCamera(): [
+  "user" | "environment",
+  (value: "user" | "environment") => void,
+] {
+  return usePref(cameraFacingPref);
+}
+
+export async function getJoinMediaPreferences() {
+  const [muted, camera, facing] = await Promise.all([
+    joinMutedPref.get(),
+    cameraOnPref.get(),
+    cameraFacingPref.get(),
+  ]);
+  return { mic: !muted, camera, facing };
+}

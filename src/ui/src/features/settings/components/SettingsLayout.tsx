@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Robot,
   Buildings,
+  Phone,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 
@@ -18,6 +19,7 @@ export type SettingsSection =
   | "profile"
   | "security"
   | "agents"
+  | "calls"
   | "general"
   | "organization";
 
@@ -30,6 +32,7 @@ interface SettingsLayoutProps {
 const SECTIONS: { id: SettingsSection; label: string; icon: React.ElementType }[] = [
   { id: "appearance", label: "Appearance", icon: PaintBrush },
   { id: "shortcuts", label: "Keyboard Shortcuts", icon: Key },
+  { id: "calls", label: "Calls", icon: Phone },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "profile", label: "Account", icon: UserCircle },
   { id: "security", label: "Security", icon: ShieldCheck },
@@ -57,6 +60,7 @@ export function SettingsLayout({ activeSection, onSectionChange, children }: Set
                     ? "bg-muted text-foreground"
                     : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
                 )}
+                aria-label={label}
                 onClick={() => onSectionChange(id)}
               >
                 <Icon size={18} weight="duotone" className="shrink-0" />

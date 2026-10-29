@@ -9,6 +9,8 @@ export interface CallPreferencesState {
   videoInputId: string | null;
   audioOutputId: string | null;
   ringtoneEnabled: boolean;
+  joinMuted: boolean;
+  cameraOn: boolean;
   /** Last drag-resized CallView height in px; null = default 40%. */
   viewHeightPx: number | null;
   /** Preferred screen-share ceiling; UNSPECIFIED follows the org-resolved cap. */
@@ -20,6 +22,8 @@ const initialState: CallPreferencesState = {
   videoInputId: null,
   audioOutputId: null,
   ringtoneEnabled: true,
+  joinMuted: true,
+  cameraOn: false,
   viewHeightPx: null,
   screenShareQuality: ScreenShareQuality.UNSPECIFIED,
 };
@@ -36,6 +40,12 @@ const callPreferencesSlice = createSlice({
     },
     audioOutputSelected(state, action: PayloadAction<string | null>) {
       state.audioOutputId = action.payload;
+    },
+    joinMutedChanged(state, action: PayloadAction<boolean>) {
+      state.joinMuted = action.payload;
+    },
+    cameraOnChanged(state, action: PayloadAction<boolean>) {
+      state.cameraOn = action.payload;
     },
     ringtoneToggled(state, action: PayloadAction<boolean>) {
       state.ringtoneEnabled = action.payload;
@@ -54,6 +64,8 @@ export const {
   videoInputSelected,
   audioOutputSelected,
   ringtoneToggled,
+  joinMutedChanged,
+  cameraOnChanged,
   viewHeightChanged,
   screenShareQualitySelected,
 } = callPreferencesSlice.actions;
