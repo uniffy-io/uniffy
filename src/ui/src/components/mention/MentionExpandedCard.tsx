@@ -3,6 +3,7 @@ import { CaretUp } from "@phosphor-icons/react";
 import { parseUrn, UrnType } from "@/shared/utils/urn";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
 import {
+  CallMentionPreview,
   TaskMentionPreview,
   CalendarMentionPreview,
   ProjectMentionPreview,
@@ -60,6 +61,8 @@ export function MentionExpandedCard({
 
   function renderPreview() {
     switch (parsed.type) {
+      case UrnType.CALL:
+        return <CallMentionPreview {...previewProps} />;
       case UrnType.TASK:
         return <TaskMentionPreview {...previewProps} />;
       case UrnType.CALENDAR_EVENT:

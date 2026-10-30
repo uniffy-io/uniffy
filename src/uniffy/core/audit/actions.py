@@ -229,6 +229,7 @@ class Action:
     # Calls (join/leave stay unaudited - calls_participants is the durable
     # attendance record; the audit log carries lifecycle + moderation only)
     CALL_PUBLISHING_CHANGED = "call.publishing_changed"
+    CALL_INVITATION_RESPONDED = "call.invitation_responded"
     CALL_STARTED = "call.started"
     CALL_ENDED = "call.ended"
     CALL_PARTICIPANT_KICKED = "call.participant_kicked"

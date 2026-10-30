@@ -11,6 +11,7 @@ import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
 import type { MentionLiveState } from "@/components/mention/types";
 import {
+  CallMentionPreview,
   TaskMentionPreview,
   CalendarMentionPreview,
   ProjectMentionPreview,
@@ -61,6 +62,7 @@ function getTypeTheme(type: UrnType): TypeTheme {
 }
 
 const KNOWN_PREVIEW_TYPES = new Set<UrnType>([
+  UrnType.CALL,
   UrnType.TASK,
   UrnType.CALENDAR_EVENT,
   UrnType.PROJECT,
@@ -210,6 +212,15 @@ export function MentionPreview({
           </div>
         )}
 
+        {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.CALL && (
+          <CallMentionPreview
+            urn={preview.urn}
+            title={preview.title}
+            liveState={effectiveLiveState}
+            onClose={onClose}
+            onCopyLink={handleCopyLink}
+          />
+        )}
         {/* Type-specific preview cards */}
         {preview && !isLoading && !error && effectiveLiveState && parsed?.type === UrnType.TASK && (
           <TaskMentionPreview

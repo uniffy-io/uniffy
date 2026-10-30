@@ -12,3 +12,5 @@ export { AgentMentionPreview } from "@/components/mention/previews/AgentMentionP
 export { TagMentionPreview } from "@/components/mention/previews/TagMentionPreview";
 export { ParentBadge, MetaSeparator } from "@/components/mention/previews/ParentBadge";
 export { MentionMediaPreview } from "@/components/mention/previews/MentionMediaPreview";
+
+export { CallMentionPreview } from "@/components/mention/previews/CallMentionPreview";

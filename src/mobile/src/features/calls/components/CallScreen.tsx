@@ -6,16 +6,7 @@ import { CallChat } from "@features/calls/components/CallChat";
 import { useCallModeration } from "@features/calls/useCallModeration";
 import { useParticipantActions } from "@features/calls/useParticipantActions";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MicrophoneSlash, PushPinSlash, Users } from "phosphor-react-native";
 import { loadLivekitClient } from "@features/calls/livekit";
@@ -32,6 +23,7 @@ import { CallParticipantsSheet } from "@features/calls/components/CallParticipan
 import { ZoomableStage } from "@features/calls/components/ZoomableStage";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { GlassSurface } from "@shared/components/GlassSurface";
+import { KeyboardSpacer } from "@shared/components/KeyboardSpacer";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
@@ -201,10 +193,7 @@ export function CallScreen() {
   const heroParticipant = remoteParticipant ?? localParticipant;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={[styles.root, { backgroundColor: T.pageBg }]}
-    >
+    <View style={[styles.root, { backgroundColor: T.pageBg }]}>
       <DomainHeader
         title={channelTitle}
         subtitle={status}
@@ -243,6 +232,27 @@ export function CallScreen() {
           <MicrophoneSlash size={13} color={T.textDim} weight="fill" />
           <Text style={[styles.bannerText, { color: T.textDim }]}>
             Joined on a second device - mic muted
+          </Text>
+        </View>
+      ) : null}
+      {activeCall?.townHall ? (
+        <View
+          style={[
+            styles.banner,
+            styles.townHall,
+            { backgroundColor: T.surface, borderColor: T.border },
+          ]}
+        >
+          <Text style={[styles.bannerText, { color: T.textDim }]}>
+            Town hall · {audienceCount} listening
+          </Text>
+          {/* Only the role is live: the listener count ticks with every join and
+              would keep interrupting whatever the screen reader is saying. */}
+          <Text
+            accessibilityLiveRegion="polite"
+            style={[styles.bannerText, styles.townHallRole, { color: T.text }]}
+          >
+            {audience ? AUDIENCE_MESSAGE : "Speaker"}
           </Text>
         </View>
       ) : null}
@@ -379,19 +389,11 @@ export function CallScreen() {
             ))}
           </ScrollView>
         )}
+        <CallReactionOverlay />
       </View>
 
-      {activeCall?.townHall && (
-        <Text
-          accessibilityLiveRegion="polite"
-          style={{ color: T.textDim, fontSize: 12, paddingHorizontal: 18, paddingVertical: 6 }}
-        >
-          Town hall · {audienceCount} listening{audience ? ` · ${AUDIENCE_MESSAGE}` : " · Speaker"}
-        </Text>
-      )}
-      <CallReactionOverlay />
       {chatOpen && session.channelId && (
-        <View style={{ flex: 1, minHeight: 180, marginHorizontal: 10 }}>
+        <View style={styles.chat}>
           <CallChat
             key={session.channelId}
             channelId={session.channelId}
@@ -420,6 +422,9 @@ export function CallScreen() {
         <CallParticipation chatOpen={chatOpen} onToggleChat={() => setChatOpen(!chatOpen)} />
         <CallControls T={T} canModerate={canModerate} />
       </View>
+      {/* The shell drops its own spacer while the call is expanded, and with
+          native resize off this is what keeps the chat input above the keyboard. */}
+      <KeyboardSpacer />
 
       <CallParticipantsSheet
         visible={rosterOpen}
@@ -427,7 +432,7 @@ export function CallScreen() {
         participants={everyone}
         canModerate={canModerate}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -446,6 +451,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   bannerText: { fontSize: 12, fontFamily: FONT.medium },
+  // Wraps the role onto its own line rather than squeezing both into columns.
+  townHall: { flexWrap: "wrap", marginHorizontal: 14, columnGap: 8, rowGap: 2 },
+  townHallRole: { flexShrink: 1, textAlign: "center" },
   stage: { flex: 1, paddingHorizontal: 10, paddingTop: 10 },
   fillTile: { flex: 1 },
   pipLayout: { flex: 1 },
@@ -475,11 +483,13 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   unpinLabel: { fontSize: 11, fontFamily: FONT.medium, color: "#ffffff" },
+  chat: { flex: 1, minHeight: 180, marginHorizontal: 10, marginTop: 10 },
   soloWrap: { alignItems: "center", paddingVertical: 6 },
   soloText: { fontSize: 12, fontFamily: FONT.regular },
   rosterButton: { flexDirection: "row", alignItems: "center", gap: 4 },
   rosterCount: { fontSize: 12, fontFamily: FONT.semibold, fontVariant: ["tabular-nums"] },
   controls: {
+    gap: 6,
     marginHorizontal: 14,
     marginTop: 10,
     paddingVertical: 10,

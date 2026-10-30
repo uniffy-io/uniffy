@@ -84,11 +84,12 @@ async def _channel(session, org_id, owner_id, channel_type=ChannelType.PRIVATE) 
     return channel
 
 
-async def _call(session, access, *, org_id=None, host_id=None) -> Call:
+async def _call(session, access, *, org_id=None, host_id=None, town_hall=False) -> Call:
     org_id = org_id or access.org_id
     host_id = host_id or access.owner_id
     channel = await _channel(session, org_id, host_id)
     call = Call(
+        town_hall=town_hall,
         organization_id=org_id,
         channel_id=channel.id,
         call_type=CallType.CHANNEL,

@@ -11,7 +11,7 @@ paths:
 # Calls Domain: Voice/Video in Chat Channels
 
 Real-time audio/video sessions attached to a chat channel, powered by a self-hosted LiveKit SFU. A
-call is a property of its channel, not standalone content - it has no URN and no `access_mode`.
+call belongs to its channel. History records have a CALL URN for direct links and pasted references, with no independent sharing or `access_mode`. Current channel access gates history and reference previews. Calls stay excluded from search discovery.
 
 ## Access rides chat membership
 
@@ -21,6 +21,9 @@ active participant WITHOUT a `ChatChannelMember` row (an org member joining a PU
 admin moderating), so the `CallParticipant` rows - not channel-member rows - are the truth for "who is
 in the call." Any recipient/visibility set that keys off channel members must also union active
 participants, or those users go blind to their own call.
+
+Call mode is fixed at creation. Prejoin selects regular call or town hall; active-call surfaces only
+display it. SetCallMode rejects changes, while speaker grants remain mutable within town halls.
 
 ## Media transport
 
@@ -159,3 +162,15 @@ path. LiveKit's coordination registry shares the app's Valkey instance.
 | `src/mobile/src/features/calls/livekit.native.ts` | Native LiveKit glue: audio session + mic foreground service |
 | `src/mobile/modules/call-foreground-service/` | Local Expo module: Android `microphone` foreground service |
 | `.docker/compose/core.yaml` | LiveKit service + `webhook.urls`/keys config |
+
+## Speaking activity
+
+Each client reports its own approximate one-second speaking observations. An empty ReportCallActivity
+bootstraps server elapsed time and the attendance id. Subsequent reports bind to that attendance,
+user, device, organization and authenticated session, with current channel access required.
+Thirty-second observed/speaking bit masks merge with PostgreSQL bitwise OR; device overlap is unioned
+before talk time is counted. No audio is stored. Reports are bounded to eight chunks and the latest
+120 seconds, with a 120-second final-upload grace after leaving. Missing observations are unknown,
+never silence. History returns at most 240 buckets per paginated person and preserves coverage counts.
+Mobile suspension can leave gaps; activity is an estimate rather than an authoritative attendance or
+performance measure.

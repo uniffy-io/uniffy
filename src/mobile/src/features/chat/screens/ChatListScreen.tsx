@@ -33,6 +33,7 @@ import {
   MagnifyingGlass,
   PencilSimple,
   Phone,
+  ClockCounterClockwise,
 } from "phosphor-react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -372,6 +373,14 @@ export function ChatListScreen() {
       onBack={browsing ? exitBrowse : undefined}
       rightActions={
         <>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Call history"
+            onPress={() => router.push("/calls")}
+            hitSlop={8}
+          >
+            <ClockCounterClockwise size={21} color={T.text} weight="duotone" />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setBrowsing((v) => !v)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

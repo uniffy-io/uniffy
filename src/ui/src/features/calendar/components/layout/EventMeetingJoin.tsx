@@ -11,14 +11,10 @@ import type { RootState } from "@/app/store";
 
 interface EventMeetingJoinProps {
   channelId: string;
+  eventId: string;
 }
 
-/**
- * Online-meeting block for a channel-bound event: resolves the channel name,
- * gates join on access, and shows live state. Join rides the global pre-join
- * modal, so no navigation is needed to enter the call.
- */
-export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
+export function EventMeetingJoin({ channelId, eventId }: EventMeetingJoinProps) {
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
   const activeCall = useAppSelector((s: RootState) => selectActiveCallForChannel(s, channelId));
@@ -69,7 +65,7 @@ export function EventMeetingJoin({ channelId }: EventMeetingJoinProps) {
             size="sm"
             variant="default"
             disabled={hasAccess !== true}
-            onClick={() => dispatch(prejoinOpened({ channelId }))}
+            onClick={() => dispatch(prejoinOpened({ channelId, calendarEventId: eventId }))}
           >
             <VideoCamera size={14} weight="fill" />
             Join meeting

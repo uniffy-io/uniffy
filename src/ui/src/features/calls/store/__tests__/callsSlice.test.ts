@@ -242,6 +242,18 @@ describe("callsSlice", () => {
     expect(state.prejoin).toEqual({ channelId: "chan-1", callId: null });
   });
 
+  it("carries calendar context through prejoin and clears it for channel calls", () => {
+    let state = callsReducer(
+      init(),
+      prejoinOpened({ channelId: "chan-1", calendarEventId: "event-1::2026-10-29" }),
+    );
+    expect(state.prejoin?.calendarEventId).toBe("event-1::2026-10-29");
+    state = callsReducer(state, prejoinClosed());
+    expect(state.prejoin).toBeNull();
+    state = callsReducer(state, prejoinOpened({ channelId: "chan-1" }));
+    expect(state.prejoin?.calendarEventId).toBeUndefined();
+  });
+
   it("wipes every slice field on sign-out", () => {
     let state = callsReducer(init(), callUpserted(call()));
     state = callsReducer(

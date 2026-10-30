@@ -44,22 +44,25 @@ export const ChannelListItem = memo(function ChannelListItem({
 
   return (
     <>
-      <div className="flex items-center">
+      <div
+        className={cn(
+          "flex items-center rounded-md mx-1.5 transition-colors",
+          "max-w-[calc(100%-12px)]",
+          isActive
+            ? "bg-muted text-foreground font-medium"
+            : isMuted
+              ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              : hasUnread
+                ? "font-semibold text-foreground hover:bg-muted/60"
+                : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
+        )}
+      >
         <button
           {...prefetch}
+          type="button"
           onClick={handleClick}
           onContextMenu={handleContextMenu}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-1.5 rounded-md mx-1.5 cursor-pointer transition-colors text-left",
-            "max-w-[calc(100%-12px)]",
-            isActive
-              ? "bg-muted text-foreground font-medium"
-              : isMuted
-                ? "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                : hasUnread
-                  ? "font-semibold text-foreground hover:bg-muted/60"
-                  : "text-foreground/90 hover:bg-muted/60 hover:text-foreground",
-          )}
+          className="flex items-center gap-2 flex-1 min-w-0 px-3 py-1.5 cursor-pointer text-left bg-transparent"
           data-testid={`chat-sidebar-channel-${channel.id}`}
           data-channel-type={isPrivate ? "private" : "public"}
           data-active={isActive ? "true" : "false"}

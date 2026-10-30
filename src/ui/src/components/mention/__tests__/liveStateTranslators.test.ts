@@ -192,3 +192,20 @@ describe("container and room live-state translation", () => {
     expect(state.folderTotalSize).toBe(0);
   });
 });
+
+it("keeps call time metadata consistent across previews, resolution and streams", () => {
+  const urn = "urn:uniffy:content:CALL:019fc01f-12b6-7c82-bb38-2849821c22cb";
+  const metadata = {
+    started_at: "2026-10-29T12:00:00Z",
+    ended_at: "2026-10-29T12:15:00Z",
+    status: "ended",
+  };
+  const expected = {
+    callStartedAt: metadata.started_at,
+    callEndedAt: metadata.ended_at,
+    callStatus: "ended",
+  };
+  expect(metadataToLiveState(urn, create(UrnMetadataSchema, { metadata }))).toMatchObject(expected);
+  expect(buildLiveStateFromMetadata(urn, "Review", metadata)).toMatchObject(expected);
+  expect(streamChangesToLiveState(metadata)).toMatchObject(expected);
+});

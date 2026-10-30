@@ -1,5 +1,6 @@
 import { ArrowSquareOut } from "@phosphor-icons/react";
 import { useCall } from "@/features/calls/components/callContext";
+import { callControlClass } from "@/features/calls/components/controlChrome";
 
 export function CallPopoutButton() {
   const { openPopout, popoutWindow } = useCall();
@@ -7,11 +8,11 @@ export function CallPopoutButton() {
     <button
       type="button"
       onClick={() => void openPopout()}
-      className="flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted"
+      className={callControlClass(true)}
       aria-label={popoutWindow ? "Focus call window" : "Pop out call"}
       title="Pop out call"
     >
-      <ArrowSquareOut size={18} />
+      <ArrowSquareOut size={16} />
     </button>
   );
 }

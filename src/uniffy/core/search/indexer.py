@@ -113,6 +113,7 @@ RANK_SCORE_BY_ENTITY_TYPE: dict[str, float] = {
     "team": 0.8,
     "agent_cron_task": 0.7,
     "tag": 0.6,
+    "call": 0.5,
     "chat_message": 0.3,
 }
 

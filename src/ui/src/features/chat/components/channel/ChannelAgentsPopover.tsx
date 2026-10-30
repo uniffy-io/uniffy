@@ -89,17 +89,15 @@ export function ChannelAgentsPopover({ channelId, anchorRef, onClose }: ChannelA
           <span className="text-sm font-semibold text-foreground">Agent context</span>
           <span className="text-xs text-muted-foreground">({agentMembers.length})</span>
         </div>
-        {!isMobile && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Close"
-            data-testid="chat-channel-agents-popover-close"
-          >
-            <X size={14} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-label="Close"
+          data-testid="chat-channel-agents-popover-close"
+        >
+          <X size={14} />
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto">
         {agentMembers.length === 0 ? (
@@ -174,6 +172,7 @@ export function ChannelAgentsPopover({ channelId, anchorRef, onClose }: ChannelA
         onClose={onClose}
         side="right"
         className="w-[min(92vw,380px)]"
+        showClose={false}
         ariaLabel="Agent context"
       >
         <div className="flex flex-col h-full">{body}</div>

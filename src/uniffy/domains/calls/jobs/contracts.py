@@ -30,8 +30,20 @@ MONITOR_CALLS_SCHEDULE = JobRef(
     reliability=JobReliability.BEST_EFFORT,
 )
 
+FLUSH_CALL_HISTORY_SCHEDULE = JobRef(
+    name="cron:flush_call_history",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="pending call search projections and expired invitations",
+        trigger="ten-second core schedule",
+    ),
+)
+
 CALLS_JOB_REFS: tuple[JobRef, ...] = ()
 CALLS_SCHEDULED_JOB_REFS = (
+    FLUSH_CALL_HISTORY_SCHEDULE,
     MONITOR_CALLS_SCHEDULE,
     RECONCILE_CALLS_SCHEDULE,
     CLEANUP_ORPHAN_CALL_ROOMS_SCHEDULE,

@@ -73,6 +73,9 @@ const ROLE_ICONS: Record<string, typeof Crown | null> = {
   MEMBER: null,
 };
 
+// Trailing member-row buttons are size-7 with a gap-1 between them.
+const MEMBER_ACTION_SLOT_WIDTH = ["", "w-7", "w-15"];
+
 const MAX_NAME_LENGTH = 50;
 
 export function ChannelSettingsModal() {
@@ -175,6 +178,21 @@ export function ChannelSettingsModal() {
     const roleOrder: Record<string, number> = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
     return [...members].sort((a, b) => (roleOrder[a.role] ?? 3) - (roleOrder[b.role] ?? 3));
   }, [members]);
+
+  // Every row reserves room for the busiest row's buttons so the role column lines up.
+  const memberActionSlots = useMemo(
+    () =>
+      Math.max(
+        0,
+        ...sortedMembers.map((m) => {
+          const isAgent = m.subjectType === "AGENT";
+          const removable =
+            canEdit && m.role !== "OWNER" && (isAgent || m.userId !== currentUserId);
+          return Number(isAgent) + Number(removable);
+        }),
+      ),
+    [sortedMembers, canEdit, currentUserId],
+  );
 
   const categoryOptions = useMemo(
     () => [
@@ -786,49 +804,60 @@ export function ChannelSettingsModal() {
                                 />
                               </div>
                             ) : (
-                              <span
+                              <div className="flex w-[104px] shrink-0">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium",
+                                    ROLE_BADGE_STYLES[member.role],
+                                  )}
+                                >
+                                  {RoleIcon && <RoleIcon size={11} weight="fill" />}
+                                  {member.role}
+                                </span>
+                              </div>
+                            )}
+                            {memberActionSlots > 0 && (
+                              <div
                                 className={cn(
-                                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0",
-                                  ROLE_BADGE_STYLES[member.role],
+                                  "flex shrink-0 justify-end gap-1",
+                                  MEMBER_ACTION_SLOT_WIDTH[memberActionSlots],
                                 )}
                               >
-                                {RoleIcon && <RoleIcon size={11} weight="fill" />}
-                                {member.role}
-                              </span>
-                            )}
-                            {isAgentMember && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setExpandedAgentId((prev) =>
-                                    prev === member.subjectId ? null : member.subjectId,
-                                  )
-                                }
-                                className={cn(
-                                  "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
-                                  isAgentExpanded && "text-primary bg-primary/10",
+                                {isAgentMember && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedAgentId((prev) =>
+                                        prev === member.subjectId ? null : member.subjectId,
+                                      )
+                                    }
+                                    className={cn(
+                                      "flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors",
+                                      isAgentExpanded && "text-primary bg-primary/10",
+                                    )}
+                                    aria-label={
+                                      isAgentExpanded ? "Hide agent context" : "Show agent context"
+                                    }
+                                    title="Agent context"
+                                  >
+                                    <Gauge size={14} />
+                                  </button>
                                 )}
-                                aria-label={
-                                  isAgentExpanded ? "Hide agent context" : "Show agent context"
-                                }
-                                title="Agent context"
-                              >
-                                <Gauge size={14} />
-                              </button>
-                            )}
-                            {canEdit && !isOwner && !isSelf && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setMemberToRemove(member);
-                                  setShowRemoveConfirm(true);
-                                }}
-                                disabled={isRemoving}
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
-                                aria-label={`Remove ${displayName}`}
-                              >
-                                <UserMinus size={14} />
-                              </button>
+                                {canEdit && !isOwner && !isSelf && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMemberToRemove(member);
+                                      setShowRemoveConfirm(true);
+                                    }}
+                                    disabled={isRemoving}
+                                    className="flex size-7 items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors md:opacity-0 md:group-hover:opacity-100 disabled:opacity-50"
+                                    aria-label={`Remove ${displayName}`}
+                                  >
+                                    <UserMinus size={14} />
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
                           {isAgentExpanded && (

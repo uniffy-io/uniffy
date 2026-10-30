@@ -9,7 +9,7 @@ from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditResourceType
-from uniffy.core.models.calls import Call, CallParticipant, CallType
+from uniffy.core.models.calls import Call, CallParticipant
 from uniffy.domains.calls.admission import matches_media_session
 from uniffy.domains.calls.converters import call_to_event_dict
 from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
@@ -63,20 +63,8 @@ class CallPublishing:
         self, actor: UUID, organization_id: UUID, call_id: UUID, *, town_hall: bool
     ) -> Call:
         call = await self._moderated_call(actor, organization_id, call_id)
-        if town_hall:
-            if call.call_type != CallType.CHANNEL or not await town_hall_allowed(
-                self.session, organization_id, call.channel_id
-            ):
-                raise PermissionDeniedError(
-                    "town hall", "Town halls are not enabled for this channel"
-                )
         if call.town_hall != town_hall:
-            call.town_hall = town_hall
-            # Starting a town hall keeps only the current host on stage.
-            call.speaker_user_ids = []
-            await self._stage_change(call, actor)
-        await self.session.commit()
-        await self.sync_and_publish(call.id)
+            raise ValidationError("town_hall", "Call mode cannot change after the call has started")
         return call
 
     async def set_speaker(

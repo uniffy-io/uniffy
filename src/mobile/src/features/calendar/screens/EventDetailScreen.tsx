@@ -93,6 +93,7 @@ export function EventDetailScreen() {
     if (!meeting?.channelId) return;
     openPrejoin({
       channelId: meeting.channelId,
+      calendarEventId: id ?? meeting.id,
       channelName: meeting.title,
       callId: activeMeetingCall?.id,
     });

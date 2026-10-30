@@ -4,6 +4,7 @@ export const UrnType = {
   FILE: "file",
   FOLDER: "folder",
   CHAT: "chat",
+  CALL: "call",
   AGENT_CHAT: "agent_chat",
   AGENT_FOLDER: "agent_folder",
   CHAT_MESSAGE: "chat_message",

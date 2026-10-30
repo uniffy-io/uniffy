@@ -54,11 +54,12 @@ export function CallShortcuts() {
     }
     return actions;
   }, [connected, session.status, invites, dispatch, toggleMic, toggleCamera, leaveCurrentCall]);
-  useShortcutHandlers(handlers, { ignoreRepeat: true });
+  useShortcutHandlers(handlers, { ignoreRepeat: true, skipHandled: true });
   useShortcutHandlers(handlers, {
     targetWindow: popoutWindow ?? window,
     enabled: !!popoutWindow,
     ignoreRepeat: true,
+    skipHandled: true,
   });
 
   const hold = useMemo(
@@ -93,8 +94,10 @@ export function CallShortcuts() {
         event.repeat ||
         event.isComposing ||
         isEditableTarget(event.target) ||
+        // Dialogs, grids, menus and media own a bare Space (the file viewer plays
+        // video on it), so holding to talk only works from the call surface itself.
         (event.target as HTMLElement | null)?.closest?.(
-          "button, a[href], [role=button], [role=slider]",
+          "button, a[href], [role=button], [role=slider], [role=dialog], [role=alertdialog], [role=grid], [role=menu], [role=listbox], video, audio",
         )
       )
         return;

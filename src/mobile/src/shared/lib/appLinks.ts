@@ -29,6 +29,10 @@ export function appPathForLink(link: string, serverOrigin: string): string | nul
     const calendarId = url.searchParams.get("calendar");
     return calendarId ? `/calendar?calendar=${encodeURIComponent(calendarId)}` : "/calendar";
   }
+  if (/^\/calls(?:\/[^/?#]+)?\/?$/.test(path)) {
+    const channelId = url.searchParams.get("channelId");
+    return channelId ? `${path}?channelId=${encodeURIComponent(channelId)}` : path;
+  }
   const project = PROJECT_PATH.exec(path);
   if (!project) return null;
   const viewId = url.searchParams.get("view");

@@ -51,10 +51,17 @@ function mergePreviewChanges(
 ): UrnPreviewData | null {
   const title = typeof changes.title === "string" ? changes.title : undefined;
   const description = typeof changes.description === "string" ? changes.description : undefined;
+  const callFields = {
+    callStartedAt: "started_at",
+    callEndedAt: "ended_at",
+    callStatus: "status",
+  } as const;
+  const hasCallChanges = Object.keys(callFields).some((key) => Object.hasOwn(changes, key));
   const hasAccessRequestId = Object.hasOwn(changes, "accessRequestId");
   const hasAccessRequestStatus = Object.hasOwn(changes, "accessRequestStatus");
   const hasCanRequestAgainAt = Object.hasOwn(changes, "canRequestAgainAt");
   if (
+    !hasCallChanges &&
     title === undefined &&
     description === undefined &&
     !hasAccessRequestId &&
@@ -74,7 +81,15 @@ function mergePreviewChanges(
       : cached.accessRequestStatus,
     canRequestAgainAt: hasCanRequestAgainAt ? changes.canRequestAgainAt : cached.canRequestAgainAt,
   };
+  if (hasCallChanges) {
+    next.metadata = { ...cached.metadata };
+    for (const [field, key] of Object.entries(callFields)) {
+      if (Object.hasOwn(changes, field))
+        next.metadata[key] = changes[field as keyof typeof callFields] ?? "";
+    }
+  }
   if (
+    !hasCallChanges &&
     next.title === cached.title &&
     next.description === cached.description &&
     next.accessRequestId === cached.accessRequestId &&
@@ -117,6 +132,8 @@ function searchResultTypeToUrnType(type: SearchResultType): UrnType {
       return UrnType.TEAM;
     case SearchResultType.CALENDAR:
       return UrnType.CALENDAR;
+    case SearchResultType.CALL:
+      return UrnType.CALL;
     case SearchResultType.CALENDAR_EVENT:
       return UrnType.CALENDAR_EVENT;
     case SearchResultType.PROJECT:
@@ -247,6 +264,11 @@ function previewDataToLiveState(urn: string, data: UrnPreviewData): MentionLiveS
       if (m["blocked_by_count"])
         state.taskBlockedByCount = parseInt(m["blocked_by_count"], 10) || 0;
       if (m["assignee_ids"]) state.taskAssigneeIds = m["assignee_ids"].split(",").filter(Boolean);
+      break;
+    case UrnType.CALL:
+      state.callStartedAt = m.started_at || undefined;
+      state.callEndedAt = m.ended_at || undefined;
+      state.callStatus = m.status || undefined;
       break;
     case UrnType.CALENDAR_EVENT:
       state.eventStartTime = m["start_time"] || undefined;

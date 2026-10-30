@@ -267,17 +267,18 @@ export function ChannelView({
       organizationId={organizationId ?? undefined}
       onSend={handleSend}
       commandHandlers={{
-        call: activeChannel.isAgentDm
-          ? undefined
-          : () => {
-              if (!effectiveChannelId || !activeChannel) return false;
-              if (callSession.status !== "idle") {
-                dispatch(feedbackChanged("Leave your current call before starting another."));
-                return false;
-              }
-              dispatch(prejoinOpened({ channelId: effectiveChannelId }));
-              return true;
-            },
+        call:
+          activeChannel.isAgentDm || activeChannel.isSelfDm
+            ? undefined
+            : () => {
+                if (!effectiveChannelId || !activeChannel) return false;
+                if (callSession.status !== "idle") {
+                  dispatch(feedbackChanged("Leave your current call before starting another."));
+                  return false;
+                }
+                dispatch(prejoinOpened({ channelId: effectiveChannelId }));
+                return true;
+              },
       }}
       onTyping={handleTyping}
       replyTo={replyToMessage}
@@ -310,11 +311,14 @@ export function ChannelView({
       {effectiveChannelId && <CallSection channelId={effectiveChannelId} />}
       <div
         className={cn(
-          "relative flex min-h-0 flex-1 flex-col",
+          "relative flex flex-1 flex-col",
           heroPhase === "hero" &&
             "z-10 items-center justify-center gap-7 overflow-y-auto px-4 py-10",
           heroExit && "hero-enter",
         )}
+        // The docked composer is absolute, so this floor keeps it from riding up over a
+        // tall call section above; the reserve var is measured by ComposeDock.
+        style={{ minHeight: "calc(var(--chat-compose-reserve, 0px) + 2.5rem)" }}
         data-testid={heroPhase === "hero" ? "chat-agent-dm-hero" : undefined}
       >
         {heroPhase === "off" && <MessageList channelId={effectiveChannelId ?? undefined} />}

@@ -30,6 +30,7 @@ import {
   Bell,
   MagnifyingGlass,
   Gauge,
+  ClockCounterClockwise,
 } from "phosphor-react-native";
 import { Avatar } from "@shared/components/Avatar";
 import { BottomSheet } from "@shared/components/BottomSheet";
@@ -81,6 +82,7 @@ export function ChannelDetailsSheet({
   onDelete,
   onLeave,
   onShowAgentContext,
+  onShowCallHistory,
   memorySubject,
   isMemoryModerator = false,
 }: {
@@ -103,6 +105,8 @@ export function ChannelDetailsSheet({
   onDelete: () => void;
   onLeave: () => void;
   onShowAgentContext?: (agentId: string) => void;
+  /** Absent where a conversation cannot hold calls (agent and self DMs). */
+  onShowCallHistory?: () => void;
   /** Set only where an agent can act; absent hides the memory section entirely. */
   memorySubject?: MemorySubject;
   isMemoryModerator?: boolean;
@@ -334,8 +338,16 @@ export function ChannelDetailsSheet({
           </View>
         ))}
 
-        {memorySubject || canManage || (!isDm && selfMember) ? (
+        {memorySubject || onShowCallHistory || canManage || (!isDm && selfMember) ? (
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIONS</Text>
+        ) : null}
+        {onShowCallHistory ? (
+          <ActionRow
+            T={T}
+            icon={<ClockCounterClockwise size={17} color={T.text} weight="duotone" />}
+            label="Call history"
+            onPress={onShowCallHistory}
+          />
         ) : null}
         {memorySubject ? (
           <>

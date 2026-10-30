@@ -19,6 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	CallService_ListCallHistory_FullMethodName     = "/calls.v1.CallService/ListCallHistory"
+	CallService_GetCallRecord_FullMethodName       = "/calls.v1.CallService/GetCallRecord"
 	CallService_GetCallAvailability_FullMethodName = "/calls.v1.CallService/GetCallAvailability"
 	CallService_GetCallState_FullMethodName        = "/calls.v1.CallService/GetCallState"
 	CallService_InitiateCall_FullMethodName        = "/calls.v1.CallService/InitiateCall"
@@ -37,6 +39,7 @@ const (
 	CallService_SendCallReaction_FullMethodName    = "/calls.v1.CallService/SendCallReaction"
 	CallService_SetCallMode_FullMethodName         = "/calls.v1.CallService/SetCallMode"
 	CallService_SetCallSpeaker_FullMethodName      = "/calls.v1.CallService/SetCallSpeaker"
+	CallService_ReportCallActivity_FullMethodName  = "/calls.v1.CallService/ReportCallActivity"
 	CallService_ReportMediaState_FullMethodName    = "/calls.v1.CallService/ReportMediaState"
 )
 
@@ -52,6 +55,8 @@ const (
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceClient interface {
+	ListCallHistory(ctx context.Context, in *ListCallHistoryRequest, opts ...grpc.CallOption) (*ListCallHistoryResponse, error)
+	GetCallRecord(ctx context.Context, in *GetCallRecordRequest, opts ...grpc.CallOption) (*GetCallRecordResponse, error)
 	GetCallAvailability(ctx context.Context, in *GetCallAvailabilityRequest, opts ...grpc.CallOption) (*GetCallAvailabilityResponse, error)
 	GetCallState(ctx context.Context, in *GetCallStateRequest, opts ...grpc.CallOption) (*GetCallStateResponse, error)
 	// Idempotent per channel: if the channel already has an active call the
@@ -84,6 +89,7 @@ type CallServiceClient interface {
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
 	// CALL_PARTICIPANT_STATE only when a flag actually changed.
+	ReportCallActivity(ctx context.Context, in *ReportCallActivityRequest, opts ...grpc.CallOption) (*ReportCallActivityResponse, error)
 	ReportMediaState(ctx context.Context, in *ReportMediaStateRequest, opts ...grpc.CallOption) (*ReportMediaStateResponse, error)
 }
 
@@ -93,6 +99,26 @@ type callServiceClient struct {
 
 func NewCallServiceClient(cc grpc.ClientConnInterface) CallServiceClient {
 	return &callServiceClient{cc}
+}
+
+func (c *callServiceClient) ListCallHistory(ctx context.Context, in *ListCallHistoryRequest, opts ...grpc.CallOption) (*ListCallHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCallHistoryResponse)
+	err := c.cc.Invoke(ctx, CallService_ListCallHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *callServiceClient) GetCallRecord(ctx context.Context, in *GetCallRecordRequest, opts ...grpc.CallOption) (*GetCallRecordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCallRecordResponse)
+	err := c.cc.Invoke(ctx, CallService_GetCallRecord_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *callServiceClient) GetCallAvailability(ctx context.Context, in *GetCallAvailabilityRequest, opts ...grpc.CallOption) (*GetCallAvailabilityResponse, error) {
@@ -275,6 +301,16 @@ func (c *callServiceClient) SetCallSpeaker(ctx context.Context, in *SetCallSpeak
 	return out, nil
 }
 
+func (c *callServiceClient) ReportCallActivity(ctx context.Context, in *ReportCallActivityRequest, opts ...grpc.CallOption) (*ReportCallActivityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportCallActivityResponse)
+	err := c.cc.Invoke(ctx, CallService_ReportCallActivity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMediaStateRequest, opts ...grpc.CallOption) (*ReportMediaStateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ReportMediaStateResponse)
@@ -297,6 +333,8 @@ func (c *callServiceClient) ReportMediaState(ctx context.Context, in *ReportMedi
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 type CallServiceServer interface {
+	ListCallHistory(context.Context, *ListCallHistoryRequest) (*ListCallHistoryResponse, error)
+	GetCallRecord(context.Context, *GetCallRecordRequest) (*GetCallRecordResponse, error)
 	GetCallAvailability(context.Context, *GetCallAvailabilityRequest) (*GetCallAvailabilityResponse, error)
 	GetCallState(context.Context, *GetCallStateRequest) (*GetCallStateResponse, error)
 	// Idempotent per channel: if the channel already has an active call the
@@ -329,6 +367,7 @@ type CallServiceServer interface {
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
 	// CALL_PARTICIPANT_STATE only when a flag actually changed.
+	ReportCallActivity(context.Context, *ReportCallActivityRequest) (*ReportCallActivityResponse, error)
 	ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error)
 	mustEmbedUnimplementedCallServiceServer()
 }
@@ -340,6 +379,12 @@ type CallServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCallServiceServer struct{}
 
+func (UnimplementedCallServiceServer) ListCallHistory(context.Context, *ListCallHistoryRequest) (*ListCallHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCallHistory not implemented")
+}
+func (UnimplementedCallServiceServer) GetCallRecord(context.Context, *GetCallRecordRequest) (*GetCallRecordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCallRecord not implemented")
+}
 func (UnimplementedCallServiceServer) GetCallAvailability(context.Context, *GetCallAvailabilityRequest) (*GetCallAvailabilityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCallAvailability not implemented")
 }
@@ -394,6 +439,9 @@ func (UnimplementedCallServiceServer) SetCallMode(context.Context, *SetCallModeR
 func (UnimplementedCallServiceServer) SetCallSpeaker(context.Context, *SetCallSpeakerRequest) (*SetCallSpeakerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetCallSpeaker not implemented")
 }
+func (UnimplementedCallServiceServer) ReportCallActivity(context.Context, *ReportCallActivityRequest) (*ReportCallActivityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportCallActivity not implemented")
+}
 func (UnimplementedCallServiceServer) ReportMediaState(context.Context, *ReportMediaStateRequest) (*ReportMediaStateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportMediaState not implemented")
 }
@@ -416,6 +464,42 @@ func RegisterCallServiceServer(s grpc.ServiceRegistrar, srv CallServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&CallService_ServiceDesc, srv)
+}
+
+func _CallService_ListCallHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCallHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).ListCallHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_ListCallHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).ListCallHistory(ctx, req.(*ListCallHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CallService_GetCallRecord_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCallRecordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).GetCallRecord(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_GetCallRecord_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).GetCallRecord(ctx, req.(*GetCallRecordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _CallService_GetCallAvailability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -742,6 +826,24 @@ func _CallService_SetCallSpeaker_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CallService_ReportCallActivity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportCallActivityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CallServiceServer).ReportCallActivity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CallService_ReportCallActivity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CallServiceServer).ReportCallActivity(ctx, req.(*ReportCallActivityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CallService_ReportMediaState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReportMediaStateRequest)
 	if err := dec(in); err != nil {
@@ -767,6 +869,14 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "calls.v1.CallService",
 	HandlerType: (*CallServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListCallHistory",
+			Handler:    _CallService_ListCallHistory_Handler,
+		},
+		{
+			MethodName: "GetCallRecord",
+			Handler:    _CallService_GetCallRecord_Handler,
+		},
 		{
 			MethodName: "GetCallAvailability",
 			Handler:    _CallService_GetCallAvailability_Handler,
@@ -838,6 +948,10 @@ var CallService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetCallSpeaker",
 			Handler:    _CallService_SetCallSpeaker_Handler,
+		},
+		{
+			MethodName: "ReportCallActivity",
+			Handler:    _CallService_ReportCallActivity_Handler,
 		},
 		{
 			MethodName: "ReportMediaState",

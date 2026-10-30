@@ -43,10 +43,6 @@ export function ComposerCommandMenu({
       )}
       data-testid="composer-command-menu"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2 text-xs text-muted-foreground">
-        <span className="font-medium">Commands</span>
-        <span>Type to filter</span>
-      </div>
       <div
         id={id}
         role="listbox"
@@ -55,36 +51,45 @@ export function ComposerCommandMenu({
       >
         {options.map((option, index) => {
           const Icon = option.icon;
+          const groupStart = index === 0 || options[index - 1].kind !== option.kind;
           return (
-            <button
-              key={`${option.kind}:${option.id}`}
-              id={`${id}-${index}`}
-              type="button"
-              role="option"
-              aria-selected={index === activeIndex}
-              onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => onHighlight(index)}
-              onClick={() => onSelect(option)}
-              className={cn(
-                "flex min-h-14 w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                index === activeIndex ? "bg-primary/10" : "hover:bg-muted",
+            <div key={`${option.kind}:${option.id}`}>
+              {groupStart && (
+                <p
+                  aria-hidden="true"
+                  className="px-2 pb-1 pt-1.5 text-[11px] font-medium text-subtle-foreground"
+                >
+                  {option.kind === "skill" ? "Skills" : "Actions"}
+                </p>
               )}
-              data-testid="composer-command-option"
-            >
-              <Icon size={20} className="mt-0.5 shrink-0 text-primary" />
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-mono text-sm font-medium">/{option.name}</span>
-                  <span className="text-xs text-muted-foreground">{option.label}</span>
+              <button
+                id={`${id}-${index}`}
+                type="button"
+                role="option"
+                aria-selected={index === activeIndex}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => onHighlight(index)}
+                onClick={() => onSelect(option)}
+                className={cn(
+                  "flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                  index === activeIndex ? "bg-primary/10" : "hover:bg-muted",
+                )}
+                data-testid="composer-command-option"
+              >
+                <Icon size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-baseline gap-2">
+                    <span className="truncate font-mono text-sm text-foreground">
+                      /{option.name}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">{option.label}</span>
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground/80">
+                    {option.description || "Add this skill to your message."}
+                  </span>
                 </span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                  {option.description || "Add this skill to your message."}
-                </span>
-              </span>
-              {option.kind === "skill" && (
-                <span className="shrink-0 text-[10px] text-muted-foreground">Skill</span>
-              )}
-            </button>
+              </button>
+            </div>
           );
         })}
       </div>
@@ -93,10 +98,19 @@ export function ComposerCommandMenu({
           No matching commands. Keep typing to write a message.
         </p>
       )}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border/60 px-3 py-2 text-[11px] text-muted-foreground">
-        <span>Arrow keys to browse</span>
-        <span>Enter or Tab to select</span>
-        <span>Esc to dismiss</span>
+      <div className="hidden items-center justify-end gap-3 border-t border-border/60 px-3 py-1.5 text-[10px] text-muted-foreground/70 sm:flex">
+        <span className="flex items-center gap-1">
+          <kbd className="rounded bg-muted/50 px-1 py-0.5 font-mono">↑↓</kbd>
+          <span>navigate</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <kbd className="rounded bg-muted/50 px-1 py-0.5 font-mono">↵</kbd>
+          <span>select</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <kbd className="rounded bg-muted/50 px-1 py-0.5 font-mono">esc</kbd>
+          <span>close</span>
+        </span>
       </div>
     </div>
   );

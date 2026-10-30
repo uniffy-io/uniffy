@@ -2,6 +2,11 @@ import { createContext, useContext } from "react";
 import type { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
 import type { Room } from "livekit-client";
 
+export interface CallStartOptions {
+  calendarEventId?: string;
+  title?: string;
+}
+
 export interface JoinMediaOptions {
   townHall?: boolean;
   micEnabled: boolean;
@@ -15,7 +20,11 @@ export interface CallContextValue {
   closePopout: () => void;
   availability: CallAvailability;
   checkAvailability: (checkMedia?: boolean) => Promise<CallAvailability>;
-  joinChannelCall: (channelId: string, opts: JoinMediaOptions) => Promise<void>;
+  joinChannelCall: (
+    channelId: string,
+    opts: JoinMediaOptions,
+    start?: CallStartOptions,
+  ) => Promise<void>;
   joinCallById: (callId: string, channelId: string, opts: JoinMediaOptions) => Promise<void>;
   leaveCurrentCall: () => Promise<void>;
   endCurrentCall: () => Promise<void>;

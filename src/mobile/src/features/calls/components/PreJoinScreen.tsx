@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -83,6 +84,7 @@ function PreJoinContent({
   const inCall = session.status !== "idle";
   const busyElsewhere = inCall && session.channelId !== channelId;
 
+  const [callTitle, setCallTitle] = useState("");
   const [micOn, setMicOn] = useState(defaults.mic);
   const [cameraOn, setCameraOn] = useState(defaults.camera);
   const [facing, setFacing] = useState<"user" | "environment">(defaults.facing);
@@ -156,6 +158,9 @@ function PreJoinContent({
   }, [cameraOn, audience, facing, inCall, joining]);
 
   const others = (activeCall?.participants ?? []).filter((p) => p.userId !== user?.id);
+  // An audience member joins with neither, whatever the saved defaults say.
+  const micShown = micOn && !audience;
+  const cameraShown = cameraOn && !audience;
 
   const join = async () => {
     if (!channelId || joining || busyElsewhere || !available) return;
@@ -183,7 +188,10 @@ function PreJoinContent({
       if (callId) {
         await joinCallById(callId, channelId, media);
       } else {
-        await joinChannelCall(channelId, media);
+        await joinChannelCall(channelId, media, {
+          calendarEventId: prejoinTarget?.calendarEventId,
+          title: callTitle.trim() || undefined,
+        });
       }
       closePrejoin();
     } catch (joinError) {
@@ -197,11 +205,6 @@ function PreJoinContent({
 
   return (
     <View style={[styles.root, { backgroundColor: T.pageBg }]}>
-      {audience && (
-        <Text accessibilityLiveRegion="polite" style={{ color: T.textDim, padding: 12 }}>
-          {AUDIENCE_MESSAGE}
-        </Text>
-      )}
       <DomainHeader
         title={activeCall ? "Join call" : "Start call"}
         subtitle={channelName}
@@ -209,11 +212,40 @@ function PreJoinContent({
         icon="chat"
         onBack={closePrejoin}
       />
+      {audience ? (
+        <View
+          style={[styles.banner, { backgroundColor: T.surface, borderColor: T.border }]}
+          accessibilityLiveRegion="polite"
+        >
+          <Text style={[styles.bannerText, { color: T.textDim }]}>{AUDIENCE_MESSAGE}</Text>
+        </View>
+      ) : null}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.body, { paddingBottom: insets.bottom + 20 }]}
         keyboardShouldPersistTaps="handled"
       >
+        {!activeCall && !prejoinTarget?.callId && (
+          <View style={styles.nameField}>
+            <Text style={[styles.nameLabel, { color: T.textDim }]}>Call name (optional)</Text>
+            <TextInput
+              accessibilityLabel="Call name (optional)"
+              value={callTitle}
+              onChangeText={setCallTitle}
+              placeholder={
+                prejoinTarget?.calendarEventId ? "Use event title" : "e.g. P0 checkout debugging"
+              }
+              placeholderTextColor={T.textDim}
+              maxLength={500}
+              editable={!joining}
+              style={[
+                styles.nameInput,
+                { color: T.textBright, backgroundColor: T.bg, borderColor: T.border },
+              ]}
+            />
+            <Text style={[styles.nameHint, { color: T.textDim }]}>Shown in call history.</Text>
+          </View>
+        )}
         <View style={[styles.preview, { backgroundColor: T.bg, borderColor: T.border }]}>
           {cameraOn && previewTrack ? (
             // Pinch magnifies what is on screen; it cannot widen the lens, so the
@@ -233,7 +265,7 @@ function PreJoinContent({
               size={56}
             />
           )}
-          {cameraOn ? (
+          {cameraOn && previewTrack ? (
             <View style={styles.previewChips}>
               <TouchableOpacity
                 style={styles.previewChip}
@@ -292,43 +324,47 @@ function PreJoinContent({
           <TouchableOpacity
             style={[
               styles.toggle,
-              { backgroundColor: T.bg, borderColor: micOn ? T.green : T.border },
+              { backgroundColor: T.bg, borderColor: micShown ? T.green : T.border },
+              audience && styles.toggleDisabled,
             ]}
             onPress={() => setMicOn((v) => !v)}
             activeOpacity={0.7}
             accessibilityRole="button"
             disabled={audience}
+            accessibilityState={{ disabled: audience }}
             accessibilityHint={audience ? AUDIENCE_MESSAGE : undefined}
-            accessibilityLabel={micOn ? "Join with microphone off" : "Join with microphone on"}
+            accessibilityLabel={micShown ? "Join with microphone off" : "Join with microphone on"}
           >
-            {micOn ? (
+            {micShown ? (
               <Microphone size={18} color={T.green} weight="fill" />
             ) : (
               <MicrophoneSlash size={18} color={T.textDim} weight="fill" />
             )}
-            <Text style={[styles.toggleLabel, { color: micOn ? T.textBright : T.textDim }]}>
-              Mic {micOn ? "on" : "off"}
+            <Text style={[styles.toggleLabel, { color: micShown ? T.textBright : T.textDim }]}>
+              Mic {micShown ? "on" : "off"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.toggle,
-              { backgroundColor: T.bg, borderColor: cameraOn ? T.green : T.border },
+              { backgroundColor: T.bg, borderColor: cameraShown ? T.green : T.border },
+              audience && styles.toggleDisabled,
             ]}
             onPress={() => setCameraOn((v) => !v)}
             activeOpacity={0.7}
             accessibilityRole="button"
             disabled={audience}
+            accessibilityState={{ disabled: audience }}
             accessibilityHint={audience ? AUDIENCE_MESSAGE : undefined}
-            accessibilityLabel={cameraOn ? "Join with camera off" : "Join with camera on"}
+            accessibilityLabel={cameraShown ? "Join with camera off" : "Join with camera on"}
           >
-            {cameraOn ? (
+            {cameraShown ? (
               <VideoCamera size={18} color={T.green} weight="fill" />
             ) : (
               <VideoCameraSlash size={18} color={T.textDim} weight="fill" />
             )}
-            <Text style={[styles.toggleLabel, { color: cameraOn ? T.textBright : T.textDim }]}>
-              Camera {cameraOn ? "on" : "off"}
+            <Text style={[styles.toggleLabel, { color: cameraShown ? T.textBright : T.textDim }]}>
+              Camera {cameraShown ? "on" : "off"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -401,15 +437,16 @@ function PreJoinContent({
           </Text>
         ) : null}
         {callsDisabledMessage ? (
-          <View accessibilityLiveRegion="polite" style={{ padding: 16, gap: 8 }}>
-            <Text style={{ color: T.text }}>{callsDisabledMessage}</Text>
+          <View accessibilityLiveRegion="polite">
+            <Text style={[styles.error, { color: T.text }]}>{callsDisabledMessage}</Text>
             <TouchableOpacity
               accessibilityRole="button"
               accessibilityLabel="Check call availability again"
               onPress={retryAvailability}
-              style={{ minHeight: 44, justifyContent: "center" }}
+              activeOpacity={0.7}
+              style={styles.textButton}
             >
-              <Text style={{ color: T.accent }}>Check again</Text>
+              <Text style={[styles.textButtonLabel, { color: T.accent }]}>Check again</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -421,9 +458,10 @@ function PreJoinContent({
                 onPress={() => void Linking.openSettings().catch(() => {})}
                 accessibilityRole="button"
                 accessibilityLabel="Open app settings"
-                style={{ minHeight: 44, justifyContent: "center" }}
+                activeOpacity={0.7}
+                style={styles.textButton}
               >
-                <Text style={{ color: T.accent }}>Open settings</Text>
+                <Text style={[styles.textButtonLabel, { color: T.accent }]}>Open settings</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -457,8 +495,34 @@ function PreJoinContent({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    alignSelf: "center",
+    marginHorizontal: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 8,
+  },
+  bannerText: { flexShrink: 1, fontSize: 12, fontFamily: FONT.medium, textAlign: "center" },
   scroll: { flex: 1 },
   body: { paddingHorizontal: 20, paddingTop: 8 },
+  nameField: { marginBottom: 16, gap: 6 },
+  nameLabel: { fontSize: 13, fontFamily: FONT.regular },
+  nameHint: { fontSize: 12, fontFamily: FONT.regular },
+  nameInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    fontFamily: FONT.regular,
+  },
   preview: {
     height: 220,
     borderRadius: 14,
@@ -493,6 +557,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
+  toggleDisabled: { opacity: 0.4 },
   toggleLabel: { fontSize: 13, fontFamily: FONT.medium },
   routeBox: { marginTop: 10, borderRadius: 12, borderWidth: 1, overflow: "hidden" },
   routeRow: {
@@ -512,6 +577,8 @@ const styles = StyleSheet.create({
   },
   routeLabel: { flex: 1, fontSize: 13, fontFamily: FONT.medium },
   error: { fontSize: 12, fontFamily: FONT.regular, paddingTop: 10 },
+  textButton: { minHeight: 44, justifyContent: "center" },
+  textButtonLabel: { fontSize: 13, fontFamily: FONT.medium },
   joinButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -525,6 +592,7 @@ const styles = StyleSheet.create({
 });
 
 export function PreJoinScreen() {
+  const T = useTheme();
   const [defaults, setDefaults] = useState<Awaited<
     ReturnType<typeof getJoinMediaPreferences>
   > | null>(null);
@@ -537,6 +605,16 @@ export function PreJoinScreen() {
       active = false;
     };
   }, []);
-  if (!defaults) return <ActivityIndicator accessibilityLabel="Loading call preferences" />;
+  if (!defaults) {
+    return (
+      <View style={[styles.loadingWrap, { backgroundColor: T.pageBg }]}>
+        <ActivityIndicator
+          size="large"
+          color={T.accent}
+          accessibilityLabel="Loading call preferences"
+        />
+      </View>
+    );
+  }
   return <PreJoinContent defaults={defaults} />;
 }

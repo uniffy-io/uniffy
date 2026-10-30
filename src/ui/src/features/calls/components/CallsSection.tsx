@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
 import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { useDevices } from "@/features/calls/hooks/useDevices";
 import { callErrorMessage } from "@/features/calls/utils/callErrors";
+import {
+  deviceOptions,
+  selectedDevice,
+  speakerSelectionSupported,
+} from "@/features/calls/utils/deviceOptions";
+import { cn } from "@/shared/utils/cn";
 import {
   audioInputSelected,
   audioOutputSelected,
@@ -25,8 +29,6 @@ export function CallsSection() {
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
   const [error, setError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
-  const speakerSupported =
-    typeof HTMLMediaElement !== "undefined" && "setSinkId" in HTMLMediaElement.prototype;
   const revealDevices = async () => {
     setRequesting(true);
     setError(null);
@@ -84,82 +86,88 @@ export function CallsSection() {
     },
   ];
   return (
-    <div className="max-w-3xl space-y-6" data-testid="call-settings">
-      <PaneHeader>
-        <PaneHeaderBar icon={Phone} title="Calls" subtitle="Defaults for calls on this device" />
-      </PaneHeader>
-      <Card tone="surface" className="divide-y divide-border/60 px-4 sm:px-6">
-        {toggles.map(({ label, description, checked, change }) => (
-          <div key={label} className="flex min-h-20 items-center justify-between gap-6 py-4">
-            <div>
-              <p className="text-sm font-medium">{label}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    <div className="space-y-8" data-testid="call-settings">
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-foreground mb-2">Calls</h1>
+        <p className="text-muted-foreground">Defaults for calls on this device.</p>
+      </div>
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Ringing and joining</h2>
+        <Card tone="surface" className="space-y-4 p-4">
+          {toggles.map(({ label, description, checked, change }, index) => (
+            <div
+              key={label}
+              className={cn(
+                "flex items-center justify-between gap-6",
+                index > 0 && "border-t border-border pt-4",
+              )}
+            >
+              <div>
+                <div className="font-medium text-foreground">{label}</div>
+                <div className="text-sm font-medium text-muted-foreground">{description}</div>
+              </div>
+              <ToggleSwitch
+                enabled={checked}
+                onChange={(value) => dispatch(change(value))}
+                ariaLabel={label}
+              />
             </div>
-            <ToggleSwitch
-              enabled={checked}
-              onChange={(value) => dispatch(change(value))}
-              ariaLabel={label}
-            />
-          </div>
-        ))}
-      </Card>
-      <Card tone="surface" className="space-y-5 p-4 sm:p-6">
+          ))}
+        </Card>
+      </section>
+
+      <section className="space-y-4">
         <div>
-          <h2 className="text-base font-medium">Default devices</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-foreground">Default devices</h2>
+          <p className="text-sm font-medium text-muted-foreground">
             Used for your next call. Unavailable devices fall back to system defaults.
           </p>
         </div>
-        {devices.map(({ label, items, value, change }) => {
-          const known = items.some((device) => device.deviceId === value);
-          const unavailable = label === "Speaker" && !speakerSupported;
-          return (
-            <div key={label} className="grid items-center gap-2 sm:grid-cols-[8rem_1fr]">
-              <span className="text-sm text-muted-foreground">{label}</span>
-              <Select
-                ariaLabel={`Default ${label.toLowerCase()}`}
-                value={known ? value! : ""}
-                disabled={unavailable}
-                onChange={(id) => dispatch(change(id || null))}
-                options={[
-                  { value: "", label: unavailable ? "Managed by browser" : "System default" },
-                  ...items
-                    .filter((device) => device.deviceId)
-                    .map((device, index) => ({
-                      value: device.deviceId,
-                      label: device.label || `${label} ${index + 1}`,
-                    })),
-                ]}
-                triggerClassName="w-full min-h-11"
-              />
-            </div>
-          );
-        })}
-        <div className="space-y-2">
-          <Button variant="outline" onClick={() => void revealDevices()} loading={requesting}>
-            Allow device access
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Browser permission reveals device names. Preview capture stops immediately.
-          </p>
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-            {error}
-          </p>
-        )}
-      </Card>
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-        <p>
-          Type <kbd className="text-foreground">/call</kbd> in a channel to open call setup.
-        </p>
-        <Link
-          to="/settings?section=shortcuts"
-          className="text-primary underline underline-offset-4"
-        >
+        <Card tone="surface" className="space-y-4 p-4">
+          {devices.map(({ label, items, value, change }) => {
+            const managedByBrowser = label === "Speaker" && !speakerSelectionSupported;
+            return (
+              <div key={label} className="grid items-center gap-2 sm:grid-cols-[8rem_1fr]">
+                <span className="text-sm text-muted-foreground">{label}</span>
+                <Select
+                  ariaLabel={`Default ${label.toLowerCase()}`}
+                  value={selectedDevice(items, value)}
+                  disabled={managedByBrowser}
+                  onChange={(id) => dispatch(change(id || null))}
+                  options={deviceOptions(label, items, managedByBrowser)}
+                  className="min-w-0"
+                  triggerClassName="w-full min-w-0"
+                />
+              </div>
+            );
+          })}
+          <div className="space-y-2 border-t border-border pt-4">
+            <Button variant="outline" onClick={() => void revealDevices()} loading={requesting}>
+              Allow device access
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Browser permission reveals device names. Preview capture stops immediately.
+            </p>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+        </Card>
+      </section>
+
+      <p className="text-sm text-muted-foreground">
+        Type{" "}
+        <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+          /call
+        </kbd>{" "}
+        in a channel to open call setup.{" "}
+        <Link to="/settings?section=shortcuts" className="text-primary hover:underline">
           Customize call shortcuts
         </Link>
-      </div>
+      </p>
     </div>
   );
 }

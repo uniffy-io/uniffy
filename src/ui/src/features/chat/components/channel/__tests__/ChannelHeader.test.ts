@@ -1,3 +1,4 @@
+import { MemoryRouter } from "react-router-dom";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Provider } from "react-redux";
@@ -68,7 +69,10 @@ function renderHeader(init: Parameters<typeof create<typeof ChatChannelSchema>>[
   );
   store.dispatch(setActiveChannel("dm"));
   return renderToStaticMarkup(
-    createElement(Provider, { store, children: createElement(ChannelHeader) }),
+    createElement(Provider, {
+      store,
+      children: createElement(MemoryRouter, {}, createElement(ChannelHeader)),
+    }),
   );
 }
 
@@ -103,6 +107,28 @@ describe("ChannelHeader", () => {
     expect(html).toContain("status:grace");
     expect(html).toContain('data-testid="chat-channel-call-button"');
   });
+
+  it("keeps the frequent channel actions inline and the rare ones behind More", () => {
+    const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
+
+    for (const testId of [
+      "chat-channel-call-button",
+      "chat-channel-search-button",
+      "chat-channel-pinned-button",
+      "chat-channel-resources-button",
+      "chat-channel-split-button",
+      "chat-channel-more-button",
+    ]) {
+      expect(html).toContain(`data-testid="${testId}"`);
+    }
+    for (const testId of [
+      "chat-channel-call-history",
+      "chat-channel-agents-toggle",
+      "chat-channel-settings-button",
+    ]) {
+      expect(html).not.toContain(`data-testid="${testId}"`);
+    }
+  });
 });
 
 it.each([
@@ -115,6 +141,17 @@ it.each([
     const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
     expect(html).toContain('data-state="unavailable"');
     expect(html).toContain(message);
+  } finally {
+    calls.availability = CallAvailability.READY;
+  }
+});
+
+it("keeps the normal call button while availability is still being checked", () => {
+  calls.availability = CallAvailability.UNSPECIFIED;
+  try {
+    const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
+    expect(html).toContain('data-state="idle"');
+    expect(html).not.toContain("Calls unavailable");
   } finally {
     calls.availability = CallAvailability.READY;
   }

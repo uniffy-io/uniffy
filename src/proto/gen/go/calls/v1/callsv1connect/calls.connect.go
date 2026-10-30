@@ -33,6 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// CallServiceListCallHistoryProcedure is the fully-qualified name of the CallService's
+	// ListCallHistory RPC.
+	CallServiceListCallHistoryProcedure = "/calls.v1.CallService/ListCallHistory"
+	// CallServiceGetCallRecordProcedure is the fully-qualified name of the CallService's GetCallRecord
+	// RPC.
+	CallServiceGetCallRecordProcedure = "/calls.v1.CallService/GetCallRecord"
 	// CallServiceGetCallAvailabilityProcedure is the fully-qualified name of the CallService's
 	// GetCallAvailability RPC.
 	CallServiceGetCallAvailabilityProcedure = "/calls.v1.CallService/GetCallAvailability"
@@ -82,6 +88,9 @@ const (
 	// CallServiceSetCallSpeakerProcedure is the fully-qualified name of the CallService's
 	// SetCallSpeaker RPC.
 	CallServiceSetCallSpeakerProcedure = "/calls.v1.CallService/SetCallSpeaker"
+	// CallServiceReportCallActivityProcedure is the fully-qualified name of the CallService's
+	// ReportCallActivity RPC.
+	CallServiceReportCallActivityProcedure = "/calls.v1.CallService/ReportCallActivity"
 	// CallServiceReportMediaStateProcedure is the fully-qualified name of the CallService's
 	// ReportMediaState RPC.
 	CallServiceReportMediaStateProcedure = "/calls.v1.CallService/ReportMediaState"
@@ -89,6 +98,8 @@ const (
 
 // CallServiceClient is a client for the calls.v1.CallService service.
 type CallServiceClient interface {
+	ListCallHistory(context.Context, *connect.Request[v1.ListCallHistoryRequest]) (*connect.Response[v1.ListCallHistoryResponse], error)
+	GetCallRecord(context.Context, *connect.Request[v1.GetCallRecordRequest]) (*connect.Response[v1.GetCallRecordResponse], error)
 	GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error)
 	GetCallState(context.Context, *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error)
 	// Idempotent per channel: if the channel already has an active call the
@@ -121,6 +132,7 @@ type CallServiceClient interface {
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
 	// CALL_PARTICIPANT_STATE only when a flag actually changed.
+	ReportCallActivity(context.Context, *connect.Request[v1.ReportCallActivityRequest]) (*connect.Response[v1.ReportCallActivityResponse], error)
 	ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error)
 }
 
@@ -135,6 +147,18 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	callServiceMethods := v1.File_calls_v1_calls_proto.Services().ByName("CallService").Methods()
 	return &callServiceClient{
+		listCallHistory: connect.NewClient[v1.ListCallHistoryRequest, v1.ListCallHistoryResponse](
+			httpClient,
+			baseURL+CallServiceListCallHistoryProcedure,
+			connect.WithSchema(callServiceMethods.ByName("ListCallHistory")),
+			connect.WithClientOptions(opts...),
+		),
+		getCallRecord: connect.NewClient[v1.GetCallRecordRequest, v1.GetCallRecordResponse](
+			httpClient,
+			baseURL+CallServiceGetCallRecordProcedure,
+			connect.WithSchema(callServiceMethods.ByName("GetCallRecord")),
+			connect.WithClientOptions(opts...),
+		),
 		getCallAvailability: connect.NewClient[v1.GetCallAvailabilityRequest, v1.GetCallAvailabilityResponse](
 			httpClient,
 			baseURL+CallServiceGetCallAvailabilityProcedure,
@@ -243,6 +267,12 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(callServiceMethods.ByName("SetCallSpeaker")),
 			connect.WithClientOptions(opts...),
 		),
+		reportCallActivity: connect.NewClient[v1.ReportCallActivityRequest, v1.ReportCallActivityResponse](
+			httpClient,
+			baseURL+CallServiceReportCallActivityProcedure,
+			connect.WithSchema(callServiceMethods.ByName("ReportCallActivity")),
+			connect.WithClientOptions(opts...),
+		),
 		reportMediaState: connect.NewClient[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse](
 			httpClient,
 			baseURL+CallServiceReportMediaStateProcedure,
@@ -254,6 +284,8 @@ func NewCallServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // callServiceClient implements CallServiceClient.
 type callServiceClient struct {
+	listCallHistory     *connect.Client[v1.ListCallHistoryRequest, v1.ListCallHistoryResponse]
+	getCallRecord       *connect.Client[v1.GetCallRecordRequest, v1.GetCallRecordResponse]
 	getCallAvailability *connect.Client[v1.GetCallAvailabilityRequest, v1.GetCallAvailabilityResponse]
 	getCallState        *connect.Client[v1.GetCallStateRequest, v1.GetCallStateResponse]
 	initiateCall        *connect.Client[v1.InitiateCallRequest, v1.InitiateCallResponse]
@@ -272,7 +304,18 @@ type callServiceClient struct {
 	sendCallReaction    *connect.Client[v1.SendCallReactionRequest, v1.SendCallReactionResponse]
 	setCallMode         *connect.Client[v1.SetCallModeRequest, v1.SetCallModeResponse]
 	setCallSpeaker      *connect.Client[v1.SetCallSpeakerRequest, v1.SetCallSpeakerResponse]
+	reportCallActivity  *connect.Client[v1.ReportCallActivityRequest, v1.ReportCallActivityResponse]
 	reportMediaState    *connect.Client[v1.ReportMediaStateRequest, v1.ReportMediaStateResponse]
+}
+
+// ListCallHistory calls calls.v1.CallService.ListCallHistory.
+func (c *callServiceClient) ListCallHistory(ctx context.Context, req *connect.Request[v1.ListCallHistoryRequest]) (*connect.Response[v1.ListCallHistoryResponse], error) {
+	return c.listCallHistory.CallUnary(ctx, req)
+}
+
+// GetCallRecord calls calls.v1.CallService.GetCallRecord.
+func (c *callServiceClient) GetCallRecord(ctx context.Context, req *connect.Request[v1.GetCallRecordRequest]) (*connect.Response[v1.GetCallRecordResponse], error) {
+	return c.getCallRecord.CallUnary(ctx, req)
 }
 
 // GetCallAvailability calls calls.v1.CallService.GetCallAvailability.
@@ -365,6 +408,11 @@ func (c *callServiceClient) SetCallSpeaker(ctx context.Context, req *connect.Req
 	return c.setCallSpeaker.CallUnary(ctx, req)
 }
 
+// ReportCallActivity calls calls.v1.CallService.ReportCallActivity.
+func (c *callServiceClient) ReportCallActivity(ctx context.Context, req *connect.Request[v1.ReportCallActivityRequest]) (*connect.Response[v1.ReportCallActivityResponse], error) {
+	return c.reportCallActivity.CallUnary(ctx, req)
+}
+
 // ReportMediaState calls calls.v1.CallService.ReportMediaState.
 func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {
 	return c.reportMediaState.CallUnary(ctx, req)
@@ -372,6 +420,8 @@ func (c *callServiceClient) ReportMediaState(ctx context.Context, req *connect.R
 
 // CallServiceHandler is an implementation of the calls.v1.CallService service.
 type CallServiceHandler interface {
+	ListCallHistory(context.Context, *connect.Request[v1.ListCallHistoryRequest]) (*connect.Response[v1.ListCallHistoryResponse], error)
+	GetCallRecord(context.Context, *connect.Request[v1.GetCallRecordRequest]) (*connect.Response[v1.GetCallRecordResponse], error)
 	GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error)
 	GetCallState(context.Context, *connect.Request[v1.GetCallStateRequest]) (*connect.Response[v1.GetCallStateResponse], error)
 	// Idempotent per channel: if the channel already has an active call the
@@ -404,6 +454,7 @@ type CallServiceHandler interface {
 	// source of truth because LiveKit emits no mute webhook (a muted mic track
 	// stays published, so mute state cannot be inferred server-side). Fans out
 	// CALL_PARTICIPANT_STATE only when a flag actually changed.
+	ReportCallActivity(context.Context, *connect.Request[v1.ReportCallActivityRequest]) (*connect.Response[v1.ReportCallActivityResponse], error)
 	ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error)
 }
 
@@ -414,6 +465,18 @@ type CallServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	callServiceMethods := v1.File_calls_v1_calls_proto.Services().ByName("CallService").Methods()
+	callServiceListCallHistoryHandler := connect.NewUnaryHandler(
+		CallServiceListCallHistoryProcedure,
+		svc.ListCallHistory,
+		connect.WithSchema(callServiceMethods.ByName("ListCallHistory")),
+		connect.WithHandlerOptions(opts...),
+	)
+	callServiceGetCallRecordHandler := connect.NewUnaryHandler(
+		CallServiceGetCallRecordProcedure,
+		svc.GetCallRecord,
+		connect.WithSchema(callServiceMethods.ByName("GetCallRecord")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceGetCallAvailabilityHandler := connect.NewUnaryHandler(
 		CallServiceGetCallAvailabilityProcedure,
 		svc.GetCallAvailability,
@@ -522,6 +585,12 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(callServiceMethods.ByName("SetCallSpeaker")),
 		connect.WithHandlerOptions(opts...),
 	)
+	callServiceReportCallActivityHandler := connect.NewUnaryHandler(
+		CallServiceReportCallActivityProcedure,
+		svc.ReportCallActivity,
+		connect.WithSchema(callServiceMethods.ByName("ReportCallActivity")),
+		connect.WithHandlerOptions(opts...),
+	)
 	callServiceReportMediaStateHandler := connect.NewUnaryHandler(
 		CallServiceReportMediaStateProcedure,
 		svc.ReportMediaState,
@@ -530,6 +599,10 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/calls.v1.CallService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case CallServiceListCallHistoryProcedure:
+			callServiceListCallHistoryHandler.ServeHTTP(w, r)
+		case CallServiceGetCallRecordProcedure:
+			callServiceGetCallRecordHandler.ServeHTTP(w, r)
 		case CallServiceGetCallAvailabilityProcedure:
 			callServiceGetCallAvailabilityHandler.ServeHTTP(w, r)
 		case CallServiceGetCallStateProcedure:
@@ -566,6 +639,8 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 			callServiceSetCallModeHandler.ServeHTTP(w, r)
 		case CallServiceSetCallSpeakerProcedure:
 			callServiceSetCallSpeakerHandler.ServeHTTP(w, r)
+		case CallServiceReportCallActivityProcedure:
+			callServiceReportCallActivityHandler.ServeHTTP(w, r)
 		case CallServiceReportMediaStateProcedure:
 			callServiceReportMediaStateHandler.ServeHTTP(w, r)
 		default:
@@ -576,6 +651,14 @@ func NewCallServiceHandler(svc CallServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedCallServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedCallServiceHandler struct{}
+
+func (UnimplementedCallServiceHandler) ListCallHistory(context.Context, *connect.Request[v1.ListCallHistoryRequest]) (*connect.Response[v1.ListCallHistoryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.ListCallHistory is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) GetCallRecord(context.Context, *connect.Request[v1.GetCallRecordRequest]) (*connect.Response[v1.GetCallRecordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.GetCallRecord is not implemented"))
+}
 
 func (UnimplementedCallServiceHandler) GetCallAvailability(context.Context, *connect.Request[v1.GetCallAvailabilityRequest]) (*connect.Response[v1.GetCallAvailabilityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.GetCallAvailability is not implemented"))
@@ -647,6 +730,10 @@ func (UnimplementedCallServiceHandler) SetCallMode(context.Context, *connect.Req
 
 func (UnimplementedCallServiceHandler) SetCallSpeaker(context.Context, *connect.Request[v1.SetCallSpeakerRequest]) (*connect.Response[v1.SetCallSpeakerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.SetCallSpeaker is not implemented"))
+}
+
+func (UnimplementedCallServiceHandler) ReportCallActivity(context.Context, *connect.Request[v1.ReportCallActivityRequest]) (*connect.Response[v1.ReportCallActivityResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("calls.v1.CallService.ReportCallActivity is not implemented"))
 }
 
 func (UnimplementedCallServiceHandler) ReportMediaState(context.Context, *connect.Request[v1.ReportMediaStateRequest]) (*connect.Response[v1.ReportMediaStateResponse], error) {

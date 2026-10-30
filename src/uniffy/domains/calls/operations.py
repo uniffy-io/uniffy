@@ -1,7 +1,7 @@
 """Channel calls with committed lifecycle state and post-commit media effects."""
 
 from collections.abc import Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
@@ -19,6 +19,8 @@ from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calls import (
     Call,
     CallEndReason,
+    CallInvitation,
+    CallInvitationOutcome,
     CallParticipant,
     CallType,
     ScreenShareQuality,
@@ -33,6 +35,10 @@ from uniffy.domains.calls.config import (
     get_livekit_config,
 )
 from uniffy.domains.calls.converters import call_to_event_dict, participant_to_event_dict
+from uniffy.domains.calls.invitations import (
+    SILENT_JOIN_MEMBER_THRESHOLD,
+    CallInvitations,
+)
 from uniffy.domains.calls.lifecycle import CallEvictionReason
 from uniffy.domains.calls.livekit import LiveKitApiError, get_livekit_admin_client
 from uniffy.domains.calls.metrics import (
@@ -59,13 +65,13 @@ from uniffy.domains.calls.tokens import (
 from uniffy.domains.chat import calls as chat_events
 from uniffy.domains.chat.access import ChatAccessChecker
 from uniffy.domains.chat.calls import CallChat, SenderInfo
+from uniffy.domains.scheduling.calendar.meetings import resolve_meeting_title
 
 logger = logger.bind(component="calls.operations")
 
-RING_TIMEOUT_SECONDS = 30
-SILENT_JOIN_MEMBER_THRESHOLD = 10
 MAX_DEVICES_PER_USER = 2
 CALL_SUMMARY_MAX_MENTIONS = 6
+CALL_TITLE_MAX_LENGTH = 500
 
 
 def _format_call_duration(seconds: int) -> str:
@@ -115,6 +121,8 @@ class CallOperations:
         auth_session_id: UUID | None = None,
         *,
         town_hall: bool = False,
+        calendar_event_id: str | None = None,
+        title: str | None = None,
     ) -> tuple[Call, list[CallParticipant], MintedToken, bool]:
         channel = await self.access.get_channel(channel_id, organization_id)
         await self.access.check_access(user_id, organization_id, channel)
@@ -138,7 +146,19 @@ class CallOperations:
         ):
             raise PermissionDeniedError("town hall", "Town halls are not enabled for this channel")
 
+        custom_title = (title or "").strip()
+        if len(custom_title) > CALL_TITLE_MAX_LENGTH:
+            raise ValidationError("title", "Call name must be at most 500 characters")
+        if any(char in custom_title for char in "\r\n\0"):
+            raise ValidationError("title", "Call name must be a single line without null characters")
+        resolved_title = channel.effective_name or "Call"
+        if calendar_event_id is not None:
+            resolved_title = await resolve_meeting_title(
+                self.session, user_id, organization_id, channel_id, calendar_event_id
+            )
+
         call = Call(
+            title=custom_title or resolved_title,
             town_hall=town_hall,
             organization_id=organization_id,
             channel_id=channel_id,
@@ -166,6 +186,7 @@ class CallOperations:
             )
             return existing, participants, token, True
 
+        await CallInvitations(self.session).stage_recipients(call, channel)
         # Rides the _join commit so the audit row lands atomically with the call.
         await write_audit_event(
             self.session,
@@ -725,7 +746,7 @@ class CallOperations:
         won = await self.session.execute(
             update(Call)
             .where(Call.id == call.id, Call.ended_at.is_(None))
-            .values(ended_at=now, end_reason=reason)
+            .values(ended_at=now, end_reason=reason, search_pending=True)
             .returning(Call.id)
             .execution_options(synchronize_session=False)
         )
@@ -741,6 +762,7 @@ class CallOperations:
             .returning(CallParticipant.user_id)
             .execution_options(synchronize_session=False)
         )
+        await CallInvitations(self.session).stage_end(call.id, now)
         closed_user_ids = [row[0] for row in closed.all()]
         participant_count = len(closed_user_ids)
         await write_audit_event(
@@ -1000,6 +1022,7 @@ class CallOperations:
             device_label=device_label,
         )
 
+        await CallInvitations(self.session).stage_answer(call.id, user_id)
         if existing_row is not None:
             if await self._reopen_participant_row(
                 call, existing_row, token, device_label, auth_session_id
@@ -1088,12 +1111,21 @@ class CallOperations:
     @call_context
     async def _ring_callees(self, call: Call, channel: ChatChannel, caller_id: UUID) -> None:
         member_ids = await self.member_user_ids(channel.id)
-        callees = [uid for uid in member_ids if uid != caller_id]
-        if not callees:
-            RINGS.labels(RingOutcome.NO_RECIPIENTS).inc()
-            return
         if call.call_type == CallType.CHANNEL and len(member_ids) >= SILENT_JOIN_MEMBER_THRESHOLD:
             RINGS.labels(RingOutcome.SUPPRESSED).inc()
+            return
+        invitations = list(
+            await self.session.scalars(
+                select(CallInvitation).where(
+                    CallInvitation.call_id == call.id,
+                    CallInvitation.outcome == CallInvitationOutcome.RINGING,
+                    CallInvitation.expires_at > datetime.now(UTC),
+                )
+            )
+        )
+        callees = [invitation.user_id for invitation in invitations]
+        if not callees:
+            RINGS.labels(RingOutcome.NO_RECIPIENTS).inc()
             return
         info = await self.chat.resolve_profile(caller_id)
         payload = chat_events.build_call_ring_payload(
@@ -1103,7 +1135,7 @@ class CallOperations:
             caller_user_id=caller_id,
             caller_name=info.display_name,
             caller_avatar_url=info.avatar_url or None,
-            expires_at=datetime.now(UTC) + timedelta(seconds=RING_TIMEOUT_SECONDS),
+            expires_at=min(invitation.expires_at for invitation in invitations),
         )
         try:
             await self.chat.publish(callees, chat_events.CALL_RING, payload, channel_id=channel.id)

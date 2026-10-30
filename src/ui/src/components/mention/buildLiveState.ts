@@ -16,6 +16,10 @@ export function buildLiveStateFromMetadata(
         : MentionAvailability.Available,
   };
 
+  state.callStartedAt = metadata.started_at || undefined;
+  state.callEndedAt = metadata.ended_at || undefined;
+  state.callStatus = metadata.status || undefined;
+
   if (metadata.status) state.taskStatus = metadata.status;
   if (metadata.due_date) state.taskDueDate = metadata.due_date;
   if (metadata.assignee_name) state.taskAssignee = metadata.assignee_name;

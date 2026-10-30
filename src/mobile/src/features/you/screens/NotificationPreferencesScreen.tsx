@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Switch,
   TouchableOpacity,
   Platform,
   ActivityIndicator,
@@ -12,13 +11,12 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
+import { ToggleRow } from "@shared/components/ToggleRow";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
-import type { ThemeColors } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { useAuth } from "@core/providers/AuthContext";
 import { settingsApi } from "@core/api/settingsApi";
-import { useRingtoneEnabled } from "@features/calls/callPrefs";
 
 interface Prefs {
   toastEnabled: boolean;
@@ -40,7 +38,6 @@ export function NotificationPreferencesScreen() {
   const { isAuthenticated } = useAuth();
   const [profileId, setProfileId] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<Prefs | null>(null);
-  const [ringtoneEnabled, setRingtoneEnabled] = useRingtoneEnabled();
 
   const settingsQuery = useQuery({
     queryKey: ["settings", "effective"],
@@ -106,26 +103,16 @@ export function NotificationPreferencesScreen() {
           <Text style={[styles.sectionLabel, { color: T.textDim }]}>IN-APP</Text>
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
             <ToggleRow
-              T={T}
               label="In-app alerts"
               sub="Show toast banners for new activity"
               value={prefs.toastEnabled}
               onValueChange={(v) => update({ toastEnabled: v })}
-              border
-            />
-            <ToggleRow
-              T={T}
-              label="Call ringtone"
-              sub="Ring for incoming calls while the app is open"
-              value={ringtoneEnabled}
-              onValueChange={setRingtoneEnabled}
             />
           </View>
 
           <Text style={[styles.sectionLabel, { color: T.textDim, marginTop: 24 }]}>EMAIL</Text>
           <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
             <ToggleRow
-              T={T}
               label="Email notifications"
               sub="Get a summary by email"
               value={prefs.emailEnabled}
@@ -171,59 +158,12 @@ export function NotificationPreferencesScreen() {
   );
 }
 
-function ToggleRow({
-  T,
-  label,
-  sub,
-  value,
-  onValueChange,
-  border,
-}: {
-  T: ThemeColors;
-  label: string;
-  sub: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-  border?: boolean;
-}) {
-  return (
-    <View
-      style={[
-        styles.toggleRow,
-        border
-          ? { borderBottomColor: T.border, borderBottomWidth: StyleSheet.hairlineWidth }
-          : null,
-      ]}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.toggleLabel, { color: T.textBright }]}>{label}</Text>
-        <Text style={[styles.toggleSub, { color: T.textDim }]}>{sub}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ true: T.accent, false: T.border }}
-        thumbColor="#fff"
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 20 },
   sectionLabel: { fontSize: 11, fontFamily: FONT.semibold, letterSpacing: 0.8, marginBottom: 8 },
   card: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  toggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-  },
-  toggleLabel: { fontSize: 15, fontFamily: FONT.medium },
-  toggleSub: { fontSize: 12, fontFamily: FONT.regular, marginTop: 2 },
   freqRow: { paddingHorizontal: 14, paddingVertical: 13, gap: 10 },
   freqLabel: { fontSize: 14, fontFamily: FONT.medium },
   freqPills: { flexDirection: "row", gap: 8 },

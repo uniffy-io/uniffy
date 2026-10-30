@@ -242,9 +242,11 @@ export function Select<T extends string | number = string>({
           triggerClassName,
         )}
       >
-        <span className="flex items-center gap-2 truncate">
+        <span className="flex min-w-0 items-center gap-2 [&>svg]:shrink-0">
           {selectedOption?.icon}
-          {selectedOption?.label || placeholder}
+          <span className="truncate" title={selectedOption?.label}>
+            {selectedOption?.label || placeholder}
+          </span>
         </span>
         <CaretDown
           size={16}

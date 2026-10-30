@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from enum import Enum
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index
+from sqlalchemy import Column, DateTime, ForeignKey, Index, text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -33,6 +33,15 @@ class Call(SQLModel, table=True):
 
     __tablename__ = "calls_calls"
     __table_args__ = (
+        Index("ix_calls_history_org", "organization_id", text("started_at DESC"), text("id DESC")),
+        Index(
+            "ix_calls_history_channel",
+            "organization_id",
+            "channel_id",
+            text("started_at DESC"),
+            text("id DESC"),
+        ),
+        Index("ix_calls_search_pending", "id", postgresql_where=text("search_pending")),
         Index(
             "uq_calls_active_per_channel",
             "channel_id",
@@ -59,6 +68,8 @@ class Call(SQLModel, table=True):
     # LiveKit room name: "org_{organization_id}:call_{id}" - org prefix is a
     # cross-org isolation defense inside the shared SFU.
     livekit_room_name: str = Field(max_length=120, nullable=False, unique=True)
+    title: str = Field(default="Call", max_length=500, nullable=False)
+    search_pending: bool = Field(default=True, nullable=False)
     # Capacity stays fixed for this call, including media room recreation.
     max_participants: int = Field(default=50, nullable=False)
     town_hall: bool = Field(default=False, nullable=False)
@@ -92,6 +103,10 @@ class Call(SQLModel, table=True):
     )
 
     @property
+    def urn(self) -> str:
+        return f"urn:uniffy:content:CALL:{self.id}"
+
+    @property
     def is_active(self) -> bool:
         return self.ended_at is None
 
@@ -109,6 +124,7 @@ class CallParticipant(SQLModel, table=True):
             postgresql_where="left_at IS NULL",
         ),
         Index("ix_calls_participants_call_user", "call_id", "user_id"),
+        Index("ix_calls_attendance_user", "organization_id", "user_id", "call_id"),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)

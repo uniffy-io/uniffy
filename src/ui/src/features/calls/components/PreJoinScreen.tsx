@@ -8,14 +8,25 @@ import {
   MicrophoneSlash,
   VideoCamera,
   VideoCameraSlash,
+  Presentation,
+  UsersThree,
   Warning,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, type SelectOption } from "@/components/ui/select";
+import { OptionTile } from "@/components/ui/option-tile";
+import { popoverShellClass } from "@/components/ui/popover";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
-import { getInitials } from "@/components/subject/utils";
+import { SubjectAvatarById } from "@/components/subject";
+import { callControlClass, callControlOffClass } from "@/features/calls/components/controlChrome";
+import {
+  deviceOptions,
+  selectedDevice,
+  speakerSelectionSupported,
+} from "@/features/calls/utils/deviceOptions";
 import { useCall } from "@/features/calls/components/callContext";
 import { useDevices } from "@/features/calls/hooks/useDevices";
 import {
@@ -71,37 +82,30 @@ function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
   );
 }
 
-function DeviceSelect({
+function DeviceField({
   label,
   devices,
   value,
   onChange,
+  managedByBrowser = false,
 }: {
   label: string;
   devices: MediaDeviceInfo[];
   value: string | null;
-  onChange: (id: string) => void;
+  onChange: (id: string | null) => void;
+  managedByBrowser?: boolean;
 }) {
-  if (devices.length === 0) return null;
-  const options: SelectOption<string>[] = devices.map((d, i) => ({
-    value: d.deviceId,
-    label: d.label || `${label} ${i + 1}`,
-  }));
-  // A stored preference can name a device that is gone, or that the browser
-  // hides behind an empty id until its permission is granted. Fall back to the
-  // first entry so the trigger never reads "Select...".
-  const known = devices.some((d) => d.deviceId === value);
   return (
-    <div className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
-      {label}
+    <div className="grid items-center gap-1 sm:grid-cols-[6rem_1fr] sm:gap-3">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <Select
-        size="sm"
         ariaLabel={label}
-        value={known ? (value ?? "") : (devices[0]?.deviceId ?? "")}
-        onChange={onChange}
-        options={options}
-        menuMinWidth={260}
-        triggerClassName="h-8 w-full min-w-0 font-normal text-foreground"
+        value={selectedDevice(devices, value)}
+        disabled={managedByBrowser}
+        onChange={(id) => onChange(id || null)}
+        options={deviceOptions(label, devices, managedByBrowser)}
+        className="min-w-0"
+        triggerClassName="w-full min-w-0"
       />
     </div>
   );
@@ -113,6 +117,7 @@ function PreJoinContent() {
   const prejoin = useAppSelector(selectPrejoin);
   const channelId = prejoin?.channelId ?? null;
   const callId = prejoin?.callId ?? null;
+  const calendarEventId = prejoin?.calendarEventId;
   const channel = useAppSelector((s) => (channelId ? s.chatChannels.byId[channelId] : undefined));
   const activeCall = useAppSelector((s) =>
     channelId ? selectActiveCallForChannel(s, channelId) : null,
@@ -121,6 +126,7 @@ function PreJoinContent() {
   const userId = useAppSelector((s) => s.auth.user?.id ?? "");
   const audience = !canPublishInCall(activeCall, userId);
   const [townHall, setTownHall] = useState(false);
+  const [callTitle, setCallTitle] = useState("");
   const [allowedChannel, setAllowedChannel] = useState<string | null>(null);
   useEffect(() => {
     if (!channelId || activeCall || callId) return;
@@ -273,7 +279,10 @@ function PreJoinContent() {
       if (callId) {
         await joinCallById(callId, channelId, opts);
       } else {
-        await joinChannelCall(channelId, opts);
+        await joinChannelCall(channelId, opts, {
+          calendarEventId,
+          title: callTitle.trim() || undefined,
+        });
       }
       setMicOn(false);
       setCamOn(false);
@@ -292,6 +301,8 @@ function PreJoinContent() {
     channelId,
     ready,
     callId,
+    calendarEventId,
+    callTitle,
     micOn,
     camOn,
     audience,
@@ -319,23 +330,52 @@ function PreJoinContent() {
         />
 
         <ModalBody className="space-y-4">
-          {!activeCall && !callId && allowedChannel === channelId && (
-            <div className="space-y-1.5">
-              <Select
-                ariaLabel="Call mode"
-                value={townHall ? "town-hall" : "regular"}
-                options={[
-                  { value: "regular", label: "Regular call" },
-                  { value: "town-hall", label: "Town hall" },
-                ]}
-                onChange={(value) => setTownHall(value === "town-hall")}
-                triggerClassName="w-full"
+          {!activeCall && !callId && (
+            <div>
+              <label htmlFor="call-title" className="mb-1 block text-sm text-muted-foreground">
+                Call name (optional)
+              </label>
+              <Input
+                id="call-title"
+                value={callTitle}
+                onChange={(event) => setCallTitle(event.target.value)}
+                placeholder={calendarEventId ? "Use event title" : "e.g. P0 checkout debugging"}
+                maxLength={500}
+                disabled={joining}
+                aria-describedby="call-title-hint"
               />
-              <p className="text-xs text-muted-foreground">
-                {townHall
-                  ? "You present. Others join as audience and can raise their hand to speak."
-                  : "Everyone can use their microphone, camera and screen sharing."}
+              <p id="call-title-hint" className="mt-1 text-xs text-muted-foreground">
+                Shown in call history.
               </p>
+            </div>
+          )}
+          {!activeCall && !callId && allowedChannel === channelId && (
+            <div>
+              <p id="call-mode-label" className="mb-1 text-sm text-muted-foreground">
+                Mode
+              </p>
+              <div
+                role="radiogroup"
+                aria-labelledby="call-mode-label"
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                <OptionTile
+                  selected={!townHall}
+                  icon={<UsersThree size={16} />}
+                  label="Regular call"
+                  description="Everyone can use their microphone, camera and screen."
+                  onSelect={() => setTownHall(false)}
+                  disabled={joining}
+                />
+                <OptionTile
+                  selected={townHall}
+                  icon={<Presentation size={16} />}
+                  label="Town hall"
+                  description="You present. Others listen and raise a hand to speak."
+                  onSelect={() => setTownHall(true)}
+                  disabled={joining}
+                />
+              </div>
             </div>
           )}
           {audience && (
@@ -344,7 +384,7 @@ function PreJoinContent() {
             </p>
           )}
 
-          <div className="relative aspect-video overflow-hidden rounded-lg bg-muted/60 border border-border/60 flex items-center justify-center">
+          <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-card shadow-edge">
             <video
               ref={videoRef}
               autoPlay
@@ -353,40 +393,43 @@ function PreJoinContent() {
               className={cn("h-full w-full object-cover scale-x-[-1]", !camOn && "hidden")}
             />
             {!camOn && (
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary text-xl font-semibold">
-                {getInitials(userName)}
-              </div>
+              <SubjectAvatarById
+                userId={userId}
+                displayName={userName}
+                size="lg"
+                className="h-16 w-16 text-xl"
+                maxScale={1.6}
+              />
             )}
-            <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-2">
+            <div
+              className={cn(
+                popoverShellClass,
+                "absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 p-1",
+              )}
+            >
               <button
                 type="button"
                 disabled={audience}
                 onClick={() => setMicOn((v) => !v)}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border",
-                  micOn
-                    ? "bg-card/90 border-border text-foreground"
-                    : "bg-red-500/90 border-red-500 text-white",
-                )}
+                className={cn(callControlClass(), !(micOn && !audience) && callControlOffClass)}
                 aria-label={micOn ? "Turn microphone off" : "Turn microphone on"}
+                aria-pressed={micOn && !audience}
+                title={micOn ? "Turn microphone off" : "Turn microphone on"}
                 data-testid="call-prejoin-mic-toggle"
               >
-                {micOn ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
+                {micOn && !audience ? <Microphone size={16} /> : <MicrophoneSlash size={16} />}
               </button>
               <button
                 type="button"
                 disabled={audience}
                 onClick={() => setCamOn((v) => !v)}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border",
-                  camOn
-                    ? "bg-card/90 border-border text-foreground"
-                    : "bg-red-500/90 border-red-500 text-white",
-                )}
+                className={cn(callControlClass(), !(camOn && !audience) && callControlOffClass)}
                 aria-label={camOn ? "Turn camera off" : "Turn camera on"}
+                aria-pressed={camOn && !audience}
+                title={camOn ? "Turn camera off" : "Turn camera on"}
                 data-testid="call-prejoin-camera-toggle"
               >
-                {camOn ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
+                {camOn && !audience ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
               </button>
             </div>
           </div>
@@ -404,38 +447,40 @@ function PreJoinContent() {
             </div>
           ))}
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <DeviceSelect
+          <div className="space-y-2">
+            <DeviceField
               label="Microphone"
               devices={audioInputs}
               value={preferences.audioInputId}
               onChange={(id) => dispatch(audioInputSelected(id))}
             />
-            <DeviceSelect
+            <DeviceField
               label="Camera"
               devices={videoInputs}
               value={preferences.videoInputId}
               onChange={(id) => dispatch(videoInputSelected(id))}
             />
-            <DeviceSelect
+            <DeviceField
               label="Speaker"
               devices={audioOutputs}
               value={preferences.audioOutputId}
               onChange={(id) => dispatch(audioOutputSelected(id))}
+              managedByBrowser={!speakerSelectionSupported}
             />
           </div>
 
           {alreadyIn.length > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <div className="flex -space-x-1.5">
-                {alreadyIn.slice(0, 5).map((p) => (
-                  <span
-                    key={p.identity}
-                    className="flex h-6 w-6 items-center justify-center rounded-full border border-card bg-primary/15 text-[10px] font-semibold text-primary"
-                    title={p.displayName}
-                  >
-                    {getInitials(p.displayName)}
-                  </span>
+                {[...new Map(alreadyIn.map((p) => [p.userId, p])).values()].slice(0, 5).map((p) => (
+                  <SubjectAvatarById
+                    key={p.userId}
+                    userId={p.userId}
+                    displayName={p.displayName}
+                    avatarUrl={p.avatarUrl ?? undefined}
+                    size="sm"
+                    bordered
+                  />
                 ))}
               </div>
               <span>
@@ -465,7 +510,7 @@ function PreJoinContent() {
             </div>
           )}
           {joinError && (
-            <p role="alert" className="text-sm text-red-500">
+            <p role="alert" className="text-sm text-destructive">
               {joinError}
             </p>
           )}

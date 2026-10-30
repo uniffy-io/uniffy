@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { MicrophoneSlash, VideoCamera, MonitorArrowUp } from "phosphor-react-native";
 import type { Participant } from "livekit-client";
 import { useParticipantActions } from "@features/calls/useParticipantActions";
 import { participantLabel } from "@features/calls/components/ParticipantTile";
+import { CallSheetFeedback } from "@features/calls/components/CallSheetFeedback";
 import { loadLivekitClient } from "@features/calls/livekit";
 import { Avatar } from "@shared/components/Avatar";
 import { BottomSheet } from "@shared/components/BottomSheet";
@@ -39,54 +40,58 @@ export function CallParticipantsSheet({
   return (
     <BottomSheet visible={visible} onClose={onClose}>
       <SheetHeader title={`In this call (${participants.length})`} />
-      {participants.map((participant) => {
-        const name = participantLabel(participant);
-        const muted = participant.isMicrophoneEnabled === false;
-        const sharing =
-          !!livekit && !!participant.getTrackPublication(livekit.Track.Source.ScreenShare)?.track;
-        const actionable = canModerate && !participant.isLocal && pending === null;
-        const state = [
-          muted ? "muted" : "microphone on",
-          participant.isSpeaking ? "speaking" : null,
-          sharing ? "sharing screen" : null,
-        ]
-          .filter(Boolean)
-          .join(", ");
-        return (
-          <SheetRow
-            key={participant.identity}
-            leading={<Avatar name={name} size={28} />}
-            title={participant.isLocal ? `${name} (you)` : name}
-            subtitle={
-              actionable
-                ? state
-                  ? `${state} - tap for host actions`
-                  : "Tap for host actions"
-                : state || undefined
-            }
-            trailing={
-              <View style={styles.badges}>
-                {muted ? <MicrophoneSlash size={14} color={T.textDim} weight="fill" /> : null}
-                {participant.isCameraEnabled ? (
-                  <VideoCamera size={14} color={T.textDim} weight="fill" />
-                ) : null}
-                {sharing ? <MonitorArrowUp size={14} color={T.accent} weight="fill" /> : null}
-              </View>
-            }
-            onPress={() => {
-              if (actionable) promptHostActions(participant);
-            }}
-          />
-        );
-      })}
-      {participants.length === 0 ? (
-        <Text style={[styles.empty, { color: T.textDim }]}>No one here yet</Text>
-      ) : null}
+      <CallSheetFeedback />
+      <ScrollView style={styles.list}>
+        {participants.map((participant) => {
+          const name = participantLabel(participant);
+          const muted = participant.isMicrophoneEnabled === false;
+          const sharing =
+            !!livekit && !!participant.getTrackPublication(livekit.Track.Source.ScreenShare)?.track;
+          const actionable = canModerate && !participant.isLocal && pending === null;
+          const state = [
+            muted ? "muted" : "microphone on",
+            participant.isSpeaking ? "speaking" : null,
+            sharing ? "sharing screen" : null,
+          ]
+            .filter(Boolean)
+            .join(", ");
+          return (
+            <SheetRow
+              key={participant.identity}
+              leading={<Avatar name={name} size={28} />}
+              title={participant.isLocal ? `${name} (you)` : name}
+              subtitle={
+                actionable
+                  ? state
+                    ? `${state} - tap for host actions`
+                    : "Tap for host actions"
+                  : state || undefined
+              }
+              trailing={
+                <View style={styles.badges}>
+                  {muted ? <MicrophoneSlash size={14} color={T.textDim} weight="fill" /> : null}
+                  {participant.isCameraEnabled ? (
+                    <VideoCamera size={14} color={T.textDim} weight="fill" />
+                  ) : null}
+                  {sharing ? <MonitorArrowUp size={14} color={T.accent} weight="fill" /> : null}
+                </View>
+              }
+              onPress={() => {
+                if (actionable) promptHostActions(participant);
+              }}
+            />
+          );
+        })}
+        {participants.length === 0 ? (
+          <Text style={[styles.empty, { color: T.textDim }]}>No one here yet</Text>
+        ) : null}
+      </ScrollView>
     </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
+  list: { maxHeight: 360 },
   badges: { flexDirection: "row", alignItems: "center", gap: 6 },
   empty: { fontSize: 13, fontFamily: FONT.regular, paddingHorizontal: 16, paddingVertical: 14 },
 });

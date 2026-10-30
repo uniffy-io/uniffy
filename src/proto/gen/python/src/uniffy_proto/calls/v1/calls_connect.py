@@ -16,7 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calls_pb
-from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportMediaStateRequest, ReportMediaStateResponse, SendCallReactionRequest, SendCallReactionResponse, SetCallModeRequest, SetCallModeResponse, SetCallSpeakerRequest, SetCallSpeakerResponse, SetHandRaisedRequest, SetHandRaisedResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
+from .calls_pb import DeclineCallRequest, DeclineCallResponse, EndCallRequest, EndCallResponse, GetActiveCallRequest, GetActiveCallResponse, GetCallAvailabilityRequest, GetCallAvailabilityResponse, GetCallRecordRequest, GetCallRecordResponse, GetCallStateRequest, GetCallStateResponse, GetOrgCallPolicyRequest, GetOrgCallPolicyResponse, InitiateCallRequest, InitiateCallResponse, JoinCallRequest, JoinCallResponse, KickParticipantRequest, KickParticipantResponse, LeaveCallRequest, LeaveCallResponse, ListActiveCallsRequest, ListActiveCallsResponse, ListCallHistoryRequest, ListCallHistoryResponse, MuteParticipantRequest, MuteParticipantResponse, RefreshCallTokenRequest, RefreshCallTokenResponse, ReportCallActivityRequest, ReportCallActivityResponse, ReportMediaStateRequest, ReportMediaStateResponse, SendCallReactionRequest, SendCallReactionResponse, SetCallModeRequest, SetCallModeResponse, SetCallSpeakerRequest, SetCallSpeakerResponse, SetHandRaisedRequest, SetHandRaisedResponse, UpdateOrgCallPolicyRequest, UpdateOrgCallPolicyResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -37,6 +37,12 @@ class CallService(Protocol):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    async def list_call_history(self, request: ListCallHistoryRequest, ctx: RequestContext[ListCallHistoryRequest, ListCallHistoryResponse], /) -> ListCallHistoryResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_call_record(self, request: GetCallRecordRequest, ctx: RequestContext[GetCallRecordRequest, GetCallRecordResponse], /) -> GetCallRecordResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     async def get_call_availability(self, request: GetCallAvailabilityRequest, ctx: RequestContext[GetCallAvailabilityRequest, GetCallAvailabilityResponse], /) -> GetCallAvailabilityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -113,13 +119,16 @@ class CallService(Protocol):
     async def set_call_speaker(self, request: SetCallSpeakerRequest, ctx: RequestContext[SetCallSpeakerRequest, SetCallSpeakerResponse], /) -> SetCallSpeakerResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
-    async def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
+    async def report_call_activity(self, request: ReportCallActivityRequest, ctx: RequestContext[ReportCallActivityRequest, ReportCallActivityResponse], /) -> ReportCallActivityResponse:
         """
         The client reports its own mic/camera/screen state; this is the roster's
         source of truth because LiveKit emits no mute webhook (a muted mic track
         stays published, so mute state cannot be inferred server-side). Fans out
         CALL_PARTICIPANT_STATE only when a flag actually changed.
         """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -140,6 +149,26 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
         super().__init__(
             service=service,
             endpoints=lambda svc: {
+                "/calls.v1.CallService/ListCallHistory": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListCallHistory",
+                        service_name="calls.v1.CallService",
+                        input=ListCallHistoryRequest,
+                        output=ListCallHistoryResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.list_call_history,
+                ),
+                "/calls.v1.CallService/GetCallRecord": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetCallRecord",
+                        service_name="calls.v1.CallService",
+                        input=GetCallRecordRequest,
+                        output=GetCallRecordResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_call_record,
+                ),
                 "/calls.v1.CallService/GetCallAvailability": Endpoint.unary(
                     method=MethodInfo(
                         name="GetCallAvailability",
@@ -320,6 +349,16 @@ class CallServiceASGIApplication(ConnectASGIApplication[CallService]):
                     ),
                     function=svc.set_call_speaker,
                 ),
+                "/calls.v1.CallService/ReportCallActivity": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ReportCallActivity",
+                        service_name="calls.v1.CallService",
+                        input=ReportCallActivityRequest,
+                        output=ReportCallActivityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.report_call_activity,
+                ),
                 "/calls.v1.CallService/ReportMediaState": Endpoint.unary(
                     method=MethodInfo(
                         name="ReportMediaState",
@@ -353,6 +392,46 @@ class CallServiceClient(ConnectClient):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    async def list_call_history(
+        self,
+        request: ListCallHistoryRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCallHistoryResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCallHistory",
+                service_name="calls.v1.CallService",
+                input=ListCallHistoryRequest,
+                output=ListCallHistoryResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_call_record(
+        self,
+        request: GetCallRecordRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallRecordResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallRecord",
+                service_name="calls.v1.CallService",
+                input=GetCallRecordRequest,
+                output=GetCallRecordResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def get_call_availability(
         self,
         request: GetCallAvailabilityRequest,
@@ -735,6 +814,32 @@ class CallServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def report_call_activity(
+        self,
+        request: ReportCallActivityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReportCallActivityResponse:
+        """
+        The client reports its own mic/camera/screen state; this is the roster's
+        source of truth because LiveKit emits no mute webhook (a muted mic track
+        stays published, so mute state cannot be inferred server-side). Fans out
+        CALL_PARTICIPANT_STATE only when a flag actually changed.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReportCallActivity",
+                service_name="calls.v1.CallService",
+                input=ReportCallActivityRequest,
+                output=ReportCallActivityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
     async def report_media_state(
         self,
         request: ReportMediaStateRequest,
@@ -742,12 +847,6 @@ class CallServiceClient(ConnectClient):
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
     ) -> ReportMediaStateResponse:
-        """
-        The client reports its own mic/camera/screen state; this is the roster's
-        source of truth because LiveKit emits no mute webhook (a muted mic track
-        stays published, so mute state cannot be inferred server-side). Fans out
-        CALL_PARTICIPANT_STATE only when a flag actually changed.
-        """
         return await self.execute_unary(
             request=request,
             method=MethodInfo(
@@ -771,6 +870,12 @@ class CallServiceSync(Protocol):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    def list_call_history(self, request: ListCallHistoryRequest, ctx: RequestContext[ListCallHistoryRequest, ListCallHistoryResponse], /) -> ListCallHistoryResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_call_record(self, request: GetCallRecordRequest, ctx: RequestContext[GetCallRecordRequest, GetCallRecordResponse], /) -> GetCallRecordResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def get_call_availability(self, request: GetCallAvailabilityRequest, ctx: RequestContext[GetCallAvailabilityRequest, GetCallAvailabilityResponse], /) -> GetCallAvailabilityResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -847,13 +952,16 @@ class CallServiceSync(Protocol):
     def set_call_speaker(self, request: SetCallSpeakerRequest, ctx: RequestContext[SetCallSpeakerRequest, SetCallSpeakerResponse], /) -> SetCallSpeakerResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
-    def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
+    def report_call_activity(self, request: ReportCallActivityRequest, ctx: RequestContext[ReportCallActivityRequest, ReportCallActivityResponse], /) -> ReportCallActivityResponse:
         """
         The client reports its own mic/camera/screen state; this is the roster's
         source of truth because LiveKit emits no mute webhook (a muted mic track
         stays published, so mute state cannot be inferred server-side). Fans out
         CALL_PARTICIPANT_STATE only when a flag actually changed.
         """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def report_media_state(self, request: ReportMediaStateRequest, ctx: RequestContext[ReportMediaStateRequest, ReportMediaStateResponse], /) -> ReportMediaStateResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -872,6 +980,26 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
     ) -> None:
         super().__init__(
             endpoints={
+                "/calls.v1.CallService/ListCallHistory": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListCallHistory",
+                        service_name="calls.v1.CallService",
+                        input=ListCallHistoryRequest,
+                        output=ListCallHistoryResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.list_call_history,
+                ),
+                "/calls.v1.CallService/GetCallRecord": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetCallRecord",
+                        service_name="calls.v1.CallService",
+                        input=GetCallRecordRequest,
+                        output=GetCallRecordResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_call_record,
+                ),
                 "/calls.v1.CallService/GetCallAvailability": EndpointSync.unary(
                     method=MethodInfo(
                         name="GetCallAvailability",
@@ -1052,6 +1180,16 @@ class CallServiceWSGIApplication(ConnectWSGIApplication):
                     ),
                     function=service.set_call_speaker,
                 ),
+                "/calls.v1.CallService/ReportCallActivity": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ReportCallActivity",
+                        service_name="calls.v1.CallService",
+                        input=ReportCallActivityRequest,
+                        output=ReportCallActivityResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.report_call_activity,
+                ),
                 "/calls.v1.CallService/ReportMediaState": EndpointSync.unary(
                     method=MethodInfo(
                         name="ReportMediaState",
@@ -1085,6 +1223,44 @@ class CallServiceClientSync(ConnectClientSync):
     either a path the client resolves against window.location (same-origin
     edge route) or an absolute ws(s):// override for split-origin deployments.
     """
+    def list_call_history(
+        self,
+        request: ListCallHistoryRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCallHistoryResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCallHistory",
+                service_name="calls.v1.CallService",
+                input=ListCallHistoryRequest,
+                output=ListCallHistoryResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_call_record(
+        self,
+        request: GetCallRecordRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetCallRecordResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetCallRecord",
+                service_name="calls.v1.CallService",
+                input=GetCallRecordRequest,
+                output=GetCallRecordResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     def get_call_availability(
         self,
         request: GetCallAvailabilityRequest,
@@ -1449,6 +1625,31 @@ class CallServiceClientSync(ConnectClientSync):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+    def report_call_activity(
+        self,
+        request: ReportCallActivityRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ReportCallActivityResponse:
+        """
+        The client reports its own mic/camera/screen state; this is the roster's
+        source of truth because LiveKit emits no mute webhook (a muted mic track
+        stays published, so mute state cannot be inferred server-side). Fans out
+        CALL_PARTICIPANT_STATE only when a flag actually changed.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ReportCallActivity",
+                service_name="calls.v1.CallService",
+                input=ReportCallActivityRequest,
+                output=ReportCallActivityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     def report_media_state(
         self,
         request: ReportMediaStateRequest,
@@ -1456,12 +1657,6 @@ class CallServiceClientSync(ConnectClientSync):
         headers: Headers | Mapping[str, str] | None = None,
         timeout_ms: int | None = None,
     ) -> ReportMediaStateResponse:
-        """
-        The client reports its own mic/camera/screen state; this is the roster's
-        source of truth because LiveKit emits no mute webhook (a muted mic track
-        stays published, so mute state cannot be inferred server-side). Fans out
-        CALL_PARTICIPANT_STATE only when a flag actually changed.
-        """
         return self.execute_unary(
             request=request,
             method=MethodInfo(

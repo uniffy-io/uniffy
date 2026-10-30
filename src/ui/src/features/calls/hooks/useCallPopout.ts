@@ -44,7 +44,7 @@ export function useCallPopout(callId: string | null) {
       document
         .querySelectorAll('style, link[rel="stylesheet"]')
         .forEach((node) => child.document.head.append(node.cloneNode(true)));
-      child.document.body.className = "h-screen overflow-hidden bg-background text-foreground";
+      child.document.body.className = "h-dvh overflow-hidden bg-background text-foreground";
       setPopoutWindow(child);
     } catch {
       dispatch(

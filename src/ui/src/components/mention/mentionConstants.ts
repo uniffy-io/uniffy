@@ -2,6 +2,7 @@ import { UrnType } from "@/shared/utils/urn";
 import { cn } from "@/shared/utils/cn";
 
 export const EXPANDABLE_URN_TYPES = new Set<string>([
+  UrnType.CALL,
   UrnType.TASK,
   UrnType.CALENDAR_EVENT,
   UrnType.PROJECT,

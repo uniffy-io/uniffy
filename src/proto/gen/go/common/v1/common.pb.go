@@ -46,6 +46,7 @@ const (
 	ContentType_CONTENT_TYPE_AGENT_FOLDER    ContentType = 16
 	ContentType_CONTENT_TYPE_TEAM            ContentType = 17
 	ContentType_CONTENT_TYPE_CALENDAR        ContentType = 18
+	ContentType_CONTENT_TYPE_CALL            ContentType = 19
 )
 
 // Enum value maps for ContentType.
@@ -70,6 +71,7 @@ var (
 		16: "CONTENT_TYPE_AGENT_FOLDER",
 		17: "CONTENT_TYPE_TEAM",
 		18: "CONTENT_TYPE_CALENDAR",
+		19: "CONTENT_TYPE_CALL",
 	}
 	ContentType_value = map[string]int32{
 		"CONTENT_TYPE_UNSPECIFIED":     0,
@@ -91,6 +93,7 @@ var (
 		"CONTENT_TYPE_AGENT_FOLDER":    16,
 		"CONTENT_TYPE_TEAM":            17,
 		"CONTENT_TYPE_CALENDAR":        18,
+		"CONTENT_TYPE_CALL":            19,
 	}
 )
 
@@ -1452,7 +1455,7 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\vtotal_count\x18\x03 \x01(\x05R\n" +
 	"totalCount\x12\x1f\n" +
 	"\vtotal_pages\x18\x04 \x01(\x05R\n" +
-	"totalPages*\x85\x04\n" +
+	"totalPages*\x9c\x04\n" +
 	"\vContentType\x12\x1c\n" +
 	"\x18CONTENT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CONTENT_TYPE_NOTE\x10\x01\x12\x15\n" +
@@ -1473,7 +1476,8 @@ const file_common_v1_common_proto_rawDesc = "" +
 	"\x10CONTENT_TYPE_TAG\x10\x0f\x12\x1d\n" +
 	"\x19CONTENT_TYPE_AGENT_FOLDER\x10\x10\x12\x15\n" +
 	"\x11CONTENT_TYPE_TEAM\x10\x11\x12\x19\n" +
-	"\x15CONTENT_TYPE_CALENDAR\x10\x12*\x91\x01\n" +
+	"\x15CONTENT_TYPE_CALENDAR\x10\x12\x12\x15\n" +
+	"\x11CONTENT_TYPE_CALL\x10\x13*\x91\x01\n" +
 	"\vSubjectType\x12\x1c\n" +
 	"\x18SUBJECT_TYPE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_TYPE_USER\x10\x01\x12\x16\n" +

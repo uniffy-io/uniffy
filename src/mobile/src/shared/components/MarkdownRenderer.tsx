@@ -21,6 +21,7 @@ const CONTENT_TYPE_TO_DOMAIN: Record<string, Domain> = {
   NOTE: "notes",
   FILE: "files",
   CHAT: "chat",
+  CALL: "chat",
   CALENDAR: "calendar",
   CALENDAR_EVENT: "calendar",
   PROJECT: "projects",
@@ -270,15 +271,17 @@ function renderMixedParts(
         : refId && NAVIGABLE_DOMAINS.has(domain)
           ? () =>
               router.push(
-                (urnType === "CALENDAR"
-                  ? `/calendar?calendar=${encodeURIComponent(refId)}`
-                  : `/${domain}/${refId}`) as any,
+                (urnType === "CALL"
+                  ? `/calls/${refId}`
+                  : urnType === "CALENDAR"
+                    ? `/calendar?calendar=${encodeURIComponent(refId)}`
+                    : `/${domain}/${refId}`) as any,
               )
           : undefined;
       return (
         <ReferenceChip
           key={`${kp}-m${i}`}
-          domain={domain}
+          domain={urnType === "CALL" ? "call" : domain}
           label={part.label}
           onPress={handlePress}
         />

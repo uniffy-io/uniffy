@@ -1,4 +1,4 @@
-/** Renders into `document.body` to escape ancestor `overflow: hidden` containers (e.g. Table). */
+/** Portals out of ancestor `overflow: hidden` containers (e.g. Table) into `overlayRoot`. */
 import {
   type ReactNode,
   type RefObject,
@@ -10,6 +10,7 @@ import {
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
 import { cn } from "@/shared/utils/cn";
+import { overlayRoot } from "@/shared/utils/overlayRoot";
 import { popoverShellClass } from "@/components/ui/popover";
 
 interface MenuPosition {
@@ -160,6 +161,6 @@ export function PortalMenu({
     >
       {children}
     </div>,
-    position.ownerDocument.fullscreenElement ?? position.ownerDocument.body,
+    overlayRoot(position.ownerDocument),
   );
 }

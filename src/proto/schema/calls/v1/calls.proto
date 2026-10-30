@@ -41,6 +41,8 @@ enum ScreenShareQuality {
 // either a path the client resolves against window.location (same-origin
 // edge route) or an absolute ws(s):// override for split-origin deployments.
 service CallService {
+  rpc ListCallHistory(ListCallHistoryRequest) returns (ListCallHistoryResponse);
+  rpc GetCallRecord(GetCallRecordRequest) returns (GetCallRecordResponse);
   rpc GetCallAvailability(GetCallAvailabilityRequest) returns (GetCallAvailabilityResponse);
   rpc GetCallState(GetCallStateRequest) returns (GetCallStateResponse);
   // Idempotent per channel: if the channel already has an active call the
@@ -73,6 +75,7 @@ service CallService {
   // source of truth because LiveKit emits no mute webhook (a muted mic track
   // stays published, so mute state cannot be inferred server-side). Fans out
   // CALL_PARTICIPANT_STATE only when a flag actually changed.
+  rpc ReportCallActivity(ReportCallActivityRequest) returns (ReportCallActivityResponse);
   rpc ReportMediaState(ReportMediaStateRequest) returns (ReportMediaStateResponse);
 }
 
@@ -162,6 +165,10 @@ message InitiateCallRequest {
   string device_id = 3;
   optional string device_label = 4;
   bool town_hall = 5;
+  // Event UUID or recurring occurrence reference. Title is resolved by the server.
+  optional string calendar_event_id = 6;
+  // Optional name for a new call. Blank uses the event or channel title.
+  optional string title = 7;
 }
 
 message InitiateCallResponse {
@@ -365,3 +372,81 @@ message SendCallReactionRequest {
   CallReaction reaction = 4;
 }
 message SendCallReactionResponse {}
+
+// Invitation outcome is independent of attendance after a late join.
+enum CallInvitationOutcome {
+  CALL_INVITATION_OUTCOME_UNSPECIFIED = 0;
+  CALL_INVITATION_OUTCOME_RINGING = 1;
+  CALL_INVITATION_OUTCOME_ANSWERED = 2;
+  CALL_INVITATION_OUTCOME_DECLINED = 3;
+  CALL_INVITATION_OUTCOME_MISSED = 4;
+}
+message CallRecord {
+  Call call = 1;
+  string urn = 2;
+  string title = 3;
+  int32 participant_count = 4;
+  bool attended = 5;
+  CallInvitationOutcome invitation_outcome = 6;
+}
+message CallAttendance {
+  string user_id = 1;
+  string display_name = 2;
+  optional string avatar_url = 3;
+  optional google.protobuf.Timestamp joined_at = 4;
+  optional google.protobuf.Timestamp left_at = 5;
+  CallInvitationOutcome invitation_outcome = 6;
+  uint32 activity_resolution_seconds = 7;
+  repeated CallActivityBucket activity = 8;
+  uint32 speaking_seconds = 9;
+  uint32 observed_seconds = 10;
+  uint32 present_seconds = 11;
+  uint32 activity_duration_seconds = 12;
+}
+message ListCallHistoryRequest {
+  string organization_id = 1;
+  // Omit to list calls initiated, attended or received by the caller.
+  optional string channel_id = 2;
+  string cursor = 3;
+  int32 page_size = 4;
+}
+message ListCallHistoryResponse {
+  repeated CallRecord records = 1;
+  string next_cursor = 2;
+}
+message GetCallRecordRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string participant_cursor = 3;
+  int32 page_size = 4;
+}
+message GetCallRecordResponse {
+  CallRecord record = 1;
+  repeated CallAttendance participants = 2;
+  string next_participant_cursor = 3;
+}
+
+// Masks represent one-second samples within a 30-second chunk relative to call start.
+message CallActivityChunk {
+  uint32 offset_seconds = 1;
+  uint32 observed_mask = 2;
+  uint32 speaking_mask = 3;
+}
+message ReportCallActivityRequest {
+  string organization_id = 1;
+  string call_id = 2;
+  string device_id = 3;
+  // Empty only for clock/bootstrap; subsequent writes bind to this attendance row.
+  string participant_id = 4;
+  repeated CallActivityChunk chunks = 5;
+}
+message ReportCallActivityResponse {
+  string participant_id = 1;
+  double elapsed_seconds = 2;
+}
+message CallActivityBucket {
+  uint32 offset_seconds = 1;
+  uint32 present_seconds = 2;
+  uint32 observed_seconds = 3;
+  uint32 speaking_seconds = 4;
+}

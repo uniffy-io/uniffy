@@ -1,4 +1,5 @@
 import React from "react";
+import { router } from "expo-router";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { PhoneDisconnect } from "phosphor-react-native";
 import { useCall } from "@features/calls/CallContext";
@@ -23,6 +24,21 @@ export function CallEndedNotice() {
             {CALL_END_COPY[endedInfo.cause]}
           </Text>
           <View style={styles.buttons}>
+            {!canRejoin && (
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: T.green }]}
+                onPress={() => {
+                  const id = endedInfo.callId;
+                  clearEndedInfo();
+                  router.push(`/calls/${id}`);
+                }}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="View call summary"
+              >
+                <Text style={styles.primaryLabel}>View summary</Text>
+              </TouchableOpacity>
+            )}
             {canRejoin ? (
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: T.green }]}

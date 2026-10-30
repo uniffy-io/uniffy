@@ -17,6 +17,7 @@ from uniffy.core.search.engine import (
     any_of,
 )
 from uniffy.core.search.stop_words import STOP_WORDS
+from uniffy.core.types import ContentType
 
 
 class SearchCandidateScope(StrEnum):
@@ -262,7 +263,8 @@ def build_candidate_filter(
             owner_filter,
         )
 
-    filters = [base]
+    # Calls remain addressable by URN without appearing in discovery results.
+    filters = [base, SearchNot(SearchTerm("entity_type", ContentType.CALL.value.lower()))]
     if type_filters:
         filters.append(any_of(*(SearchTerm("entity_type", value) for value in type_filters)))
     filters.extend(SearchTerm("tags", value) for value in tag_filters)

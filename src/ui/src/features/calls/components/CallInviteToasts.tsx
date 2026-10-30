@@ -2,7 +2,8 @@ import { useFormattedKeybinding } from "@/features/settings/hooks/useKeyboardSho
 import { useEffect } from "react";
 import { Phone, PhoneDisconnect } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { getInitials } from "@/components/subject/utils";
+import { SubjectAvatarById } from "@/components/subject";
+import { Button } from "@/components/ui/button";
 import { popoverShellClass } from "@/components/ui/popover";
 import { cn } from "@/shared/utils/cn";
 import {
@@ -96,31 +97,27 @@ function InviteCard({ invite }: { invite: RingInvite }) {
       aria-atomic="true"
       data-testid="call-invite-toast"
     >
-      {invite.callerAvatarUrl ? (
-        <img
-          src={invite.callerAvatarUrl}
-          alt=""
-          className="h-10 w-10 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-          {getInitials(invite.callerName)}
-        </span>
-      )}
+      <SubjectAvatarById
+        userId={invite.callerUserId}
+        displayName={invite.callerName}
+        avatarUrl={invite.callerAvatarUrl ?? undefined}
+        size="lg"
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">{invite.callerName}</p>
         <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
       </div>
-      <button
-        type="button"
+      <Button
+        variant="destructive"
+        size="icon"
         onClick={() => void dispatch(declineCall(invite.callId))}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+        className="size-9 rounded-full pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         title={`Decline (${declineBinding})`}
         aria-label="Decline call"
         data-testid="call-invite-decline"
       >
         <PhoneDisconnect size={16} weight="fill" />
-      </button>
+      </Button>
       <button
         type="button"
         onClick={() => {
@@ -129,7 +126,7 @@ function InviteCard({ invite }: { invite: RingInvite }) {
           // if it already ended - never start a fresh one in the channel.
           dispatch(prejoinOpened({ channelId: invite.channelId, callId: invite.callId }));
         }}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white hover:bg-emerald-600"
+        className="focus-ring flex size-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-white transition-colors hover:bg-green-700 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
         title={`Answer (${answerBinding})`}
         aria-label="Accept call"
         data-testid="call-invite-accept"

@@ -18,7 +18,7 @@ from uniffy.domains.calls.policy import ResolvedCallPolicy, save_call_policy
 from uniffy.domains.calls.publishing import CallPublishing, can_publish
 from uniffy.domains.chat.calls import CALL_UPDATED
 from uniffy.tests.integration.access.call_contention import contend
-from uniffy.tests.integration.access.calls import _auth_session, _call, _participant
+from uniffy.tests.integration.access.calls import _auth_session, _call, _channel, _participant
 from uniffy.tests.integration.access.calls import call_publication as call_publication
 from uniffy.tests.integration.access.calls import livekit as livekit
 
@@ -33,8 +33,8 @@ class Denial(StrEnum):
     DIRECT = "direct"
 
 
-async def setup_call(session, access):
-    call = await _call(session, access)
+async def setup_call(session, access, *, town_hall=True):
+    call = await _call(session, access, town_hall=town_hall)
     await session.execute(
         update(ChatChannel)
         .where(ChatChannel.id == call.channel_id)
@@ -49,7 +49,7 @@ async def setup_call(session, access):
         row.token_jti = generate_id().hex
         row.hand_raised_at = datetime.now(UTC)
         row.hand_revision = 1
-        row.mic_enabled = row.camera_enabled = row.screen_sharing = True
+        row.mic_enabled = row.camera_enabled = row.screen_sharing = not town_hall
     await session.commit()
     return call, devices, auth
 
@@ -65,13 +65,17 @@ def live_entries(devices, allowed):
     ]
 
 
-async def test_mode_and_roles_control_every_device_without_enabling_media(
+async def test_speaker_roles_control_every_device_without_enabling_media(
     session, access, livekit, call_publication
 ):
     call, devices, _ = await setup_call(session, access)
     livekit.list_participants.return_value = live_entries(devices, True)
+    call.speaker_user_ids = [str(access.member_id)]
+    for row in devices:
+        row.mic_enabled = row.camera_enabled = row.screen_sharing = True
+    await session.commit()
     ops = CallPublishing(session)
-    await ops.set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
+    await ops.set_speaker(access.owner_id, access.org_id, call.id, access.member_id, speaker=False)
     assert call.town_hall and call.publishing_revision == 1
     assert can_publish(call, access.owner_id)
     assert not can_publish(call, access.member_id)
@@ -95,9 +99,7 @@ async def test_mode_and_roles_control_every_device_without_enabling_media(
     livekit.list_participants.return_value = live_entries(devices, True)
     await ops.set_speaker(access.owner_id, access.org_id, call.id, access.member_id, speaker=False)
     assert not can_publish(call, access.member_id)
-    await ops.set_mode(access.owner_id, access.org_id, call.id, town_hall=False)
-    assert can_publish(call, access.member_id)
-    assert call.speaker_user_ids == [] and call.publishing_revision == 4
+    assert call.speaker_user_ids == [] and call.publishing_revision == 3
     assert (
         len(
             (
@@ -109,7 +111,7 @@ async def test_mode_and_roles_control_every_device_without_enabling_media(
                 )
             ).all()
         )
-        == 4
+        == 3
     )
 
 
@@ -118,7 +120,6 @@ async def test_audience_token_rejoin_and_media_report_follow_persisted_role(
 ):
     call, devices, auth = await setup_call(session, access)
     publishing = CallPublishing(session)
-    await publishing.set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
     operations = CallOperations(session)
     _, _, token = await operations.join_call(
         access.member_id, access.org_id, call.id, "web", auth_session_id=auth.id
@@ -152,10 +153,10 @@ async def test_audience_token_rejoin_and_media_report_follow_persisted_role(
     "denial",
     [Denial.MEMBER, Denial.FOREIGN_ORG, Denial.DISABLED, Denial.OTHER_CHANNEL, Denial.DIRECT],
 )
-async def test_mode_requires_moderation_and_org_channel_policy(
+async def test_mode_change_is_rejected_for_every_channel_policy(
     session, access, livekit, call_publication, denial
 ):
-    call, _, _ = await setup_call(session, access)
+    call, _, _ = await setup_call(session, access, town_hall=False)
     if denial in (Denial.DISABLED, Denial.OTHER_CHANNEL):
         await save_call_policy(
             session,
@@ -172,7 +173,7 @@ async def test_mode_requires_moderation_and_org_channel_policy(
         call.call_type = CallType.DIRECT
     await session.commit()
     call_id = call.id
-    with pytest.raises((PermissionDeniedError, NotFoundError)):
+    with pytest.raises((PermissionDeniedError, NotFoundError, ValidationError)):
         await CallPublishing(session).set_mode(
             access.member_id if denial == Denial.MEMBER else access.owner_id,
             generate_id() if denial == Denial.FOREIGN_ORG else access.org_id,
@@ -188,13 +189,13 @@ async def test_mode_requires_moderation_and_org_channel_policy(
 async def test_grants_require_town_hall_active_target_and_moderator(
     session, access, livekit, call_publication
 ):
-    call, _, _ = await setup_call(session, access)
+    call, _, _ = await setup_call(session, access, town_hall=False)
     ops = CallPublishing(session)
     with pytest.raises(ValidationError):
         await ops.set_speaker(
             access.owner_id, access.org_id, call.id, access.member_id, speaker=True
         )
-    await ops.set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
+    call, _, _ = await setup_call(session, access)
     with pytest.raises(PermissionDeniedError):
         await ops.set_speaker(
             access.member_id, access.org_id, call.id, access.member_id, speaker=True
@@ -211,39 +212,41 @@ async def test_failed_media_update_reconciles_from_committed_policy(
     session, access, livekit, call_publication
 ):
     call, devices, _ = await setup_call(session, access)
+    call.speaker_user_ids = [str(access.member_id)]
+    await session.commit()
     livekit.list_participants.return_value = live_entries(devices, True)
     livekit.set_publishing.side_effect = LiveKitApiError("offline", status_code=503)
     with pytest.raises(LiveKitApiError):
-        await CallPublishing(session).set_mode(
-            access.owner_id, access.org_id, call.id, town_hall=True
+        await CallPublishing(session).set_speaker(
+            access.owner_id, access.org_id, call.id, access.member_id, speaker=False
         )
     await session.refresh(call)
-    assert call.town_hall
+    assert not can_publish(call, access.member_id)
     livekit.set_publishing.side_effect = None
     livekit.set_publishing.reset_mock()
     await CallPublishing(session).sync(call.id)
     assert livekit.set_publishing.await_count == 2
 
 
-async def test_competing_mode_updates_publish_current_policy(
+async def test_competing_speaker_updates_publish_current_policy(
     session, access, livekit, call_publication
 ):
     call, _, _ = await setup_call(session, access)
     results = await contend(
         select(Call).where(Call.id == call.id).with_for_update(),
         [
-            lambda s: CallPublishing(s).set_mode(
-                access.owner_id, access.org_id, call.id, town_hall=True
+            lambda s: CallPublishing(s).set_speaker(
+                access.owner_id, access.org_id, call.id, access.member_id, speaker=True
             ),
-            lambda s: CallPublishing(s).set_mode(
-                access.owner_id, access.org_id, call.id, town_hall=False
+            lambda s: CallPublishing(s).set_speaker(
+                access.owner_id, access.org_id, call.id, access.member_id, speaker=False
             ),
         ],
     )
     assert not any(isinstance(r, Exception) for r in results)
     await session.refresh(call)
     last = call_publication.await_args.args[2]["call"]
-    assert last["town_hall"] == call.town_hall
+    assert last["speaker_user_ids"] == call.speaker_user_ids
     assert last["publishing_revision"] == call.publishing_revision
 
 
@@ -253,7 +256,6 @@ async def test_join_webhook_corrects_replayed_speaker_permissions(
     from uniffy.domains.calls.webhook import LiveKitWebhookProvider
 
     call, devices, _ = await setup_call(session, access)
-    await CallPublishing(session).set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
     stale = live_entries(devices[:1], True)[0]
     stale["sid"] = "reconnected"
     livekit.get_participant.return_value = stale
@@ -274,7 +276,6 @@ async def test_departing_host_hands_speaking_permission_to_successor(
     session, access, livekit, call_publication
 ):
     call, devices, _ = await setup_call(session, access)
-    await CallPublishing(session).set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
     livekit.list_participants.return_value = live_entries(devices, False)
     await session.execute(
         update(CallParticipant)
@@ -284,7 +285,7 @@ async def test_departing_host_hands_speaking_permission_to_successor(
     await session.commit()
     await CallOperations(session).reassign_host_if_absent(call)
     await session.refresh(call)
-    assert call.host_user_id == access.member_id and call.publishing_revision == 2
+    assert call.host_user_id == access.member_id and call.publishing_revision == 1
     for row in devices:
         livekit.set_publishing.assert_any_await(call.livekit_room_name, row.identity, allowed=True)
         await session.refresh(row)
@@ -331,7 +332,6 @@ async def test_removed_member_cannot_be_promoted_from_stale_participant_row(
     from uniffy.core.models.login.organization_member import OrganizationMember
 
     call, _, _ = await setup_call(session, access)
-    await CallPublishing(session).set_mode(access.owner_id, access.org_id, call.id, town_hall=True)
     await session.execute(
         update(OrganizationMember)
         .where(
@@ -346,3 +346,71 @@ async def test_removed_member_cannot_be_promoted_from_stale_participant_row(
             access.owner_id, access.org_id, call.id, access.member_id, speaker=True
         )
     assert not can_publish(call, access.member_id)
+
+
+@pytest.mark.parametrize("town_hall", [False, True])
+async def test_call_mode_is_fixed_at_start(session, access, livekit, call_publication, town_hall):
+    actor, org_id = access.owner_id, access.org_id
+    channel = await _channel(session, org_id, actor, ChannelType.PUBLIC)
+    auth = await _auth_session(session, actor, org_id)
+    call, _, _, _ = await CallOperations(session).initiate_call(
+        actor, org_id, channel.id, "web", auth_session_id=auth.id, town_hall=town_hall
+    )
+    assert call.town_hall == town_hall
+    call_id = call.id
+    call_publication.reset_mock()
+    livekit.set_publishing.reset_mock()
+    ops = CallPublishing(session)
+    with pytest.raises(ValidationError, match="Call mode cannot change"):
+        await ops.set_mode(actor, org_id, call_id, town_hall=not town_hall)
+    await session.rollback()
+    persisted = await session.get(Call, call_id)
+    assert persisted.town_hall == town_hall
+    assert persisted.publishing_revision == 0
+    unchanged = await CallPublishing(session).set_mode(actor, org_id, call_id, town_hall=town_hall)
+    assert unchanged.town_hall == town_hall
+    assert (
+        await session.scalar(
+            select(AuditEvent.id).where(
+                AuditEvent.resource_id == call_id,
+                AuditEvent.action == Action.CALL_PUBLISHING_CHANGED,
+            )
+        )
+        is None
+    )
+    livekit.set_publishing.assert_not_awaited()
+    call_publication.assert_not_awaited()
+
+
+@pytest.mark.parametrize("denial", [Denial.DISABLED, Denial.OTHER_CHANNEL, Denial.DIRECT])
+async def test_town_hall_creation_respects_channel_policy(
+    session, access, livekit, call_publication, denial
+):
+    channel = await _channel(
+        session,
+        access.org_id,
+        access.owner_id,
+        ChannelType.DIRECT if denial == Denial.DIRECT else ChannelType.PUBLIC,
+    )
+    auth = await _auth_session(session, access.owner_id, access.org_id)
+    await save_call_policy(
+        session,
+        policy=ResolvedCallPolicy(
+            organization_id=access.org_id,
+            town_hall_enabled=denial != Denial.DISABLED,
+            town_hall_channel_ids=(str(generate_id()),) if denial == Denial.OTHER_CHANNEL else (),
+        ),
+        updated_by_user_id=access.owner_id,
+    )
+    await session.commit()
+    with pytest.raises(PermissionDeniedError):
+        await CallOperations(session).initiate_call(
+            access.owner_id,
+            access.org_id,
+            channel.id,
+            "web",
+            auth_session_id=auth.id,
+            town_hall=True,
+        )
+    assert await session.scalar(select(Call.id).where(Call.channel_id == channel.id)) is None
+    livekit.create_room.assert_not_awaited()

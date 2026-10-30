@@ -45,6 +45,11 @@ export function metadataToLiveState(urn: string, meta: UrnMetadata): MentionLive
       if (meta.assigneeIds?.length) state.taskAssigneeIds = [...meta.assigneeIds];
       break;
 
+    case UrnType.CALL:
+      state.callStartedAt = m.started_at || undefined;
+      state.callEndedAt = m.ended_at || undefined;
+      state.callStatus = m.status || undefined;
+      break;
     case UrnType.CALENDAR_EVENT:
       state.eventStartTime = meta.eventStartTime || m.start_time || undefined;
       state.eventEndTime = meta.eventEndTime || m.end_time || undefined;
@@ -185,6 +190,12 @@ export function streamChangesToLiveState(
       case "description":
         patch.description = value || undefined;
         break;
+      case "started_at":
+        patch.callStartedAt = value || undefined;
+        break;
+      case "ended_at":
+        patch.callEndedAt = value || undefined;
+        break;
       case "updated_at":
         patch.updatedAt = value || undefined;
         break;
@@ -203,6 +214,7 @@ export function streamChangesToLiveState(
         break;
 
       case "status":
+        patch.callStatus = value || undefined;
         patch.taskStatus = value || undefined;
         patch.projectStatus = value || undefined;
         break;

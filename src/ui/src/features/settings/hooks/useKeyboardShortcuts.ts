@@ -197,6 +197,8 @@ export function useShortcutHandlers(
     preventDefault?: boolean;
     targetWindow?: Window;
     ignoreRepeat?: boolean;
+    /** Skip keys an earlier listener already consumed with preventDefault. */
+    skipHandled?: boolean;
   } = {},
 ) {
   const {
@@ -204,6 +206,7 @@ export function useShortcutHandlers(
     preventDefault = true,
     targetWindow = window,
     ignoreRepeat = false,
+    skipHandled = false,
   } = options;
   const bindings = useKeyboardBindings();
 
@@ -211,7 +214,8 @@ export function useShortcutHandlers(
     if (!enabled) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.isComposing || (ignoreRepeat && event.repeat)) return;
+      if ((skipHandled && event.defaultPrevented) || event.isComposing) return;
+      if (ignoreRepeat && event.repeat) return;
       const editable = isEditableTarget(event.target);
 
       for (const [action, handler] of Object.entries(handlers)) {
@@ -230,7 +234,7 @@ export function useShortcutHandlers(
 
     targetWindow.addEventListener("keydown", handleKeyDown);
     return () => targetWindow.removeEventListener("keydown", handleKeyDown);
-  }, [bindings, handlers, enabled, preventDefault, targetWindow, ignoreRepeat]);
+  }, [bindings, handlers, enabled, preventDefault, targetWindow, ignoreRepeat, skipHandled]);
 }
 
 export function useGlobalShortcuts() {

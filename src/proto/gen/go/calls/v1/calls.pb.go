@@ -352,6 +352,62 @@ func (CallReaction) EnumDescriptor() ([]byte, []int) {
 	return file_calls_v1_calls_proto_rawDescGZIP(), []int{5}
 }
 
+// Invitation outcome is independent of attendance after a late join.
+type CallInvitationOutcome int32
+
+const (
+	CallInvitationOutcome_CALL_INVITATION_OUTCOME_UNSPECIFIED CallInvitationOutcome = 0
+	CallInvitationOutcome_CALL_INVITATION_OUTCOME_RINGING     CallInvitationOutcome = 1
+	CallInvitationOutcome_CALL_INVITATION_OUTCOME_ANSWERED    CallInvitationOutcome = 2
+	CallInvitationOutcome_CALL_INVITATION_OUTCOME_DECLINED    CallInvitationOutcome = 3
+	CallInvitationOutcome_CALL_INVITATION_OUTCOME_MISSED      CallInvitationOutcome = 4
+)
+
+// Enum value maps for CallInvitationOutcome.
+var (
+	CallInvitationOutcome_name = map[int32]string{
+		0: "CALL_INVITATION_OUTCOME_UNSPECIFIED",
+		1: "CALL_INVITATION_OUTCOME_RINGING",
+		2: "CALL_INVITATION_OUTCOME_ANSWERED",
+		3: "CALL_INVITATION_OUTCOME_DECLINED",
+		4: "CALL_INVITATION_OUTCOME_MISSED",
+	}
+	CallInvitationOutcome_value = map[string]int32{
+		"CALL_INVITATION_OUTCOME_UNSPECIFIED": 0,
+		"CALL_INVITATION_OUTCOME_RINGING":     1,
+		"CALL_INVITATION_OUTCOME_ANSWERED":    2,
+		"CALL_INVITATION_OUTCOME_DECLINED":    3,
+		"CALL_INVITATION_OUTCOME_MISSED":      4,
+	}
+)
+
+func (x CallInvitationOutcome) Enum() *CallInvitationOutcome {
+	p := new(CallInvitationOutcome)
+	*p = x
+	return p
+}
+
+func (x CallInvitationOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CallInvitationOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_calls_v1_calls_proto_enumTypes[6].Descriptor()
+}
+
+func (CallInvitationOutcome) Type() protoreflect.EnumType {
+	return &file_calls_v1_calls_proto_enumTypes[6]
+}
+
+func (x CallInvitationOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CallInvitationOutcome.Descriptor instead.
+func (CallInvitationOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{6}
+}
+
 type GetCallAvailabilityRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
@@ -911,9 +967,13 @@ type InitiateCallRequest struct {
 	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
 	ChannelId      string                 `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3" json:"channel_id,omitempty"`
 	// Client-generated stable UUID persisted in localStorage.
-	DeviceId      string  `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
-	DeviceLabel   *string `protobuf:"bytes,4,opt,name=device_label,json=deviceLabel,proto3,oneof" json:"device_label,omitempty"`
-	TownHall      bool    `protobuf:"varint,5,opt,name=town_hall,json=townHall,proto3" json:"town_hall,omitempty"`
+	DeviceId    string  `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	DeviceLabel *string `protobuf:"bytes,4,opt,name=device_label,json=deviceLabel,proto3,oneof" json:"device_label,omitempty"`
+	TownHall    bool    `protobuf:"varint,5,opt,name=town_hall,json=townHall,proto3" json:"town_hall,omitempty"`
+	// Event UUID or recurring occurrence reference. Title is resolved by the server.
+	CalendarEventId *string `protobuf:"bytes,6,opt,name=calendar_event_id,json=calendarEventId,proto3,oneof" json:"calendar_event_id,omitempty"`
+	// Optional name for a new call. Blank uses the event or channel title.
+	Title         *string `protobuf:"bytes,7,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -981,6 +1041,20 @@ func (x *InitiateCallRequest) GetTownHall() bool {
 		return x.TownHall
 	}
 	return false
+}
+
+func (x *InitiateCallRequest) GetCalendarEventId() string {
+	if x != nil && x.CalendarEventId != nil {
+		return *x.CalendarEventId
+	}
+	return ""
+}
+
+func (x *InitiateCallRequest) GetTitle() string {
+	if x != nil && x.Title != nil {
+		return *x.Title
+	}
+	return ""
 }
 
 type InitiateCallResponse struct {
@@ -2944,6 +3018,729 @@ func (*SendCallReactionResponse) Descriptor() ([]byte, []int) {
 	return file_calls_v1_calls_proto_rawDescGZIP(), []int{41}
 }
 
+type CallRecord struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Call              *Call                  `protobuf:"bytes,1,opt,name=call,proto3" json:"call,omitempty"`
+	Urn               string                 `protobuf:"bytes,2,opt,name=urn,proto3" json:"urn,omitempty"`
+	Title             string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	ParticipantCount  int32                  `protobuf:"varint,4,opt,name=participant_count,json=participantCount,proto3" json:"participant_count,omitempty"`
+	Attended          bool                   `protobuf:"varint,5,opt,name=attended,proto3" json:"attended,omitempty"`
+	InvitationOutcome CallInvitationOutcome  `protobuf:"varint,6,opt,name=invitation_outcome,json=invitationOutcome,proto3,enum=calls.v1.CallInvitationOutcome" json:"invitation_outcome,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CallRecord) Reset() {
+	*x = CallRecord{}
+	mi := &file_calls_v1_calls_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallRecord) ProtoMessage() {}
+
+func (x *CallRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallRecord.ProtoReflect.Descriptor instead.
+func (*CallRecord) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *CallRecord) GetCall() *Call {
+	if x != nil {
+		return x.Call
+	}
+	return nil
+}
+
+func (x *CallRecord) GetUrn() string {
+	if x != nil {
+		return x.Urn
+	}
+	return ""
+}
+
+func (x *CallRecord) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CallRecord) GetParticipantCount() int32 {
+	if x != nil {
+		return x.ParticipantCount
+	}
+	return 0
+}
+
+func (x *CallRecord) GetAttended() bool {
+	if x != nil {
+		return x.Attended
+	}
+	return false
+}
+
+func (x *CallRecord) GetInvitationOutcome() CallInvitationOutcome {
+	if x != nil {
+		return x.InvitationOutcome
+	}
+	return CallInvitationOutcome_CALL_INVITATION_OUTCOME_UNSPECIFIED
+}
+
+type CallAttendance struct {
+	state                     protoimpl.MessageState `protogen:"open.v1"`
+	UserId                    string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	DisplayName               string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl                 *string                `protobuf:"bytes,3,opt,name=avatar_url,json=avatarUrl,proto3,oneof" json:"avatar_url,omitempty"`
+	JoinedAt                  *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=joined_at,json=joinedAt,proto3,oneof" json:"joined_at,omitempty"`
+	LeftAt                    *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=left_at,json=leftAt,proto3,oneof" json:"left_at,omitempty"`
+	InvitationOutcome         CallInvitationOutcome  `protobuf:"varint,6,opt,name=invitation_outcome,json=invitationOutcome,proto3,enum=calls.v1.CallInvitationOutcome" json:"invitation_outcome,omitempty"`
+	ActivityResolutionSeconds uint32                 `protobuf:"varint,7,opt,name=activity_resolution_seconds,json=activityResolutionSeconds,proto3" json:"activity_resolution_seconds,omitempty"`
+	Activity                  []*CallActivityBucket  `protobuf:"bytes,8,rep,name=activity,proto3" json:"activity,omitempty"`
+	SpeakingSeconds           uint32                 `protobuf:"varint,9,opt,name=speaking_seconds,json=speakingSeconds,proto3" json:"speaking_seconds,omitempty"`
+	ObservedSeconds           uint32                 `protobuf:"varint,10,opt,name=observed_seconds,json=observedSeconds,proto3" json:"observed_seconds,omitempty"`
+	PresentSeconds            uint32                 `protobuf:"varint,11,opt,name=present_seconds,json=presentSeconds,proto3" json:"present_seconds,omitempty"`
+	ActivityDurationSeconds   uint32                 `protobuf:"varint,12,opt,name=activity_duration_seconds,json=activityDurationSeconds,proto3" json:"activity_duration_seconds,omitempty"`
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
+}
+
+func (x *CallAttendance) Reset() {
+	*x = CallAttendance{}
+	mi := &file_calls_v1_calls_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallAttendance) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallAttendance) ProtoMessage() {}
+
+func (x *CallAttendance) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallAttendance.ProtoReflect.Descriptor instead.
+func (*CallAttendance) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *CallAttendance) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *CallAttendance) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *CallAttendance) GetAvatarUrl() string {
+	if x != nil && x.AvatarUrl != nil {
+		return *x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *CallAttendance) GetJoinedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.JoinedAt
+	}
+	return nil
+}
+
+func (x *CallAttendance) GetLeftAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LeftAt
+	}
+	return nil
+}
+
+func (x *CallAttendance) GetInvitationOutcome() CallInvitationOutcome {
+	if x != nil {
+		return x.InvitationOutcome
+	}
+	return CallInvitationOutcome_CALL_INVITATION_OUTCOME_UNSPECIFIED
+}
+
+func (x *CallAttendance) GetActivityResolutionSeconds() uint32 {
+	if x != nil {
+		return x.ActivityResolutionSeconds
+	}
+	return 0
+}
+
+func (x *CallAttendance) GetActivity() []*CallActivityBucket {
+	if x != nil {
+		return x.Activity
+	}
+	return nil
+}
+
+func (x *CallAttendance) GetSpeakingSeconds() uint32 {
+	if x != nil {
+		return x.SpeakingSeconds
+	}
+	return 0
+}
+
+func (x *CallAttendance) GetObservedSeconds() uint32 {
+	if x != nil {
+		return x.ObservedSeconds
+	}
+	return 0
+}
+
+func (x *CallAttendance) GetPresentSeconds() uint32 {
+	if x != nil {
+		return x.PresentSeconds
+	}
+	return 0
+}
+
+func (x *CallAttendance) GetActivityDurationSeconds() uint32 {
+	if x != nil {
+		return x.ActivityDurationSeconds
+	}
+	return 0
+}
+
+type ListCallHistoryRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	// Omit to list calls initiated, attended or received by the caller.
+	ChannelId     *string `protobuf:"bytes,2,opt,name=channel_id,json=channelId,proto3,oneof" json:"channel_id,omitempty"`
+	Cursor        string  `protobuf:"bytes,3,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	PageSize      int32   `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCallHistoryRequest) Reset() {
+	*x = ListCallHistoryRequest{}
+	mi := &file_calls_v1_calls_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCallHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCallHistoryRequest) ProtoMessage() {}
+
+func (x *ListCallHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCallHistoryRequest.ProtoReflect.Descriptor instead.
+func (*ListCallHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ListCallHistoryRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListCallHistoryRequest) GetChannelId() string {
+	if x != nil && x.ChannelId != nil {
+		return *x.ChannelId
+	}
+	return ""
+}
+
+func (x *ListCallHistoryRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListCallHistoryRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type ListCallHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Records       []*CallRecord          `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCallHistoryResponse) Reset() {
+	*x = ListCallHistoryResponse{}
+	mi := &file_calls_v1_calls_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCallHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCallHistoryResponse) ProtoMessage() {}
+
+func (x *ListCallHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCallHistoryResponse.ProtoReflect.Descriptor instead.
+func (*ListCallHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *ListCallHistoryResponse) GetRecords() []*CallRecord {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
+func (x *ListCallHistoryResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
+type GetCallRecordRequest struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId    string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CallId            string                 `protobuf:"bytes,2,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	ParticipantCursor string                 `protobuf:"bytes,3,opt,name=participant_cursor,json=participantCursor,proto3" json:"participant_cursor,omitempty"`
+	PageSize          int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetCallRecordRequest) Reset() {
+	*x = GetCallRecordRequest{}
+	mi := &file_calls_v1_calls_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCallRecordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCallRecordRequest) ProtoMessage() {}
+
+func (x *GetCallRecordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCallRecordRequest.ProtoReflect.Descriptor instead.
+func (*GetCallRecordRequest) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetCallRecordRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *GetCallRecordRequest) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *GetCallRecordRequest) GetParticipantCursor() string {
+	if x != nil {
+		return x.ParticipantCursor
+	}
+	return ""
+}
+
+func (x *GetCallRecordRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type GetCallRecordResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Record                *CallRecord            `protobuf:"bytes,1,opt,name=record,proto3" json:"record,omitempty"`
+	Participants          []*CallAttendance      `protobuf:"bytes,2,rep,name=participants,proto3" json:"participants,omitempty"`
+	NextParticipantCursor string                 `protobuf:"bytes,3,opt,name=next_participant_cursor,json=nextParticipantCursor,proto3" json:"next_participant_cursor,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *GetCallRecordResponse) Reset() {
+	*x = GetCallRecordResponse{}
+	mi := &file_calls_v1_calls_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCallRecordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCallRecordResponse) ProtoMessage() {}
+
+func (x *GetCallRecordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCallRecordResponse.ProtoReflect.Descriptor instead.
+func (*GetCallRecordResponse) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GetCallRecordResponse) GetRecord() *CallRecord {
+	if x != nil {
+		return x.Record
+	}
+	return nil
+}
+
+func (x *GetCallRecordResponse) GetParticipants() []*CallAttendance {
+	if x != nil {
+		return x.Participants
+	}
+	return nil
+}
+
+func (x *GetCallRecordResponse) GetNextParticipantCursor() string {
+	if x != nil {
+		return x.NextParticipantCursor
+	}
+	return ""
+}
+
+// Masks represent one-second samples within a 30-second chunk relative to call start.
+type CallActivityChunk struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OffsetSeconds uint32                 `protobuf:"varint,1,opt,name=offset_seconds,json=offsetSeconds,proto3" json:"offset_seconds,omitempty"`
+	ObservedMask  uint32                 `protobuf:"varint,2,opt,name=observed_mask,json=observedMask,proto3" json:"observed_mask,omitempty"`
+	SpeakingMask  uint32                 `protobuf:"varint,3,opt,name=speaking_mask,json=speakingMask,proto3" json:"speaking_mask,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CallActivityChunk) Reset() {
+	*x = CallActivityChunk{}
+	mi := &file_calls_v1_calls_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallActivityChunk) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallActivityChunk) ProtoMessage() {}
+
+func (x *CallActivityChunk) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallActivityChunk.ProtoReflect.Descriptor instead.
+func (*CallActivityChunk) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *CallActivityChunk) GetOffsetSeconds() uint32 {
+	if x != nil {
+		return x.OffsetSeconds
+	}
+	return 0
+}
+
+func (x *CallActivityChunk) GetObservedMask() uint32 {
+	if x != nil {
+		return x.ObservedMask
+	}
+	return 0
+}
+
+func (x *CallActivityChunk) GetSpeakingMask() uint32 {
+	if x != nil {
+		return x.SpeakingMask
+	}
+	return 0
+}
+
+type ReportCallActivityRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	CallId         string                 `protobuf:"bytes,2,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	DeviceId       string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	// Empty only for clock/bootstrap; subsequent writes bind to this attendance row.
+	ParticipantId string               `protobuf:"bytes,4,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	Chunks        []*CallActivityChunk `protobuf:"bytes,5,rep,name=chunks,proto3" json:"chunks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportCallActivityRequest) Reset() {
+	*x = ReportCallActivityRequest{}
+	mi := &file_calls_v1_calls_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportCallActivityRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportCallActivityRequest) ProtoMessage() {}
+
+func (x *ReportCallActivityRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportCallActivityRequest.ProtoReflect.Descriptor instead.
+func (*ReportCallActivityRequest) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *ReportCallActivityRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ReportCallActivityRequest) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *ReportCallActivityRequest) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *ReportCallActivityRequest) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
+func (x *ReportCallActivityRequest) GetChunks() []*CallActivityChunk {
+	if x != nil {
+		return x.Chunks
+	}
+	return nil
+}
+
+type ReportCallActivityResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ParticipantId  string                 `protobuf:"bytes,1,opt,name=participant_id,json=participantId,proto3" json:"participant_id,omitempty"`
+	ElapsedSeconds float64                `protobuf:"fixed64,2,opt,name=elapsed_seconds,json=elapsedSeconds,proto3" json:"elapsed_seconds,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ReportCallActivityResponse) Reset() {
+	*x = ReportCallActivityResponse{}
+	mi := &file_calls_v1_calls_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportCallActivityResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportCallActivityResponse) ProtoMessage() {}
+
+func (x *ReportCallActivityResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportCallActivityResponse.ProtoReflect.Descriptor instead.
+func (*ReportCallActivityResponse) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ReportCallActivityResponse) GetParticipantId() string {
+	if x != nil {
+		return x.ParticipantId
+	}
+	return ""
+}
+
+func (x *ReportCallActivityResponse) GetElapsedSeconds() float64 {
+	if x != nil {
+		return x.ElapsedSeconds
+	}
+	return 0
+}
+
+type CallActivityBucket struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	OffsetSeconds   uint32                 `protobuf:"varint,1,opt,name=offset_seconds,json=offsetSeconds,proto3" json:"offset_seconds,omitempty"`
+	PresentSeconds  uint32                 `protobuf:"varint,2,opt,name=present_seconds,json=presentSeconds,proto3" json:"present_seconds,omitempty"`
+	ObservedSeconds uint32                 `protobuf:"varint,3,opt,name=observed_seconds,json=observedSeconds,proto3" json:"observed_seconds,omitempty"`
+	SpeakingSeconds uint32                 `protobuf:"varint,4,opt,name=speaking_seconds,json=speakingSeconds,proto3" json:"speaking_seconds,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CallActivityBucket) Reset() {
+	*x = CallActivityBucket{}
+	mi := &file_calls_v1_calls_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallActivityBucket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallActivityBucket) ProtoMessage() {}
+
+func (x *CallActivityBucket) ProtoReflect() protoreflect.Message {
+	mi := &file_calls_v1_calls_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallActivityBucket.ProtoReflect.Descriptor instead.
+func (*CallActivityBucket) Descriptor() ([]byte, []int) {
+	return file_calls_v1_calls_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *CallActivityBucket) GetOffsetSeconds() uint32 {
+	if x != nil {
+		return x.OffsetSeconds
+	}
+	return 0
+}
+
+func (x *CallActivityBucket) GetPresentSeconds() uint32 {
+	if x != nil {
+		return x.PresentSeconds
+	}
+	return 0
+}
+
+func (x *CallActivityBucket) GetObservedSeconds() uint32 {
+	if x != nil {
+		return x.ObservedSeconds
+	}
+	return 0
+}
+
+func (x *CallActivityBucket) GetSpeakingSeconds() uint32 {
+	if x != nil {
+		return x.SpeakingSeconds
+	}
+	return 0
+}
+
 var File_calls_v1_calls_proto protoreflect.FileDescriptor
 
 const file_calls_v1_calls_proto_rawDesc = "" +
@@ -3012,15 +3809,19 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\rhand_revision\x18\f \x01(\x05R\fhandRevisionB\r\n" +
 	"\v_avatar_urlB\x0f\n" +
 	"\r_device_labelB\x11\n" +
-	"\x0f_hand_raised_at\"\xd0\x01\n" +
+	"\x0f_hand_raised_at\"\xbc\x02\n" +
 	"\x13InitiateCallRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
 	"channel_id\x18\x02 \x01(\tR\tchannelId\x12\x1b\n" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12&\n" +
 	"\fdevice_label\x18\x04 \x01(\tH\x00R\vdeviceLabel\x88\x01\x01\x12\x1b\n" +
-	"\ttown_hall\x18\x05 \x01(\bR\btownHallB\x0f\n" +
-	"\r_device_label\"\xfc\x02\n" +
+	"\ttown_hall\x18\x05 \x01(\bR\btownHall\x12/\n" +
+	"\x11calendar_event_id\x18\x06 \x01(\tH\x01R\x0fcalendarEventId\x88\x01\x01\x12\x19\n" +
+	"\x05title\x18\a \x01(\tH\x02R\x05title\x88\x01\x01B\x0f\n" +
+	"\r_device_labelB\x14\n" +
+	"\x12_calendar_event_idB\b\n" +
+	"\x06_title\"\xfc\x02\n" +
 	"\x14InitiateCallResponse\x12\"\n" +
 	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\x12\x15\n" +
 	"\x06ws_url\x18\x02 \x01(\tR\x05wsUrl\x12#\n" +
@@ -3153,7 +3954,73 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n" +
 	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x122\n" +
 	"\breaction\x18\x04 \x01(\x0e2\x16.calls.v1.CallReactionR\breaction\"\x1a\n" +
-	"\x18SendCallReactionResponse*j\n" +
+	"\x18SendCallReactionResponse\"\xf1\x01\n" +
+	"\n" +
+	"CallRecord\x12\"\n" +
+	"\x04call\x18\x01 \x01(\v2\x0e.calls.v1.CallR\x04call\x12\x10\n" +
+	"\x03urn\x18\x02 \x01(\tR\x03urn\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12+\n" +
+	"\x11participant_count\x18\x04 \x01(\x05R\x10participantCount\x12\x1a\n" +
+	"\battended\x18\x05 \x01(\bR\battended\x12N\n" +
+	"\x12invitation_outcome\x18\x06 \x01(\x0e2\x1f.calls.v1.CallInvitationOutcomeR\x11invitationOutcome\"\x96\x05\n" +
+	"\x0eCallAttendance\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\"\n" +
+	"\n" +
+	"avatar_url\x18\x03 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12<\n" +
+	"\tjoined_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\bjoinedAt\x88\x01\x01\x128\n" +
+	"\aleft_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x02R\x06leftAt\x88\x01\x01\x12N\n" +
+	"\x12invitation_outcome\x18\x06 \x01(\x0e2\x1f.calls.v1.CallInvitationOutcomeR\x11invitationOutcome\x12>\n" +
+	"\x1bactivity_resolution_seconds\x18\a \x01(\rR\x19activityResolutionSeconds\x128\n" +
+	"\bactivity\x18\b \x03(\v2\x1c.calls.v1.CallActivityBucketR\bactivity\x12)\n" +
+	"\x10speaking_seconds\x18\t \x01(\rR\x0fspeakingSeconds\x12)\n" +
+	"\x10observed_seconds\x18\n" +
+	" \x01(\rR\x0fobservedSeconds\x12'\n" +
+	"\x0fpresent_seconds\x18\v \x01(\rR\x0epresentSeconds\x12:\n" +
+	"\x19activity_duration_seconds\x18\f \x01(\rR\x17activityDurationSecondsB\r\n" +
+	"\v_avatar_urlB\f\n" +
+	"\n" +
+	"_joined_atB\n" +
+	"\n" +
+	"\b_left_at\"\xa9\x01\n" +
+	"\x16ListCallHistoryRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\"\n" +
+	"\n" +
+	"channel_id\x18\x02 \x01(\tH\x00R\tchannelId\x88\x01\x01\x12\x16\n" +
+	"\x06cursor\x18\x03 \x01(\tR\x06cursor\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSizeB\r\n" +
+	"\v_channel_id\"j\n" +
+	"\x17ListCallHistoryResponse\x12.\n" +
+	"\arecords\x18\x01 \x03(\v2\x14.calls.v1.CallRecordR\arecords\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor\"\xa4\x01\n" +
+	"\x14GetCallRecordRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\acall_id\x18\x02 \x01(\tR\x06callId\x12-\n" +
+	"\x12participant_cursor\x18\x03 \x01(\tR\x11participantCursor\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\"\xbb\x01\n" +
+	"\x15GetCallRecordResponse\x12,\n" +
+	"\x06record\x18\x01 \x01(\v2\x14.calls.v1.CallRecordR\x06record\x12<\n" +
+	"\fparticipants\x18\x02 \x03(\v2\x18.calls.v1.CallAttendanceR\fparticipants\x126\n" +
+	"\x17next_participant_cursor\x18\x03 \x01(\tR\x15nextParticipantCursor\"\x84\x01\n" +
+	"\x11CallActivityChunk\x12%\n" +
+	"\x0eoffset_seconds\x18\x01 \x01(\rR\roffsetSeconds\x12#\n" +
+	"\robserved_mask\x18\x02 \x01(\rR\fobservedMask\x12#\n" +
+	"\rspeaking_mask\x18\x03 \x01(\rR\fspeakingMask\"\xd6\x01\n" +
+	"\x19ReportCallActivityRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
+	"\acall_id\x18\x02 \x01(\tR\x06callId\x12\x1b\n" +
+	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12%\n" +
+	"\x0eparticipant_id\x18\x04 \x01(\tR\rparticipantId\x123\n" +
+	"\x06chunks\x18\x05 \x03(\v2\x1b.calls.v1.CallActivityChunkR\x06chunks\"l\n" +
+	"\x1aReportCallActivityResponse\x12%\n" +
+	"\x0eparticipant_id\x18\x01 \x01(\tR\rparticipantId\x12'\n" +
+	"\x0felapsed_seconds\x18\x02 \x01(\x01R\x0eelapsedSeconds\"\xba\x01\n" +
+	"\x12CallActivityBucket\x12%\n" +
+	"\x0eoffset_seconds\x18\x01 \x01(\rR\roffsetSeconds\x12'\n" +
+	"\x0fpresent_seconds\x18\x02 \x01(\rR\x0epresentSeconds\x12)\n" +
+	"\x10observed_seconds\x18\x03 \x01(\rR\x0fobservedSeconds\x12)\n" +
+	"\x10speaking_seconds\x18\x04 \x01(\rR\x0fspeakingSeconds*j\n" +
 	"\bCallType\x12\x19\n" +
 	"\x15CALL_TYPE_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10CALL_TYPE_DIRECT\x10\x01\x12\x16\n" +
@@ -3188,8 +4055,16 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\x13CALL_REACTION_AGREE\x10\x01\x12\x1a\n" +
 	"\x16CALL_REACTION_APPLAUSE\x10\x02\x12\x16\n" +
 	"\x12CALL_REACTION_LOVE\x10\x03\x12\x1b\n" +
-	"\x17CALL_REACTION_CELEBRATE\x10\x042\xc1\f\n" +
-	"\vCallService\x12b\n" +
+	"\x17CALL_REACTION_CELEBRATE\x10\x04*\xd5\x01\n" +
+	"\x15CallInvitationOutcome\x12'\n" +
+	"#CALL_INVITATION_OUTCOME_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fCALL_INVITATION_OUTCOME_RINGING\x10\x01\x12$\n" +
+	" CALL_INVITATION_OUTCOME_ANSWERED\x10\x02\x12$\n" +
+	" CALL_INVITATION_OUTCOME_DECLINED\x10\x03\x12\"\n" +
+	"\x1eCALL_INVITATION_OUTCOME_MISSED\x10\x042\xcc\x0e\n" +
+	"\vCallService\x12V\n" +
+	"\x0fListCallHistory\x12 .calls.v1.ListCallHistoryRequest\x1a!.calls.v1.ListCallHistoryResponse\x12P\n" +
+	"\rGetCallRecord\x12\x1e.calls.v1.GetCallRecordRequest\x1a\x1f.calls.v1.GetCallRecordResponse\x12b\n" +
 	"\x13GetCallAvailability\x12$.calls.v1.GetCallAvailabilityRequest\x1a%.calls.v1.GetCallAvailabilityResponse\x12M\n" +
 	"\fGetCallState\x12\x1d.calls.v1.GetCallStateRequest\x1a\x1e.calls.v1.GetCallStateResponse\x12M\n" +
 	"\fInitiateCall\x12\x1d.calls.v1.InitiateCallRequest\x1a\x1e.calls.v1.InitiateCallResponse\x12A\n" +
@@ -3207,7 +4082,8 @@ const file_calls_v1_calls_proto_rawDesc = "" +
 	"\rSetHandRaised\x12\x1e.calls.v1.SetHandRaisedRequest\x1a\x1f.calls.v1.SetHandRaisedResponse\x12Y\n" +
 	"\x10SendCallReaction\x12!.calls.v1.SendCallReactionRequest\x1a\".calls.v1.SendCallReactionResponse\x12J\n" +
 	"\vSetCallMode\x12\x1c.calls.v1.SetCallModeRequest\x1a\x1d.calls.v1.SetCallModeResponse\x12S\n" +
-	"\x0eSetCallSpeaker\x12\x1f.calls.v1.SetCallSpeakerRequest\x1a .calls.v1.SetCallSpeakerResponse\x12Y\n" +
+	"\x0eSetCallSpeaker\x12\x1f.calls.v1.SetCallSpeakerRequest\x1a .calls.v1.SetCallSpeakerResponse\x12_\n" +
+	"\x12ReportCallActivity\x12#.calls.v1.ReportCallActivityRequest\x1a$.calls.v1.ReportCallActivityResponse\x12Y\n" +
 	"\x10ReportMediaState\x12!.calls.v1.ReportMediaStateRequest\x1a\".calls.v1.ReportMediaStateResponseB7Z5github.com/uniffy-io/uniffy-proto-go/calls/v1;callsv1b\x06proto3"
 
 var (
@@ -3222,8 +4098,8 @@ func file_calls_v1_calls_proto_rawDescGZIP() []byte {
 	return file_calls_v1_calls_proto_rawDescData
 }
 
-var file_calls_v1_calls_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
+var file_calls_v1_calls_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_calls_v1_calls_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
 var file_calls_v1_calls_proto_goTypes = []any{
 	(CallType)(0),                       // 0: calls.v1.CallType
 	(CallEndReason)(0),                  // 1: calls.v1.CallEndReason
@@ -3231,125 +4107,152 @@ var file_calls_v1_calls_proto_goTypes = []any{
 	(CallAvailability)(0),               // 3: calls.v1.CallAvailability
 	(IceTransportPolicy)(0),             // 4: calls.v1.IceTransportPolicy
 	(CallReaction)(0),                   // 5: calls.v1.CallReaction
-	(*GetCallAvailabilityRequest)(nil),  // 6: calls.v1.GetCallAvailabilityRequest
-	(*GetCallAvailabilityResponse)(nil), // 7: calls.v1.GetCallAvailabilityResponse
-	(*GetCallStateRequest)(nil),         // 8: calls.v1.GetCallStateRequest
-	(*GetCallStateResponse)(nil),        // 9: calls.v1.GetCallStateResponse
-	(*IceServer)(nil),                   // 10: calls.v1.IceServer
-	(*Call)(nil),                        // 11: calls.v1.Call
-	(*CallParticipant)(nil),             // 12: calls.v1.CallParticipant
-	(*InitiateCallRequest)(nil),         // 13: calls.v1.InitiateCallRequest
-	(*InitiateCallResponse)(nil),        // 14: calls.v1.InitiateCallResponse
-	(*JoinCallRequest)(nil),             // 15: calls.v1.JoinCallRequest
-	(*JoinCallResponse)(nil),            // 16: calls.v1.JoinCallResponse
-	(*LeaveCallRequest)(nil),            // 17: calls.v1.LeaveCallRequest
-	(*LeaveCallResponse)(nil),           // 18: calls.v1.LeaveCallResponse
-	(*EndCallRequest)(nil),              // 19: calls.v1.EndCallRequest
-	(*EndCallResponse)(nil),             // 20: calls.v1.EndCallResponse
-	(*RefreshCallTokenRequest)(nil),     // 21: calls.v1.RefreshCallTokenRequest
-	(*RefreshCallTokenResponse)(nil),    // 22: calls.v1.RefreshCallTokenResponse
-	(*GetActiveCallRequest)(nil),        // 23: calls.v1.GetActiveCallRequest
-	(*GetActiveCallResponse)(nil),       // 24: calls.v1.GetActiveCallResponse
-	(*ListActiveCallsRequest)(nil),      // 25: calls.v1.ListActiveCallsRequest
-	(*ListActiveCallsResponse)(nil),     // 26: calls.v1.ListActiveCallsResponse
-	(*DeclineCallRequest)(nil),          // 27: calls.v1.DeclineCallRequest
-	(*DeclineCallResponse)(nil),         // 28: calls.v1.DeclineCallResponse
-	(*KickParticipantRequest)(nil),      // 29: calls.v1.KickParticipantRequest
-	(*KickParticipantResponse)(nil),     // 30: calls.v1.KickParticipantResponse
-	(*MuteParticipantRequest)(nil),      // 31: calls.v1.MuteParticipantRequest
-	(*MuteParticipantResponse)(nil),     // 32: calls.v1.MuteParticipantResponse
-	(*ReportMediaStateRequest)(nil),     // 33: calls.v1.ReportMediaStateRequest
-	(*ReportMediaStateResponse)(nil),    // 34: calls.v1.ReportMediaStateResponse
-	(*OrgCallPolicy)(nil),               // 35: calls.v1.OrgCallPolicy
-	(*GetOrgCallPolicyRequest)(nil),     // 36: calls.v1.GetOrgCallPolicyRequest
-	(*GetOrgCallPolicyResponse)(nil),    // 37: calls.v1.GetOrgCallPolicyResponse
-	(*UpdateOrgCallPolicyRequest)(nil),  // 38: calls.v1.UpdateOrgCallPolicyRequest
-	(*SetCallModeRequest)(nil),          // 39: calls.v1.SetCallModeRequest
-	(*SetCallModeResponse)(nil),         // 40: calls.v1.SetCallModeResponse
-	(*SetCallSpeakerRequest)(nil),       // 41: calls.v1.SetCallSpeakerRequest
-	(*SetCallSpeakerResponse)(nil),      // 42: calls.v1.SetCallSpeakerResponse
-	(*UpdateOrgCallPolicyResponse)(nil), // 43: calls.v1.UpdateOrgCallPolicyResponse
-	(*SetHandRaisedRequest)(nil),        // 44: calls.v1.SetHandRaisedRequest
-	(*SetHandRaisedResponse)(nil),       // 45: calls.v1.SetHandRaisedResponse
-	(*SendCallReactionRequest)(nil),     // 46: calls.v1.SendCallReactionRequest
-	(*SendCallReactionResponse)(nil),    // 47: calls.v1.SendCallReactionResponse
-	(*timestamppb.Timestamp)(nil),       // 48: google.protobuf.Timestamp
+	(CallInvitationOutcome)(0),          // 6: calls.v1.CallInvitationOutcome
+	(*GetCallAvailabilityRequest)(nil),  // 7: calls.v1.GetCallAvailabilityRequest
+	(*GetCallAvailabilityResponse)(nil), // 8: calls.v1.GetCallAvailabilityResponse
+	(*GetCallStateRequest)(nil),         // 9: calls.v1.GetCallStateRequest
+	(*GetCallStateResponse)(nil),        // 10: calls.v1.GetCallStateResponse
+	(*IceServer)(nil),                   // 11: calls.v1.IceServer
+	(*Call)(nil),                        // 12: calls.v1.Call
+	(*CallParticipant)(nil),             // 13: calls.v1.CallParticipant
+	(*InitiateCallRequest)(nil),         // 14: calls.v1.InitiateCallRequest
+	(*InitiateCallResponse)(nil),        // 15: calls.v1.InitiateCallResponse
+	(*JoinCallRequest)(nil),             // 16: calls.v1.JoinCallRequest
+	(*JoinCallResponse)(nil),            // 17: calls.v1.JoinCallResponse
+	(*LeaveCallRequest)(nil),            // 18: calls.v1.LeaveCallRequest
+	(*LeaveCallResponse)(nil),           // 19: calls.v1.LeaveCallResponse
+	(*EndCallRequest)(nil),              // 20: calls.v1.EndCallRequest
+	(*EndCallResponse)(nil),             // 21: calls.v1.EndCallResponse
+	(*RefreshCallTokenRequest)(nil),     // 22: calls.v1.RefreshCallTokenRequest
+	(*RefreshCallTokenResponse)(nil),    // 23: calls.v1.RefreshCallTokenResponse
+	(*GetActiveCallRequest)(nil),        // 24: calls.v1.GetActiveCallRequest
+	(*GetActiveCallResponse)(nil),       // 25: calls.v1.GetActiveCallResponse
+	(*ListActiveCallsRequest)(nil),      // 26: calls.v1.ListActiveCallsRequest
+	(*ListActiveCallsResponse)(nil),     // 27: calls.v1.ListActiveCallsResponse
+	(*DeclineCallRequest)(nil),          // 28: calls.v1.DeclineCallRequest
+	(*DeclineCallResponse)(nil),         // 29: calls.v1.DeclineCallResponse
+	(*KickParticipantRequest)(nil),      // 30: calls.v1.KickParticipantRequest
+	(*KickParticipantResponse)(nil),     // 31: calls.v1.KickParticipantResponse
+	(*MuteParticipantRequest)(nil),      // 32: calls.v1.MuteParticipantRequest
+	(*MuteParticipantResponse)(nil),     // 33: calls.v1.MuteParticipantResponse
+	(*ReportMediaStateRequest)(nil),     // 34: calls.v1.ReportMediaStateRequest
+	(*ReportMediaStateResponse)(nil),    // 35: calls.v1.ReportMediaStateResponse
+	(*OrgCallPolicy)(nil),               // 36: calls.v1.OrgCallPolicy
+	(*GetOrgCallPolicyRequest)(nil),     // 37: calls.v1.GetOrgCallPolicyRequest
+	(*GetOrgCallPolicyResponse)(nil),    // 38: calls.v1.GetOrgCallPolicyResponse
+	(*UpdateOrgCallPolicyRequest)(nil),  // 39: calls.v1.UpdateOrgCallPolicyRequest
+	(*SetCallModeRequest)(nil),          // 40: calls.v1.SetCallModeRequest
+	(*SetCallModeResponse)(nil),         // 41: calls.v1.SetCallModeResponse
+	(*SetCallSpeakerRequest)(nil),       // 42: calls.v1.SetCallSpeakerRequest
+	(*SetCallSpeakerResponse)(nil),      // 43: calls.v1.SetCallSpeakerResponse
+	(*UpdateOrgCallPolicyResponse)(nil), // 44: calls.v1.UpdateOrgCallPolicyResponse
+	(*SetHandRaisedRequest)(nil),        // 45: calls.v1.SetHandRaisedRequest
+	(*SetHandRaisedResponse)(nil),       // 46: calls.v1.SetHandRaisedResponse
+	(*SendCallReactionRequest)(nil),     // 47: calls.v1.SendCallReactionRequest
+	(*SendCallReactionResponse)(nil),    // 48: calls.v1.SendCallReactionResponse
+	(*CallRecord)(nil),                  // 49: calls.v1.CallRecord
+	(*CallAttendance)(nil),              // 50: calls.v1.CallAttendance
+	(*ListCallHistoryRequest)(nil),      // 51: calls.v1.ListCallHistoryRequest
+	(*ListCallHistoryResponse)(nil),     // 52: calls.v1.ListCallHistoryResponse
+	(*GetCallRecordRequest)(nil),        // 53: calls.v1.GetCallRecordRequest
+	(*GetCallRecordResponse)(nil),       // 54: calls.v1.GetCallRecordResponse
+	(*CallActivityChunk)(nil),           // 55: calls.v1.CallActivityChunk
+	(*ReportCallActivityRequest)(nil),   // 56: calls.v1.ReportCallActivityRequest
+	(*ReportCallActivityResponse)(nil),  // 57: calls.v1.ReportCallActivityResponse
+	(*CallActivityBucket)(nil),          // 58: calls.v1.CallActivityBucket
+	(*timestamppb.Timestamp)(nil),       // 59: google.protobuf.Timestamp
 }
 var file_calls_v1_calls_proto_depIdxs = []int32{
 	3,  // 0: calls.v1.GetCallAvailabilityResponse.availability:type_name -> calls.v1.CallAvailability
-	11, // 1: calls.v1.GetCallStateResponse.call:type_name -> calls.v1.Call
+	12, // 1: calls.v1.GetCallStateResponse.call:type_name -> calls.v1.Call
 	0,  // 2: calls.v1.Call.call_type:type_name -> calls.v1.CallType
-	48, // 3: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
-	48, // 4: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
+	59, // 3: calls.v1.Call.started_at:type_name -> google.protobuf.Timestamp
+	59, // 4: calls.v1.Call.ended_at:type_name -> google.protobuf.Timestamp
 	1,  // 5: calls.v1.Call.end_reason:type_name -> calls.v1.CallEndReason
-	12, // 6: calls.v1.Call.participants:type_name -> calls.v1.CallParticipant
-	48, // 7: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
-	48, // 8: calls.v1.CallParticipant.hand_raised_at:type_name -> google.protobuf.Timestamp
-	11, // 9: calls.v1.InitiateCallResponse.call:type_name -> calls.v1.Call
+	13, // 6: calls.v1.Call.participants:type_name -> calls.v1.CallParticipant
+	59, // 7: calls.v1.CallParticipant.joined_at:type_name -> google.protobuf.Timestamp
+	59, // 8: calls.v1.CallParticipant.hand_raised_at:type_name -> google.protobuf.Timestamp
+	12, // 9: calls.v1.InitiateCallResponse.call:type_name -> calls.v1.Call
 	2,  // 10: calls.v1.InitiateCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
-	10, // 11: calls.v1.InitiateCallResponse.ice_servers:type_name -> calls.v1.IceServer
+	11, // 11: calls.v1.InitiateCallResponse.ice_servers:type_name -> calls.v1.IceServer
 	4,  // 12: calls.v1.InitiateCallResponse.ice_transport_policy:type_name -> calls.v1.IceTransportPolicy
-	11, // 13: calls.v1.JoinCallResponse.call:type_name -> calls.v1.Call
+	12, // 13: calls.v1.JoinCallResponse.call:type_name -> calls.v1.Call
 	2,  // 14: calls.v1.JoinCallResponse.screen_share_quality_cap:type_name -> calls.v1.ScreenShareQuality
-	10, // 15: calls.v1.JoinCallResponse.ice_servers:type_name -> calls.v1.IceServer
+	11, // 15: calls.v1.JoinCallResponse.ice_servers:type_name -> calls.v1.IceServer
 	4,  // 16: calls.v1.JoinCallResponse.ice_transport_policy:type_name -> calls.v1.IceTransportPolicy
-	11, // 17: calls.v1.GetActiveCallResponse.call:type_name -> calls.v1.Call
-	11, // 18: calls.v1.ListActiveCallsResponse.calls:type_name -> calls.v1.Call
+	12, // 17: calls.v1.GetActiveCallResponse.call:type_name -> calls.v1.Call
+	12, // 18: calls.v1.ListActiveCallsResponse.calls:type_name -> calls.v1.Call
 	2,  // 19: calls.v1.OrgCallPolicy.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
 	2,  // 20: calls.v1.OrgCallPolicy.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
 	2,  // 21: calls.v1.OrgCallPolicy.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
-	35, // 22: calls.v1.GetOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
+	36, // 22: calls.v1.GetOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
 	2,  // 23: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_direct:type_name -> calls.v1.ScreenShareQuality
 	2,  // 24: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_group:type_name -> calls.v1.ScreenShareQuality
 	2,  // 25: calls.v1.UpdateOrgCallPolicyRequest.max_screen_share_quality_channel:type_name -> calls.v1.ScreenShareQuality
-	11, // 26: calls.v1.SetCallModeResponse.call:type_name -> calls.v1.Call
-	11, // 27: calls.v1.SetCallSpeakerResponse.call:type_name -> calls.v1.Call
-	35, // 28: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
-	12, // 29: calls.v1.SetHandRaisedResponse.participant:type_name -> calls.v1.CallParticipant
+	12, // 26: calls.v1.SetCallModeResponse.call:type_name -> calls.v1.Call
+	12, // 27: calls.v1.SetCallSpeakerResponse.call:type_name -> calls.v1.Call
+	36, // 28: calls.v1.UpdateOrgCallPolicyResponse.policy:type_name -> calls.v1.OrgCallPolicy
+	13, // 29: calls.v1.SetHandRaisedResponse.participant:type_name -> calls.v1.CallParticipant
 	5,  // 30: calls.v1.SendCallReactionRequest.reaction:type_name -> calls.v1.CallReaction
-	6,  // 31: calls.v1.CallService.GetCallAvailability:input_type -> calls.v1.GetCallAvailabilityRequest
-	8,  // 32: calls.v1.CallService.GetCallState:input_type -> calls.v1.GetCallStateRequest
-	13, // 33: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
-	15, // 34: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
-	17, // 35: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
-	19, // 36: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
-	21, // 37: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
-	23, // 38: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
-	25, // 39: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
-	27, // 40: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
-	29, // 41: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
-	31, // 42: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
-	36, // 43: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
-	38, // 44: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
-	44, // 45: calls.v1.CallService.SetHandRaised:input_type -> calls.v1.SetHandRaisedRequest
-	46, // 46: calls.v1.CallService.SendCallReaction:input_type -> calls.v1.SendCallReactionRequest
-	39, // 47: calls.v1.CallService.SetCallMode:input_type -> calls.v1.SetCallModeRequest
-	41, // 48: calls.v1.CallService.SetCallSpeaker:input_type -> calls.v1.SetCallSpeakerRequest
-	33, // 49: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
-	7,  // 50: calls.v1.CallService.GetCallAvailability:output_type -> calls.v1.GetCallAvailabilityResponse
-	9,  // 51: calls.v1.CallService.GetCallState:output_type -> calls.v1.GetCallStateResponse
-	14, // 52: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
-	16, // 53: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
-	18, // 54: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
-	20, // 55: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
-	22, // 56: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
-	24, // 57: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
-	26, // 58: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
-	28, // 59: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
-	30, // 60: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
-	32, // 61: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
-	37, // 62: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
-	43, // 63: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
-	45, // 64: calls.v1.CallService.SetHandRaised:output_type -> calls.v1.SetHandRaisedResponse
-	47, // 65: calls.v1.CallService.SendCallReaction:output_type -> calls.v1.SendCallReactionResponse
-	40, // 66: calls.v1.CallService.SetCallMode:output_type -> calls.v1.SetCallModeResponse
-	42, // 67: calls.v1.CallService.SetCallSpeaker:output_type -> calls.v1.SetCallSpeakerResponse
-	34, // 68: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
-	50, // [50:69] is the sub-list for method output_type
-	31, // [31:50] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	12, // 31: calls.v1.CallRecord.call:type_name -> calls.v1.Call
+	6,  // 32: calls.v1.CallRecord.invitation_outcome:type_name -> calls.v1.CallInvitationOutcome
+	59, // 33: calls.v1.CallAttendance.joined_at:type_name -> google.protobuf.Timestamp
+	59, // 34: calls.v1.CallAttendance.left_at:type_name -> google.protobuf.Timestamp
+	6,  // 35: calls.v1.CallAttendance.invitation_outcome:type_name -> calls.v1.CallInvitationOutcome
+	58, // 36: calls.v1.CallAttendance.activity:type_name -> calls.v1.CallActivityBucket
+	49, // 37: calls.v1.ListCallHistoryResponse.records:type_name -> calls.v1.CallRecord
+	49, // 38: calls.v1.GetCallRecordResponse.record:type_name -> calls.v1.CallRecord
+	50, // 39: calls.v1.GetCallRecordResponse.participants:type_name -> calls.v1.CallAttendance
+	55, // 40: calls.v1.ReportCallActivityRequest.chunks:type_name -> calls.v1.CallActivityChunk
+	51, // 41: calls.v1.CallService.ListCallHistory:input_type -> calls.v1.ListCallHistoryRequest
+	53, // 42: calls.v1.CallService.GetCallRecord:input_type -> calls.v1.GetCallRecordRequest
+	7,  // 43: calls.v1.CallService.GetCallAvailability:input_type -> calls.v1.GetCallAvailabilityRequest
+	9,  // 44: calls.v1.CallService.GetCallState:input_type -> calls.v1.GetCallStateRequest
+	14, // 45: calls.v1.CallService.InitiateCall:input_type -> calls.v1.InitiateCallRequest
+	16, // 46: calls.v1.CallService.JoinCall:input_type -> calls.v1.JoinCallRequest
+	18, // 47: calls.v1.CallService.LeaveCall:input_type -> calls.v1.LeaveCallRequest
+	20, // 48: calls.v1.CallService.EndCall:input_type -> calls.v1.EndCallRequest
+	22, // 49: calls.v1.CallService.RefreshCallToken:input_type -> calls.v1.RefreshCallTokenRequest
+	24, // 50: calls.v1.CallService.GetActiveCall:input_type -> calls.v1.GetActiveCallRequest
+	26, // 51: calls.v1.CallService.ListActiveCalls:input_type -> calls.v1.ListActiveCallsRequest
+	28, // 52: calls.v1.CallService.DeclineCall:input_type -> calls.v1.DeclineCallRequest
+	30, // 53: calls.v1.CallService.KickParticipant:input_type -> calls.v1.KickParticipantRequest
+	32, // 54: calls.v1.CallService.MuteParticipant:input_type -> calls.v1.MuteParticipantRequest
+	37, // 55: calls.v1.CallService.GetOrgCallPolicy:input_type -> calls.v1.GetOrgCallPolicyRequest
+	39, // 56: calls.v1.CallService.UpdateOrgCallPolicy:input_type -> calls.v1.UpdateOrgCallPolicyRequest
+	45, // 57: calls.v1.CallService.SetHandRaised:input_type -> calls.v1.SetHandRaisedRequest
+	47, // 58: calls.v1.CallService.SendCallReaction:input_type -> calls.v1.SendCallReactionRequest
+	40, // 59: calls.v1.CallService.SetCallMode:input_type -> calls.v1.SetCallModeRequest
+	42, // 60: calls.v1.CallService.SetCallSpeaker:input_type -> calls.v1.SetCallSpeakerRequest
+	56, // 61: calls.v1.CallService.ReportCallActivity:input_type -> calls.v1.ReportCallActivityRequest
+	34, // 62: calls.v1.CallService.ReportMediaState:input_type -> calls.v1.ReportMediaStateRequest
+	52, // 63: calls.v1.CallService.ListCallHistory:output_type -> calls.v1.ListCallHistoryResponse
+	54, // 64: calls.v1.CallService.GetCallRecord:output_type -> calls.v1.GetCallRecordResponse
+	8,  // 65: calls.v1.CallService.GetCallAvailability:output_type -> calls.v1.GetCallAvailabilityResponse
+	10, // 66: calls.v1.CallService.GetCallState:output_type -> calls.v1.GetCallStateResponse
+	15, // 67: calls.v1.CallService.InitiateCall:output_type -> calls.v1.InitiateCallResponse
+	17, // 68: calls.v1.CallService.JoinCall:output_type -> calls.v1.JoinCallResponse
+	19, // 69: calls.v1.CallService.LeaveCall:output_type -> calls.v1.LeaveCallResponse
+	21, // 70: calls.v1.CallService.EndCall:output_type -> calls.v1.EndCallResponse
+	23, // 71: calls.v1.CallService.RefreshCallToken:output_type -> calls.v1.RefreshCallTokenResponse
+	25, // 72: calls.v1.CallService.GetActiveCall:output_type -> calls.v1.GetActiveCallResponse
+	27, // 73: calls.v1.CallService.ListActiveCalls:output_type -> calls.v1.ListActiveCallsResponse
+	29, // 74: calls.v1.CallService.DeclineCall:output_type -> calls.v1.DeclineCallResponse
+	31, // 75: calls.v1.CallService.KickParticipant:output_type -> calls.v1.KickParticipantResponse
+	33, // 76: calls.v1.CallService.MuteParticipant:output_type -> calls.v1.MuteParticipantResponse
+	38, // 77: calls.v1.CallService.GetOrgCallPolicy:output_type -> calls.v1.GetOrgCallPolicyResponse
+	44, // 78: calls.v1.CallService.UpdateOrgCallPolicy:output_type -> calls.v1.UpdateOrgCallPolicyResponse
+	46, // 79: calls.v1.CallService.SetHandRaised:output_type -> calls.v1.SetHandRaisedResponse
+	48, // 80: calls.v1.CallService.SendCallReaction:output_type -> calls.v1.SendCallReactionResponse
+	41, // 81: calls.v1.CallService.SetCallMode:output_type -> calls.v1.SetCallModeResponse
+	43, // 82: calls.v1.CallService.SetCallSpeaker:output_type -> calls.v1.SetCallSpeakerResponse
+	57, // 83: calls.v1.CallService.ReportCallActivity:output_type -> calls.v1.ReportCallActivityResponse
+	35, // 84: calls.v1.CallService.ReportMediaState:output_type -> calls.v1.ReportMediaStateResponse
+	63, // [63:85] is the sub-list for method output_type
+	41, // [41:63] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_calls_v1_calls_proto_init() }
@@ -3366,13 +4269,15 @@ func file_calls_v1_calls_proto_init() {
 	file_calls_v1_calls_proto_msgTypes[18].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[32].OneofWrappers = []any{}
 	file_calls_v1_calls_proto_msgTypes[38].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[43].OneofWrappers = []any{}
+	file_calls_v1_calls_proto_msgTypes[44].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_calls_v1_calls_proto_rawDesc), len(file_calls_v1_calls_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   42,
+			NumEnums:      7,
+			NumMessages:   52,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

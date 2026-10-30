@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { dialogShellClass } from "@/components/ui/popover";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
+import { overlayRoot } from "@/shared/utils/overlayRoot";
 
 interface DrawerProps {
   open: boolean;
@@ -46,7 +48,9 @@ export function Drawer({
 
   const isLeft = side === "left";
 
-  return (
+  // Portaled so a drawer opened from inside a pane is not trapped under the app header's
+  // stacking context.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={ariaLabel}>
       <div
         className={cn(
@@ -85,6 +89,7 @@ export function Drawer({
 
         {children}
       </div>
-    </div>
+    </div>,
+    overlayRoot(),
   );
 }

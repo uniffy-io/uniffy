@@ -2,11 +2,11 @@ import { canPublishInCall } from "@/features/calls/utils/callPublishing";
 import { useState } from "react";
 import { MicrophoneSlash, UserMinus, Microphone, Ear } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
-import { SUBJECT_TYPE } from "@/components/subject/types";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { PaneIconButton } from "@/components/ui/pane-header";
+import { CallPersonRow } from "@/features/calls/components/CallPersonRow";
 import { useCall } from "@/features/calls/components/callContext";
 import { useRoomParticipants } from "@/features/calls/hooks/useRoomParticipants";
 import { useCallModeration } from "@/features/calls/hooks/useCallModeration";
@@ -48,7 +48,7 @@ export function CallParticipants({ onClose }: { onClose: () => void }) {
           description="Microphone, speaking and screen sharing status"
         />
         <ModalBody>
-          <ul className="space-y-1" data-testid="call-participant-roster">
+          <ul data-testid="call-participant-roster">
             {participants.map((participant) => {
               const row = call?.participants.find((p) => p.identity === participant.identity);
               const name = row?.displayName || participant.name || "Participant";
@@ -65,33 +65,18 @@ export function CallParticipants({ onClose }: { onClose: () => void }) {
                 .filter(Boolean)
                 .join(", ");
               return (
-                <li
+                <CallPersonRow
                   key={participant.identity}
-                  className="flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-muted/50"
+                  userId={row?.userId ?? participant.identity.split(":")[0]}
+                  name={name}
+                  avatarUrl={row?.avatarUrl}
+                  label={`${name}${participant.isLocal ? " (you)" : ""}${row?.userId === call?.hostUserId ? " · Host" : ""}`}
+                  state={state}
                 >
-                  <SubjectAvatar
-                    subject={{
-                      id: row?.userId ?? participant.identity.split(":")[0],
-                      type: SUBJECT_TYPE.USER,
-                      name,
-                      avatarUrl: row?.avatarUrl ?? undefined,
-                    }}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {name}
-                      {participant.isLocal ? " (you)" : ""}
-                      {row?.userId === call?.hostUserId ? " · Host" : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{state}</p>
-                  </div>
                   {canModerate && !participant.isLocal && (
-                    <div className="flex gap-1">
+                    <>
                       {call?.townHall && row && row.userId !== call.hostUserId && (
-                        <Button
-                          variant="ghost"
-                          className="min-h-11 min-w-11"
+                        <PaneIconButton
                           disabled={pending !== null}
                           title={speaker ? "Move to audience" : "Allow to speak"}
                           aria-label={
@@ -114,31 +99,29 @@ export function CallParticipants({ onClose }: { onClose: () => void }) {
                             }
                           }}
                         >
-                          {speaker ? <Ear size={18} /> : <Microphone size={18} />}
-                        </Button>
+                          {speaker ? <Ear size={16} /> : <Microphone size={16} />}
+                        </PaneIconButton>
                       )}
-
-                      <Button
-                        variant="ghost"
-                        className="min-h-11 min-w-11"
+                      <PaneIconButton
                         disabled={pending !== null || !participant.isMicrophoneEnabled}
+                        title="Mute"
                         aria-label={`Mute ${name}`}
                         onClick={() => void act(participant.identity, false)}
                       >
-                        <MicrophoneSlash size={18} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="min-h-11 min-w-11 text-red-500"
+                        <MicrophoneSlash size={16} />
+                      </PaneIconButton>
+                      <PaneIconButton
+                        className="hover:bg-destructive/10 hover:text-destructive"
                         disabled={pending !== null}
+                        title="Remove from call"
                         aria-label={`Remove ${name} from call`}
                         onClick={() => setRemove({ identity: participant.identity, name })}
                       >
-                        <UserMinus size={18} />
-                      </Button>
-                    </div>
+                        <UserMinus size={16} />
+                      </PaneIconButton>
+                    </>
                   )}
-                </li>
+                </CallPersonRow>
               );
             })}
           </ul>

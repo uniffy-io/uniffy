@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
@@ -5,7 +7,7 @@ from sqlalchemy import select
 from uniffy_proto.calls.v1.calls_pb import DeclineCallRequest
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
-from uniffy.core.models.calls import Call, CallParticipant, ScreenShareQuality
+from uniffy.core.models.calls import Call, CallInvitation, CallParticipant, ScreenShareQuality
 from uniffy.core.models.chat.channel import ChannelType, ChatChannel
 from uniffy.core.models.chat.channel_member import ChatChannelMember
 from uniffy.core.types import SubjectType
@@ -32,6 +34,15 @@ async def test_decline_checks_access_without_ending_shared_call(
     session, access, livekit, call_publication, actor, other_org, code
 ):
     call = await _call(session, access)
+    session.add(
+        CallInvitation(
+            call_id=call.id,
+            user_id=access.owner_id,
+            organization_id=access.org_id,
+            expires_at=datetime.now(UTC) + timedelta(seconds=30),
+        )
+    )
+    await session.commit()
     org_id = access.other_org_id if other_org else access.org_id
 
     async def decline():

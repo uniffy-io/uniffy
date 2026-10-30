@@ -2,6 +2,8 @@ import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import {
   CallService,
+  ListCallHistoryRequestSchema,
+  GetCallRecordRequestSchema,
   GetCallAvailabilityRequestSchema,
   GetCallStateRequestSchema,
   InitiateCallRequestSchema,
@@ -14,9 +16,9 @@ import {
   DeclineCallRequestSchema,
   KickParticipantRequestSchema,
   MuteParticipantRequestSchema,
+  ReportCallActivityRequestSchema,
   ReportMediaStateRequestSchema,
   SetHandRaisedRequestSchema,
-  SetCallModeRequestSchema,
   SetCallSpeakerRequestSchema,
   SendCallReactionRequestSchema,
   GetOrgCallPolicyRequestSchema,
@@ -27,8 +29,12 @@ import type { MessageInitShape } from "@bufbuild/protobuf";
 const callsClient = createClient(CallService, unaryTransport);
 
 export const callsApi = {
-  setCallMode: (req: MessageInitShape<typeof SetCallModeRequestSchema>) =>
-    callsClient.setCallMode(req),
+  reportCallActivity: (req: MessageInitShape<typeof ReportCallActivityRequestSchema>) =>
+    callsClient.reportCallActivity(req, { timeoutMs: 10000 }),
+  listCallHistory: (req: MessageInitShape<typeof ListCallHistoryRequestSchema>) =>
+    callsClient.listCallHistory(req),
+  getCallRecord: (req: MessageInitShape<typeof GetCallRecordRequestSchema>) =>
+    callsClient.getCallRecord(req),
   setCallSpeaker: (req: MessageInitShape<typeof SetCallSpeakerRequestSchema>) =>
     callsClient.setCallSpeaker(req),
   getCallAvailability: (req: MessageInitShape<typeof GetCallAvailabilityRequestSchema>) =>
