@@ -46,6 +46,7 @@ export const fetchCallHistory = createAsyncThunk(
 );
 interface HistoryState {
   scope: string;
+  revision: number;
   requestId: string | null;
   loading: boolean;
   error: boolean;
@@ -55,6 +56,7 @@ interface HistoryState {
 }
 const initialState: HistoryState = {
   scope: "",
+  revision: 0,
   requestId: null,
   loading: false,
   error: false,
@@ -68,11 +70,13 @@ const slice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder.addCase(removeChannel, (state, action) => {
+      // A pending personal-history response can contain this channel even with no loaded rows.
+      state.requestId = null;
+      state.loading = false;
+      state.revision += 1;
       if (state.records.some((record) => record.channelId === action.payload)) {
         state.records = state.records.filter((record) => record.channelId !== action.payload);
         state.people = [];
-        state.requestId = null;
-        state.loading = false;
       }
     });
     builder.addCase(fetchCallHistory.pending, (state, action) => {

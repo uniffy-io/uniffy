@@ -28,10 +28,14 @@ const client = createClient(CallService, transport);
 export const callsApi = {
   reportCallActivity: (req: MessageInitShape<typeof ReportCallActivityRequestSchema>) =>
     client.reportCallActivity(req, { timeoutMs: 10000 }),
-  listCallHistory: (req: MessageInitShape<typeof ListCallHistoryRequestSchema>) =>
-    client.listCallHistory(req),
-  getCallRecord: (req: MessageInitShape<typeof GetCallRecordRequestSchema>) =>
-    client.getCallRecord(req),
+  listCallHistory: (
+    req: MessageInitShape<typeof ListCallHistoryRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.listCallHistory(req, options),
+  getCallRecord: (
+    req: MessageInitShape<typeof GetCallRecordRequestSchema>,
+    options?: { signal?: AbortSignal },
+  ) => client.getCallRecord(req, options),
   getCallAvailability: (req: MessageInitShape<typeof GetCallAvailabilityRequestSchema>) =>
     client.getCallAvailability(req),
   getCallState: (req: MessageInitShape<typeof GetCallStateRequestSchema>) =>

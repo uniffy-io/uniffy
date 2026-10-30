@@ -47,7 +47,7 @@ export function CallRecordScreen() {
   const people = history.data?.pages.flatMap((page) => page.people) ?? [];
   const goBack = () => (router.canGoBack() ? router.back() : router.replace("/calls"));
 
-  // A failed refocus refetch keeps the summary already on screen.
+  // Only transient failures retain cached history; denied reads clear it in the query.
   if (history.isError && !record) {
     return (
       <ScreenError

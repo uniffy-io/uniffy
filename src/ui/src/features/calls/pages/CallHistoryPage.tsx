@@ -46,7 +46,7 @@ export function CallHistoryPage() {
     const refresh = () => load();
     window.addEventListener("focus", refresh);
     return () => window.removeEventListener("focus", refresh);
-  }, [load, liveCalls]);
+  }, [load, liveCalls, history.revision]);
   const backTo = record
     ? `/calls?channelId=${record.channelId}`
     : channelId

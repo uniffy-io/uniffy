@@ -19,9 +19,15 @@ from uniffy.domains.calls.history import CallHistoryReader
 from uniffy.domains.calls.invitations import CallInvitations
 from uniffy.domains.calls.jobs import history as history_jobs
 from uniffy.domains.calls.operations import CallOperations
-from uniffy.domains.calls.search import stage_channel_history_refresh
+from uniffy.domains.chat.channels.operations import ChatChannelOperations
+from uniffy.domains.chat.search import (
+    record_chat_search_acl_refresh,
+    remove_channel_message_documents,
+)
 from uniffy.domains.permissions.access.resolver import ResourceAccessResolver
 from uniffy.domains.permissions.access.types import ResourceAccessPurpose, ResourceKey
+from uniffy.domains.search.operations import SearchOperations
+from uniffy.domains.search.queries import UrnAvailability
 from uniffy.infrastructure.database import open_session
 from uniffy.tests.integration.access.call_contention import contend
 from uniffy.tests.integration.access.calls import (
@@ -31,6 +37,7 @@ from uniffy.tests.integration.access.calls import (
 )
 from uniffy.tests.integration.access.calls import call_publication as call_publication
 from uniffy.tests.integration.access.calls import livekit as livekit
+from uniffy.tests.integration.access.recording_search import RecordingSearchEngine, recording_indexer
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -208,7 +215,7 @@ async def test_join_competes_with_decline_without_losing_attendance(
     assert invitation.outcome == previous
 
 
-async def test_projection_retries_and_uses_current_parent_access(session, access, monkeypatch):
+async def test_projection_retries_and_removes_deleted_parents(session, access, monkeypatch):
     call = await _call(session, access)
     writer = AsyncMock()
     writer.index.side_effect = RuntimeError("index unavailable")
@@ -220,20 +227,11 @@ async def test_projection_retries_and_uses_current_parent_access(session, access
     await history_jobs.flush_call_history({SEARCH_INDEXER_CTX_KEY: writer})
     await session.refresh(call)
     assert not call.search_pending
-    assert writer.index.call_args.kwargs["shared_user_ids"] == [access.owner_id]
-    await session.execute(
-        update(ChatChannel)
-        .where(ChatChannel.id == call.channel_id)
-        .values(channel_type=ChannelType.PUBLIC)
-    )
-    await stage_channel_history_refresh(session, call.channel_id)
-    await session.commit()
-    await history_jobs.flush_call_history({SEARCH_INDEXER_CTX_KEY: writer})
-    assert writer.index.call_args.kwargs["access_mode"] == AccessMode.OPEN_TO_ORG.value
+    assert writer.index.call_args.kwargs["access_mode"] == AccessMode.OWNER_ONLY.value
     await session.execute(
         update(ChatChannel).where(ChatChannel.id == call.channel_id).values(is_deleted=True)
     )
-    await stage_channel_history_refresh(session, call.channel_id)
+    call.search_pending = True
     await session.commit()
     await history_jobs.flush_call_history({SEARCH_INDEXER_CTX_KEY: writer})
     writer.remove.assert_awaited_with(call.urn)
@@ -247,6 +245,71 @@ async def test_projection_retries_and_uses_current_parent_access(session, access
         )
     )[key]
     assert not decision.can_view
+
+
+async def test_references_follow_channel_access_without_history_reindex(
+    session, access, monkeypatch
+):
+    call = await _call(session, access)
+    engine = RecordingSearchEngine()
+    writer = recording_indexer(engine)
+    monkeypatch.setattr(history_jobs, "open_session", scoped_history_sessions(access.org_id))
+    await history_jobs.flush_call_history({SEARCH_INDEXER_CTX_KEY: writer})
+    indexed = dict(engine.indexed(ContentType.CALL, call.id))
+    assert indexed["shared_user_ids"] == []
+
+    async def resolve():
+        results = await SearchOperations(session, writer.search).resolve_urns(
+            access.member_id, access.org_id, [call.urn]
+        )
+        return results[call.urn]
+
+    assert (await resolve()).availability is UrnAvailability.RESTRICTED
+    await ChatChannelOperations(session).stage_members(
+        access.owner_id, access.org_id, call.channel_id, [access.member_id]
+    )
+    await session.commit()
+    await session.refresh(call)
+    assert not call.search_pending
+    granted = await resolve()
+    assert granted.availability is UrnAvailability.AVAILABLE
+    assert granted.title == call.title
+
+    await ChatChannelOperations(session).stage_members_remove(
+        access.owner_id, access.org_id, call.channel_id, [access.member_id]
+    )
+    await session.commit()
+    await session.refresh(call)
+    assert not call.search_pending
+    denied = await resolve()
+    assert denied.availability is UrnAvailability.RESTRICTED
+    assert denied.title == ""
+
+    for channel_type, availability in (
+        (ChannelType.PUBLIC, UrnAvailability.AVAILABLE),
+        (ChannelType.PRIVATE, UrnAvailability.RESTRICTED),
+    ):
+        await session.execute(
+            update(ChatChannel)
+            .where(ChatChannel.id == call.channel_id)
+            .values(channel_type=channel_type)
+        )
+        await record_chat_search_acl_refresh(
+            session, organization_id=access.org_id, channel_id=call.channel_id
+        )
+        await session.commit()
+        await session.refresh(call)
+        assert not call.search_pending
+        assert (await resolve()).availability is availability
+        assert engine.indexed(ContentType.CALL, call.id) == indexed
+
+    await session.execute(
+        update(ChatChannel).where(ChatChannel.id == call.channel_id).values(is_deleted=True)
+    )
+    await session.commit()
+    await remove_channel_message_documents(writer, call.channel_id)
+    assert engine.indexed(ContentType.CALL, call.id) is None
+    assert (await resolve()).availability is UrnAvailability.DELETED
 
 
 def scoped_history_sessions(organization_id):

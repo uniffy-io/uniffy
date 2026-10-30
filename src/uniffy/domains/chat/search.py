@@ -11,7 +11,6 @@ from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.chat.search_acl_refresh import ChatSearchAclRefresh
 from uniffy.core.search import SearchIndexer
 from uniffy.core.search.engine import SearchTerm, all_of, any_of
-from uniffy.domains.calls.search import stage_channel_history_refresh
 from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 
 logger = logger.bind(component="chat.search")
@@ -43,7 +42,6 @@ async def record_chat_search_acl_refresh(
         )
     )
     await session.execute(stmt)
-    await stage_channel_history_refresh(session, channel_id)
 
 
 async def enqueue_chat_search_acl_refresh(channel_id: UUID) -> None:
