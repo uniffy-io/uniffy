@@ -107,6 +107,28 @@ describe("ChannelHeader", () => {
     expect(html).toContain("status:grace");
     expect(html).toContain('data-testid="chat-channel-call-button"');
   });
+
+  it("keeps the frequent channel actions inline and the rare ones behind More", () => {
+    const html = renderHeader({ name: "General", channelType: ChannelType.PUBLIC });
+
+    for (const testId of [
+      "chat-channel-call-button",
+      "chat-channel-search-button",
+      "chat-channel-pinned-button",
+      "chat-channel-resources-button",
+      "chat-channel-split-button",
+      "chat-channel-more-button",
+    ]) {
+      expect(html).toContain(`data-testid="${testId}"`);
+    }
+    for (const testId of [
+      "chat-channel-call-history",
+      "chat-channel-agents-toggle",
+      "chat-channel-settings-button",
+    ]) {
+      expect(html).not.toContain(`data-testid="${testId}"`);
+    }
+  });
 });
 
 it.each([

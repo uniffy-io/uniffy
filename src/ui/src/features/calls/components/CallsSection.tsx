@@ -136,7 +136,8 @@ export function CallsSection() {
                   disabled={managedByBrowser}
                   onChange={(id) => dispatch(change(id || null))}
                   options={deviceOptions(label, items, managedByBrowser)}
-                  triggerClassName="w-full"
+                  className="min-w-0"
+                  triggerClassName="w-full min-w-0"
                 />
               </div>
             );

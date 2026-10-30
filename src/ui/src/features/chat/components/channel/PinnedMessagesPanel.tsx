@@ -4,7 +4,9 @@ import { createPortal } from "react-dom";
 import { PushPin, X } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { SubjectAvatarById } from "@/components/subject";
+import { Drawer } from "@/components/ui/drawer";
 import { dialogShellClass } from "@/components/ui/popover";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { cn } from "@/shared/utils/cn";
 import { AgentAvatar } from "@/features/agents/components/AgentAvatar";
 import { fetchPinnedMessages } from "@/features/chat/store/chatThunks";
@@ -31,6 +33,7 @@ export function PinnedMessagesPanel({
   const agentsById = useAppSelector((state) => state.agents.agents);
   const [pinnedMessages, setPinnedMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { isMobile } = useBreakpoint();
 
   useEffect(() => {
     if (!organizationId) return;
@@ -56,6 +59,7 @@ export function PinnedMessagesPanel({
   const [position, setPosition] = useState({ top: 100, left: 100 });
 
   useEffect(() => {
+    if (isMobile) return;
     const anchor = anchorRef.current;
     if (!anchor) return;
 
@@ -69,9 +73,10 @@ export function PinnedMessagesPanel({
     if (left < 16) left = 16;
 
     setPosition({ top: rect.bottom + 6, left });
-  }, [anchorRef]);
+  }, [anchorRef, isMobile]);
 
   useEffect(() => {
+    if (isMobile) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
         onClose();
@@ -84,19 +89,13 @@ export function PinnedMessagesPanel({
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [onClose]);
+  }, [onClose, isMobile]);
 
-  useOverlayEscape(onClose);
+  // The mobile drawer owns Escape itself.
+  useOverlayEscape(onClose, !isMobile);
 
-  return createPortal(
-    <div
-      ref={panelRef}
-      className={cn(
-        dialogShellClass,
-        "fixed z-[100] w-[380px] max-h-[60vh] rounded-xl overflow-hidden flex flex-col",
-      )}
-      style={{ top: position.top, left: position.left }}
-    >
+  const body = (
+    <>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <PushPin size={16} className="text-muted-foreground" />
@@ -104,8 +103,10 @@ export function PinnedMessagesPanel({
           <span className="text-xs text-muted-foreground">({pinnedMessages.length})</span>
         </div>
         <button
+          type="button"
           onClick={onClose}
           className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          aria-label="Close"
         >
           <X size={14} />
         </button>
@@ -177,6 +178,34 @@ export function PinnedMessagesPanel({
           })
         )}
       </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer
+        open
+        onClose={onClose}
+        side="right"
+        className="w-[min(92vw,380px)]"
+        showClose={false}
+        ariaLabel="Pinned messages"
+      >
+        <div className="flex flex-col h-full">{body}</div>
+      </Drawer>
+    );
+  }
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className={cn(
+        dialogShellClass,
+        "fixed z-[100] w-[380px] max-h-[60vh] rounded-xl overflow-hidden flex flex-col",
+      )}
+      style={{ top: position.top, left: position.left }}
+    >
+      {body}
     </div>,
     document.body,
   );

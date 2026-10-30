@@ -520,7 +520,7 @@ generation checks, and tenant-qualified webhook room names when changing lifecyc
 
 ## Calls: history and references
 
-- [ ] Start and end a call with two users. Open Call history from chat, then channel history from its header. Personal history contains calls started, attended or received. Channel history includes accessible calls in that conversation.
+- [ ] Start and end a call with two users. Open channel history from the channel header. It includes accessible calls in that conversation. Personal history (`/calls` on web, the chat list on mobile) contains calls started, attended or received.
 - [ ] Decline one invitation and ignore another until it expires or the call ends. History shows Declined and Missed. Join after declining or missing: attendance appears without rewriting that invitation outcome.
 - [ ] Open a summary after leaving or ending a call. Check date, duration and people. Joining on two devices shows one person. Load more works for both history and attendance.
 - [ ] Copy a call link and reference. Open the link directly, paste the reference into chat or a note, and confirm calls stay absent from search and mention suggestions. The pasted reference preview shows the call title and time. Live references update when the call ends.

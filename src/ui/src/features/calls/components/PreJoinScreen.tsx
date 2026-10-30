@@ -104,6 +104,7 @@ function DeviceField({
         disabled={managedByBrowser}
         onChange={(id) => onChange(id || null)}
         options={deviceOptions(label, devices, managedByBrowser)}
+        className="min-w-0"
         triggerClassName="w-full min-w-0"
       />
     </div>

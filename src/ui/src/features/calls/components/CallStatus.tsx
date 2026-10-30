@@ -65,8 +65,6 @@ export function CallStatus() {
   const session = useAppSelector(selectCallSession);
   return (
     <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
-      <span className="size-2 shrink-0 rounded-full bg-green-500" />
-      <span className="whitespace-nowrap">Live call</span>
       <CallModeBadge />
       {session.status === "reconnecting" && <ReconnectingChip />}
       <SoloNotice />

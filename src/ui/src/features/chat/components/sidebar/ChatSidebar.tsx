@@ -19,7 +19,6 @@ import {
   ArrowCounterClockwise,
   Hash,
   Lock,
-  ClockCounterClockwise,
 } from "@phosphor-icons/react";
 import {
   DndContext,
@@ -572,13 +571,6 @@ export function ChatSidebar() {
           testId="chat-sidebar-saved-link"
         />
 
-        <SidebarNavItem
-          icon={ClockCounterClockwise}
-          label="Call history"
-          testId="chat-call-history"
-          active={false}
-          onClick={() => navigate("/calls")}
-        />
         <SidebarNavItem
           icon={Compass}
           label="Browse Channels"
