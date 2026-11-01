@@ -13,6 +13,7 @@ import {
   speakerSelectionSupported,
 } from "@/features/calls/utils/deviceOptions";
 import { cn } from "@/shared/utils/cn";
+import { BackgroundSettings } from "@/features/calls/components/BackgroundSettings";
 import {
   audioInputSelected,
   audioOutputSelected,
@@ -125,6 +126,7 @@ export function CallsSection() {
           </p>
         </div>
         <Card tone="surface" className="space-y-4 p-4">
+          <BackgroundSettings />
           {devices.map(({ label, items, value, change }) => {
             const managedByBrowser = label === "Speaker" && !speakerSelectionSupported;
             return (

@@ -9,6 +9,7 @@
 !package.json
 !pnpm-workspace.yaml
 !pnpm-lock.yaml
+!patches
 !src/uniffy
 !src/proto/gen/python
 !src/proto/gen/typescript

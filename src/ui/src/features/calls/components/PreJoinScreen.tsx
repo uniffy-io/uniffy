@@ -41,6 +41,9 @@ import {
   videoInputSelected,
 } from "@/features/calls/store/callPreferencesSlice";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import type { LocalVideoTrack } from "livekit-client";
+import { createCameraTrack, BLUR_FAILURE } from "@/features/calls/utils/cameraTrack";
+import { BackgroundSettings } from "@/features/calls/components/BackgroundSettings";
 
 function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
   const [level, setLevel] = useState(0);
@@ -164,12 +167,16 @@ function PreJoinContent() {
   const ready = checkedTarget === channelId && availability === CallAvailability.READY;
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const camStreamRef = useRef<MediaStream | null>(null);
+  const camTrackRef = useRef<LocalVideoTrack | null>(null);
+  const camAbortRef = useRef<AbortController | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
 
   const stopCamStream = useCallback(() => {
-    camStreamRef.current?.getTracks().forEach((t) => t.stop());
-    camStreamRef.current = null;
+    camAbortRef.current?.abort();
+    camAbortRef.current = null;
+    camTrackRef.current?.detach();
+    camTrackRef.current?.stop();
+    camTrackRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
@@ -185,34 +192,46 @@ function PreJoinContent() {
       stopCamStream();
       return;
     }
-    let cancelled = false;
-    Promise.resolve()
-      .then(() =>
-        navigator.mediaDevices.getUserMedia({
-          video: { deviceId: preferences.videoInputId ?? undefined },
-        }),
-      )
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+    const abort = new AbortController();
+    camAbortRef.current = abort;
+    void createCameraTrack(
+      { deviceId: preferences.videoInputId, blur: preferences.backgroundBlur ?? false },
+      abort.signal,
+      () => {
+        if (!abort.signal.aborted) {
+          setCamError(BLUR_FAILURE);
+          setCamOn(false);
+        }
+      },
+    )
+      .then((track) => {
+        if (abort.signal.aborted) {
+          track.stop();
           return;
         }
         setCamError(null);
-        camStreamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        camTrackRef.current = track;
+        if (videoRef.current) track.attach(videoRef.current);
         void refresh();
       })
       .catch((error) => {
-        if (!cancelled) {
+        if (!abort.signal.aborted) {
           setCamError(callErrorMessage(error, "camera"));
           setCamOn(false);
         }
       });
     return () => {
-      cancelled = true;
+      abort.abort();
       stopCamStream();
     };
-  }, [camOn, audience, preferences.videoInputId, refresh, stopCamStream]);
+  }, [
+    camOn,
+    audience,
+    preferences.videoInputId,
+    preferences.backgroundBlur,
+    refresh,
+    stopCamStream,
+  ]);
 
   useEffect(() => {
     if (!micOn || audience) {
@@ -378,6 +397,7 @@ function PreJoinContent() {
               </div>
             </div>
           )}
+          <BackgroundSettings disabled={joining || audience} />
           {audience && (
             <p role="status" className="text-sm text-muted-foreground">
               {AUDIENCE_MESSAGE}

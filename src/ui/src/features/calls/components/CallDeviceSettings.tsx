@@ -9,6 +9,7 @@ import {
   selectCallPreferences,
 } from "@/features/calls/store/callPreferencesSlice";
 import { cn } from "@/shared/utils/cn";
+import { BackgroundSettings } from "@/features/calls/components/BackgroundSettings";
 
 export function CallDeviceSettings() {
   const dispatch = useAppDispatch();
@@ -40,6 +41,7 @@ export function CallDeviceSettings() {
   ];
   return (
     <div className="space-y-3 p-3">
+      <BackgroundSettings inline />
       {fields.map(({ label, kind, devices, selected, action }) => (
         <label key={kind} className="block space-y-1 text-xs text-muted-foreground">
           <span>{label}</span>

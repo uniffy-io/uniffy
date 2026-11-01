@@ -41,7 +41,12 @@ import {
   leaveCall,
   refreshCallToken,
 } from "@/features/calls/store/callsThunks";
-import { selectCallPreferences } from "@/features/calls/store/callPreferencesSlice";
+import {
+  selectCallPreferences,
+  backgroundBlurChanged,
+} from "@/features/calls/store/callPreferencesSlice";
+import { CameraController } from "@/features/calls/utils/cameraController";
+import { BLUR_FAILURE, type CameraOptions } from "@/features/calls/utils/cameraTrack";
 import { callsApi } from "@/features/calls/api/callsApi";
 import { resolveSignalingUrl } from "@/features/calls/utils/signalingUrl";
 import { buildRtcConfiguration } from "@/features/calls/utils/iceConfig";
@@ -188,6 +193,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reportInFlightRef = useRef(false);
   const reportPendingRef = useRef(false);
+  const cameraRef = useRef<CameraController | null>(null);
   // This provider never unmounts, and the rejoin loop, media reporter and
   // disconnect handler must stay identity-stable for the life of a call while
   // still reading the CURRENT session/preferences/org. Moving these writes into
@@ -221,6 +227,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const teardown = useCallback(async () => {
+    cameraRef.current?.dispose();
+    cameraRef.current = null;
     stopActivityRef.current?.();
     stopActivityRef.current = null;
     clearRefreshTimer();
@@ -329,16 +337,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         dispatch(feedbackChanged(callErrorMessage(error, "microphone")));
       }
+      if (roomRef.current !== r) return;
       try {
         if (opts.cameraEnabled && r.localParticipant.permissions?.canPublish !== false) {
-          await r.localParticipant.setCameraEnabled(true, {
-            deviceId: prefs.videoInputId ?? undefined,
+          await cameraRef.current?.set(true, {
+            deviceId: preferencesRef.current.videoInputId,
+            blur: preferencesRef.current.backgroundBlur ?? false,
           });
-          cameraEnabled = true;
+          cameraEnabled = roomRef.current === r && r.localParticipant.isCameraEnabled;
         }
       } catch (error) {
         dispatch(feedbackChanged(callErrorMessage(error, "camera")));
       }
+      if (roomRef.current !== r) return;
       dispatch(localMediaChanged({ micEnabled, cameraEnabled, screenSharing: false }));
       reportMediaState();
     },
@@ -439,6 +450,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         audioCaptureDefaults: { deviceId: prefs.audioInputId ?? undefined },
         videoCaptureDefaults: { deviceId: prefs.videoInputId ?? undefined },
       });
+      cameraRef.current = new CameraController(r.localParticipant, () => {
+        if (roomRef.current !== r) return;
+        dispatch(localMediaChanged({ cameraEnabled: false }));
+        dispatch(feedbackChanged(BLUR_FAILURE));
+        reportMediaState();
+      });
 
       r.on(RoomEvent.Disconnected, (reason) => {
         if (roomRef.current !== r) return;
@@ -458,7 +475,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       r.on(RoomEvent.ParticipantPermissionsChanged, (_previous, participant) => {
         if (roomRef.current !== r || !participant.isLocal) return;
         if (participant.permissions?.canPublish === false) {
+          void cameraRef.current
+            ?.set(false, {
+              deviceId: preferencesRef.current.videoInputId,
+              blur: preferencesRef.current.backgroundBlur ?? false,
+            })
+            .catch(() => {});
           for (const publication of r.localParticipant.trackPublications.values()) {
+            if (publication.source === Track.Source.Camera) continue;
             if (publication.track) {
               publication.track.stop();
               void r.localParticipant.unpublishTrack(publication.track).catch(() => {});
@@ -692,22 +716,48 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [dispatch, reportMediaState]);
 
+  const updateCamera = useCallback(
+    async (enabled: boolean, override: Partial<CameraOptions> = {}) => {
+      const r = roomRef.current;
+      if (!r) return;
+      if (enabled && r.localParticipant.permissions?.canPublish === false) {
+        dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+        return;
+      }
+      try {
+        await cameraRef.current?.set(enabled, {
+          deviceId: preferencesRef.current.videoInputId,
+          blur: preferencesRef.current.backgroundBlur ?? false,
+          ...override,
+        });
+      } catch (error) {
+        if (roomRef.current === r) dispatch(feedbackChanged(callErrorMessage(error, "camera")));
+      }
+      if (roomRef.current === r) {
+        dispatch(
+          localMediaChanged({
+            cameraEnabled: Boolean(
+              cameraRef.current?.enabled && r.localParticipant.isCameraEnabled,
+            ),
+          }),
+        );
+        reportMediaState();
+      }
+    },
+    [dispatch, reportMediaState],
+  );
+
   const toggleCamera = useCallback(async () => {
-    const r = roomRef.current;
-    if (!r) return;
-    if (r.localParticipant.permissions?.canPublish === false) {
-      dispatch(feedbackChanged(AUDIENCE_MESSAGE));
-      return;
-    }
-    const enabled = r.localParticipant.isCameraEnabled;
-    try {
-      await r.localParticipant.setCameraEnabled(!enabled);
-      dispatch(localMediaChanged({ cameraEnabled: !enabled }));
-      reportMediaState();
-    } catch (error) {
-      dispatch(feedbackChanged(callErrorMessage(error, "camera")));
-    }
-  }, [dispatch, reportMediaState]);
+    await updateCamera(!cameraRef.current?.enabled);
+  }, [updateCamera]);
+
+  const setBackgroundBlur = useCallback(
+    async (enabled: boolean) => {
+      dispatch(backgroundBlurChanged(enabled));
+      if (cameraRef.current?.enabled) await updateCamera(true, { blur: enabled });
+    },
+    [dispatch, updateCamera],
+  );
 
   const toggleScreenShare = useCallback(async () => {
     const r = roomRef.current;
@@ -739,20 +789,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     async (kind: MediaDeviceKind, deviceId: string) => {
       const r = roomRef.current;
       if (!r) return;
+      if (kind === "videoinput") {
+        if (cameraRef.current?.enabled) await updateCamera(true, { deviceId });
+        return;
+      }
       try {
         await r.switchActiveDevice(kind, deviceId);
       } catch (error) {
         dispatch(
           feedbackChanged(
-            callErrorMessage(
-              error,
-              kind === "videoinput" ? "camera" : kind === "audiooutput" ? "speaker" : "microphone",
-            ),
+            callErrorMessage(error, kind === "audiooutput" ? "speaker" : "microphone"),
           ),
         );
       }
     },
-    [dispatch],
+    [dispatch, updateCamera],
   );
 
   // Backend kicked this device (channel removal, tkv bump, host kick): the
@@ -972,6 +1023,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       rejoin,
       toggleMic,
       toggleCamera,
+      setBackgroundBlur,
       toggleScreenShare,
       switchDevice,
       focusCallTab: requestFocus,
@@ -990,6 +1042,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       rejoin,
       toggleMic,
       toggleCamera,
+      setBackgroundBlur,
       toggleScreenShare,
       switchDevice,
       requestFocus,

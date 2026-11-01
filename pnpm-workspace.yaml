@@ -15,3 +15,6 @@ allowBuilds:
 # 5 days in minutes; newly published versions
 # younger than this are not installed
 minimumReleaseAge: 7200
+
+patchedDependencies:
+  '@livekit/track-processors@0.8.2': patches/@livekit__track-processors@0.8.2.patch

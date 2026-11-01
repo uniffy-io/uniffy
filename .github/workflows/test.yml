@@ -57,6 +57,7 @@ jobs:
               - 'uv.lock'
               - '.python-version'
             frontend:
+              - 'patches/**'
               - 'src/ui/**'
               - 'src/proto/gen/typescript/**'
               - 'src/proto/tests/fixtures/**'

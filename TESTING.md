@@ -380,6 +380,20 @@ direct media), nothing changes anywhere.
       browser. Fallback stays in a separate window, with no always-on-top guarantee. Blocking
       popups shows feedback and keeps embedded call usable. Repeated clicks focus existing window.
 
+## Calls: web background blur
+
+- [ ] In prejoin, choose Background > Blur and enable camera. Preview blurs surroundings while keeping person visible. Repeat at 375px, 768px and 1024px.
+- [ ] Join with a second user. Confirm remote video receives blur from its first frame. Toggle Off/Blur under More > Audio and camera settings.
+- [ ] Switch cameras, turn camera off/on, reconnect and reload into a live call. Selected blur remains applied. Screen sharing stays unaffected.
+- [ ] Cancel prejoin or leave while blur initializes. Camera capture stops and no late track publishes.
+- [ ] Block model or WASM loading. Selected blur keeps camera off and explains failure. Explicitly choose Off to use unblurred camera.
+- [ ] Stall model loading. Cancel camera setup or wait for timeout, then retry with blur off. Camera controls respond without waiting for stalled request. Late initialization must not publish video.
+- [ ] In a town hall, remove then restore speaker permission while camera is on. Camera stays off when changing blur or device. Camera-on button starts video on first click.
+- [ ] Select Blur in prejoin, active device settings and Calls settings. Notice explains local processing, slower performance, device heat and battery use. Check at 375px, 768px and 1024px.
+- [ ] On unsupported browser, Blur explains unavailability. A saved Blur preference must never silently publish raw video.
+- [ ] Verify processing assets load from deployment origin with external network access blocked. Inspect both development and production builds.
+- [ ] Check person edges, movement, low light and sustained performance on slower hardware. Blur is approximate and can include nearby people.
+
 ## Calls: participation and channel chat
 
 Run with host A and participant B. Repeat on web, iOS and Android, with keyboard,
