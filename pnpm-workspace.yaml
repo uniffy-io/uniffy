@@ -17,4 +17,4 @@ allowBuilds:
 minimumReleaseAge: 7200
 
 patchedDependencies:
-  '@livekit/track-processors@0.8.2': patches/@livekit__track-processors@0.8.2.patch
+  '@livekit/track-processors@0.8.2': src/ui/patches/@livekit__track-processors@0.8.2.patch
