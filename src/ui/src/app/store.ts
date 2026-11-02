@@ -46,6 +46,7 @@ import { viewerReducer } from "@/features/files/store/viewerSlice";
 import { trashReducer } from "@/features/files/store/trashSlice";
 import { imageEditorReducer } from "@/features/files/store/imageEditorSlice";
 import { notificationsReducer } from "@/features/notifications/store/notificationsSlice";
+import { dashboardReducer } from "@/features/dashboard/store/dashboardSlice";
 import { notificationsPageReducer } from "@/features/notifications/store/notificationsPageSlice";
 import { sessionsReducer } from "@/features/settings/store/sessionsSlice";
 import { commentsReducer } from "@/features/comments/store/commentsSlice";
@@ -223,6 +224,7 @@ const rootReducer = combineReducers({
   trash: trashReducer,
   imageEditor: imageEditorReducer,
   notifications: notificationsReducer,
+  dashboard: dashboardReducer,
   notificationsPage: notificationsPageReducer,
   presence: presenceReducer,
   sessions: sessionsReducer,

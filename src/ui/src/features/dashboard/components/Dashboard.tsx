@@ -6,23 +6,15 @@ import { useMyTasks } from "@/features/dashboard/hooks/useMyTasks";
 import { MyTasksDialog } from "@/features/dashboard/components/MyTasksDialog";
 import { cn } from "@/shared/utils/cn";
 import { QuickStatsWidget } from "@/features/dashboard/components/widgets/QuickStatsWidget";
-import { QuickActionsWidget } from "@/features/dashboard/components/widgets/QuickActionsWidget";
-import { MyTimeWidget } from "@/features/dashboard/components/widgets/MyTimeWidget";
 import { TodayAgendaWidget } from "@/features/dashboard/components/widgets/TodayAgendaWidget";
 import { MyTasksWidget } from "@/features/dashboard/components/widgets/MyTasksWidget";
-import { BookmarkedItemsWidget } from "@/features/dashboard/components/widgets/BookmarkedItemsWidget";
-import { RecentActivityWidget } from "@/features/dashboard/components/widgets/RecentActivityWidget";
-import { AgentQuickAccessWidget } from "@/features/dashboard/components/widgets/AgentQuickAccessWidget";
-import { PeopleWidget } from "@/features/dashboard/components/widgets/PeopleWidget";
-import { TeamPresenceWidget } from "@/features/dashboard/components/widgets/TeamPresenceWidget";
-import { NotificationsSummaryWidget } from "@/features/dashboard/components/widgets/NotificationsSummaryWidget";
-import { RecentNotesWidget } from "@/features/dashboard/components/widgets/RecentNotesWidget";
-import { RecentFilesWidget } from "@/features/dashboard/components/widgets/RecentFilesWidget";
-import { PersonalAnalyticsWidget } from "@/features/dashboard/components/widgets/PersonalAnalyticsWidget";
 import {
-  DashboardCustomizerButton,
+  DashboardActions,
   DashboardCustomizerPanel,
 } from "@/features/dashboard/components/DashboardCustomizer";
+import { DashboardNameField } from "@/features/dashboard/components/DashboardNameField";
+import { DashboardWidgetView } from "@/features/dashboard/components/DashboardWidgetView";
+import { WidgetSkeleton } from "@/features/dashboard/components/widgets/WidgetCard";
 import { useDashboardRefresh } from "@/features/dashboard/hooks/useDashboardRefresh";
 import { useDashboardLayout } from "@/features/dashboard/hooks/useDashboardLayout";
 import { ArrowsClockwise, WarningCircle, ArrowRight } from "@phosphor-icons/react";
@@ -83,17 +75,7 @@ export function Dashboard() {
   const { lastRefreshed, isRefreshing, manualRefresh } = useDashboardRefresh({
     onManualRefresh: refresh,
   });
-  const {
-    widgets,
-    isEditing,
-    startEditing,
-    cancelEditing,
-    saveEditing,
-    toggleVisibility,
-    toggleSize,
-    resetToDefault,
-    isWidgetVisible,
-  } = useDashboardLayout();
+  const layout = useDashboardLayout();
 
   const { summary, overdueCount } = useContextualSummary();
   const [isOverdueDialogOpen, setIsOverdueDialogOpen] = useState(false);
@@ -102,7 +84,7 @@ export function Dashboard() {
   if (isZenMode) {
     return (
       <div className="mx-auto max-w-[1600px] space-y-6">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <TodayAgendaWidget />
           <MyTasksWidget />
         </div>
@@ -122,8 +104,19 @@ export function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!isEditing && <DashboardCustomizerButton onStartEditing={startEditing} />}
-          {!isEditing && (
+          {!layout.isEditing && layout.ready && (
+            <DashboardActions
+              catalog={layout.catalog}
+              activePreset={layout.activePreset}
+              hasPrevious={layout.hasPrevious}
+              saving={layout.saving}
+              onStartEditing={layout.startEditing}
+              onApplyPreset={layout.applyPreset}
+              onShowEverything={layout.resetToDefault}
+              onRestorePrevious={() => void layout.restorePrevious()}
+            />
+          )}
+          {!layout.isEditing && (
             <button
               onClick={manualRefresh}
               disabled={isRefreshing}
@@ -168,37 +161,55 @@ export function Dashboard() {
         <MyTasksDialog initialView="overdue" onClose={() => setIsOverdueDialogOpen(false)} />
       )}
 
-      {isEditing && (
+      {layout.isEditing && layout.catalog && (
         <DashboardCustomizerPanel
-          widgets={widgets}
-          onCancel={cancelEditing}
-          onSave={saveEditing}
-          onToggleVisibility={toggleVisibility}
-          onToggleSize={toggleSize}
-          onReset={resetToDefault}
+          catalog={layout.catalog}
+          widgets={layout.widgets}
+          saving={layout.saving}
+          dashboardName={layout.name}
+          onRename={layout.setName}
+          onCancel={layout.cancelEditing}
+          onSave={layout.saveEditing}
+          onToggleVisibility={layout.toggleVisibility}
+          onToggleSize={layout.toggleSize}
+          onSetFilters={layout.setFilters}
+          onMove={layout.moveWidget}
+          onReset={layout.resetToDefault}
         />
       )}
 
       <QuickStatsWidget />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {isWidgetVisible("today-agenda") && <TodayAgendaWidget />}
-        {isWidgetVisible("my-tasks") && <MyTasksWidget />}
-      </div>
+      {layout.ready && !layout.isEditing && (
+        <h2 className="text-base font-semibold tracking-tight">
+          <DashboardNameField
+            value={layout.name}
+            onSave={layout.rename}
+            emptyLabel="Add a name"
+            disabled={layout.saving}
+            testId="dashboard-name"
+          />
+        </h2>
+      )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        {isWidgetVisible("quick-actions") && <QuickActionsWidget />}
-        {isWidgetVisible("my-time") && <MyTimeWidget />}
-        {isWidgetVisible("team-presence") && <TeamPresenceWidget />}
-        {isWidgetVisible("people") && <PeopleWidget />}
-        {isWidgetVisible("recent-notes") && <RecentNotesWidget />}
-        {isWidgetVisible("recent-files") && <RecentFilesWidget />}
-        {isWidgetVisible("bookmarks") && <BookmarkedItemsWidget />}
-        {isWidgetVisible("analytics") && <PersonalAnalyticsWidget />}
-        {isWidgetVisible("agents") && <AgentQuickAccessWidget />}
-        {isWidgetVisible("notifications") && <NotificationsSummaryWidget />}
-        {isWidgetVisible("recent-activity") && <RecentActivityWidget />}
-      </div>
+      {layout.ready ? (
+        <div
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+          data-testid="dashboard-widgets"
+        >
+          {layout.visibleWidgets.map((widget) => (
+            <DashboardWidgetView key={widget.id} widget={widget} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[0, 1].map((slot) => (
+            <div key={slot} className="rounded-xl bg-surface p-6 shadow-edge md:col-span-2">
+              <WidgetSkeleton rows={4} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

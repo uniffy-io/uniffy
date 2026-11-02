@@ -31,6 +31,8 @@ import { internalToolName, toolActionLabel } from "@/features/agents/config/tool
 import { persistedThinkingBlocks } from "@/features/agents/utils/thinkingBlocks";
 import { GeneratedImageCard } from "@/features/chat/components/channel/GeneratedImageCard";
 import { parseImageMeta, type ImageGenerationMeta } from "@/features/chat/utils/imageMeta";
+import { DashboardProposalCard } from "@/features/dashboard/components/DashboardProposalCard";
+import { parseDashboardProposal, type DashboardProposal } from "@/features/dashboard/utils/layout";
 import type { ChatMessage } from "@/features/chat/types";
 
 interface AgentMessageBodyProps {
@@ -192,6 +194,22 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
     },
   );
 
+  const proposals: { messageId: string; proposal: DashboardProposal }[] = toolMessages.flatMap(
+    (message) => {
+      const toolCallId = readString(message.metadata, "tool_call_id");
+      const resultMsg = toolCallId
+        ? channelMessages.find(
+            (m) =>
+              m.senderType === "AGENT" &&
+              m.metadata?.["kind"] === "tool_result" &&
+              m.metadata?.["tool_call_id"] === toolCallId,
+          )
+        : undefined;
+      const proposal = resultMsg ? parseDashboardProposal(resultMsg.metadata?.["tool_meta"]) : null;
+      return proposal && resultMsg ? [{ messageId: resultMsg.id, proposal }] : [];
+    },
+  );
+
   const live = steps.some((s) => s.status === "running");
   const onStop = live && agentId ? () => dispatch(stopAgentRun({ channelId, agentId })) : undefined;
 
@@ -204,6 +222,9 @@ export function AgentToolActivityPane({ toolMessages }: { toolMessages: ChatMess
         onStop={onStop}
         testId={`chat-agent-tool-activity-${toolMessages[0]?.id ?? ""}`}
       />
+      {proposals.map(({ messageId, proposal }) => (
+        <DashboardProposalCard key={messageId} proposal={proposal} />
+      ))}
       {imageResults.map(({ messageId, meta }) => (
         <GeneratedImageCard
           key={messageId}
