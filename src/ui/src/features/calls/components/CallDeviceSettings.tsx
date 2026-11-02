@@ -13,6 +13,40 @@ import {
 import { cn } from "@/shared/utils/cn";
 import { BLUR_UNSUPPORTED_HINT, useBackgroundBlur } from "@/features/calls/hooks/useBackgroundBlur";
 import { BlurStrengthControl } from "@/features/calls/components/BlurStrengthControl";
+import {
+  NOISE_SUPPRESSION_UNSUPPORTED_HINT,
+  useNoiseSuppression,
+} from "@/features/calls/hooks/useNoiseSuppression";
+
+function SwitchRow({
+  label,
+  enabled,
+  onChange,
+  disabled,
+  title,
+}: {
+  label: string;
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+  disabled: boolean;
+  title?: string;
+}) {
+  return (
+    <label
+      className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm text-foreground lg:min-h-9"
+      title={title}
+    >
+      <span>{label}</span>
+      <ToggleSwitch
+        size="sm"
+        enabled={enabled}
+        onChange={onChange}
+        disabled={disabled}
+        ariaLabel={label}
+      />
+    </label>
+  );
+}
 
 export function CallDeviceSettings() {
   const dispatch = useAppDispatch();
@@ -27,6 +61,7 @@ export function CallDeviceSettings() {
     strength: blurStrength,
     setStrength: setBlurStrength,
   } = useBackgroundBlur();
+  const noise = useNoiseSuppression();
   const fields = [
     {
       label: "Microphone",
@@ -81,20 +116,23 @@ export function CallDeviceSettings() {
               ))}
             </select>
           </label>
+          {kind === "audioinput" && (
+            <SwitchRow
+              label="Noise suppression"
+              enabled={noise.enabled}
+              onChange={noise.setEnabled}
+              disabled={!noise.supported}
+              title={noise.supported ? undefined : NOISE_SUPPRESSION_UNSUPPORTED_HINT}
+            />
+          )}
           {kind === "videoinput" && (
-            <label
-              className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm text-foreground lg:min-h-9"
+            <SwitchRow
+              label="Blur background"
+              enabled={blur}
+              onChange={setBlur}
+              disabled={!blurAvailable}
               title={blurSupported === false && !blur ? BLUR_UNSUPPORTED_HINT : undefined}
-            >
-              <span>Blur background</span>
-              <ToggleSwitch
-                size="sm"
-                enabled={blur}
-                onChange={setBlur}
-                disabled={!blurAvailable}
-                ariaLabel="Blur background"
-              />
-            </label>
+            />
           )}
           {kind === "videoinput" && blur && (
             <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">

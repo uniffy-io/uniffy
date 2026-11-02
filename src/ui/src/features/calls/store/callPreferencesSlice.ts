@@ -14,6 +14,7 @@ export interface CallPreferencesState {
   cameraOn: boolean;
   backgroundBlur: boolean;
   backgroundBlurStrength: BlurStrength;
+  noiseSuppression: boolean;
   /** Last drag-resized CallView height in px; null = default 40%. */
   viewHeightPx: number | null;
   /** Preferred screen-share ceiling; UNSPECIFIED follows the org-resolved cap. */
@@ -29,6 +30,7 @@ const initialState: CallPreferencesState = {
   cameraOn: false,
   backgroundBlur: false,
   backgroundBlurStrength: DEFAULT_BLUR_STRENGTH,
+  noiseSuppression: true,
   viewHeightPx: null,
   screenShareQuality: ScreenShareQuality.UNSPECIFIED,
 };
@@ -58,6 +60,9 @@ const callPreferencesSlice = createSlice({
     backgroundBlurStrengthChanged(state, action: PayloadAction<BlurStrength>) {
       state.backgroundBlurStrength = action.payload;
     },
+    noiseSuppressionChanged(state, action: PayloadAction<boolean>) {
+      state.noiseSuppression = action.payload;
+    },
     ringtoneToggled(state, action: PayloadAction<boolean>) {
       state.ringtoneEnabled = action.payload;
     },
@@ -79,6 +84,7 @@ export const {
   cameraOnChanged,
   backgroundBlurChanged,
   backgroundBlurStrengthChanged,
+  noiseSuppressionChanged,
   viewHeightChanged,
   screenShareQualitySelected,
 } = callPreferencesSlice.actions;

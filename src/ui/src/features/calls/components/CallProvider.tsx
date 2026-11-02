@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ConnectionState,
   DisconnectReason,
+  LocalAudioTrack,
   Room,
   RoomEvent,
   Track,
@@ -48,6 +49,11 @@ import {
 import { CameraController } from "@/features/calls/utils/cameraController";
 import { BLUR_FAILURE, type CameraOptions } from "@/features/calls/utils/cameraTrack";
 import { DEFAULT_BLUR_STRENGTH, setActiveBlurStrength } from "@/features/calls/utils/blurStrength";
+import {
+  MIC_CAPTURE_CONSTRAINTS,
+  NOISE_SUPPRESSION_FAILURE,
+  NoiseSuppressionController,
+} from "@/features/calls/utils/noiseSuppression";
 import { callsApi } from "@/features/calls/api/callsApi";
 import { resolveSignalingUrl } from "@/features/calls/utils/signalingUrl";
 import { buildRtcConfiguration } from "@/features/calls/utils/iceConfig";
@@ -195,6 +201,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const reportInFlightRef = useRef(false);
   const reportPendingRef = useRef(false);
   const cameraRef = useRef<CameraController | null>(null);
+  const noiseRef = useRef<NoiseSuppressionController | null>(null);
   // This provider never unmounts, and the rejoin loop, media reporter and
   // disconnect handler must stay identity-stable for the life of a call while
   // still reading the CURRENT session/preferences/org. Moving these writes into
@@ -211,6 +218,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   /* eslint-enable react/react-compiler */
   const blurStrength = preferences.backgroundBlurStrength ?? DEFAULT_BLUR_STRENGTH;
   useEffect(() => setActiveBlurStrength(blurStrength), [blurStrength]);
+  const noiseSuppression = preferences.noiseSuppression ?? true;
+  useEffect(() => {
+    const track = roomRef.current?.localParticipant.getTrackPublication(
+      Track.Source.Microphone,
+    )?.track;
+    if (track instanceof LocalAudioTrack) void noiseRef.current?.sync(track);
+  }, [noiseSuppression]);
   const rejoiningRef = useRef(false);
   const everConnectedRef = useRef(false);
   const connectedAtRef = useRef(0);
@@ -232,6 +246,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const teardown = useCallback(async () => {
     cameraRef.current?.dispose();
     cameraRef.current = null;
+    noiseRef.current?.dispose();
+    noiseRef.current = null;
     stopActivityRef.current?.();
     stopActivityRef.current = null;
     clearRefreshTimer();
@@ -450,7 +466,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // a Retina screen-share tile reads as ~720p even at native capture.
         adaptiveStream: { pixelDensity: "screen" },
         dynacast: true,
-        audioCaptureDefaults: { deviceId: prefs.audioInputId ?? undefined },
+        audioCaptureDefaults: {
+          deviceId: prefs.audioInputId ?? undefined,
+          ...MIC_CAPTURE_CONSTRAINTS,
+        },
         videoCaptureDefaults: { deviceId: prefs.videoInputId ?? undefined },
       });
       cameraRef.current = new CameraController(r.localParticipant, () => {
@@ -459,6 +478,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         dispatch(feedbackChanged(BLUR_FAILURE));
         reportMediaState();
       });
+      noiseRef.current = new NoiseSuppressionController(
+        () => preferencesRef.current.noiseSuppression ?? true,
+        () => {
+          if (roomRef.current === r) dispatch(feedbackChanged(NOISE_SUPPRESSION_FAILURE));
+        },
+      );
 
       r.on(RoomEvent.Disconnected, (reason) => {
         if (roomRef.current !== r) return;
@@ -502,6 +527,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
       r.on(RoomEvent.LocalTrackPublished, (pub) => {
         if (roomRef.current !== r) return;
+        if (pub.track instanceof LocalAudioTrack && pub.source === Track.Source.Microphone) {
+          void noiseRef.current?.sync(pub.track);
+        }
         if (pub.source === Track.Source.Microphone || pub.source === Track.Source.Camera) {
           const device = pub.source === Track.Source.Camera ? "camera" : "microphone";
           pub.track?.once(TrackEvent.Ended, () => {

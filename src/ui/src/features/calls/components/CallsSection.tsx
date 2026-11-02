@@ -21,6 +21,11 @@ import {
 } from "@/features/calls/hooks/useBackgroundBlur";
 import { BlurStrengthControl } from "@/features/calls/components/BlurStrengthControl";
 import {
+  NOISE_SUPPRESSION_HINT,
+  NOISE_SUPPRESSION_UNSUPPORTED_HINT,
+  useNoiseSuppression,
+} from "@/features/calls/hooks/useNoiseSuppression";
+import {
   audioInputSelected,
   audioOutputSelected,
   videoInputSelected,
@@ -42,6 +47,7 @@ export function CallsSection() {
     strength: blurStrength,
     setStrength: setBlurStrength,
   } = useBackgroundBlur();
+  const noise = useNoiseSuppression();
   const [error, setError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const revealDevices = async () => {
@@ -72,6 +78,13 @@ export function CallsSection() {
       description: "Start with microphone off. You can change this before joining.",
       checked: preferences.joinMuted ?? true,
       onChange: (value: boolean) => dispatch(joinMutedChanged(value)),
+    },
+    {
+      label: "Noise suppression",
+      description: noise.supported ? NOISE_SUPPRESSION_HINT : NOISE_SUPPRESSION_UNSUPPORTED_HINT,
+      checked: noise.enabled,
+      onChange: noise.setEnabled,
+      disabled: !noise.supported,
     },
     {
       label: "Start with camera on",
