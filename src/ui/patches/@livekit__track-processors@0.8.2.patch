@@ -1,0 +1,192 @@
+diff --git a/dist/index.js b/dist/index.js
+index 61060f624d82077e3a6911e4725706eb404a3bb1..90884dea79287739189d09cdc350dc4afdaee327 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -203,20 +203,37 @@ var ProcessorWrapper = class _ProcessorWrapper {
+   async init(opts) {
+     this.log.debug("Init called");
+     this.lifecycleState = "initializing";
+-    await this.setup(opts);
+-    if (!this.canvas) {
+-      throw new TypeError("Expected canvas to be defined after setup");
+-    }
+-    await this.transformer.init({
+-      outputCanvas: this.canvas,
+-      inputElement: this.sourceDummy
+-    });
+-    if (this.useStreamFallback) {
+-      this.initFallbackPath();
+-    } else {
+-      this.initStreamProcessorPath();
++    try {
++      await this.setup(opts);
++      if (this.lifecycleState !== "initializing") {
++        throw new DOMException("Processor stopped", "AbortError");
++      }
++      if (!this.canvas) {
++        throw new TypeError("Expected canvas to be defined after setup");
++      }
++      await this.transformer.init({
++        outputCanvas: this.canvas,
++        inputElement: this.sourceDummy
++      });
++      if (this.lifecycleState !== "initializing") {
++        throw new DOMException("Processor stopped", "AbortError");
++      }
++      if (this.useStreamFallback) {
++        this.initFallbackPath();
++      } else {
++        this.initStreamProcessorPath();
++      }
++      this.lifecycleState = "running";
++    } catch (error) {
++      this.lifecycleState = "destroying";
++      try {
++        await this.cleanup();
++      } finally {
++        await this.transformer.destroy();
++        this.lifecycleState = "destroyed";
++      }
++      throw error;
+     }
+-    this.lifecycleState = "running";
+   }
+   initStreamProcessorPath() {
+     if (!this.processor || !this.trackGenerator) {
+@@ -392,6 +409,7 @@ var ProcessorWrapper = class _ProcessorWrapper {
+   async destroy(transformerDestroyOptions = { willProcessorRestart: false }) {
+     this.log.debug(`Destroy called - lifecycleState=${this.lifecycleState}, transformerDestroyOptions=${JSON.stringify(transformerDestroyOptions)}`);
+     switch (this.lifecycleState) {
++      case "initializing":
+       case "running":
+       case "media-exhausted":
+         this.lifecycleState = "destroying";
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 056c816b61255dec2d02a7508dea75ae9604c504..90d57d5fb13c2e1e1df9baa9927fd3f28ef896c6 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -203,20 +203,37 @@ var ProcessorWrapper = class _ProcessorWrapper {
+   async init(opts) {
+     this.log.debug("Init called");
+     this.lifecycleState = "initializing";
+-    await this.setup(opts);
+-    if (!this.canvas) {
+-      throw new TypeError("Expected canvas to be defined after setup");
+-    }
+-    await this.transformer.init({
+-      outputCanvas: this.canvas,
+-      inputElement: this.sourceDummy
+-    });
+-    if (this.useStreamFallback) {
+-      this.initFallbackPath();
+-    } else {
+-      this.initStreamProcessorPath();
++    try {
++      await this.setup(opts);
++      if (this.lifecycleState !== "initializing") {
++        throw new DOMException("Processor stopped", "AbortError");
++      }
++      if (!this.canvas) {
++        throw new TypeError("Expected canvas to be defined after setup");
++      }
++      await this.transformer.init({
++        outputCanvas: this.canvas,
++        inputElement: this.sourceDummy
++      });
++      if (this.lifecycleState !== "initializing") {
++        throw new DOMException("Processor stopped", "AbortError");
++      }
++      if (this.useStreamFallback) {
++        this.initFallbackPath();
++      } else {
++        this.initStreamProcessorPath();
++      }
++      this.lifecycleState = "running";
++    } catch (error) {
++      this.lifecycleState = "destroying";
++      try {
++        await this.cleanup();
++      } finally {
++        await this.transformer.destroy();
++        this.lifecycleState = "destroyed";
++      }
++      throw error;
+     }
+-    this.lifecycleState = "running";
+   }
+   initStreamProcessorPath() {
+     if (!this.processor || !this.trackGenerator) {
+@@ -392,6 +409,7 @@ var ProcessorWrapper = class _ProcessorWrapper {
+   async destroy(transformerDestroyOptions = { willProcessorRestart: false }) {
+     this.log.debug(`Destroy called - lifecycleState=${this.lifecycleState}, transformerDestroyOptions=${JSON.stringify(transformerDestroyOptions)}`);
+     switch (this.lifecycleState) {
++      case "initializing":
+       case "running":
+       case "media-exhausted":
+         this.lifecycleState = "destroying";
+diff --git a/src/ProcessorWrapper.ts b/src/ProcessorWrapper.ts
+index ef1b38abcd98e212cb5fb45f91db9941e7d0aed7..41ea470e43dab048718bfd52ef241e64d67deed8 100644
+--- a/src/ProcessorWrapper.ts
++++ b/src/ProcessorWrapper.ts
+@@ -156,23 +156,40 @@ export default class ProcessorWrapper<
+   async init(opts: ProcessorOptions<Track.Kind>): Promise<void> {
+     this.log.debug('Init called');
+     this.lifecycleState = 'initializing';
+-    await this.setup(opts);
++    try {
++      await this.setup(opts);
++      if (this.lifecycleState !== 'initializing') {
++        throw new DOMException('Processor stopped', 'AbortError');
++      }
+ 
+-    if (!this.canvas) {
+-      throw new TypeError('Expected canvas to be defined after setup');
+-    }
++      if (!this.canvas) {
++        throw new TypeError('Expected canvas to be defined after setup');
++      }
+ 
+-    await this.transformer.init({
+-      outputCanvas: this.canvas,
+-      inputElement: this.sourceDummy as HTMLVideoElement,
+-    });
++      await this.transformer.init({
++        outputCanvas: this.canvas,
++        inputElement: this.sourceDummy as HTMLVideoElement,
++      });
+ 
+-    if (this.useStreamFallback) {
+-      this.initFallbackPath();
+-    } else {
+-      this.initStreamProcessorPath();
++      if (this.lifecycleState !== 'initializing') {
++        throw new DOMException('Processor stopped', 'AbortError');
++      }
++      if (this.useStreamFallback) {
++        this.initFallbackPath();
++      } else {
++        this.initStreamProcessorPath();
++      }
++      this.lifecycleState = 'running';
++    } catch (error) {
++      this.lifecycleState = 'destroying';
++      try {
++        await this.cleanup();
++      } finally {
++        await this.transformer.destroy();
++        this.lifecycleState = 'destroyed';
++      }
++      throw error;
+     }
+-    this.lifecycleState = 'running';
+   }
+ 
+   private initStreamProcessorPath() {
+@@ -426,6 +443,7 @@ export default class ProcessorWrapper<
+   async destroy(transformerDestroyOptions: TrackTransformerDestroyOptions = { willProcessorRestart: false }) {
+     this.log.debug(`Destroy called - lifecycleState=${this.lifecycleState}, transformerDestroyOptions=${JSON.stringify(transformerDestroyOptions)}`);
+     switch (this.lifecycleState) {
++      case 'initializing':
+       case 'running':
+       case 'media-exhausted':
+         this.lifecycleState = 'destroying';

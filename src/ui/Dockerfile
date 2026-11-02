@@ -18,6 +18,7 @@ ENV CI=true \
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY src/ui/patches src/ui/patches
 COPY src/proto/gen/typescript/package.json src/proto/gen/typescript/package.json
 COPY src/ui/package.json src/ui/package.json
 RUN --mount=type=cache,target=/pnpm-store \

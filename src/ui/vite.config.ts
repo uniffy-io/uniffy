@@ -3,6 +3,7 @@ import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
+import { backgroundAssets } from './backgroundAssets'
 
 /**
  * Inject a Content-Security-Policy meta tag scoped to the build mode.
@@ -57,6 +58,7 @@ export default defineConfig(({ command, mode }) => {
     react(),
     tailwindcss(),
     cspMetaPlugin(connectExtras),
+    backgroundAssets(),
   ],
   define: {
     // Silence Vue feature flag warnings from 

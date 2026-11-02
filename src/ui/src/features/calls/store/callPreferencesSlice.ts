@@ -2,6 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import { ScreenShareQuality } from "@uniffy/proto/calls/v1/calls_pb";
 import type { RootState } from "@/app/store";
+import { DEFAULT_BLUR_STRENGTH, type BlurStrength } from "@/features/calls/utils/blurStrength";
 
 /** Persisted device picks and ring behavior; media state itself never persists. */
 export interface CallPreferencesState {
@@ -11,6 +12,9 @@ export interface CallPreferencesState {
   ringtoneEnabled: boolean;
   joinMuted: boolean;
   cameraOn: boolean;
+  backgroundBlur: boolean;
+  backgroundBlurStrength: BlurStrength;
+  noiseSuppression: boolean;
   /** Last drag-resized CallView height in px; null = default 40%. */
   viewHeightPx: number | null;
   /** Preferred screen-share ceiling; UNSPECIFIED follows the org-resolved cap. */
@@ -24,6 +28,9 @@ const initialState: CallPreferencesState = {
   ringtoneEnabled: true,
   joinMuted: true,
   cameraOn: false,
+  backgroundBlur: false,
+  backgroundBlurStrength: DEFAULT_BLUR_STRENGTH,
+  noiseSuppression: true,
   viewHeightPx: null,
   screenShareQuality: ScreenShareQuality.UNSPECIFIED,
 };
@@ -47,6 +54,15 @@ const callPreferencesSlice = createSlice({
     cameraOnChanged(state, action: PayloadAction<boolean>) {
       state.cameraOn = action.payload;
     },
+    backgroundBlurChanged(state, action: PayloadAction<boolean>) {
+      state.backgroundBlur = action.payload;
+    },
+    backgroundBlurStrengthChanged(state, action: PayloadAction<BlurStrength>) {
+      state.backgroundBlurStrength = action.payload;
+    },
+    noiseSuppressionChanged(state, action: PayloadAction<boolean>) {
+      state.noiseSuppression = action.payload;
+    },
     ringtoneToggled(state, action: PayloadAction<boolean>) {
       state.ringtoneEnabled = action.payload;
     },
@@ -66,6 +82,9 @@ export const {
   ringtoneToggled,
   joinMutedChanged,
   cameraOnChanged,
+  backgroundBlurChanged,
+  backgroundBlurStrengthChanged,
+  noiseSuppressionChanged,
   viewHeightChanged,
   screenShareQualitySelected,
 } = callPreferencesSlice.actions;

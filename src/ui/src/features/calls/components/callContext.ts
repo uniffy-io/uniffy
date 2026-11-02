@@ -31,6 +31,7 @@ export interface CallContextValue {
   rejoin: () => Promise<void>;
   toggleMic: () => Promise<void>;
   toggleCamera: () => Promise<void>;
+  setBackgroundBlur: (enabled: boolean) => Promise<void>;
   toggleScreenShare: () => Promise<void>;
   switchDevice: (kind: MediaDeviceKind, deviceId: string) => Promise<void>;
   focusCallTab: () => void;

@@ -27,6 +27,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | aiofiles               | 25.1.0      | Apache Software License                             | https://github.com/Tinche/aiofiles                                                 |
 | aiohappyeyeballs       | 2.6.1       | Python Software Foundation License                  | https://github.com/aio-libs/aiohappyeyeballs                                       |
 | aiohttp                | 3.14.5      | Apache-2.0 AND MIT                                  | https://github.com/aio-libs/aiohttp                                                |
+| aioice                 | 0.10.2      | BSD-3-Clause                                        | https://github.com/aiortc/aioice                                                   |
 | aioitertools           | 0.13.0      | MIT                                                 | https://aioitertools.omnilib.dev/en/latest/changelog.html                          |
 | aiosignal              | 1.4.0       | Apache Software License                             | https://github.com/aio-libs/aiosignal                                              |
 | aiosmtplib             | 5.1.3       | MIT                                                 | https://github.com/cole/aiosmtplib/blob/main/CHANGELOG.rst                         |
@@ -76,6 +77,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | hyperframe             | 6.1.0       | MIT License                                         | https://github.com/python-hyper/hyperframe/                                        |
 | icalendar              | 7.3.0       | BSD-2-Clause                                        | https://icalendar.readthedocs.io/en/stable/                                        |
 | idna                   | 3.18        | BSD-3-Clause                                        | https://github.com/kjd/idna                                                        |
+| ifaddr                 | 0.2.0       | MIT License                                         | https://github.com/pydron/ifaddr                                                   |
 | import-linter          | 2.15        | BSD License                                         | https://import-linter.readthedocs.io/                                              |
 | importlib_metadata     | 8.7.1       | Apache-2.0                                          | https://github.com/python/importlib_metadata                                       |
 | iniconfig              | 2.3.0       | MIT                                                 | https://github.com/pytest-dev/iniconfig                                            |
@@ -105,7 +107,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | psycopg2-binary        | 2.9.13      | GNU Library or Lesser General Public License (LGPL) | https://psycopg.org/                                                               |
 | py-cpuinfo2            | 10.1.1      | MIT                                                 | https://github.com/akx/py-cpuinfo2                                                 |
 | py-vapid               | 1.9.4       | MPL-2.0                                             | https://github.com/mozilla-services/vapid                                          |
-| pyasn1                 | 0.6.4       | BSD-2-Clause                                        | https://github.com/pyasn1/pyasn1                                                   |
+| pyasn1                 | 0.6.5       | BSD-2-Clause                                        | https://github.com/pyasn1/pyasn1                                                   |
 | pyasn1_modules         | 0.4.2       | BSD License                                         | https://github.com/pyasn1/pyasn1-modules                                           |
 | pycparser              | 3.0         | BSD-3-Clause                                        | https://github.com/eliben/pycparser                                                |
 | pycrdt                 | 0.13.0      | MIT License                                         | https://github.com/y-crdt/pycrdt                                                   |
@@ -431,9 +433,11 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @livekit/react-native-expo-plugin@1.0.2 | Apache-2.0 | https://github.com/livekit/client-sdk-react-native-expo-plugin#readme |
 | @livekit/react-native-webrtc@144.1.1 | MIT | https://github.com/livekit/react-native-webrtc |
 | @livekit/react-native@2.11.1 | Apache-2.0 | https://github.com/livekit/client-sdk-react-native#readme |
+| @livekit/track-processors@0.8.2 | Apache-2.0 | https://github.com/livekit/track-processors-js#readme |
 | @lobehub/icons-static-svg@1.94.0 | MIT | https://github.com/lobehub/lobe-icons |
 | @marijn/find-cluster-break@1.0.2 | MIT | https://github.com/marijnh/find-cluster-break#readme |
 | @mdx-js/mdx@3.1.1 | MIT | https://mdxjs.com |
+| @mediapipe/tasks-vision@0.10.14 | Apache-2.0 | http://mediapipe.dev |
 | @milkdown/components@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
 | @milkdown/core@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
 | @milkdown/crepe@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
@@ -524,6 +528,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @rolldown/pluginutils@1.0.1 | MIT | https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme |
 | @rollup/pluginutils@5.3.0 | MIT | https://github.com/rollup/plugins/tree/master/packages/pluginutils#readme |
 | @rollup/rollup-linux-x64-gnu@4.59.0 | MIT | https://rollupjs.org/ |
+| @sapphi-red/web-noise-suppressor@0.4.1 | MIT | https://github.com/sapphi-red/web-noise-suppressor#readme |
 | @shikijs/core@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/engine-javascript@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/engine-oniguruma@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
@@ -566,6 +571,8 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @types/d3-zoom@3.0.8 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-zoom |
 | @types/debug@4.1.13 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/debug |
 | @types/dom-mediacapture-record@1.0.22 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dom-mediacapture-record |
+| @types/dom-mediacapture-transform@0.1.12 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dom-mediacapture-transform |
+| @types/dom-webcodecs@0.1.19 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dom-webcodecs |
 | @types/estree-jsx@1.0.5 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree-jsx |
 | @types/estree@1.0.8 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree |
 | @types/hammerjs@2.0.46 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hammerjs |

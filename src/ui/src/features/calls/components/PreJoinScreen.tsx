@@ -9,6 +9,7 @@ import {
   VideoCamera,
   VideoCameraSlash,
   Presentation,
+  UserFocus,
   UsersThree,
   Warning,
 } from "@phosphor-icons/react";
@@ -21,7 +22,11 @@ import { popoverShellClass } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarById } from "@/components/subject";
-import { callControlClass, callControlOffClass } from "@/features/calls/components/controlChrome";
+import {
+  callControlActiveClass,
+  callControlClass,
+  callControlOffClass,
+} from "@/features/calls/components/controlChrome";
 import {
   deviceOptions,
   selectedDevice,
@@ -41,6 +46,10 @@ import {
   videoInputSelected,
 } from "@/features/calls/store/callPreferencesSlice";
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
+import type { LocalVideoTrack } from "livekit-client";
+import { createCameraTrack, BLUR_FAILURE } from "@/features/calls/utils/cameraTrack";
+import { BLUR_UNSUPPORTED_HINT, useBackgroundBlur } from "@/features/calls/hooks/useBackgroundBlur";
+import { BlurStrengthControl } from "@/features/calls/components/BlurStrengthControl";
 
 function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
   const [level, setLevel] = useState(0);
@@ -143,6 +152,14 @@ function PreJoinContent() {
   }, [channelId, activeCall, callId, dispatch]);
   const userName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
+  const {
+    blur,
+    supported: blurSupported,
+    available: blurAvailable,
+    setBlur,
+    strength: blurStrength,
+    setStrength: setBlurStrength,
+  } = useBackgroundBlur();
 
   const [micOn, setMicOn] = useState(!(preferences.joinMuted ?? true));
   const [camOn, setCamOn] = useState(preferences.cameraOn ?? false);
@@ -164,12 +181,16 @@ function PreJoinContent() {
   const ready = checkedTarget === channelId && availability === CallAvailability.READY;
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const camStreamRef = useRef<MediaStream | null>(null);
+  const camTrackRef = useRef<LocalVideoTrack | null>(null);
+  const camAbortRef = useRef<AbortController | null>(null);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
 
   const stopCamStream = useCallback(() => {
-    camStreamRef.current?.getTracks().forEach((t) => t.stop());
-    camStreamRef.current = null;
+    camAbortRef.current?.abort();
+    camAbortRef.current = null;
+    camTrackRef.current?.detach();
+    camTrackRef.current?.stop();
+    camTrackRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
@@ -185,34 +206,46 @@ function PreJoinContent() {
       stopCamStream();
       return;
     }
-    let cancelled = false;
-    Promise.resolve()
-      .then(() =>
-        navigator.mediaDevices.getUserMedia({
-          video: { deviceId: preferences.videoInputId ?? undefined },
-        }),
-      )
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+    const abort = new AbortController();
+    camAbortRef.current = abort;
+    void createCameraTrack(
+      { deviceId: preferences.videoInputId, blur: preferences.backgroundBlur ?? false },
+      abort.signal,
+      () => {
+        if (!abort.signal.aborted) {
+          setCamError(BLUR_FAILURE);
+          setCamOn(false);
+        }
+      },
+    )
+      .then((track) => {
+        if (abort.signal.aborted) {
+          track.stop();
           return;
         }
         setCamError(null);
-        camStreamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        camTrackRef.current = track;
+        if (videoRef.current) track.attach(videoRef.current);
         void refresh();
       })
       .catch((error) => {
-        if (!cancelled) {
+        if (!abort.signal.aborted) {
           setCamError(callErrorMessage(error, "camera"));
           setCamOn(false);
         }
       });
     return () => {
-      cancelled = true;
+      abort.abort();
       stopCamStream();
     };
-  }, [camOn, audience, preferences.videoInputId, refresh, stopCamStream]);
+  }, [
+    camOn,
+    audience,
+    preferences.videoInputId,
+    preferences.backgroundBlur,
+    refresh,
+    stopCamStream,
+  ]);
 
   useEffect(() => {
     if (!micOn || audience) {
@@ -320,7 +353,7 @@ function PreJoinContent() {
   const channelName = channel ? getChannelDisplayName(channel) : "this channel";
 
   return (
-    <Modal onClose={close} closeDisabled={joining} maxWidth="max-w-md">
+    <Modal onClose={close} closeDisabled={joining} maxWidth="max-w-xl">
       <div data-testid="call-prejoin">
         <ModalHeader
           title={
@@ -401,6 +434,13 @@ function PreJoinContent() {
                 maxScale={1.6}
               />
             )}
+            {blur && !audience && (
+              <BlurStrengthControl
+                value={blurStrength}
+                onChange={setBlurStrength}
+                className={cn(popoverShellClass, "absolute right-2 top-2 border-0")}
+              />
+            )}
             <div
               className={cn(
                 popoverShellClass,
@@ -430,6 +470,24 @@ function PreJoinContent() {
                 data-testid="call-prejoin-camera-toggle"
               >
                 {camOn && !audience ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
+              </button>
+              <button
+                type="button"
+                disabled={audience || joining || !blurAvailable}
+                onClick={() => setBlur(!blur)}
+                className={cn(callControlClass(), blur && !audience && callControlActiveClass)}
+                aria-label={blur ? "Turn off background blur" : "Blur background"}
+                aria-pressed={blur && !audience}
+                title={
+                  blurSupported === false && !blur
+                    ? BLUR_UNSUPPORTED_HINT
+                    : blur
+                      ? "Turn off background blur"
+                      : "Blur background"
+                }
+                data-testid="call-prejoin-blur-toggle"
+              >
+                <UserFocus size={16} />
               </button>
             </div>
           </div>

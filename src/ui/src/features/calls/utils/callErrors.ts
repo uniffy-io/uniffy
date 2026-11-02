@@ -1,4 +1,9 @@
 import { CallAvailability } from "@uniffy/proto/calls/v1/calls_pb";
+import {
+  BackgroundBlurError,
+  BLUR_FAILURE,
+  BLUR_UNSUPPORTED,
+} from "@/features/calls/utils/cameraTrack";
 
 export const CALL_END_COPY = {
   HOST_ENDED: "The host ended the call.",
@@ -37,6 +42,9 @@ export function callAvailabilityMessage(availability: CallAvailability): string 
 export type CallDevice = "microphone" | "camera" | "screen" | "speaker";
 
 export function callErrorMessage(error: unknown, device?: CallDevice): string {
+  if (error instanceof BackgroundBlurError) {
+    return error.message === BLUR_UNSUPPORTED ? BLUR_UNSUPPORTED : BLUR_FAILURE;
+  }
   const record =
     typeof error === "object" && error !== null
       ? (error as { name?: string; message?: string; code?: number })
