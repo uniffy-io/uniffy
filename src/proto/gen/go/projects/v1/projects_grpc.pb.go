@@ -76,6 +76,7 @@ const (
 	ProjectsService_ListPeriods_FullMethodName               = "/projects.v1.ProjectsService/ListPeriods"
 	ProjectsService_CreateInternalTimeProject_FullMethodName = "/projects.v1.ProjectsService/CreateInternalTimeProject"
 	ProjectsService_GetSprintCapacity_FullMethodName         = "/projects.v1.ProjectsService/GetSprintCapacity"
+	ProjectsService_GetTaskMetrics_FullMethodName            = "/projects.v1.ProjectsService/GetTaskMetrics"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -148,6 +149,9 @@ type ProjectsServiceClient interface {
 	ListPeriods(ctx context.Context, in *ListPeriodsRequest, opts ...grpc.CallOption) (*ListPeriodsResponse, error)
 	CreateInternalTimeProject(ctx context.Context, in *CreateInternalTimeProjectRequest, opts ...grpc.CallOption) (*CreateInternalTimeProjectResponse, error)
 	GetSprintCapacity(ctx context.Context, in *GetSprintCapacityRequest, opts ...grpc.CallOption) (*GetSprintCapacityResponse, error)
+	// ----- Metrics -----
+	// Permission-scoped task aggregates for dashboard widgets.
+	GetTaskMetrics(ctx context.Context, in *GetTaskMetricsRequest, opts ...grpc.CallOption) (*GetTaskMetricsResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -737,6 +741,16 @@ func (c *projectsServiceClient) GetSprintCapacity(ctx context.Context, in *GetSp
 	return out, nil
 }
 
+func (c *projectsServiceClient) GetTaskMetrics(ctx context.Context, in *GetTaskMetricsRequest, opts ...grpc.CallOption) (*GetTaskMetricsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTaskMetricsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetTaskMetrics_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -807,6 +821,9 @@ type ProjectsServiceServer interface {
 	ListPeriods(context.Context, *ListPeriodsRequest) (*ListPeriodsResponse, error)
 	CreateInternalTimeProject(context.Context, *CreateInternalTimeProjectRequest) (*CreateInternalTimeProjectResponse, error)
 	GetSprintCapacity(context.Context, *GetSprintCapacityRequest) (*GetSprintCapacityResponse, error)
+	// ----- Metrics -----
+	// Permission-scoped task aggregates for dashboard widgets.
+	GetTaskMetrics(context.Context, *GetTaskMetricsRequest) (*GetTaskMetricsResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -987,6 +1004,9 @@ func (UnimplementedProjectsServiceServer) CreateInternalTimeProject(context.Cont
 }
 func (UnimplementedProjectsServiceServer) GetSprintCapacity(context.Context, *GetSprintCapacityRequest) (*GetSprintCapacityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetSprintCapacity not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetTaskMetrics(context.Context, *GetTaskMetricsRequest) (*GetTaskMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTaskMetrics not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -2028,6 +2048,24 @@ func _ProjectsService_GetSprintCapacity_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_GetTaskMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTaskMetricsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetTaskMetrics(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetTaskMetrics_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetTaskMetrics(ctx, req.(*GetTaskMetricsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2258,6 +2296,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSprintCapacity",
 			Handler:    _ProjectsService_GetSprintCapacity_Handler,
+		},
+		{
+			MethodName: "GetTaskMetrics",
+			Handler:    _ProjectsService_GetTaskMetrics_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

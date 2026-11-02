@@ -6,6 +6,7 @@ from uniffy.core.storage import ObjectStorage
 from uniffy.domains.projects.export.handlers import ExportHandlers
 from uniffy.domains.projects.fields.handlers import FieldHandlers
 from uniffy.domains.projects.handlers import ProjectsHandlers
+from uniffy.domains.projects.metrics.handlers import MetricsHandlers
 from uniffy.domains.projects.sprints.handlers import SprintHandlers
 from uniffy.domains.projects.tasks.handlers import TaskHandlers
 from uniffy.domains.projects.time.approvals import TimesheetHandlers
@@ -24,6 +25,7 @@ class ProjectsServiceImpl(
     ExportHandlers,
     TimeHandlers,
     TimesheetHandlers,
+    MetricsHandlers,
 ):
     def __init__(
         self, storage: ObjectStorage, search_indexer: SearchIndexer, buffer: UpdateBuffer

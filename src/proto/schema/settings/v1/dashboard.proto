@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package settings.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1";
+
+// A dashboard is the viewer's own layout in one organization. Filters hold relative
+// tokens ("me", "my teams", "my projects") that resolve for whoever opens it, never
+// ids resolved at save time.
+
+enum DashboardProjectScope {
+  DASHBOARD_PROJECT_SCOPE_UNSPECIFIED = 0;
+  // Every project the viewer can read.
+  DASHBOARD_PROJECT_SCOPE_ALL = 1;
+  // Projects the viewer owns or is a member of, directly or through a group.
+  DASHBOARD_PROJECT_SCOPE_MY_PROJECTS = 2;
+  // The projects in project_ids, still limited to the ones the viewer can read.
+  DASHBOARD_PROJECT_SCOPE_SELECTED = 3;
+}
+
+enum DashboardPeopleScope {
+  DASHBOARD_PEOPLE_SCOPE_UNSPECIFIED = 0;
+  DASHBOARD_PEOPLE_SCOPE_EVERYONE = 1;
+  // Tasks assigned to the viewer.
+  DASHBOARD_PEOPLE_SCOPE_ME = 2;
+  // Tasks assigned to anyone in the viewer's teams, the viewer included.
+  DASHBOARD_PEOPLE_SCOPE_MY_TEAMS = 3;
+}
+
+enum DashboardSprintScope {
+  DASHBOARD_SPRINT_SCOPE_UNSPECIFIED = 0;
+  DASHBOARD_SPRINT_SCOPE_ANY = 1;
+  // Only tasks in a sprint that is running now.
+  DASHBOARD_SPRINT_SCOPE_ACTIVE = 2;
+}
+
+enum DashboardWidgetSize {
+  DASHBOARD_WIDGET_SIZE_UNSPECIFIED = 0;
+  DASHBOARD_WIDGET_SIZE_COMPACT = 1;
+  DASHBOARD_WIDGET_SIZE_EXPANDED = 2;
+}
+
+message DashboardWidgetFilters {
+  DashboardProjectScope projects = 1;
+  repeated string project_ids = 2;
+  DashboardPeopleScope people = 3;
+  DashboardSprintScope sprint = 4;
+}
+
+message DashboardWidget {
+  // An id from the widget catalog, such as "overdue-tasks".
+  string widget_id = 1;
+  bool visible = 2;
+  DashboardWidgetSize size = 3;
+  DashboardWidgetFilters filters = 4;
+  // Filters a stored definition carries that this version cannot apply. The widget
+  // shows a warning for them instead of silently counting more than was asked.
+  repeated string unsupported_filters = 5;
+}
+
+message DashboardDefinition {
+  // Schema version of the stored document.
+  int32 version = 1;
+  // Widgets in display order.
+  repeated DashboardWidget widgets = 2;
+  // The template this layout came from, empty for a hand-made one.
+  string preset = 3;
+  // What the viewer calls this dashboard; empty shows no title.
+  string name = 4;
+}
+
+message Dashboard {
+  // Unset until the viewer saves a layout; clients then show the built-in default.
+  DashboardDefinition definition = 1;
+  // Increases on every save. A save names the revision it was based on.
+  int64 revision = 2;
+  // A layout replaced by a preset or a proposal can be restored once.
+  bool has_previous = 3;
+}
+
+message GetDashboardRequest {
+  string organization_id = 1;
+}
+
+message GetDashboardResponse {
+  Dashboard dashboard = 1;
+}
+
+message SaveDashboardRequest {
+  string organization_id = 1;
+  DashboardDefinition definition = 2;
+  // The revision the edit was based on. A save against an older revision is
+  // rejected, so a second tab never silently overwrites the first.
+  int64 expected_revision = 3;
+  // Keep the replaced layout so it can be restored (presets, agent proposals).
+  bool keep_previous = 4;
+}
+
+message SaveDashboardResponse {
+  Dashboard dashboard = 1;
+}
+
+message RestorePreviousDashboardRequest {
+  string organization_id = 1;
+  int64 expected_revision = 2;
+}
+
+message RestorePreviousDashboardResponse {
+  Dashboard dashboard = 1;
+}
+
+message DashboardWidgetType {
+  string widget_id = 1;
+  string label = 2;
+  string description = 3;
+  // Whether the widget counts project tasks and so takes project, people and sprint filters.
+  bool filterable = 4;
+  DashboardWidgetSize default_size = 5;
+}
+
+message DashboardPreset {
+  string preset_id = 1;
+  string label = 2;
+  string description = 3;
+  DashboardDefinition definition = 4;
+}
+
+message GetDashboardCatalogRequest {}
+
+message GetDashboardCatalogResponse {
+  repeated DashboardWidgetType widgets = 1;
+  repeated DashboardPreset presets = 2;
+  // The layout shown before the viewer saves one, and what Reset returns to.
+  DashboardDefinition default_definition = 3;
+}

@@ -4,6 +4,7 @@ package projects.v1;
 
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "projects/v1/metrics.proto";
 import "projects/v1/time.proto";
 import "tags/v1/tags.proto";
 
@@ -87,6 +88,10 @@ service ProjectsService {
   rpc ListPeriods(ListPeriodsRequest) returns (ListPeriodsResponse);
   rpc CreateInternalTimeProject(CreateInternalTimeProjectRequest) returns (CreateInternalTimeProjectResponse);
   rpc GetSprintCapacity(GetSprintCapacityRequest) returns (GetSprintCapacityResponse);
+
+  // ----- Metrics -----
+  // Permission-scoped task aggregates for dashboard widgets.
+  rpc GetTaskMetrics(GetTaskMetricsRequest) returns (GetTaskMetricsResponse);
 }
 
 // ============================================================================

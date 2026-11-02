@@ -34,6 +34,7 @@ tools:
   - rooms.get_room
   - projects.list_projects
   - tasks.list_tasks
+  - dashboard.propose
   - memory.read
   - system.current_time
 ---

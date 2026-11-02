@@ -16,6 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import settings_pb
+from .dashboard_pb import GetDashboardCatalogRequest, GetDashboardCatalogResponse, GetDashboardRequest, GetDashboardResponse, RestorePreviousDashboardRequest, RestorePreviousDashboardResponse, SaveDashboardRequest, SaveDashboardResponse
 from .settings_pb import CreateProfileRequest, CreateProfileResponse, DeleteProfileRequest, DeleteProfileResponse, GetEffectiveSettingsRequest, GetEffectiveSettingsResponse, GetProfileRequest, GetProfileResponse, GetSettingsSchemaRequest, GetSettingsSchemaResponse, ListProfilesRequest, ListProfilesResponse, SetDefaultProfileRequest, SetDefaultProfileResponse, UpdateProfileRequest, UpdateProfileResponse
 
 if TYPE_CHECKING:
@@ -76,6 +77,30 @@ class SettingsService(Protocol):
     async def set_default_profile(self, request: SetDefaultProfileRequest, ctx: RequestContext[SetDefaultProfileRequest, SetDefaultProfileResponse], /) -> SetDefaultProfileResponse:
         """
         Set a profile as the default for the user
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_dashboard_catalog(self, request: GetDashboardCatalogRequest, ctx: RequestContext[GetDashboardCatalogRequest, GetDashboardCatalogResponse], /) -> GetDashboardCatalogResponse:
+        """
+        The widget catalog, the role presets and the default layout
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_dashboard(self, request: GetDashboardRequest, ctx: RequestContext[GetDashboardRequest, GetDashboardResponse], /) -> GetDashboardResponse:
+        """
+        The viewer's dashboard layout in one organization
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def save_dashboard(self, request: SaveDashboardRequest, ctx: RequestContext[SaveDashboardRequest, SaveDashboardResponse], /) -> SaveDashboardResponse:
+        """
+        Replace the dashboard layout, checked against the revision it was based on
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def restore_previous_dashboard(self, request: RestorePreviousDashboardRequest, ctx: RequestContext[RestorePreviousDashboardRequest, RestorePreviousDashboardResponse], /) -> RestorePreviousDashboardResponse:
+        """
+        Put back the layout a preset or a proposal replaced
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -176,6 +201,46 @@ class SettingsServiceASGIApplication(ConnectASGIApplication[SettingsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.set_default_profile,
+                ),
+                "/settings.v1.SettingsService/GetDashboardCatalog": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetDashboardCatalog",
+                        service_name="settings.v1.SettingsService",
+                        input=GetDashboardCatalogRequest,
+                        output=GetDashboardCatalogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_dashboard_catalog,
+                ),
+                "/settings.v1.SettingsService/GetDashboard": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=GetDashboardRequest,
+                        output=GetDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_dashboard,
+                ),
+                "/settings.v1.SettingsService/SaveDashboard": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SaveDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=SaveDashboardRequest,
+                        output=SaveDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.save_dashboard,
+                ),
+                "/settings.v1.SettingsService/RestorePreviousDashboard": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RestorePreviousDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=RestorePreviousDashboardRequest,
+                        output=RestorePreviousDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.restore_previous_dashboard,
                 ),
             },
             interceptors=interceptors,
@@ -378,6 +443,98 @@ class SettingsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_dashboard_catalog(
+        self,
+        request: GetDashboardCatalogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetDashboardCatalogResponse:
+        """
+        The widget catalog, the role presets and the default layout
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDashboardCatalog",
+                service_name="settings.v1.SettingsService",
+                input=GetDashboardCatalogRequest,
+                output=GetDashboardCatalogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_dashboard(
+        self,
+        request: GetDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetDashboardResponse:
+        """
+        The viewer's dashboard layout in one organization
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDashboard",
+                service_name="settings.v1.SettingsService",
+                input=GetDashboardRequest,
+                output=GetDashboardResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def save_dashboard(
+        self,
+        request: SaveDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SaveDashboardResponse:
+        """
+        Replace the dashboard layout, checked against the revision it was based on
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveDashboard",
+                service_name="settings.v1.SettingsService",
+                input=SaveDashboardRequest,
+                output=SaveDashboardResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
+    async def restore_previous_dashboard(
+        self,
+        request: RestorePreviousDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RestorePreviousDashboardResponse:
+        """
+        Put back the layout a preset or a proposal replaced
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestorePreviousDashboard",
+                service_name="settings.v1.SettingsService",
+                input=RestorePreviousDashboardRequest,
+                output=RestorePreviousDashboardResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class SettingsServiceSync(Protocol):
     """
     SettingsService provides user settings management functionality
@@ -427,6 +584,30 @@ class SettingsServiceSync(Protocol):
     def set_default_profile(self, request: SetDefaultProfileRequest, ctx: RequestContext[SetDefaultProfileRequest, SetDefaultProfileResponse], /) -> SetDefaultProfileResponse:
         """
         Set a profile as the default for the user
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_dashboard_catalog(self, request: GetDashboardCatalogRequest, ctx: RequestContext[GetDashboardCatalogRequest, GetDashboardCatalogResponse], /) -> GetDashboardCatalogResponse:
+        """
+        The widget catalog, the role presets and the default layout
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_dashboard(self, request: GetDashboardRequest, ctx: RequestContext[GetDashboardRequest, GetDashboardResponse], /) -> GetDashboardResponse:
+        """
+        The viewer's dashboard layout in one organization
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def save_dashboard(self, request: SaveDashboardRequest, ctx: RequestContext[SaveDashboardRequest, SaveDashboardResponse], /) -> SaveDashboardResponse:
+        """
+        Replace the dashboard layout, checked against the revision it was based on
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def restore_previous_dashboard(self, request: RestorePreviousDashboardRequest, ctx: RequestContext[RestorePreviousDashboardRequest, RestorePreviousDashboardResponse], /) -> RestorePreviousDashboardResponse:
+        """
+        Put back the layout a preset or a proposal replaced
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -525,6 +706,46 @@ class SettingsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.set_default_profile,
+                ),
+                "/settings.v1.SettingsService/GetDashboardCatalog": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetDashboardCatalog",
+                        service_name="settings.v1.SettingsService",
+                        input=GetDashboardCatalogRequest,
+                        output=GetDashboardCatalogResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_dashboard_catalog,
+                ),
+                "/settings.v1.SettingsService/GetDashboard": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=GetDashboardRequest,
+                        output=GetDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_dashboard,
+                ),
+                "/settings.v1.SettingsService/SaveDashboard": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SaveDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=SaveDashboardRequest,
+                        output=SaveDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.save_dashboard,
+                ),
+                "/settings.v1.SettingsService/RestorePreviousDashboard": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RestorePreviousDashboard",
+                        service_name="settings.v1.SettingsService",
+                        input=RestorePreviousDashboardRequest,
+                        output=RestorePreviousDashboardResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.restore_previous_dashboard,
                 ),
             },
             interceptors=interceptors,
@@ -714,6 +935,94 @@ class SettingsServiceClientSync(ConnectClientSync):
                 service_name="settings.v1.SettingsService",
                 input=SetDefaultProfileRequest,
                 output=SetDefaultProfileResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_dashboard_catalog(
+        self,
+        request: GetDashboardCatalogRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetDashboardCatalogResponse:
+        """
+        The widget catalog, the role presets and the default layout
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDashboardCatalog",
+                service_name="settings.v1.SettingsService",
+                input=GetDashboardCatalogRequest,
+                output=GetDashboardCatalogResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_dashboard(
+        self,
+        request: GetDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetDashboardResponse:
+        """
+        The viewer's dashboard layout in one organization
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetDashboard",
+                service_name="settings.v1.SettingsService",
+                input=GetDashboardRequest,
+                output=GetDashboardResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def save_dashboard(
+        self,
+        request: SaveDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SaveDashboardResponse:
+        """
+        Replace the dashboard layout, checked against the revision it was based on
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SaveDashboard",
+                service_name="settings.v1.SettingsService",
+                input=SaveDashboardRequest,
+                output=SaveDashboardResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def restore_previous_dashboard(
+        self,
+        request: RestorePreviousDashboardRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RestorePreviousDashboardResponse:
+        """
+        Put back the layout a preset or a proposal replaced
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RestorePreviousDashboard",
+                service_name="settings.v1.SettingsService",
+                input=RestorePreviousDashboardRequest,
+                output=RestorePreviousDashboardResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

@@ -37,13 +37,14 @@ from uniffy.domains.settings.converters import (
     scheduling_dict_to_proto,
     scheduling_from_proto,
 )
+from uniffy.domains.settings.dashboard.handlers import DashboardHandlers
 from uniffy.domains.settings.operations import SettingsOperations
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="settings.handlers")
 
 
-class SettingsHandlers:
+class SettingsHandlers(DashboardHandlers):
     async def create_profile(
         self,
         request: CreateProfileRequest,

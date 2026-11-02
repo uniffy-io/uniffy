@@ -19,14 +19,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SettingsService_CreateProfile_FullMethodName        = "/settings.v1.SettingsService/CreateProfile"
-	SettingsService_GetProfile_FullMethodName           = "/settings.v1.SettingsService/GetProfile"
-	SettingsService_UpdateProfile_FullMethodName        = "/settings.v1.SettingsService/UpdateProfile"
-	SettingsService_DeleteProfile_FullMethodName        = "/settings.v1.SettingsService/DeleteProfile"
-	SettingsService_ListProfiles_FullMethodName         = "/settings.v1.SettingsService/ListProfiles"
-	SettingsService_GetEffectiveSettings_FullMethodName = "/settings.v1.SettingsService/GetEffectiveSettings"
-	SettingsService_GetSettingsSchema_FullMethodName    = "/settings.v1.SettingsService/GetSettingsSchema"
-	SettingsService_SetDefaultProfile_FullMethodName    = "/settings.v1.SettingsService/SetDefaultProfile"
+	SettingsService_CreateProfile_FullMethodName            = "/settings.v1.SettingsService/CreateProfile"
+	SettingsService_GetProfile_FullMethodName               = "/settings.v1.SettingsService/GetProfile"
+	SettingsService_UpdateProfile_FullMethodName            = "/settings.v1.SettingsService/UpdateProfile"
+	SettingsService_DeleteProfile_FullMethodName            = "/settings.v1.SettingsService/DeleteProfile"
+	SettingsService_ListProfiles_FullMethodName             = "/settings.v1.SettingsService/ListProfiles"
+	SettingsService_GetEffectiveSettings_FullMethodName     = "/settings.v1.SettingsService/GetEffectiveSettings"
+	SettingsService_GetSettingsSchema_FullMethodName        = "/settings.v1.SettingsService/GetSettingsSchema"
+	SettingsService_SetDefaultProfile_FullMethodName        = "/settings.v1.SettingsService/SetDefaultProfile"
+	SettingsService_GetDashboardCatalog_FullMethodName      = "/settings.v1.SettingsService/GetDashboardCatalog"
+	SettingsService_GetDashboard_FullMethodName             = "/settings.v1.SettingsService/GetDashboard"
+	SettingsService_SaveDashboard_FullMethodName            = "/settings.v1.SettingsService/SaveDashboard"
+	SettingsService_RestorePreviousDashboard_FullMethodName = "/settings.v1.SettingsService/RestorePreviousDashboard"
 )
 
 // SettingsServiceClient is the client API for SettingsService service.
@@ -51,6 +55,14 @@ type SettingsServiceClient interface {
 	GetSettingsSchema(ctx context.Context, in *GetSettingsSchemaRequest, opts ...grpc.CallOption) (*GetSettingsSchemaResponse, error)
 	// Set a profile as the default for the user
 	SetDefaultProfile(ctx context.Context, in *SetDefaultProfileRequest, opts ...grpc.CallOption) (*SetDefaultProfileResponse, error)
+	// The widget catalog, the role presets and the default layout
+	GetDashboardCatalog(ctx context.Context, in *GetDashboardCatalogRequest, opts ...grpc.CallOption) (*GetDashboardCatalogResponse, error)
+	// The viewer's dashboard layout in one organization
+	GetDashboard(ctx context.Context, in *GetDashboardRequest, opts ...grpc.CallOption) (*GetDashboardResponse, error)
+	// Replace the dashboard layout, checked against the revision it was based on
+	SaveDashboard(ctx context.Context, in *SaveDashboardRequest, opts ...grpc.CallOption) (*SaveDashboardResponse, error)
+	// Put back the layout a preset or a proposal replaced
+	RestorePreviousDashboard(ctx context.Context, in *RestorePreviousDashboardRequest, opts ...grpc.CallOption) (*RestorePreviousDashboardResponse, error)
 }
 
 type settingsServiceClient struct {
@@ -141,6 +153,46 @@ func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, in *SetDe
 	return out, nil
 }
 
+func (c *settingsServiceClient) GetDashboardCatalog(ctx context.Context, in *GetDashboardCatalogRequest, opts ...grpc.CallOption) (*GetDashboardCatalogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDashboardCatalogResponse)
+	err := c.cc.Invoke(ctx, SettingsService_GetDashboardCatalog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *settingsServiceClient) GetDashboard(ctx context.Context, in *GetDashboardRequest, opts ...grpc.CallOption) (*GetDashboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDashboardResponse)
+	err := c.cc.Invoke(ctx, SettingsService_GetDashboard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *settingsServiceClient) SaveDashboard(ctx context.Context, in *SaveDashboardRequest, opts ...grpc.CallOption) (*SaveDashboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SaveDashboardResponse)
+	err := c.cc.Invoke(ctx, SettingsService_SaveDashboard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *settingsServiceClient) RestorePreviousDashboard(ctx context.Context, in *RestorePreviousDashboardRequest, opts ...grpc.CallOption) (*RestorePreviousDashboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RestorePreviousDashboardResponse)
+	err := c.cc.Invoke(ctx, SettingsService_RestorePreviousDashboard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SettingsServiceServer is the server API for SettingsService service.
 // All implementations must embed UnimplementedSettingsServiceServer
 // for forward compatibility.
@@ -163,6 +215,14 @@ type SettingsServiceServer interface {
 	GetSettingsSchema(context.Context, *GetSettingsSchemaRequest) (*GetSettingsSchemaResponse, error)
 	// Set a profile as the default for the user
 	SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*SetDefaultProfileResponse, error)
+	// The widget catalog, the role presets and the default layout
+	GetDashboardCatalog(context.Context, *GetDashboardCatalogRequest) (*GetDashboardCatalogResponse, error)
+	// The viewer's dashboard layout in one organization
+	GetDashboard(context.Context, *GetDashboardRequest) (*GetDashboardResponse, error)
+	// Replace the dashboard layout, checked against the revision it was based on
+	SaveDashboard(context.Context, *SaveDashboardRequest) (*SaveDashboardResponse, error)
+	// Put back the layout a preset or a proposal replaced
+	RestorePreviousDashboard(context.Context, *RestorePreviousDashboardRequest) (*RestorePreviousDashboardResponse, error)
 	mustEmbedUnimplementedSettingsServiceServer()
 }
 
@@ -196,6 +256,18 @@ func (UnimplementedSettingsServiceServer) GetSettingsSchema(context.Context, *Ge
 }
 func (UnimplementedSettingsServiceServer) SetDefaultProfile(context.Context, *SetDefaultProfileRequest) (*SetDefaultProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetDefaultProfile not implemented")
+}
+func (UnimplementedSettingsServiceServer) GetDashboardCatalog(context.Context, *GetDashboardCatalogRequest) (*GetDashboardCatalogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDashboardCatalog not implemented")
+}
+func (UnimplementedSettingsServiceServer) GetDashboard(context.Context, *GetDashboardRequest) (*GetDashboardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDashboard not implemented")
+}
+func (UnimplementedSettingsServiceServer) SaveDashboard(context.Context, *SaveDashboardRequest) (*SaveDashboardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveDashboard not implemented")
+}
+func (UnimplementedSettingsServiceServer) RestorePreviousDashboard(context.Context, *RestorePreviousDashboardRequest) (*RestorePreviousDashboardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RestorePreviousDashboard not implemented")
 }
 func (UnimplementedSettingsServiceServer) mustEmbedUnimplementedSettingsServiceServer() {}
 func (UnimplementedSettingsServiceServer) testEmbeddedByValue()                         {}
@@ -362,6 +434,78 @@ func _SettingsService_SetDefaultProfile_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SettingsService_GetDashboardCatalog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDashboardCatalogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettingsServiceServer).GetDashboardCatalog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SettingsService_GetDashboardCatalog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettingsServiceServer).GetDashboardCatalog(ctx, req.(*GetDashboardCatalogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SettingsService_GetDashboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDashboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettingsServiceServer).GetDashboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SettingsService_GetDashboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettingsServiceServer).GetDashboard(ctx, req.(*GetDashboardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SettingsService_SaveDashboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveDashboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettingsServiceServer).SaveDashboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SettingsService_SaveDashboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettingsServiceServer).SaveDashboard(ctx, req.(*SaveDashboardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SettingsService_RestorePreviousDashboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestorePreviousDashboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettingsServiceServer).RestorePreviousDashboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SettingsService_RestorePreviousDashboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettingsServiceServer).RestorePreviousDashboard(ctx, req.(*RestorePreviousDashboardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SettingsService_ServiceDesc is the grpc.ServiceDesc for SettingsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -400,6 +544,22 @@ var SettingsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDefaultProfile",
 			Handler:    _SettingsService_SetDefaultProfile_Handler,
+		},
+		{
+			MethodName: "GetDashboardCatalog",
+			Handler:    _SettingsService_GetDashboardCatalog_Handler,
+		},
+		{
+			MethodName: "GetDashboard",
+			Handler:    _SettingsService_GetDashboard_Handler,
+		},
+		{
+			MethodName: "SaveDashboard",
+			Handler:    _SettingsService_SaveDashboard_Handler,
+		},
+		{
+			MethodName: "RestorePreviousDashboard",
+			Handler:    _SettingsService_RestorePreviousDashboard_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

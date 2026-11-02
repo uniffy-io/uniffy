@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package projects.v1;
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
+
+// Task metrics for dashboard widgets. Every number is a server-side aggregate over the
+// tasks the viewer can read, so a widget never has to load tasks to count them.
+
+enum TaskMetric {
+  TASK_METRIC_UNSPECIFIED = 0;
+  // Active sprints with their progress and a daily burndown.
+  TASK_METRIC_SPRINT_PROGRESS = 1;
+  TASK_METRIC_OVERDUE = 2;
+  // Open tasks with at least one open blocker.
+  TASK_METRIC_BLOCKED = 3;
+  // Open and overdue tasks per assignee.
+  TASK_METRIC_WORKLOAD = 4;
+  TASK_METRIC_STATUS_BY_PROJECT = 5;
+  // Bugs opened and closed per day.
+  TASK_METRIC_BUG_TREND = 6;
+  // Open tasks in a review status.
+  TASK_METRIC_REVIEW_QUEUE = 7;
+}
+
+enum MetricProjectScope {
+  METRIC_PROJECT_SCOPE_UNSPECIFIED = 0;
+  METRIC_PROJECT_SCOPE_ALL = 1;
+  // Projects the viewer owns or is a member of, directly or through a group.
+  METRIC_PROJECT_SCOPE_MY_PROJECTS = 2;
+  METRIC_PROJECT_SCOPE_SELECTED = 3;
+}
+
+enum MetricPeopleScope {
+  METRIC_PEOPLE_SCOPE_UNSPECIFIED = 0;
+  METRIC_PEOPLE_SCOPE_EVERYONE = 1;
+  METRIC_PEOPLE_SCOPE_ME = 2;
+  // Anyone in a team the viewer belongs to, the viewer included.
+  METRIC_PEOPLE_SCOPE_MY_TEAMS = 3;
+}
+
+enum MetricSprintScope {
+  METRIC_SPRINT_SCOPE_UNSPECIFIED = 0;
+  METRIC_SPRINT_SCOPE_ANY = 1;
+  METRIC_SPRINT_SCOPE_ACTIVE = 2;
+}
+
+// Unspecified values mean all readable projects, everyone and any sprint.
+message TaskMetricsScope {
+  MetricProjectScope projects = 1;
+  repeated string project_ids = 2;
+  MetricPeopleScope people = 3;
+  MetricSprintScope sprint = 4;
+}
+
+message GetTaskMetricsRequest {
+  string organization_id = 1;
+  TaskMetric metric = 2;
+  TaskMetricsScope scope = 3;
+  // Rows in task lists, 1 to 50 (default 8).
+  int32 limit = 4;
+  // Days covered by the bug trend, 7 to 180 (default 30).
+  int32 days = 5;
+  // IANA zone that decides what "today" and "overdue" mean; UTC when empty.
+  string time_zone = 6;
+}
+
+message TaskMetricItem {
+  string task_id = 1;
+  string project_id = 2;
+  int32 number = 3;
+  string title = 4;
+  string due_date = 5;
+  repeated string assignee_ids = 6;
+  string status = 7;
+  string priority = 8;
+}
+
+message WorkloadRow {
+  // Empty for unassigned work.
+  string user_id = 1;
+  int32 open = 2;
+  int32 overdue = 3;
+}
+
+message ProjectStatusRow {
+  string project_id = 1;
+  int32 todo = 2;
+  int32 in_progress = 3;
+  int32 review = 4;
+  int32 completed = 5;
+}
+
+message BugTrendPoint {
+  // YYYY-MM-DD in the request time zone.
+  string date = 1;
+  int32 opened = 2;
+  int32 closed = 3;
+}
+
+message BurndownPoint {
+  string date = 1;
+  int32 remaining = 2;
+}
+
+message SprintProgress {
+  string sprint_id = 1;
+  string project_id = 2;
+  string name = 3;
+  string start_date = 4;
+  string end_date = 5;
+  int32 total = 6;
+  int32 completed = 7;
+  // One point per sprint day up to today, counting the sprint's current tasks.
+  repeated BurndownPoint burndown = 8;
+}
+
+message GetTaskMetricsResponse {
+  // The headline count: overdue, blocked or in-review tasks, or open tasks for workload.
+  int32 total = 1;
+  // The first rows behind the headline count, most urgent first.
+  repeated TaskMetricItem items = 2;
+  repeated WorkloadRow workload = 3;
+  repeated ProjectStatusRow status_by_project = 4;
+  repeated BugTrendPoint bug_trend = 5;
+  repeated SprintProgress sprints = 6;
+}

@@ -1,0 +1,105 @@
+{
+  "widgets": [
+    { "id": "today-agenda", "label": "Today's agenda", "description": "Your events for today and the next few days.", "filterable": false, "size": "expanded" },
+    { "id": "my-tasks", "label": "My tasks", "description": "Tasks assigned to you, grouped into overdue, due today and upcoming.", "filterable": false, "size": "expanded" },
+    { "id": "my-time", "label": "My time", "description": "Time you logged this week and any running timer.", "filterable": false, "size": "compact" },
+    { "id": "sprint-progress", "label": "Sprint progress", "description": "Running sprints with completion and a daily burndown.", "filterable": true, "size": "expanded" },
+    { "id": "overdue-tasks", "label": "Overdue tasks", "description": "Open tasks past their due date.", "filterable": true, "size": "compact" },
+    { "id": "blocked-tasks", "label": "Blocked tasks", "description": "Open tasks waiting on another open task.", "filterable": true, "size": "compact" },
+    { "id": "review-queue", "label": "Review queue", "description": "Open tasks in a review status, oldest first.", "filterable": true, "size": "compact" },
+    { "id": "workload", "label": "Workload", "description": "Open and overdue tasks per assignee.", "filterable": true, "size": "expanded" },
+    { "id": "status-by-project", "label": "Tasks by status", "description": "To do, in progress, in review and done per project.", "filterable": true, "size": "expanded" },
+    { "id": "project-health", "label": "Project health", "description": "Each project's progress and whether it is on track, at risk or behind.", "filterable": true, "size": "expanded" },
+    { "id": "bug-trend", "label": "Bugs opened vs closed", "description": "Bugs opened and closed per day over the last 30 days.", "filterable": true, "size": "expanded" },
+    { "id": "recent-activity", "label": "Recent activity", "description": "Recent changes across your workspace.", "filterable": false, "size": "expanded" },
+    { "id": "quick-actions", "label": "Quick actions", "description": "Shortcuts to create notes, tasks, events and more.", "filterable": false, "size": "expanded" },
+    { "id": "team-presence", "label": "Team online", "description": "Who on your team is online now.", "filterable": false, "size": "compact" },
+    { "id": "people", "label": "People", "description": "People you work with most.", "filterable": false, "size": "compact" },
+    { "id": "notifications", "label": "Notifications", "description": "Your unread notifications.", "filterable": false, "size": "compact" },
+    { "id": "recent-notes", "label": "Recent notes", "description": "Notes you opened or edited recently.", "filterable": false, "size": "expanded" },
+    { "id": "recent-files", "label": "Recent files", "description": "Files you opened or uploaded recently.", "filterable": false, "size": "expanded" },
+    { "id": "bookmarks", "label": "Bookmarks", "description": "Items you bookmarked.", "filterable": false, "size": "expanded" },
+    { "id": "analytics", "label": "Your activity", "description": "Your own activity over the last two weeks.", "filterable": false, "size": "expanded" },
+    { "id": "agents", "label": "Agent sessions", "description": "Your recent agent sessions.", "filterable": false, "size": "expanded" }
+  ],
+  "default": [
+    { "id": "today-agenda" },
+    { "id": "my-tasks" },
+    { "id": "my-time" },
+    { "id": "overdue-tasks" },
+    { "id": "blocked-tasks" },
+    { "id": "review-queue" },
+    { "id": "sprint-progress" },
+    { "id": "workload" },
+    { "id": "status-by-project" },
+    { "id": "project-health" },
+    { "id": "bug-trend" },
+    { "id": "quick-actions" },
+    { "id": "recent-activity" },
+    { "id": "team-presence" },
+    { "id": "people" },
+    { "id": "notifications" },
+    { "id": "recent-notes" },
+    { "id": "recent-files" },
+    { "id": "bookmarks" },
+    { "id": "analytics" },
+    { "id": "agents" }
+  ],
+  "presets": [
+    {
+      "id": "lead",
+      "label": "Team lead",
+      "description": "Your teams' workload, what is overdue or blocked, and how the running sprints are going.",
+      "widgets": [
+        { "id": "workload", "filters": { "projects": "my_projects", "people": "my_teams" } },
+        { "id": "overdue-tasks", "filters": { "projects": "my_projects", "people": "my_teams" } },
+        { "id": "blocked-tasks", "filters": { "projects": "my_projects", "people": "my_teams" } },
+        { "id": "sprint-progress", "filters": { "projects": "my_projects", "people": "my_teams" } },
+        { "id": "review-queue", "filters": { "projects": "my_projects", "people": "my_teams" } },
+        { "id": "today-agenda" },
+        { "id": "team-presence" }
+      ]
+    },
+    {
+      "id": "pm",
+      "label": "Project manager",
+      "description": "Sprint progress, project health, and the overdue and blocked work across your projects.",
+      "widgets": [
+        { "id": "sprint-progress", "filters": { "projects": "my_projects" } },
+        { "id": "project-health", "filters": { "projects": "my_projects" } },
+        { "id": "overdue-tasks", "filters": { "projects": "my_projects" } },
+        { "id": "blocked-tasks", "filters": { "projects": "my_projects" } },
+        { "id": "status-by-project", "filters": { "projects": "my_projects" } },
+        { "id": "workload", "filters": { "projects": "my_projects" } },
+        { "id": "today-agenda" }
+      ]
+    },
+    {
+      "id": "developer",
+      "label": "Developer",
+      "description": "Your own tasks, what blocks you, and your part of the running sprint.",
+      "widgets": [
+        { "id": "my-tasks" },
+        { "id": "sprint-progress", "filters": { "projects": "my_projects", "people": "me" } },
+        { "id": "blocked-tasks", "filters": { "people": "me" } },
+        { "id": "review-queue", "filters": { "people": "me" } },
+        { "id": "today-agenda" },
+        { "id": "my-time" },
+        { "id": "recent-notes" }
+      ]
+    },
+    {
+      "id": "qa",
+      "label": "QA",
+      "description": "The review queue, the bug trend, and blocked work in your projects.",
+      "widgets": [
+        { "id": "review-queue", "filters": { "projects": "my_projects" } },
+        { "id": "bug-trend", "filters": { "projects": "my_projects" } },
+        { "id": "blocked-tasks", "filters": { "projects": "my_projects" } },
+        { "id": "overdue-tasks", "filters": { "projects": "my_projects" } },
+        { "id": "my-tasks" },
+        { "id": "today-agenda" }
+      ]
+    }
+  ]
+}

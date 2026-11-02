@@ -3493,6 +3493,51 @@ they belong to; with neither, org admins review.
       projects_worklogs w WHERE w.task_id=t.id AND NOT w.is_deleted)` is 0, one timer runs, and the
       busiest team's lead sees a submitted and an approved week in Approvals.
 
+## Dashboard: templates, metric widgets and saved layouts
+
+Home dashboard (`/`). Use two users who see different projects, for example `bob@uniffy.io` and
+`alice@uniffy.io`, in two browsers.
+
+- [ ] A user with no saved layout sees every widget (21), personal ones first, then the project
+      metrics (all projects you can read), then the rest. Templates > Everything returns to it at
+      any time and shows no dashboard title.
+- [ ] Templates > Project manager: the page switches to Sprint progress, Project health, Overdue,
+      Blocked, Tasks by status, Workload and Today's agenda, each subtitled `My projects`. The
+      numbers count only projects you own or were added to (directly or through a group), never an
+      open project you merely can read.
+- [ ] Each metric widget matches the project views for the same filter: Overdue equals the open
+      tasks with a past due date, Blocked equals the open tasks with an open blocker, Review queue
+      equals the open tasks in the project's review status. Another member's private project never
+      shows up, also as an org owner or admin. (`(both products)`)
+- [ ] Customize > funnel on a project widget: set Projects to Selected projects (pick one), Assigned
+      to Me, Sprint Active sprint, Apply filters, Save. The subtitle names the project and `Me`; a
+      second user who opens the same preset sees their own work under `Me`.
+- [ ] Customize: drag a row (or use the arrows) to reorder, hide a widget, toggle compact or wide,
+      Save. Reload and open the dashboard in another browser as the same user: the same order,
+      sizes and filters load. Another user's dashboard is unchanged.
+- [ ] Templates > QA: the dashboard is titled "QA". Templates > Restore previous layout brings back
+      the layout from before the template. Customize > Show everything does the same as
+      Templates > Everything and can itself be restored.
+- [ ] Click the dashboard title (or "Add a name" when it has none), type a new name and press Enter
+      or click away: it saves at once and survives a reload; Escape cancels. Widgets, the template
+      and Templates > Restore previous layout are unchanged by a rename. Customize > Dashboard name
+      does the same. Extra spaces are collapsed and names stop at 80 characters.
+- [ ] Two tabs: save a change in tab A, then save a different change in tab B without reloading.
+      Tab B shows "This change conflicts with another update", reloads tab A's layout, and keeps the
+      editor open; the next save goes through.
+- [ ] A layout saved by an older version in this browser (`uniffy_dashboard_layout_<user id>` in
+      localStorage) is carried over on first load and the key is removed.
+- [ ] Agent: with `dashboard.propose` enabled (Capabilities > Dashboard), ask "make me a QA
+      dashboard for <project>". A preview card lists the widgets in order with their filters.
+      Click the card title to rename the draft before applying. Discard leaves the dashboard
+      untouched; Apply to my dashboard replaces it, titles it with the (possibly renamed) draft name,
+      and Undo puts the previous layout back. A project name the asker cannot open is refused by the tool.
+- [ ] Responsive at 1024px, 768px (compact widgets take half a row, wide ones the full row) and
+      375px (single column, customizer rows stack the name above 44px buttons). Light and dark
+      themes: charts and bars use the brand ramp and theme-token axes.
+- [ ] Performance: on an organization with about 50,000 tasks each metric RPC
+      (`ProjectsService.GetTaskMetrics`) answers in well under 200ms.
+
 ## Pre-release sweep
 
 - [ ] All linters green: `./manage.py lint`.
