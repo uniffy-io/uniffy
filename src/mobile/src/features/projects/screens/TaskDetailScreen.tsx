@@ -47,7 +47,9 @@ import { TaskPriorityBadge } from "@features/projects/components/TaskPriorityBad
 import { RecurrenceSheet } from "@features/projects/components/RecurrenceSheet";
 import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects/taskTypes";
 import { formatMinutes } from "@features/projects/timeFormatting";
-import { formatRelativeTime } from "@shared/lib/dateFormatting";
+import { formatDateShort, formatRelativeTime } from "@shared/lib/dateFormatting";
+import { describeActivity, type ActivityLookups } from "@features/projects/activityText";
+import { FieldType } from "@uniffy/proto/projects/v1/projects_pb";
 import { parseRecurrence, describeRecurrence } from "@features/projects/taskRecurrence";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
@@ -69,7 +71,6 @@ import {
   getStatusOptions,
   getPriorityOptions,
   getOptionById,
-  activityActionLabel,
 } from "@features/projects/projectsSerializer";
 import { statusIdForSemantic } from "@features/projects/statusSemantics";
 import { isTaskBlocked } from "@features/projects/taskRelations";
@@ -218,11 +219,24 @@ export function TaskDetailScreen() {
 
   // Activity rows store raw ids - option ids for status/priority changes, user
   // ids for assignment changes. Show whichever label we can resolve.
-  function resolveActivityValue(raw: string): string {
-    const option = getOptionById([...statusOptions, ...priorityOptions], raw);
-    if (option) return option.label;
-    return directory.byId.get(raw)?.name ?? raw;
-  }
+  const activityLookups: ActivityLookups = {
+    optionLabel: (fieldId, optionId) =>
+      project?.fieldDefinitions
+        .find((f) => f.id === fieldId)
+        ?.options.find((o) => o.id === optionId)?.label,
+    fieldName: (fieldId) => project?.fieldDefinitions.find((f) => f.id === fieldId)?.name,
+    isMultiSelect: (fieldId) =>
+      project?.fieldDefinitions.find((f) => f.id === fieldId)?.type === FieldType.MULTI_SELECT,
+    personName: (userId) => directory.byId.get(userId)?.name,
+    taskLabel: (id) => {
+      const linked = tasksById.get(id);
+      return linked ? `#${linked.number} ${linked.title}` : undefined;
+    },
+    sprintName: (id) => sprints.find((s) => s.id === id)?.name,
+    typeLabel: (taskType) => getTaskTypeConfig(taskType).label,
+    date: formatDateShort,
+    minutes: formatMinutes,
+  };
 
   function toggleAssignee(userId: string) {
     const current = task!.assigneeIds;
@@ -652,6 +666,7 @@ export function TaskDetailScreen() {
             <Text style={[styles.sectionLabel, { color: T.textDim }]}>ACTIVITY</Text>
             {activities.map((act) => {
               const actor = directory.byId.get(act.actorId);
+              const text = describeActivity(act, activityLookups);
               return (
                 <View key={act.id} style={styles.activityRow}>
                   <Avatar
@@ -662,13 +677,16 @@ export function TaskDetailScreen() {
                   />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.activityText, { color: T.text }]}>
-                      <Text style={{ fontFamily: FONT.semibold }}>{actor?.name ?? "Someone"}</Text>{" "}
-                      {activityActionLabel(act.action)}
+                      <Text style={{ fontFamily: FONT.semibold }}>
+                        {act.agentId
+                          ? `${act.agentName ?? "An agent"} for ${actor?.name ?? "someone"}`
+                          : (actor?.name ?? "Someone")}
+                      </Text>{" "}
+                      {text.headline}
                     </Text>
-                    {act.previousValue && act.newValue && (
+                    {text.detail && (
                       <Text style={[styles.activityDetail, { color: T.textDim }]}>
-                        {resolveActivityValue(act.previousValue)} {"->"}{" "}
-                        {resolveActivityValue(act.newValue)}
+                        {text.detail}
                       </Text>
                     )}
                   </View>

@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable, Collection
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pycrdt
@@ -9,10 +10,12 @@ from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.realtime.adapter import register_realtime_adapter
+from uniffy.core.realtime.buffer_keys import BufferedUpdate
 from uniffy.core.realtime.markdown import markdown_text, seed_markdown
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType
+from uniffy.domains.projects.tasks.description_activity import stage_description_edits
 from uniffy.domains.projects.tasks.realtime import TaskRealtimePersistence, load_live_task
 
 _POLICY_STATEMENT = (
@@ -33,6 +36,29 @@ class TaskRealtimeAdapter:
 
     def __init__(self, search_indexer: SearchIndexer) -> None:
         self.search_indexer = search_indexer
+
+    async def stage_edits(
+        self,
+        session: AsyncSession,
+        content_id: UUID,
+        organization_id: UUID,
+        updates: Collection[BufferedUpdate],
+    ) -> None:
+        task_id = await session.scalar(
+            select(Task.id).where(Task.id == content_id, Task.organization_id == organization_id)
+        )
+        if task_id is None:
+            return
+        await stage_description_edits(
+            session,
+            task_id,
+            [
+                (edit.actor_id, datetime.fromtimestamp(edit.accepted_at_ms / 1000, UTC))
+                for edit in updates
+                if edit.markdown_changed
+            ],
+            agent_id=None,
+        )
 
     async def authorize(
         self,
@@ -130,4 +156,5 @@ class TaskRealtimeAdapter:
 
 
 def register_task_realtime_adapter(search_indexer: SearchIndexer) -> None:
-    register_realtime_adapter(TaskRealtimeAdapter(search_indexer))
+    adapter = TaskRealtimeAdapter(search_indexer)
+    register_realtime_adapter(adapter, stage_edits=adapter.stage_edits)

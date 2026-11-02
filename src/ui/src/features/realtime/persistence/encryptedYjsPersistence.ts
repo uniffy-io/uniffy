@@ -87,6 +87,7 @@ interface SnapshotHeader {
 
 /** One own update the server has not checkpointed, kept under its update id until it is. */
 interface PendingHeader {
+  authored: boolean;
   kind: "pending";
   scope?: PendingDoc;
   updateId: string;
@@ -208,7 +209,13 @@ function decodeRow(bytes: Uint8Array): StoredRow | null {
     kind: "pending",
     update,
     scope,
-    retained: { updateId: row.updateId, update, editedAt: row.editedAt, receipt: row.receipt },
+    retained: {
+      updateId: row.updateId,
+      update,
+      editedAt: row.editedAt,
+      receipt: row.receipt,
+      authored: row.authored === true,
+    },
   };
 }
 
@@ -568,6 +575,7 @@ interface RecoverySession {
   device: () => DeviceRecoveryState;
   /** This session has read the device's rows for its generation, or has none it could read. */
   hydrated: () => boolean;
+  ready: () => boolean;
 }
 
 const recoverySessions = new Map<string, Set<RecoverySession>>();
@@ -594,6 +602,11 @@ export function linkRecovery(docName: string, transport: RecoveryTransport): () 
  * an edit an earlier session left unconfirmed may still be unknown to the transport. */
 export function isRecoveryHydrated(docName: string): boolean {
   for (const session of recoverySessions.get(docName) ?? []) if (!session.hydrated()) return false;
+  return true;
+}
+
+export function isRecoveryReady(docName: string): boolean {
+  for (const session of recoverySessions.get(docName) ?? []) if (!session.ready()) return false;
   return true;
 }
 
@@ -670,6 +683,7 @@ export interface EncryptedPersistence {
 }
 
 interface TrackedUpdate {
+  authored: boolean;
   /** Generation the update's row is stored under. */
   generation: string;
   update: Uint8Array;
@@ -737,6 +751,7 @@ export function attachEncryptedPersistence(
   // Set once view access is gone: the device keeps nothing more of the live lineage.
   let released = false;
   let rowsRead = false;
+  let hydrationFailed = false;
   let destroyPromise: Promise<void> | null = null;
   const pendingWrites = new Set<Promise<void>>();
   let writeLoop: Promise<void> | null = null;
@@ -831,6 +846,7 @@ export function attachEncryptedPersistence(
         generation: known?.generation ?? storageGeneration(),
         update,
         editedAt: event.editedAt,
+        authored: event.coverage === "local" ? event.authored === true : known?.authored === true,
         receipt,
       };
       tracked.set(event.updateId, next);
@@ -844,6 +860,7 @@ export function attachEncryptedPersistence(
       updateId,
       update: update.update,
       editedAt: update.editedAt,
+      authored: update.authored,
       receipt: update.receipt,
     }));
 
@@ -861,6 +878,7 @@ export function attachEncryptedPersistence(
       unpersisted: localUpdates > persistedUpdates,
     }),
     hydrated: () => rowsRead || destroyed || released,
+    ready: () => rowsRead || hydrationFailed || destroyed || released,
   };
 
   function finishHydration(restored: RetainedUpdate[]): void {
@@ -883,6 +901,7 @@ export function attachEncryptedPersistence(
       scope: opts.scope,
       updateId,
       editedAt: update.editedAt,
+      authored: update.authored,
       receipt: update.receipt,
     };
     return encodeRow(header, update.update);
@@ -1038,7 +1057,7 @@ export function attachEncryptedPersistence(
 
   let hydration: Promise<string | null> = Promise.resolve(null);
   function hydrate(options?: { serverGeneration: string | null }): Promise<string | null> {
-    hydration = hydration.then(() => hydrateRows(options));
+    hydration = hydration.catch(() => null).then(() => hydrateRows(options));
     return hydration;
   }
 
@@ -1048,6 +1067,8 @@ export function attachEncryptedPersistence(
     await previousDisposal;
     await ownRowsClaimed;
     if (destroyed || released) return null;
+    rowsRead = false;
+    hydrationFailed = false;
     if (!isStorageEncryptionReady()) {
       finishHydration([]);
       return null;
@@ -1104,9 +1125,15 @@ export function attachEncryptedPersistence(
           if (row.update.length > 0) Y.applyUpdate(ydoc, row.update, HYDRATION_ORIGIN);
           if (row.kind === "pending") {
             hydratedDirty = true;
-            const { updateId, editedAt, receipt } = row.retained;
+            const { updateId, editedAt, receipt, authored } = row.retained;
             if (tracked.has(updateId) || retiring.has(updateId)) continue;
-            tracked.set(updateId, { generation: key[2], update: row.update, editedAt, receipt });
+            tracked.set(updateId, {
+              generation: key[2],
+              update: row.update,
+              editedAt,
+              receipt,
+              authored: authored === true,
+            });
             if (!opened.bound) unboundRows.add(updateId);
             restored.push(row.retained);
           } else {
@@ -1131,6 +1158,11 @@ export function attachEncryptedPersistence(
       return replayGeneration;
     } catch (err) {
       console.warn("[realtime] encrypted persistence hydrate failed", err);
+      hydrationFailed = true;
+      storageFailed = true;
+      publishDeviceState(docKey);
+      // Device failure must not block server saves or claim that unread recovery is covered.
+      transport()?.restorePending(retainedUpdates());
       throw err;
     }
   }

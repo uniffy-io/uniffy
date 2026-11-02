@@ -35,6 +35,7 @@ import { realtimeMultiplexer, type UpdateCoverageEvent } from "@/features/realti
 import { hasPendingDoc } from "@/features/realtime/pendingDocs";
 import {
   SNAPSHOT_INTERVAL_MS,
+  HYDRATION_ORIGIN,
   discoverStoredPendingDocs,
   getDeviceRecoveryState,
   readRecoveredDrafts,
@@ -113,6 +114,34 @@ function failWrites() {
 }
 
 describe("checkpoint coverage in local recovery", () => {
+  it.each([true, false])(
+    "keeps authored=%s on pending updates through encrypted recovery",
+    async (authored) => {
+      const contentId = `provenance-${authored}`;
+      const { server, editor, ws } = await connect(contentId, "base");
+      editor.ydoc.transact(
+        () => editor.ydoc.getText("markdown").insert(4, " edit"),
+        authored ? "editor" : HYDRATION_ORIGIN,
+      );
+      vi.advanceTimersByTime(BATCH_MS);
+      const original = updateWrites(ws, editor.docName).at(-1)!;
+      await editor.persistence.flush();
+      await editor.close();
+      const before = updateWrites(ws, editor.docName).length;
+      const restarted = openEditor(contentId);
+      const events = recordCoverage(restarted.docName);
+      server.attach(ws);
+      await restarted.hydrated;
+      const replay = events.find(
+        (entry) => entry.updateId === original.id && entry.coverage === "local",
+      );
+      expect(replay).toMatchObject({ authored });
+      expect(updateWrites(ws, restarted.docName)[before].id).toBe(original.id);
+      server.accept(ws);
+      server.checkpoint([ws]);
+      await restarted.close();
+    },
+  );
   it("restores an accepted delete-only edit after restart and replays it under its id once the buffer is lost", async () => {
     const { server, editor, ws } = await connect("fixture-9", "delete me");
     editor.ydoc.transact(
@@ -452,6 +481,50 @@ describe("unload warning", () => {
 });
 
 describe("device storage failure", () => {
+  it("replays original authored ids before derived state during a slow recovery retry", async () => {
+    const { server, editor, ws } = await connect("read-retry", "base");
+    editor.type(" authored");
+    vi.advanceTimersByTime(BATCH_MS);
+    const original = updateWrites(ws, editor.docName).at(-1)!;
+    await editor.persistence.flush();
+    await editor.close();
+    const read = vi.spyOn(IDBObjectStore.prototype, "getAll").mockImplementation(() => {
+      throw new DOMException("Device read failed", "UnknownError");
+    });
+    const restarted = openEditor("read-retry");
+    server.attach(ws);
+    await restarted.hydrated;
+    read.mockRestore();
+    restarted.ydoc.on("update", (_update, origin) => {
+      if (origin === HYDRATION_ORIGIN) vi.advanceTimersByTime(BATCH_MS);
+    });
+    const before = updateWrites(ws, restarted.docName).length;
+    await restarted.persistence.hydrate({ serverGeneration: GENERATION });
+    expect(updateWrites(ws, restarted.docName)[before].id).toBe(original.id);
+    server.accept(ws);
+    server.checkpoint([ws]);
+    await restarted.close();
+  });
+
+  it("keeps server saves working after a failed recovery read without claiming full coverage", async () => {
+    const read = vi.spyOn(IDBObjectStore.prototype, "getAll").mockImplementation(() => {
+      throw new DOMException("Device read failed", "UnknownError");
+    });
+    const { server, editor, ws } = await connect("read-failure", "base");
+    expect(getDeviceRecoveryState(editor.docName).storage).toBe("failed");
+    editor.type(" edit");
+    vi.advanceTimersByTime(BATCH_MS);
+    expect(updateWrites(ws, editor.docName)).toHaveLength(1);
+    server.accept(ws);
+    expect(server.doc.getText("markdown").toString()).toBe("base edit");
+    expect(realtimeMultiplexer.getDocState(editor.docName).coverageKnown).toBe(false);
+    read.mockRestore();
+    await editor.persistence.hydrate({ serverGeneration: GENERATION });
+    expect(realtimeMultiplexer.getDocState(editor.docName).coverageKnown).toBe(true);
+    server.checkpoint([ws]);
+    await editor.close();
+  });
+
   it("surfaces a failed write, never records the doc as saved on device, and recovers on the next write", async () => {
     const { server, editor, ws } = await connect("quota");
     const states: DeviceRecoveryState[] = [];

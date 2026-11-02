@@ -168,7 +168,13 @@ class UpdateBuffer:
         return total // BUCKET_COUNT
 
     async def admit(
-        self, head: BufferHead, *, update_id: str, update: bytes, actor_id: UUID
+        self,
+        head: BufferHead,
+        *,
+        update_id: str,
+        update: bytes,
+        actor_id: UUID,
+        markdown_changed: bool = False,
     ) -> AdmissionOutcome:
         """Append one update under ``head``, read under the caller's document lock.
 
@@ -200,6 +206,7 @@ class UpdateBuffer:
             budget // _ORGANIZATION_BUDGET_DIVISOR,
             EARLY_PENDING_BYTES,
             EARLY_PENDING_RECORDS,
+            int(markdown_changed),
         ]
         connection = self._valkey().client()
         try:

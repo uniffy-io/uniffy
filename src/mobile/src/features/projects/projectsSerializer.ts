@@ -163,6 +163,9 @@ export interface SerializedActivity {
   fieldId?: string;
   previousValue?: string;
   newValue?: string;
+  /** Set when an agent made the change for actorId. */
+  agentId?: string;
+  agentName?: string;
 }
 
 export interface ProjectStats {
@@ -195,22 +198,6 @@ const DEFAULT_PRIORITY_OPTIONS: PlainSelectOption[] = [
   { id: "priority_high", label: "High", color: "#ef4444", sortOrder: 2 },
   { id: "priority_urgent", label: "Urgent", color: "#dc2626", sortOrder: 3 },
 ];
-
-const ACTIVITY_LABELS: Record<string, string> = {
-  CREATED: "created this task",
-  STATUS_CHANGED: "changed status",
-  PRIORITY_CHANGED: "changed priority",
-  FIELD_UPDATED: "updated a field",
-  BLOCKED_BY_ADDED: "added a blocker",
-  BLOCKED_BY_REMOVED: "removed a blocker",
-  ASSIGNED: "changed assignees",
-  TYPE_CHANGED: "changed the type",
-  SPRINT_CHANGED: "changed the sprint",
-};
-
-export function activityActionLabel(action: string): string {
-  return ACTIVITY_LABELS[action] ?? "made a change";
-}
 
 function tsToIso(ts?: { seconds: bigint; nanos: number }): string | undefined {
   if (!ts) return undefined;
@@ -384,6 +371,8 @@ export function activityToPlain(activity: TaskActivity): SerializedActivity {
     fieldId: activity.fieldId,
     previousValue: activity.previousValue,
     newValue: activity.newValue,
+    agentId: activity.agentId,
+    agentName: activity.agentName,
   };
 }
 

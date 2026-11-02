@@ -22,6 +22,7 @@ from valkey.exceptions import ValkeyError
 
 from uniffy.core.jobs import JobEnqueueOutcome, JobRef, enqueue_job_reconnecting
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.realtime.adapter import stage_buffered_edits
 from uniffy.core.realtime.buffer import (
     BufferUnavailable,
     RecoveryReason,
@@ -148,13 +149,14 @@ def compact_checkpoint(checkpoint: bytes, tail: Sequence[BufferedUpdate]) -> tup
 
 
 async def stage_recovered(
-    _db: AsyncSession, row: RealtimeYjsSnapshot, updates: tuple[BufferedUpdate, ...]
+    db: AsyncSession, row: RealtimeYjsSnapshot, updates: tuple[BufferedUpdate, ...]
 ) -> None:
     """Fold a replaced epoch's provable prefix into the row; ``ensure_epoch`` commits it."""
     row.updates, row.state_vector = compact_checkpoint(row.updates, updates)
     row.revision += 1
     row.actor_id = updates[-1].actor_id
     row.updated_at = datetime.now(UTC)
+    await stage_buffered_edits(db, (row.content_type, row.content_id), row.organization_id, updates)
 
 
 def stage_checkpoint(
@@ -315,6 +317,7 @@ async def _store(capture: CheckpointCapture, updates: bytes, state_vector: bytes
             )
         ).scalar_one_or_none()
         if revision is not None:
+            await stage_buffered_edits(db, _key(scope), scope.organization_id, capture.updates)
             await db.commit()
         return revision
 

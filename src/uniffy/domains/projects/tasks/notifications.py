@@ -1,10 +1,12 @@
 """Task activity and notification side effects."""
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.acting_agent import current_acting_agent
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.events import (
     NotificationEvent,
@@ -15,11 +17,12 @@ from uniffy.core.events import (
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.models.projects.activity import TaskActivity
+from uniffy.core.models.projects.activity import TaskActivity, TaskActivityAction
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NotificationType
+from uniffy.domains.projects.tasks.description_activity import stage_description_edits
 from uniffy.domains.projects.watchers.operations import WatcherOperations
 
 
@@ -218,7 +221,7 @@ class TaskNotifications:
         self,
         task_id: UUID,
         actor_id: UUID,
-        action: str,
+        action: TaskActivityAction,
         field_id: str | None = None,
         previous_value: str | None = None,
         new_value: str | None = None,
@@ -226,11 +229,20 @@ class TaskNotifications:
         activity = TaskActivity(
             task_id=task_id,
             actor_id=actor_id,
+            agent_id=current_acting_agent(),
             action=action,
             field_id=field_id,
             previous_value=previous_value,
             new_value=new_value,
         )
         self.session.add(activity)
-        await self.session.flush()
         return activity
+
+    async def log_description_edit(self, task_id: UUID, actor_id: UUID) -> TaskActivity:
+        entries = await stage_description_edits(
+            self.session,
+            task_id,
+            [(actor_id, datetime.now(UTC))],
+            agent_id=current_acting_agent(),
+        )
+        return entries[0]

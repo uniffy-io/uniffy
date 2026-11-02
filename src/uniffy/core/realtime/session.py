@@ -55,6 +55,7 @@ from uniffy.core.realtime.storage import (
 )
 from uniffy.core.realtime.wire import (
     MAX_WIRE_STRING_BYTES,
+    MESSAGE_DERIVED_UPDATE,
     MESSAGE_QUERY_AWARENESS,
     MESSAGE_SEED_CAPABILITY,
     MESSAGE_SEED_UPDATE,
@@ -315,7 +316,7 @@ async def _dispatch_doc_frame(
     ):
         # The attaching SyncStep1 creates the handle and stays unthrottled.
         await handle.ws_session.resyncs.wait()
-    if kind != MESSAGE_UPDATE:
+    if kind not in (MESSAGE_UPDATE, MESSAGE_DERIVED_UPDATE):
         # Admission reads the writer's role under the document lock and applies it to the handle.
         await manager.access.recheck([session.key], handle.user_id)
     if handle.closed:
@@ -326,7 +327,7 @@ async def _dispatch_doc_frame(
             return
         handle.can_seed = bool(payload[1]) and handle.can_edit
         await manager.refresh_fragment_seeder(session)
-    elif kind in (MESSAGE_UPDATE, MESSAGE_SEED_UPDATE):
+    elif kind in (MESSAGE_UPDATE, MESSAGE_DERIVED_UPDATE, MESSAGE_SEED_UPDATE):
         await _handle_write(ws_session, session, handle, doc_name, payload, manager)
     elif kind == YMessageType.SYNC:
         await _handle_sync_frame(ws, session, handle, doc_name, payload, manager, attached=attached)
@@ -399,6 +400,7 @@ async def _handle_write(
                 source_conn_id=handle.conn_id,
                 generation=generation,
                 update_id=update_id,
+                authored=payload[0] == MESSAGE_UPDATE,
             )
             reply = (
                 create_committed_message(update_id)

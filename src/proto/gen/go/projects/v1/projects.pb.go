@@ -759,6 +759,18 @@ const (
 	ActivityAction_ACTIVITY_ACTION_TIME_LOGGED        ActivityAction = 10
 	ActivityAction_ACTIVITY_ACTION_TIME_UPDATED       ActivityAction = 11
 	ActivityAction_ACTIVITY_ACTION_TIME_REMOVED       ActivityAction = 12
+	ActivityAction_ACTIVITY_ACTION_TITLE_CHANGED      ActivityAction = 13
+	ActivityAction_ACTIVITY_ACTION_DESCRIPTION_EDITED ActivityAction = 14
+	ActivityAction_ACTIVITY_ACTION_START_DATE_CHANGED ActivityAction = 15
+	ActivityAction_ACTIVITY_ACTION_DUE_DATE_CHANGED   ActivityAction = 16
+	ActivityAction_ACTIVITY_ACTION_ESTIMATE_CHANGED   ActivityAction = 17
+	ActivityAction_ACTIVITY_ACTION_PARENT_CHANGED     ActivityAction = 18
+	ActivityAction_ACTIVITY_ACTION_RECURRENCE_CHANGED ActivityAction = 19
+	ActivityAction_ACTIVITY_ACTION_MILESTONE_CHANGED  ActivityAction = 20
+	ActivityAction_ACTIVITY_ACTION_TAGS_CHANGED       ActivityAction = 21
+	// On the blocking task: the change is recorded on both ends of the link.
+	ActivityAction_ACTIVITY_ACTION_BLOCKING_ADDED   ActivityAction = 22
+	ActivityAction_ACTIVITY_ACTION_BLOCKING_REMOVED ActivityAction = 23
 )
 
 // Enum value maps for ActivityAction.
@@ -777,6 +789,17 @@ var (
 		10: "ACTIVITY_ACTION_TIME_LOGGED",
 		11: "ACTIVITY_ACTION_TIME_UPDATED",
 		12: "ACTIVITY_ACTION_TIME_REMOVED",
+		13: "ACTIVITY_ACTION_TITLE_CHANGED",
+		14: "ACTIVITY_ACTION_DESCRIPTION_EDITED",
+		15: "ACTIVITY_ACTION_START_DATE_CHANGED",
+		16: "ACTIVITY_ACTION_DUE_DATE_CHANGED",
+		17: "ACTIVITY_ACTION_ESTIMATE_CHANGED",
+		18: "ACTIVITY_ACTION_PARENT_CHANGED",
+		19: "ACTIVITY_ACTION_RECURRENCE_CHANGED",
+		20: "ACTIVITY_ACTION_MILESTONE_CHANGED",
+		21: "ACTIVITY_ACTION_TAGS_CHANGED",
+		22: "ACTIVITY_ACTION_BLOCKING_ADDED",
+		23: "ACTIVITY_ACTION_BLOCKING_REMOVED",
 	}
 	ActivityAction_value = map[string]int32{
 		"ACTIVITY_ACTION_UNSPECIFIED":        0,
@@ -792,6 +815,17 @@ var (
 		"ACTIVITY_ACTION_TIME_LOGGED":        10,
 		"ACTIVITY_ACTION_TIME_UPDATED":       11,
 		"ACTIVITY_ACTION_TIME_REMOVED":       12,
+		"ACTIVITY_ACTION_TITLE_CHANGED":      13,
+		"ACTIVITY_ACTION_DESCRIPTION_EDITED": 14,
+		"ACTIVITY_ACTION_START_DATE_CHANGED": 15,
+		"ACTIVITY_ACTION_DUE_DATE_CHANGED":   16,
+		"ACTIVITY_ACTION_ESTIMATE_CHANGED":   17,
+		"ACTIVITY_ACTION_PARENT_CHANGED":     18,
+		"ACTIVITY_ACTION_RECURRENCE_CHANGED": 19,
+		"ACTIVITY_ACTION_MILESTONE_CHANGED":  20,
+		"ACTIVITY_ACTION_TAGS_CHANGED":       21,
+		"ACTIVITY_ACTION_BLOCKING_ADDED":     22,
+		"ACTIVITY_ACTION_BLOCKING_REMOVED":   23,
 	}
 )
 
@@ -3022,6 +3056,9 @@ type TaskActivity struct {
 	FieldId       *string                `protobuf:"bytes,6,opt,name=field_id,json=fieldId,proto3,oneof" json:"field_id,omitempty"`
 	PreviousValue *string                `protobuf:"bytes,7,opt,name=previous_value,json=previousValue,proto3,oneof" json:"previous_value,omitempty"`
 	NewValue      *string                `protobuf:"bytes,8,opt,name=new_value,json=newValue,proto3,oneof" json:"new_value,omitempty"`
+	// Set when an agent made the change for actor_id.
+	AgentId       *string `protobuf:"bytes,9,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
+	AgentName     *string `protobuf:"bytes,10,opt,name=agent_name,json=agentName,proto3,oneof" json:"agent_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3108,6 +3145,20 @@ func (x *TaskActivity) GetPreviousValue() string {
 func (x *TaskActivity) GetNewValue() string {
 	if x != nil && x.NewValue != nil {
 		return *x.NewValue
+	}
+	return ""
+}
+
+func (x *TaskActivity) GetAgentId() string {
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
+	}
+	return ""
+}
+
+func (x *TaskActivity) GetAgentName() string {
+	if x != nil && x.AgentName != nil {
+		return *x.AgentName
 	}
 	return ""
 }
@@ -8078,7 +8129,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"visibility\x12\x1d\n" +
 	"\n" +
 	"sort_order\x18\f \x01(\x05R\tsortOrderJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\n" +
-	"is_defaultR\vconfig_json\"\xdd\x02\n" +
+	"is_defaultR\vconfig_json\"\xbd\x03\n" +
 	"\fTaskActivity\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x19\n" +
@@ -8087,11 +8138,17 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1e\n" +
 	"\bfield_id\x18\x06 \x01(\tH\x00R\afieldId\x88\x01\x01\x12*\n" +
 	"\x0eprevious_value\x18\a \x01(\tH\x01R\rpreviousValue\x88\x01\x01\x12 \n" +
-	"\tnew_value\x18\b \x01(\tH\x02R\bnewValue\x88\x01\x01B\v\n" +
+	"\tnew_value\x18\b \x01(\tH\x02R\bnewValue\x88\x01\x01\x12\x1e\n" +
+	"\bagent_id\x18\t \x01(\tH\x03R\aagentId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"agent_name\x18\n" +
+	" \x01(\tH\x04R\tagentName\x88\x01\x01B\v\n" +
 	"\t_field_idB\x11\n" +
 	"\x0f_previous_valueB\f\n" +
 	"\n" +
-	"_new_value\"i\n" +
+	"_new_valueB\v\n" +
+	"\t_agent_idB\r\n" +
+	"\v_agent_name\"i\n" +
 	"\fSelectOption\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
@@ -8699,7 +8756,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x18ROADMAP_ZOOM_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10ROADMAP_ZOOM_DAY\x10\x01\x12\x15\n" +
 	"\x11ROADMAP_ZOOM_WEEK\x10\x02\x12\x16\n" +
-	"\x12ROADMAP_ZOOM_MONTH\x10\x03*\xd2\x03\n" +
+	"\x12ROADMAP_ZOOM_MONTH\x10\x03*\xf0\x06\n" +
 	"\x0eActivityAction\x12\x1f\n" +
 	"\x1bACTIVITY_ACTION_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ACTIVITY_ACTION_CREATED\x10\x01\x12\"\n" +
@@ -8714,7 +8771,18 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x1bACTIVITY_ACTION_TIME_LOGGED\x10\n" +
 	"\x12 \n" +
 	"\x1cACTIVITY_ACTION_TIME_UPDATED\x10\v\x12 \n" +
-	"\x1cACTIVITY_ACTION_TIME_REMOVED\x10\f2\x8d'\n" +
+	"\x1cACTIVITY_ACTION_TIME_REMOVED\x10\f\x12!\n" +
+	"\x1dACTIVITY_ACTION_TITLE_CHANGED\x10\r\x12&\n" +
+	"\"ACTIVITY_ACTION_DESCRIPTION_EDITED\x10\x0e\x12&\n" +
+	"\"ACTIVITY_ACTION_START_DATE_CHANGED\x10\x0f\x12$\n" +
+	" ACTIVITY_ACTION_DUE_DATE_CHANGED\x10\x10\x12$\n" +
+	" ACTIVITY_ACTION_ESTIMATE_CHANGED\x10\x11\x12\"\n" +
+	"\x1eACTIVITY_ACTION_PARENT_CHANGED\x10\x12\x12&\n" +
+	"\"ACTIVITY_ACTION_RECURRENCE_CHANGED\x10\x13\x12%\n" +
+	"!ACTIVITY_ACTION_MILESTONE_CHANGED\x10\x14\x12 \n" +
+	"\x1cACTIVITY_ACTION_TAGS_CHANGED\x10\x15\x12\"\n" +
+	"\x1eACTIVITY_ACTION_BLOCKING_ADDED\x10\x16\x12$\n" +
+	" ACTIVITY_ACTION_BLOCKING_REMOVED\x10\x172\x8d'\n" +
 	"\x0fProjectsService\x12V\n" +
 	"\rCreateProject\x12!.projects.v1.CreateProjectRequest\x1a\".projects.v1.CreateProjectResponse\x12M\n" +
 	"\n" +

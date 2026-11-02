@@ -18,6 +18,8 @@ import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
   REMOTE_ORIGIN,
   isRecoveryHydrated,
+  isRecoveryReady,
+  isPersistedOrigin,
   linkRecovery,
 } from "@/features/realtime/persistence/encryptedYjsPersistence";
 import {
@@ -30,6 +32,7 @@ import {
   MESSAGE_GENERATION,
   MESSAGE_SESSION_STATE,
   MESSAGE_UPDATE,
+  MESSAGE_DERIVED_UPDATE,
   NOT_A_MEMBER_CLOSE_REASON,
   UNAVAILABLE_REASON,
   UPDATE_CONFLICT_REASON,
@@ -140,12 +143,19 @@ export interface RealtimeDocState {
 
 /** One own update changed coverage. `local` carries the bytes a retry or recovery replays. */
 export type UpdateCoverageEvent =
-  | { updateId: string; coverage: "local"; editedAt: number; update: Uint8Array }
+  | {
+      updateId: string;
+      coverage: "local";
+      editedAt: number;
+      update: Uint8Array;
+      authored?: boolean;
+    }
   | { updateId: string; coverage: "accepted"; editedAt: number; receipt: ReceiptIdentity }
   | { updateId: string; coverage: "checkpointed"; editedAt: number };
 
 /** An uncheckpointed update kept by local recovery, handed back after a restart. */
 export interface RetainedUpdate {
+  authored?: boolean;
   updateId: string;
   update: Uint8Array;
   editedAt: number;
@@ -160,8 +170,14 @@ const DETACHED_DOC_STATE: RealtimeDocState = Object.freeze({
   coverageKnown: false,
 });
 
+interface UpdatePiece {
+  update: Uint8Array;
+  authored: boolean;
+}
+
 interface DocEntry {
-  localBatch: Uint8Array[];
+  localBatch: UpdatePiece[];
+  deferredSyncReply: Uint8Array | null;
   localBatchBytes: number;
   batchBoundary: number;
   batchTimer: ReturnType<typeof setTimeout> | null;
@@ -194,7 +210,7 @@ interface DocEntry {
   owesState: boolean;
   updateCounter: number;
   // Raw bytes per own update id until a checkpoint covers it, delete-only updates included.
-  retained: Map<string, Uint8Array>;
+  retained: Map<string, UpdatePiece>;
   coverage: UpdateCoverage;
   // Write and seed ids sent on this socket, oldest first. The server answers them in order, so a
   // denial without an id belongs to the head.
@@ -283,17 +299,24 @@ class RealtimeMultiplexer {
       rejected: false,
       syncDeadline: null,
       localBatch: [],
+      deferredSyncReply: null,
       localBatchBytes: 0,
       batchBoundary: 0,
       batchTimer: null,
       scheduleBatch: () => {
-        if (!entry.localBatch.length || entry.rejected || entry.denied) return;
+        if (
+          !entry.localBatch.length ||
+          entry.rejected ||
+          entry.denied ||
+          !isRecoveryReady(entry.docName)
+        )
+          return;
         if (entry.localBatchBytes > MAX_UPDATE_BYTES && entry.batchBoundary > 0) {
           // Separate prior edits without splitting this transaction's mirror updates.
           const transaction = entry.localBatch.splice(entry.batchBoundary);
           entry.flushBatch();
           entry.localBatch = transaction;
-          entry.localBatchBytes = transaction.reduce((sum, update) => sum + update.length, 0);
+          entry.localBatchBytes = transaction.reduce((sum, piece) => sum + piece.update.length, 0);
           entry.unsentSince = Date.now();
         }
         if (entry.localBatchBytes >= UPDATE_BATCH_BYTES || document.visibilityState === "hidden") {
@@ -307,8 +330,14 @@ class RealtimeMultiplexer {
       flushBatch: () => {
         if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
         entry.batchTimer = null;
-        if (!entry.localBatch.length) return;
-        this.queueUpdate(entry, Y.mergeUpdates(this.takeBatch(entry)), this.takeUnsentSince(entry));
+        if (!entry.localBatch.length || !isRecoveryReady(entry.docName)) return;
+        const pieces = this.takeBatch(entry);
+        this.queueUpdate(
+          entry,
+          Y.mergeUpdates(pieces.map((piece) => piece.update)),
+          this.takeUnsentSince(entry),
+          pieces.some((piece) => piece.authored),
+        );
       },
       docName,
       organizationId: opts.organizationId,
@@ -342,12 +371,12 @@ class RealtimeMultiplexer {
         // Skip echoes of frames we just applied from the wire.
         if (origin === REMOTE_ORIGIN) return;
         if (entry.rejected || entry.denied) {
-          this.queueUpdate(entry, update, Date.now());
+          this.queueUpdate(entry, update, Date.now(), isPersistedOrigin(origin));
           return;
         }
         // Read-only docs never push state. IDB hydration replays of
         // server-known content would otherwise leave as write frames.
-        entry.localBatch.push(update);
+        entry.localBatch.push({ update, authored: isPersistedOrigin(origin) });
         entry.localBatchBytes += update.length;
         entry.unsentSince ??= Date.now();
         if (!entry.state.transportPending) this.publishState(entry);
@@ -975,6 +1004,10 @@ class RealtimeMultiplexer {
   // ids through coverage, and a Yjs reply always repeats the whole delete set, so only a doc that
   // owes state gets the full reply. Otherwise the answer is the unsent local batch.
   private answerSyncStep1(entry: DocEntry, replyBytes: Uint8Array): void {
+    if (!isRecoveryReady(entry.docName)) {
+      entry.deferredSyncReply = replyBytes;
+      return;
+    }
     const owed = entry.owesState;
     entry.owesState = false;
     if (!owed || entry.readOnly || isNoopSyncStep2(replyBytes)) {
@@ -989,10 +1022,15 @@ class RealtimeMultiplexer {
     if (entry.batchTimer !== null) clearTimeout(entry.batchTimer);
     entry.batchTimer = null;
     const updates = this.takeBatch(entry);
-    this.queueUpdate(entry, Y.mergeUpdates([...updates, update]), this.takeUnsentSince(entry));
+    this.queueUpdate(
+      entry,
+      Y.mergeUpdates([...updates.map((piece) => piece.update), update]),
+      this.takeUnsentSince(entry),
+      updates.some((piece) => piece.authored),
+    );
   }
 
-  private takeBatch(entry: DocEntry): Uint8Array[] {
+  private takeBatch(entry: DocEntry): UpdatePiece[] {
     const updates = entry.localBatch;
     entry.localBatch = [];
     entry.localBatchBytes = 0;
@@ -1017,9 +1055,15 @@ class RealtimeMultiplexer {
     this.publishState(entry);
   }
 
-  private queueUpdate(entry: DocEntry, update: Uint8Array, editedAt: number): void {
+  private queueUpdate(
+    entry: DocEntry,
+    update: Uint8Array,
+    editedAt: number,
+    authored: boolean,
+  ): void {
     let localBytes = update.length;
-    for (const id of entry.coverage.localIds()) localBytes += entry.retained.get(id)?.length ?? 0;
+    for (const id of entry.coverage.localIds())
+      localBytes += entry.retained.get(id)?.update.length ?? 0;
     if (entry.rejected || update.length > MAX_UPDATE_BYTES || localBytes > MAX_LOCAL_BYTES) {
       // The edit stays in the Y.Doc and local recovery; transport drops it.
       entry.unsentSince = Math.min(entry.unsentSince ?? editedAt, editedAt);
@@ -1027,15 +1071,21 @@ class RealtimeMultiplexer {
       return;
     }
     const id = entry.ydoc.guid + ":" + ++entry.updateCounter;
-    entry.retained.set(id, update);
+    entry.retained.set(id, { update, authored });
     this.applyCoverage(entry, entry.coverage.add(id, editedAt));
   }
 
   private restorePending(entry: DocEntry, updates: readonly RetainedUpdate[]): void {
-    for (const { updateId, update, editedAt, receipt } of updates) {
+    for (const { updateId, update, editedAt, receipt, authored } of updates) {
       if (entry.retained.has(updateId)) continue;
-      entry.retained.set(updateId, update);
+      entry.retained.set(updateId, { update, authored: authored === true });
       this.applyCoverage(entry, entry.coverage.add(updateId, editedAt, receipt));
+    }
+    if (isRecoveryReady(entry.docName)) {
+      const reply = entry.deferredSyncReply;
+      entry.deferredSyncReply = null;
+      if (reply) this.answerSyncStep1(entry, reply);
+      else entry.flushBatch();
     }
     // An empty restore still reports that local recovery has read this device.
     this.publishState(entry);
@@ -1051,7 +1101,7 @@ class RealtimeMultiplexer {
       if (transition.coverage !== "local") {
         for (const listener of listeners) listener(transition);
       } else if (update) {
-        for (const listener of listeners) listener({ ...transition, update });
+        for (const listener of listeners) listener({ ...transition, ...update });
         this.sendUpdate(entry, transition.updateId, update);
       }
     }
@@ -1063,14 +1113,14 @@ class RealtimeMultiplexer {
     if (update) this.sendUpdate(entry, id, update);
   }
 
-  private sendUpdate(entry: DocEntry, id: string, update: Uint8Array): void {
+  private sendUpdate(entry: DocEntry, id: string, piece: UpdatePiece): void {
     if (entry.generation === null || entry.readOnly || entry.rejected || entry.conflicted.has(id))
       return;
     const encoder = encoding.createEncoder();
-    encoding.writeVarUint(encoder, MESSAGE_UPDATE);
+    encoding.writeVarUint(encoder, piece.authored ? MESSAGE_UPDATE : MESSAGE_DERIVED_UPDATE);
     encoding.writeVarString(encoder, entry.generation);
     encoding.writeVarString(encoder, id);
-    encoding.writeVarUint8Array(encoder, update);
+    encoding.writeVarUint8Array(encoder, piece.update);
     if (this.sendForDoc(entry.docName, encoding.toUint8Array(encoder))) entry.awaiting.push(id);
   }
 

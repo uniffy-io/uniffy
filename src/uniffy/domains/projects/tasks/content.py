@@ -14,6 +14,7 @@ from uniffy.core.auth.permissions.defaults import (
 from uniffy.core.content.base_operations import BaseContentOperations
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.core.models.tags.tag import Tag
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import (
@@ -21,6 +22,7 @@ from uniffy.core.types import (
     ContentType,
 )
 from uniffy.domains.projects.registration import register_project_content
+from uniffy.domains.projects.tasks.activity import TaskActivityRecorder
 from uniffy.domains.tags.operations import TagOperations
 
 logger = logger.bind(component="projects.tasks.content")
@@ -87,17 +89,45 @@ class TaskContentOperations(BaseContentOperations[Task]):
         actor_id: UUID,
         task: Task,
         tag_ids: list[UUID] | None,
+        record_activity: bool = False,
     ) -> None:
         """``tag_ids=None`` leaves manual assignments untouched."""
         if tag_ids is None:
             return
         tag_ops = TagOperations(self.session, self.search_indexer)
-        await tag_ops.replace_manual_tags(
+        content_urn = build_content_urn(self.content_type, task.id)
+        if not record_activity:
+            await tag_ops.replace_manual_tags(
+                actor_id=actor_id,
+                organization_id=task.organization_id,
+                content_urn=content_urn,
+                tag_ids=tag_ids,
+            )
+            return
+        staged = await tag_ops.stage_manual_tags(
             actor_id=actor_id,
             organization_id=task.organization_id,
-            content_urn=build_content_urn(self.content_type, task.id),
+            content_urn=content_urn,
             tag_ids=tag_ids,
         )
+        if not staged.affected_tag_ids:
+            return
+        changed = set(staged.added_tag_ids) | set(staged.removed_tag_ids)
+        names = dict(
+            (await self.session.execute(select(Tag.id, Tag.name).where(Tag.id.in_(changed)))).all()
+        )
+        await TaskActivityRecorder(self.session).tags(
+            task.id,
+            actor_id,
+            added=[names[tid] for tid in staged.added_tag_ids if tid in names],
+            removed=[names[tid] for tid in staged.removed_tag_ids if tid in names],
+        )
+        try:
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await tag_ops.finish_manual_tags_after_commit(staged)
 
     async def _resolve_role(
         self,

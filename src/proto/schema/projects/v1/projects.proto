@@ -226,6 +226,18 @@ enum ActivityAction {
   ACTIVITY_ACTION_TIME_LOGGED = 10;
   ACTIVITY_ACTION_TIME_UPDATED = 11;
   ACTIVITY_ACTION_TIME_REMOVED = 12;
+  ACTIVITY_ACTION_TITLE_CHANGED = 13;
+  ACTIVITY_ACTION_DESCRIPTION_EDITED = 14;
+  ACTIVITY_ACTION_START_DATE_CHANGED = 15;
+  ACTIVITY_ACTION_DUE_DATE_CHANGED = 16;
+  ACTIVITY_ACTION_ESTIMATE_CHANGED = 17;
+  ACTIVITY_ACTION_PARENT_CHANGED = 18;
+  ACTIVITY_ACTION_RECURRENCE_CHANGED = 19;
+  ACTIVITY_ACTION_MILESTONE_CHANGED = 20;
+  ACTIVITY_ACTION_TAGS_CHANGED = 21;
+  // On the blocking task: the change is recorded on both ends of the link.
+  ACTIVITY_ACTION_BLOCKING_ADDED = 22;
+  ACTIVITY_ACTION_BLOCKING_REMOVED = 23;
 }
 
 // ============================================================================
@@ -477,6 +489,9 @@ message TaskActivity {
   optional string field_id = 6;
   optional string previous_value = 7;
   optional string new_value = 8;
+  // Set when an agent made the change for actor_id.
+  optional string agent_id = 9;
+  optional string agent_name = 10;
 }
 
 message SelectOption {

@@ -95,6 +95,7 @@ if not (watermark and byte_limit and record_limit and budget and delay and max_r
     and organization_limit and early_bytes and early_records)
     or #update_id == 0 or #update_id > max_id or #update == 0 or #update > max_record
     or #digest ~= 64 or not string.match(digest, '^%x+$') or #actor ~= 36
+    or (ARGV[17] ~= '0' and ARGV[17] ~= '1')
     or not organization_field(member) then
   return {'type_error'}
 end
@@ -135,7 +136,7 @@ end
 local now_ms = clock_ms()
 local seq = head + 1
 local appended = redis.pcall('XADD', stream, string.format('%d-0', seq), 'i', update_id,
-  'u', update, 'a', actor, 't', string.format('%d', now_ms), 'v', ARGV[13])
+  'u', update, 'a', actor, 't', string.format('%d', now_ms), 'v', ARGV[13], 'm', ARGV[17])
 if type(appended) == 'table' and appended['err'] then
   return {'recovery_required'}
 end

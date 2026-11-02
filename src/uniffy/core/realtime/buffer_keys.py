@@ -210,6 +210,7 @@ class BufferedUpdate:
     update: bytes
     actor_id: UUID
     accepted_at_ms: int
+    markdown_changed: bool = False
 
 
 def merge_tail(checkpoint: bytes, tail: Sequence[BufferedUpdate]) -> bytes:
@@ -299,6 +300,7 @@ def parse_record(entry_id: bytes, fields: dict[bytes, bytes]) -> BufferedUpdate 
             update=fields[b"u"],
             actor_id=UUID(fields[b"a"].decode()),
             accepted_at_ms=int(fields[b"t"]),
+            markdown_changed=fields.get(b"m") == b"1",
         )
     except KeyError, ValueError:
         return None
