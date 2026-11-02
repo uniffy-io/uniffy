@@ -382,15 +382,16 @@ direct media), nothing changes anywhere.
 
 ## Calls: web background blur
 
-- [ ] In prejoin, choose Background > Blur and enable camera. Preview blurs surroundings while keeping person visible. Repeat at 375px, 768px and 1024px.
-- [ ] Join with a second user. Confirm remote video receives blur from its first frame. Toggle Off/Blur under More > Audio and camera settings.
+- [ ] In prejoin, press the blur button in the preview controls and enable camera. Preview blurs surroundings while keeping person visible. Repeat at 375px, 768px and 1024px.
+- [ ] Join with a second user. Confirm remote video receives blur from its first frame. Toggle Blur background under More > Audio and camera settings.
 - [ ] Switch cameras, turn camera off/on, reconnect and reload into a live call. Selected blur remains applied. Screen sharing stays unaffected.
 - [ ] Cancel prejoin or leave while blur initializes. Camera capture stops and no late track publishes.
-- [ ] Block model or WASM loading. Selected blur keeps camera off and explains failure. Explicitly choose Off to use unblurred camera.
+- [ ] Block model or WASM loading. Selected blur keeps camera off and explains failure. Explicitly turn blur off to use unblurred camera.
 - [ ] Stall model loading. Cancel camera setup or wait for timeout, then retry with blur off. Camera controls respond without waiting for stalled request. Late initialization must not publish video.
 - [ ] In a town hall, remove then restore speaker permission while camera is on. Camera stays off when changing blur or device. Camera-on button starts video on first click.
-- [ ] Select Blur in prejoin, active device settings and Calls settings. Notice explains local processing, slower performance, device heat and battery use. Check at 375px, 768px and 1024px.
-- [ ] On unsupported browser, Blur explains unavailability. A saved Blur preference must never silently publish raw video.
+- [ ] Toggle blur from the prejoin preview controls, the in-call Audio and camera settings, and Calls settings. Calls settings notes that blur runs on the device and uses more battery. Check at 375px, 768px and 1024px.
+- [ ] Switch blur strength between Light, Medium and Strong from the prejoin preview, the in-call settings and Calls settings. The live preview and remote video change without the camera restarting. Strong hides objects in the room. The choice survives a reload.
+- [ ] On unsupported browser, blur controls are disabled and explain unavailability. A saved Blur preference must never silently publish raw video.
 - [ ] Verify processing assets load from deployment origin with external network access blocked. Inspect both development and production builds.
 - [ ] Check person edges, movement, low light and sustained performance on slower hardware. Blur is approximate and can include nearby people.
 

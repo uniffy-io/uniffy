@@ -1,9 +1,8 @@
 import { createLocalVideoTrack, type LocalVideoTrack } from "livekit-client";
 
-export const BLUR_FAILURE =
-  "Background blur failed. Camera is off. Retry or turn blur off to use your camera.";
+export const BLUR_FAILURE = "Background blur stopped working. Turn blur off to use your camera.";
 export const BLUR_UNSUPPORTED =
-  "Background blur is unavailable in this browser. Camera stays off while blur is selected.";
+  "This browser can't blur your background. Turn blur off to use your camera.";
 
 export class BackgroundBlurError extends Error {}
 

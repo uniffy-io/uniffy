@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BlurTransformer } from "@/features/calls/utils/blurProcessor";
+import {
+  DEFAULT_BLUR_STRENGTH,
+  activeBlurRadius,
+  setActiveBlurStrength,
+} from "@/features/calls/utils/blurStrength";
 
 describe("blur frame privacy", () => {
   afterEach(() => {
+    setActiveBlurStrength(DEFAULT_BLUR_STRENGTH);
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -17,12 +23,14 @@ describe("blur frame privacy", () => {
       close: vi.fn(),
     };
     transformer.canvas = canvas as OffscreenCanvas;
-    transformer.gl = {
+    const gl = {
+      setBlurRadius: vi.fn(),
       updateMask: vi.fn(),
       renderFrame: vi.fn(() => {
         if (failure === "render") throw new Error("context lost");
       }),
-    } as unknown as NonNullable<typeof transformer.gl>;
+    };
+    transformer.gl = gl as unknown as NonNullable<typeof transformer.gl>;
     transformer.imageSegmenter = {
       segmentForVideo: vi.fn((_frame, _time, callback) => {
         if (failure === "segment") throw new Error("GPU unavailable");
@@ -45,7 +53,7 @@ describe("blur frame privacy", () => {
         constructor(public source: unknown) {}
       },
     );
-    return { transformer, failed, ready, frame, controller, result, canvas };
+    return { transformer, failed, ready, frame, controller, result, canvas, gl };
   }
 
   it("emits processed pixels from first frame, never a camera clone", async () => {
@@ -96,5 +104,25 @@ describe("blur frame privacy", () => {
     expect(controller.enqueue.mock.calls.length).toBeLessThanOrEqual(24);
     expect(controller.enqueue.mock.calls.length).toBeGreaterThan(0);
     expect(frame.close).toHaveBeenCalledTimes(60);
+  });
+
+  it("applies a strength change to the running processor once", async () => {
+    const { transformer, frame, controller, gl } = setup();
+    const clock = vi.spyOn(performance, "now");
+    const run = async (at: number) => {
+      clock.mockReturnValue(at);
+      await transformer.transform(
+        frame as unknown as VideoFrame,
+        controller as unknown as TransformStreamDefaultController<VideoFrame>,
+      );
+    };
+    await run(0);
+    expect(gl.setBlurRadius).not.toHaveBeenCalled();
+    setActiveBlurStrength("light");
+    await run(100);
+    await run(200);
+    expect(gl.setBlurRadius).toHaveBeenCalledOnce();
+    expect(gl.setBlurRadius).toHaveBeenCalledWith(activeBlurRadius());
+    expect(controller.enqueue).toHaveBeenCalledTimes(3);
   });
 });

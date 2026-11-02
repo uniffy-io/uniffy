@@ -3,6 +3,7 @@ import {
   ProcessorWrapper,
   supportsBackgroundProcessors,
 } from "@livekit/track-processors";
+import { activeBlurRadius } from "@/features/calls/utils/blurStrength";
 
 export function blurSupported(): boolean {
   return supportsBackgroundProcessors();
@@ -11,13 +12,14 @@ export function blurSupported(): boolean {
 // Upstream's transform emits a raw startup frame. Every emitted frame here must have a mask.
 export class BlurTransformer extends BackgroundTransformer {
   private nextFrameAt = 0;
+  private appliedRadius = activeBlurRadius();
 
   constructor(
     private readonly failed: () => void,
     private readonly ready: () => void,
   ) {
     super({
-      blurRadius: 12,
+      blurRadius: activeBlurRadius(),
       assetPaths: {
         tasksVisionFileSet: "/background-blur/vision-0.10.14",
         modelAssetPath: "/background-blur/selfie_segmenter.tflite",
@@ -35,6 +37,11 @@ export class BlurTransformer extends BackgroundTransformer {
       const { canvas, gl } = this;
       if (canvas.width !== frame.displayWidth) canvas.width = frame.displayWidth;
       if (canvas.height !== frame.displayHeight) canvas.height = frame.displayHeight;
+      const radius = activeBlurRadius();
+      if (radius !== this.appliedRadius) {
+        gl.setBlurRadius(radius);
+        this.appliedRadius = radius;
+      }
       this.imageSegmenter.segmentForVideo(frame, now, (result) => {
         try {
           if (!result.categoryMask) throw new Error("Blur mask is unavailable");

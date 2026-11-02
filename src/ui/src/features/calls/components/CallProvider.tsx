@@ -47,6 +47,7 @@ import {
 } from "@/features/calls/store/callPreferencesSlice";
 import { CameraController } from "@/features/calls/utils/cameraController";
 import { BLUR_FAILURE, type CameraOptions } from "@/features/calls/utils/cameraTrack";
+import { DEFAULT_BLUR_STRENGTH, setActiveBlurStrength } from "@/features/calls/utils/blurStrength";
 import { callsApi } from "@/features/calls/api/callsApi";
 import { resolveSignalingUrl } from "@/features/calls/utils/signalingUrl";
 import { buildRtcConfiguration } from "@/features/calls/utils/iceConfig";
@@ -208,6 +209,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const orgIdRef = useRef(currentOrgId);
   orgIdRef.current = currentOrgId;
   /* eslint-enable react/react-compiler */
+  const blurStrength = preferences.backgroundBlurStrength ?? DEFAULT_BLUR_STRENGTH;
+  useEffect(() => setActiveBlurStrength(blurStrength), [blurStrength]);
   const rejoiningRef = useRef(false);
   const everConnectedRef = useRef(false);
   const connectedAtRef = useRef(0);

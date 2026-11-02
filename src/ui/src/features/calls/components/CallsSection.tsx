@@ -13,7 +13,13 @@ import {
   speakerSelectionSupported,
 } from "@/features/calls/utils/deviceOptions";
 import { cn } from "@/shared/utils/cn";
-import { BackgroundSettings } from "@/features/calls/components/BackgroundSettings";
+import {
+  BLUR_COST_HINT,
+  BLUR_STRENGTH_HINT,
+  BLUR_UNSUPPORTED_HINT,
+  useBackgroundBlur,
+} from "@/features/calls/hooks/useBackgroundBlur";
+import { BlurStrengthControl } from "@/features/calls/components/BlurStrengthControl";
 import {
   audioInputSelected,
   audioOutputSelected,
@@ -28,6 +34,14 @@ export function CallsSection() {
   const dispatch = useAppDispatch();
   const preferences = useAppSelector(selectCallPreferences);
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
+  const {
+    blur,
+    supported: blurSupported,
+    available: blurAvailable,
+    setBlur,
+    strength: blurStrength,
+    setStrength: setBlurStrength,
+  } = useBackgroundBlur();
   const [error, setError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const revealDevices = async () => {
@@ -51,19 +65,26 @@ export function CallsSection() {
       label: "Incoming ringtone",
       description: "Play a sound when someone calls you.",
       checked: preferences.ringtoneEnabled,
-      change: ringtoneToggled,
+      onChange: (value: boolean) => dispatch(ringtoneToggled(value)),
     },
     {
       label: "Join muted",
       description: "Start with microphone off. You can change this before joining.",
       checked: preferences.joinMuted ?? true,
-      change: joinMutedChanged,
+      onChange: (value: boolean) => dispatch(joinMutedChanged(value)),
     },
     {
       label: "Start with camera on",
       description: "Show camera preview before joining and start with video enabled.",
       checked: preferences.cameraOn ?? false,
-      change: cameraOnChanged,
+      onChange: (value: boolean) => dispatch(cameraOnChanged(value)),
+    },
+    {
+      label: "Blur background",
+      description: blurSupported === false ? BLUR_UNSUPPORTED_HINT : BLUR_COST_HINT,
+      checked: blur,
+      onChange: setBlur,
+      disabled: !blurAvailable,
     },
   ];
   const devices = [
@@ -96,7 +117,7 @@ export function CallsSection() {
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Ringing and joining</h2>
         <Card tone="surface" className="space-y-4 p-4">
-          {toggles.map(({ label, description, checked, change }, index) => (
+          {toggles.map(({ label, description, checked, onChange, disabled }, index) => (
             <div
               key={label}
               className={cn(
@@ -110,11 +131,23 @@ export function CallsSection() {
               </div>
               <ToggleSwitch
                 enabled={checked}
-                onChange={(value) => dispatch(change(value))}
+                onChange={onChange}
+                disabled={disabled}
                 ariaLabel={label}
               />
             </div>
           ))}
+          {blur && (
+            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border pt-4">
+              <div>
+                <div className="font-medium text-foreground">Blur strength</div>
+                <div className="text-sm font-medium text-muted-foreground">
+                  {BLUR_STRENGTH_HINT}
+                </div>
+              </div>
+              <BlurStrengthControl value={blurStrength} onChange={setBlurStrength} />
+            </div>
+          )}
         </Card>
       </section>
 
@@ -126,7 +159,6 @@ export function CallsSection() {
           </p>
         </div>
         <Card tone="surface" className="space-y-4 p-4">
-          <BackgroundSettings />
           {devices.map(({ label, items, value, change }) => {
             const managedByBrowser = label === "Speaker" && !speakerSelectionSupported;
             return (

@@ -9,6 +9,7 @@ import {
   VideoCamera,
   VideoCameraSlash,
   Presentation,
+  UserFocus,
   UsersThree,
   Warning,
 } from "@phosphor-icons/react";
@@ -21,7 +22,11 @@ import { popoverShellClass } from "@/components/ui/popover";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import { SubjectAvatarById } from "@/components/subject";
-import { callControlClass, callControlOffClass } from "@/features/calls/components/controlChrome";
+import {
+  callControlActiveClass,
+  callControlClass,
+  callControlOffClass,
+} from "@/features/calls/components/controlChrome";
 import {
   deviceOptions,
   selectedDevice,
@@ -43,7 +48,8 @@ import {
 import { getChannelDisplayName } from "@/features/chat/utils/channelDisplay";
 import type { LocalVideoTrack } from "livekit-client";
 import { createCameraTrack, BLUR_FAILURE } from "@/features/calls/utils/cameraTrack";
-import { BackgroundSettings } from "@/features/calls/components/BackgroundSettings";
+import { BLUR_UNSUPPORTED_HINT, useBackgroundBlur } from "@/features/calls/hooks/useBackgroundBlur";
+import { BlurStrengthControl } from "@/features/calls/components/BlurStrengthControl";
 
 function MicLevelMeter({ stream }: { stream: MediaStream | null }) {
   const [level, setLevel] = useState(0);
@@ -146,6 +152,14 @@ function PreJoinContent() {
   }, [channelId, activeCall, callId, dispatch]);
   const userName = useAppSelector((s) => s.auth.user?.fullName ?? "");
   const { audioInputs, videoInputs, audioOutputs, refresh } = useDevices();
+  const {
+    blur,
+    supported: blurSupported,
+    available: blurAvailable,
+    setBlur,
+    strength: blurStrength,
+    setStrength: setBlurStrength,
+  } = useBackgroundBlur();
 
   const [micOn, setMicOn] = useState(!(preferences.joinMuted ?? true));
   const [camOn, setCamOn] = useState(preferences.cameraOn ?? false);
@@ -339,7 +353,7 @@ function PreJoinContent() {
   const channelName = channel ? getChannelDisplayName(channel) : "this channel";
 
   return (
-    <Modal onClose={close} closeDisabled={joining} maxWidth="max-w-md">
+    <Modal onClose={close} closeDisabled={joining} maxWidth="max-w-xl">
       <div data-testid="call-prejoin">
         <ModalHeader
           title={
@@ -397,7 +411,6 @@ function PreJoinContent() {
               </div>
             </div>
           )}
-          <BackgroundSettings disabled={joining || audience} />
           {audience && (
             <p role="status" className="text-sm text-muted-foreground">
               {AUDIENCE_MESSAGE}
@@ -419,6 +432,13 @@ function PreJoinContent() {
                 size="lg"
                 className="h-16 w-16 text-xl"
                 maxScale={1.6}
+              />
+            )}
+            {blur && !audience && (
+              <BlurStrengthControl
+                value={blurStrength}
+                onChange={setBlurStrength}
+                className={cn(popoverShellClass, "absolute right-2 top-2 border-0")}
               />
             )}
             <div
@@ -450,6 +470,24 @@ function PreJoinContent() {
                 data-testid="call-prejoin-camera-toggle"
               >
                 {camOn && !audience ? <VideoCamera size={16} /> : <VideoCameraSlash size={16} />}
+              </button>
+              <button
+                type="button"
+                disabled={audience || joining || !blurAvailable}
+                onClick={() => setBlur(!blur)}
+                className={cn(callControlClass(), blur && !audience && callControlActiveClass)}
+                aria-label={blur ? "Turn off background blur" : "Blur background"}
+                aria-pressed={blur && !audience}
+                title={
+                  blurSupported === false && !blur
+                    ? BLUR_UNSUPPORTED_HINT
+                    : blur
+                      ? "Turn off background blur"
+                      : "Blur background"
+                }
+                data-testid="call-prejoin-blur-toggle"
+              >
+                <UserFocus size={16} />
               </button>
             </div>
           </div>
