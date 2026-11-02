@@ -260,7 +260,7 @@ function filterValueToProto(value: ViewFilterValue): FilterValueInit {
   }
 }
 
-function filterGroupToProto(group: ViewFilterGroup): FilterGroupInit {
+export function filterGroupToProto(group: ViewFilterGroup): FilterGroupInit {
   return {
     logic: group.logic,
     nodes: group.nodes.map((node) =>

@@ -11,6 +11,7 @@ import {
   fetchProjects,
   fetchProject,
   fetchProjectTasks,
+  searchProjectTasks,
   fetchTask,
   createProject,
   updateProject,
@@ -294,6 +295,12 @@ export const projectsSlice = createSlice({
         });
         const { arg } = action.meta;
         state.taskListLoadedIds[typeof arg === "string" ? arg : arg.projectId] = true;
+      })
+      .addCase(searchProjectTasks.fulfilled, (state, action) => {
+        action.payload.forEach((task) => {
+          if (!state.projects[task.projectId] && state.projectsListed) return;
+          acceptServerTask(state, task);
+        });
       })
       .addCase(fetchProjectTasks.rejected, (state, action) => {
         // A superseded load settles after its replacement started; its outcome is not this state's.

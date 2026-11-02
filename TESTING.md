@@ -2815,6 +2815,27 @@ shell`, since no screen assigns semantics.
       tapping the key opens the parent. In selection mode the key does not open anything.
 - [ ] Mobile board shows subtask cards with the parent key; mobile backlog and roadmap rows show the
       Blocked marker on the same tasks as web.
+
+## Projects: picking blockers
+
+Needs a project with an epic, a story under it with two subtasks, a second story under the same
+epic, and a few unrelated tasks, some done.
+
+- [ ] `(both products)` Web: open a subtask, Add blocker. With nothing typed the list has sections
+      in this order: Same parent (its sibling), Same epic (the other story and its children),
+      Recently updated, Other tasks. Done tasks sit last inside each section, and every child row
+      names its parent.
+- [ ] Typing a title fragment, `#12`, or the `KEY-12` key narrows the list without losing the
+      sections. Pick the sibling: it shows under Blocked By, and the database row lists it.
+- [ ] Open the sibling: the task now waiting on it shows under Blocks and is not offered in its
+      picker.
+- [ ] Insert a task straight into `projects_tasks` (so the open page never loads it) and type its
+      title: it appears after a moment, fetched by the picker's server search.
+- [ ] Remove the only blocker, reload: Blocked By stays empty and the database row holds `[]`.
+- [ ] The picker fits at 768px and 375px with rows at least 44px tall, and reads correctly in dark
+      mode.
+- [ ] Mobile: the Blocked by sheet shows Selected first, then the same sections; `12` alone matches
+      task #12; toggling the last blocker off saves.
 ## Projects: table sort, assignee filter and large projects
 
 A project with tasks in every status and priority, assigned to at least three people (one task with

@@ -150,6 +150,14 @@ export function TaskDetailScreen() {
     () => (taskId ? collectDescendantIds(allTasks, taskId) : []),
     [allTasks, taskId],
   );
+  // A task already waiting on this one would close a loop the server refuses.
+  const blockerExcludeIds = useMemo(
+    () =>
+      taskId
+        ? [taskId, ...allTasks.filter((t) => t.blockedByTaskIds.includes(taskId)).map((t) => t.id)]
+        : [],
+    [allTasks, taskId],
+  );
 
   if (taskQuery.isLoading) {
     return (
@@ -778,8 +786,9 @@ export function TaskDetailScreen() {
         onClose={() => setSheet(null)}
         title="Blocked by"
         tasks={allTasks}
-        excludeIds={[task.id]}
+        excludeIds={blockerExcludeIds}
         selectedIds={task.blockedByTaskIds}
+        rankAgainst={task}
         multi
         accentColor={T.accent}
         onToggle={toggleBlocker}

@@ -12,6 +12,9 @@ import {
   FieldType as ProtoFieldType,
   ActivityAction as ProtoActivityAction,
   ViewIdFlag as ProtoViewIdFlag,
+  FilterLogic as ProtoFilterLogic,
+  TaskFilterOperator as ProtoTaskFilterOperator,
+  TaskPseudoField as ProtoTaskPseudoField,
   type ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
@@ -36,16 +39,22 @@ import type {
   UpdateSprintRequest as FrontendUpdateSprintRequest,
   StartSprintRequest as FrontendStartSprintRequest,
 } from "../types/project";
+import { SYSTEM_FIELD_IDS } from "../types/fields";
 import type { FieldDefinition, FieldType, FieldValue } from "../types/fields";
 import type {
   ViewCatalog,
   ViewConfig,
   ViewDefinition,
   ViewFieldCapabilities,
+  ViewFilterNode,
   ViewIdFlag,
 } from "../types/views";
 import type { TaskActivity, ActivityAction } from "../types/activity";
-import { frontendViewDefinitionToProto, protoViewConfigToFrontend } from "./viewConverters";
+import {
+  filterGroupToProto,
+  frontendViewDefinitionToProto,
+  protoViewConfigToFrontend,
+} from "./viewConverters";
 
 const projectsClient = createClient(ProjectsService, unaryTransport);
 const projectsStreamClient = createClient(ProjectsService, transport);
@@ -434,6 +443,50 @@ export const projectsApi = {
     return {
       tasks: protoTasks.map(protoTaskToFrontend),
       protoTasks,
+    };
+  },
+
+  /** One page of a project's tasks whose title contains the query, or whose number equals it. */
+  searchTasks: async (
+    projectId: string,
+    organizationId: string,
+    query: string,
+    options: { limit: number; signal?: AbortSignal },
+  ): Promise<{ tasks: Task[]; protoTasks: ProtoTask[] }> => {
+    const text = query.trim();
+    const nodes: ViewFilterNode[] = [
+      {
+        kind: "condition",
+        condition: {
+          field: { kind: "field", fieldId: SYSTEM_FIELD_IDS.TITLE },
+          operator: ProtoTaskFilterOperator.CONTAINS,
+          value: { kind: "text", text },
+        },
+      },
+    ];
+    const number = /^#?(\d+)$/.exec(text) ?? /-(\d+)$/.exec(text);
+    if (number) {
+      nodes.push({
+        kind: "condition",
+        condition: {
+          field: { kind: "pseudo", pseudo: ProtoTaskPseudoField.NUMBER },
+          operator: ProtoTaskFilterOperator.IS,
+          value: { kind: "number", number: Number(number[1]) },
+        },
+      });
+    }
+    const response = await projectsClient.listTasks(
+      {
+        organizationId,
+        projectId,
+        pagination: { page: 1, pageSize: options.limit },
+        filter: filterGroupToProto({ logic: ProtoFilterLogic.OR, nodes }),
+      },
+      { signal: options.signal },
+    );
+    return {
+      tasks: response.tasks.map(protoTaskToFrontend),
+      protoTasks: response.tasks,
     };
   },
 
