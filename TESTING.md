@@ -380,6 +380,32 @@ direct media), nothing changes anywhere.
       browser. Fallback stays in a separate window, with no always-on-top guarantee. Blocking
       popups shows feedback and keeps embedded call usable. Repeated clicks focus existing window.
 
+## Calls: web background blur
+
+- [ ] In prejoin, press the blur button in the preview controls and enable camera. Preview blurs surroundings while keeping person visible. Repeat at 375px, 768px and 1024px.
+- [ ] Join with a second user. Confirm remote video receives blur from its first frame. Toggle Blur background under More > Audio and camera settings.
+- [ ] Switch cameras, turn camera off/on, reconnect and reload into a live call. Selected blur remains applied. Screen sharing stays unaffected.
+- [ ] Cancel prejoin or leave while blur initializes. Camera capture stops and no late track publishes.
+- [ ] Block model or WASM loading. Selected blur keeps camera off and explains failure. Explicitly turn blur off to use unblurred camera.
+- [ ] Stall model loading. Cancel camera setup or wait for timeout, then retry with blur off. Camera controls respond without waiting for stalled request. Late initialization must not publish video.
+- [ ] In a town hall, remove then restore speaker permission while camera is on. Camera stays off when changing blur or device. Camera-on button starts video on first click.
+- [ ] Toggle blur from the prejoin preview controls, the in-call Audio and camera settings, and Calls settings. Calls settings notes that blur runs on the device and uses more battery. Check at 375px, 768px and 1024px.
+- [ ] Switch blur strength between Light, Medium and Strong from the prejoin preview, the in-call settings and Calls settings. The live preview and remote video change without the camera restarting. Strong hides objects in the room. The choice survives a reload.
+- [ ] On unsupported browser, blur controls are disabled and explain unavailability. A saved Blur preference must never silently publish raw video.
+- [ ] Verify processing assets load from deployment origin with external network access blocked. Inspect both development and production builds.
+- [ ] Check person edges, movement, low light and sustained performance on slower hardware. Blur is approximate and can include nearby people.
+
+## Calls: web noise suppression
+
+- [ ] Join with noise suppression on (the default) next to a fan, keyboard typing and street noise. A second user hears your voice with the noise largely removed. Speech stays clear and does not cut out between words.
+- [ ] Turn Noise suppression off and on under More > Audio and camera settings while speaking. The change applies within a second without leaving the call or muting you.
+- [ ] Turn it off in Calls settings, reload and join. The second user hears unfiltered audio, with no browser or OS noise filter applied either. The choice survives a reload.
+- [ ] Switch microphones mid-call with suppression on. Suppression stays on for the new device.
+- [ ] Block the RNNoise worklet or WASM in devtools and join. Your microphone still works unfiltered and the call shows that noise suppression stopped.
+- [ ] Reload into a live call without clicking the page. Audio publishes unfiltered until the first click or key press, then suppression starts.
+- [ ] Open the app over plain HTTP on a LAN address. Noise suppression is disabled in both menus and explains that this browser does not support it.
+- [ ] Verify the worklet and both WASM files load from the deployment origin with external network access blocked.
+
 ## Calls: participation and channel chat
 
 Run with host A and participant B. Repeat on web, iOS and Android, with keyboard,

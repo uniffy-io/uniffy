@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ConnectionState,
   DisconnectReason,
+  LocalAudioTrack,
   Room,
   RoomEvent,
   Track,
@@ -41,7 +42,18 @@ import {
   leaveCall,
   refreshCallToken,
 } from "@/features/calls/store/callsThunks";
-import { selectCallPreferences } from "@/features/calls/store/callPreferencesSlice";
+import {
+  selectCallPreferences,
+  backgroundBlurChanged,
+} from "@/features/calls/store/callPreferencesSlice";
+import { CameraController } from "@/features/calls/utils/cameraController";
+import { BLUR_FAILURE, type CameraOptions } from "@/features/calls/utils/cameraTrack";
+import { DEFAULT_BLUR_STRENGTH, setActiveBlurStrength } from "@/features/calls/utils/blurStrength";
+import {
+  MIC_CAPTURE_CONSTRAINTS,
+  NOISE_SUPPRESSION_FAILURE,
+  NoiseSuppressionController,
+} from "@/features/calls/utils/noiseSuppression";
 import { callsApi } from "@/features/calls/api/callsApi";
 import { resolveSignalingUrl } from "@/features/calls/utils/signalingUrl";
 import { buildRtcConfiguration } from "@/features/calls/utils/iceConfig";
@@ -188,6 +200,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reportInFlightRef = useRef(false);
   const reportPendingRef = useRef(false);
+  const cameraRef = useRef<CameraController | null>(null);
+  const noiseRef = useRef<NoiseSuppressionController | null>(null);
   // This provider never unmounts, and the rejoin loop, media reporter and
   // disconnect handler must stay identity-stable for the life of a call while
   // still reading the CURRENT session/preferences/org. Moving these writes into
@@ -202,6 +216,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const orgIdRef = useRef(currentOrgId);
   orgIdRef.current = currentOrgId;
   /* eslint-enable react/react-compiler */
+  const blurStrength = preferences.backgroundBlurStrength ?? DEFAULT_BLUR_STRENGTH;
+  useEffect(() => setActiveBlurStrength(blurStrength), [blurStrength]);
+  const noiseSuppression = preferences.noiseSuppression ?? true;
+  useEffect(() => {
+    const track = roomRef.current?.localParticipant.getTrackPublication(
+      Track.Source.Microphone,
+    )?.track;
+    if (track instanceof LocalAudioTrack) void noiseRef.current?.sync(track);
+  }, [noiseSuppression]);
   const rejoiningRef = useRef(false);
   const everConnectedRef = useRef(false);
   const connectedAtRef = useRef(0);
@@ -221,6 +244,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const teardown = useCallback(async () => {
+    cameraRef.current?.dispose();
+    cameraRef.current = null;
+    noiseRef.current?.dispose();
+    noiseRef.current = null;
     stopActivityRef.current?.();
     stopActivityRef.current = null;
     clearRefreshTimer();
@@ -329,16 +356,19 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         dispatch(feedbackChanged(callErrorMessage(error, "microphone")));
       }
+      if (roomRef.current !== r) return;
       try {
         if (opts.cameraEnabled && r.localParticipant.permissions?.canPublish !== false) {
-          await r.localParticipant.setCameraEnabled(true, {
-            deviceId: prefs.videoInputId ?? undefined,
+          await cameraRef.current?.set(true, {
+            deviceId: preferencesRef.current.videoInputId,
+            blur: preferencesRef.current.backgroundBlur ?? false,
           });
-          cameraEnabled = true;
+          cameraEnabled = roomRef.current === r && r.localParticipant.isCameraEnabled;
         }
       } catch (error) {
         dispatch(feedbackChanged(callErrorMessage(error, "camera")));
       }
+      if (roomRef.current !== r) return;
       dispatch(localMediaChanged({ micEnabled, cameraEnabled, screenSharing: false }));
       reportMediaState();
     },
@@ -436,9 +466,24 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // a Retina screen-share tile reads as ~720p even at native capture.
         adaptiveStream: { pixelDensity: "screen" },
         dynacast: true,
-        audioCaptureDefaults: { deviceId: prefs.audioInputId ?? undefined },
+        audioCaptureDefaults: {
+          deviceId: prefs.audioInputId ?? undefined,
+          ...MIC_CAPTURE_CONSTRAINTS,
+        },
         videoCaptureDefaults: { deviceId: prefs.videoInputId ?? undefined },
       });
+      cameraRef.current = new CameraController(r.localParticipant, () => {
+        if (roomRef.current !== r) return;
+        dispatch(localMediaChanged({ cameraEnabled: false }));
+        dispatch(feedbackChanged(BLUR_FAILURE));
+        reportMediaState();
+      });
+      noiseRef.current = new NoiseSuppressionController(
+        () => preferencesRef.current.noiseSuppression ?? true,
+        () => {
+          if (roomRef.current === r) dispatch(feedbackChanged(NOISE_SUPPRESSION_FAILURE));
+        },
+      );
 
       r.on(RoomEvent.Disconnected, (reason) => {
         if (roomRef.current !== r) return;
@@ -458,7 +503,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       r.on(RoomEvent.ParticipantPermissionsChanged, (_previous, participant) => {
         if (roomRef.current !== r || !participant.isLocal) return;
         if (participant.permissions?.canPublish === false) {
+          void cameraRef.current
+            ?.set(false, {
+              deviceId: preferencesRef.current.videoInputId,
+              blur: preferencesRef.current.backgroundBlur ?? false,
+            })
+            .catch(() => {});
           for (const publication of r.localParticipant.trackPublications.values()) {
+            if (publication.source === Track.Source.Camera) continue;
             if (publication.track) {
               publication.track.stop();
               void r.localParticipant.unpublishTrack(publication.track).catch(() => {});
@@ -475,6 +527,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
       r.on(RoomEvent.LocalTrackPublished, (pub) => {
         if (roomRef.current !== r) return;
+        if (pub.track instanceof LocalAudioTrack && pub.source === Track.Source.Microphone) {
+          void noiseRef.current?.sync(pub.track);
+        }
         if (pub.source === Track.Source.Microphone || pub.source === Track.Source.Camera) {
           const device = pub.source === Track.Source.Camera ? "camera" : "microphone";
           pub.track?.once(TrackEvent.Ended, () => {
@@ -692,22 +747,48 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }, [dispatch, reportMediaState]);
 
+  const updateCamera = useCallback(
+    async (enabled: boolean, override: Partial<CameraOptions> = {}) => {
+      const r = roomRef.current;
+      if (!r) return;
+      if (enabled && r.localParticipant.permissions?.canPublish === false) {
+        dispatch(feedbackChanged(AUDIENCE_MESSAGE));
+        return;
+      }
+      try {
+        await cameraRef.current?.set(enabled, {
+          deviceId: preferencesRef.current.videoInputId,
+          blur: preferencesRef.current.backgroundBlur ?? false,
+          ...override,
+        });
+      } catch (error) {
+        if (roomRef.current === r) dispatch(feedbackChanged(callErrorMessage(error, "camera")));
+      }
+      if (roomRef.current === r) {
+        dispatch(
+          localMediaChanged({
+            cameraEnabled: Boolean(
+              cameraRef.current?.enabled && r.localParticipant.isCameraEnabled,
+            ),
+          }),
+        );
+        reportMediaState();
+      }
+    },
+    [dispatch, reportMediaState],
+  );
+
   const toggleCamera = useCallback(async () => {
-    const r = roomRef.current;
-    if (!r) return;
-    if (r.localParticipant.permissions?.canPublish === false) {
-      dispatch(feedbackChanged(AUDIENCE_MESSAGE));
-      return;
-    }
-    const enabled = r.localParticipant.isCameraEnabled;
-    try {
-      await r.localParticipant.setCameraEnabled(!enabled);
-      dispatch(localMediaChanged({ cameraEnabled: !enabled }));
-      reportMediaState();
-    } catch (error) {
-      dispatch(feedbackChanged(callErrorMessage(error, "camera")));
-    }
-  }, [dispatch, reportMediaState]);
+    await updateCamera(!cameraRef.current?.enabled);
+  }, [updateCamera]);
+
+  const setBackgroundBlur = useCallback(
+    async (enabled: boolean) => {
+      dispatch(backgroundBlurChanged(enabled));
+      if (cameraRef.current?.enabled) await updateCamera(true, { blur: enabled });
+    },
+    [dispatch, updateCamera],
+  );
 
   const toggleScreenShare = useCallback(async () => {
     const r = roomRef.current;
@@ -739,20 +820,21 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     async (kind: MediaDeviceKind, deviceId: string) => {
       const r = roomRef.current;
       if (!r) return;
+      if (kind === "videoinput") {
+        if (cameraRef.current?.enabled) await updateCamera(true, { deviceId });
+        return;
+      }
       try {
         await r.switchActiveDevice(kind, deviceId);
       } catch (error) {
         dispatch(
           feedbackChanged(
-            callErrorMessage(
-              error,
-              kind === "videoinput" ? "camera" : kind === "audiooutput" ? "speaker" : "microphone",
-            ),
+            callErrorMessage(error, kind === "audiooutput" ? "speaker" : "microphone"),
           ),
         );
       }
     },
-    [dispatch],
+    [dispatch, updateCamera],
   );
 
   // Backend kicked this device (channel removal, tkv bump, host kick): the
@@ -972,6 +1054,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       rejoin,
       toggleMic,
       toggleCamera,
+      setBackgroundBlur,
       toggleScreenShare,
       switchDevice,
       focusCallTab: requestFocus,
@@ -990,6 +1073,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       rejoin,
       toggleMic,
       toggleCamera,
+      setBackgroundBlur,
       toggleScreenShare,
       switchDevice,
       requestFocus,

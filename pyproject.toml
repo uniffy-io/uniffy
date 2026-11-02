@@ -103,7 +103,7 @@ constraint-dependencies = [
   "httpx2>=2.13.0",
   "lxml>=6.1.3",
   "mako>=1.4.1",
-  "pyasn1>=0.6.4",
+  "pyasn1>=0.6.5",
   "urllib3>=2.8.0",
 ]
 
