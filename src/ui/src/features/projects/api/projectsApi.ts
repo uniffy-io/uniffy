@@ -568,7 +568,7 @@ export const projectsApi = {
       ...(data.taskType !== undefined ? { taskType: data.taskType } : {}),
       ...(data.sprintId !== undefined ? { sprintId: data.sprintId ?? "" } : {}),
       ...(data.parentId !== undefined ? { parentId: data.parentId ?? "" } : {}),
-      ...(data.blockedByTaskIds !== undefined ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
+      ...(data.blockedByTaskIds !== undefined ? { blockedBy: { ids: data.blockedByTaskIds } } : {}),
       ...(data.estimatedMinutes !== undefined
         ? { estimatedMinutes: data.estimatedMinutes ?? 0 }
         : {}),
