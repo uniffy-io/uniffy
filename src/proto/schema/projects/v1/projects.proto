@@ -634,7 +634,9 @@ message UpdateTaskRequest {
   optional string start_date = 8;
   optional string due_date = 9;
   optional string parent_id = 10;
-  repeated string blocked_by_task_ids = 11;
+  // Read only when blocked_by is unset, for clients built before it; it cannot express "no
+  // blockers", since proto3 sends an empty list as nothing.
+  repeated string blocked_by_task_ids = 11 [deprecated = true];
   optional bool is_milestone = 12;
   optional string recurrence_rule = 13;
   optional int32 sort_order = 14;
@@ -647,11 +649,20 @@ message UpdateTaskRequest {
   optional TaskTagIds tag_ids = 20;
   // Original description read by the caller. Required when description is set.
   optional string base_description = 21;
+  // Replacement set of blocker task ids. Empty list removes every blocker;
+  // field unset (HasField=false) leaves them untouched.
+  optional TaskBlockerIds blocked_by = 22;
 }
 
 // Wrapper so callers can distinguish "leave tags alone" from
 // "clear all tags" (proto3 cannot tell empty repeated apart from unset).
 message TaskTagIds {
+  repeated string ids = 1;
+}
+
+// Wrapper so callers can distinguish "leave blockers alone" from
+// "remove every blocker" (proto3 cannot tell empty repeated apart from unset).
+message TaskBlockerIds {
   repeated string ids = 1;
 }
 

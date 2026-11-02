@@ -7,6 +7,7 @@ import {
   Plus,
   X,
   MagnifyingGlass,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
@@ -17,6 +18,10 @@ import {
 } from "@/features/projects/store/projectsSlice";
 import { updateTask } from "@/features/projects/store/projectsThunks";
 import { Badge } from "@/components/ui/badge";
+import { popoverShellClass } from "@/components/ui/popover";
+import { cn } from "@/shared/utils/cn";
+import { useServerTaskSearch } from "@/features/projects/hooks/useServerTaskSearch";
+import { parentLabel, rankBlockerCandidates } from "@/features/projects/utils/blockerCandidates";
 import type { Task } from "@/features/projects/types/project";
 
 interface DependenciesListProps {
@@ -35,6 +40,11 @@ export function DependenciesList({
   const hasBlocks = blocksTaskIds.length > 0;
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // A task this one blocks would close a loop the server refuses, so it is never offered.
+  const pickerExcludeIds = useMemo(
+    () => [...blockedByTaskIds, ...blocksTaskIds],
+    [blockedByTaskIds, blocksTaskIds],
+  );
   // Once this task is complete it no longer holds anything up.
   const isComplete = useAppSelector((state) => !!selectTasksMap(state)[taskId]?.completedAt);
 
@@ -71,7 +81,7 @@ export function DependenciesList({
         {isPickerOpen ? (
           <TaskPicker
             taskId={taskId}
-            excludeIds={blockedByTaskIds}
+            excludeIds={pickerExcludeIds}
             onSelect={handleAddBlocker}
             onClose={() => setIsPickerOpen(false)}
           />
@@ -114,7 +124,8 @@ interface TaskPickerProps {
 
 function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) {
   const project = useAppSelector(selectCurrentProject);
-  const projectId = project?.id;
+  const current = useAppSelector((state) => selectTasksMap(state)[taskId]);
+  const projectId = current?.projectId ?? project?.id;
   const selectTasks = useMemo(
     () => (projectId ? selectTasksForProject(projectId) : () => [] as Task[]),
     [projectId],
@@ -122,6 +133,7 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   const allTasks = useAppSelector(selectTasks);
 
   const [query, setQuery] = useState("");
+  const searching = useServerTaskSearch(projectId, query);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -139,14 +151,19 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  const excludeSet = useMemo(() => new Set([taskId, ...excludeIds]), [taskId, excludeIds]);
+  const tasksById = useMemo(() => new Map(allTasks.map((t) => [t.id, t])), [allTasks]);
 
-  const filtered = useMemo(() => {
-    const lq = query.toLowerCase();
-    return allTasks
-      .filter((t) => !t.parentId && !excludeSet.has(t.id))
-      .filter((t) => !lq || t.title.toLowerCase().includes(lq) || String(t.number).includes(lq));
-  }, [allTasks, excludeSet, query]);
+  const sections = useMemo(
+    () =>
+      current
+        ? rankBlockerCandidates(current, allTasks, {
+            query,
+            excludeIds,
+            projectSlug: project?.id === current.projectId ? project.slug : undefined,
+          })
+        : [],
+    [current, allTasks, query, excludeIds, project],
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -155,11 +172,8 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="rounded-lg border border-border bg-card shadow-md overflow-hidden"
-    >
-      <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border">
+    <div ref={containerRef} className={cn(popoverShellClass, "overflow-hidden")}>
+      <div className="flex items-center gap-2 px-2.5 py-1.5 border-b border-border/60">
         <MagnifyingGlass size={14} className="text-muted-foreground shrink-0" />
         <input
           ref={inputRef}
@@ -167,26 +181,56 @@ function TaskPicker({ taskId, excludeIds, onSelect, onClose }: TaskPickerProps) 
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search tasks..."
-          className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+          placeholder="Search by title or number..."
+          aria-label="Search tasks"
+          className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
         />
+        {searching && (
+          <CircleNotch size={12} className="animate-spin text-muted-foreground shrink-0" />
+        )}
       </div>
-      <div className="max-h-40 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-muted-foreground">No matching tasks</div>
+      <div className="max-h-80 overflow-y-auto py-1" data-testid="blocker-picker-list">
+        {sections.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-muted-foreground">
+            {searching ? "Searching..." : "No matching tasks"}
+          </div>
         ) : (
-          filtered.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className="flex items-center gap-2 w-full text-left px-3 py-1.5 text-sm hover:bg-muted transition-colors"
-              onClick={() => onSelect(t.id)}
-            >
-              <span className="text-[10px] font-mono text-muted-foreground shrink-0">
-                #{t.number}
-              </span>
-              <span className="truncate">{t.title}</span>
-            </button>
+          sections.map((section) => (
+            <div key={section.key} data-testid={`blocker-section-${section.key}`}>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-subtle-foreground">
+                {section.label}
+              </div>
+              {section.tasks.map((t) => {
+                const parent = parentLabel(t, tasksById);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className="flex items-center gap-2 w-full min-h-11 lg:min-h-0 text-left px-3 py-1.5 text-sm hover:bg-foreground/5 transition-colors"
+                    onClick={() => onSelect(t.id)}
+                  >
+                    <span className="w-9 text-right text-[10px] font-mono tabular-nums text-muted-foreground shrink-0">
+                      #{t.number}
+                    </span>
+                    <span className="flex flex-col min-w-0 flex-1">
+                      <span className={cn("truncate", t.completedAt && "text-muted-foreground")}>
+                        {t.title}
+                      </span>
+                      {parent && (
+                        <span className="truncate text-xs text-subtle-foreground">in {parent}</span>
+                      )}
+                    </span>
+                    {t.completedAt && (
+                      <CheckCircle
+                        size={12}
+                        weight="fill"
+                        className="text-muted-foreground shrink-0"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           ))
         )}
       </div>

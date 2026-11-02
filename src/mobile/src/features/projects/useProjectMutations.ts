@@ -191,7 +191,7 @@ export function useUpdateTask() {
         // server to see the change, and absent to leave it untouched.
         sprintId: args.sprintId !== undefined ? (args.sprintId ?? "") : undefined,
         parentId: args.parentId !== undefined ? (args.parentId ?? "") : undefined,
-        blockedByTaskIds: args.blockedByTaskIds,
+        blockedBy: args.blockedByTaskIds ? { ids: args.blockedByTaskIds } : undefined,
         estimatedMinutes:
           args.estimatedMinutes !== undefined ? (args.estimatedMinutes ?? 0) : undefined,
         tagIds: args.tagIds ? { ids: args.tagIds } : undefined,

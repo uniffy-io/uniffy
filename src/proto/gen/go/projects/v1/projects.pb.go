@@ -4270,10 +4270,14 @@ type UpdateTaskRequest struct {
 	Priority       *string                `protobuf:"bytes,6,opt,name=priority,proto3,oneof" json:"priority,omitempty"`
 	// Replacement set of assignee ids. Empty list clears all assignees;
 	// field unset (HasField=false) leaves them untouched.
-	AssigneeIds      *TaskAssigneeIds  `protobuf:"bytes,7,opt,name=assignee_ids,json=assigneeIds,proto3,oneof" json:"assignee_ids,omitempty"`
-	StartDate        *string           `protobuf:"bytes,8,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
-	DueDate          *string           `protobuf:"bytes,9,opt,name=due_date,json=dueDate,proto3,oneof" json:"due_date,omitempty"`
-	ParentId         *string           `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	AssigneeIds *TaskAssigneeIds `protobuf:"bytes,7,opt,name=assignee_ids,json=assigneeIds,proto3,oneof" json:"assignee_ids,omitempty"`
+	StartDate   *string          `protobuf:"bytes,8,opt,name=start_date,json=startDate,proto3,oneof" json:"start_date,omitempty"`
+	DueDate     *string          `protobuf:"bytes,9,opt,name=due_date,json=dueDate,proto3,oneof" json:"due_date,omitempty"`
+	ParentId    *string          `protobuf:"bytes,10,opt,name=parent_id,json=parentId,proto3,oneof" json:"parent_id,omitempty"`
+	// Read only when blocked_by is unset, for clients built before it; it cannot express "no
+	// blockers", since proto3 sends an empty list as nothing.
+	//
+	// Deprecated: Marked as deprecated in projects/v1/projects.proto.
 	BlockedByTaskIds []string          `protobuf:"bytes,11,rep,name=blocked_by_task_ids,json=blockedByTaskIds,proto3" json:"blocked_by_task_ids,omitempty"`
 	IsMilestone      *bool             `protobuf:"varint,12,opt,name=is_milestone,json=isMilestone,proto3,oneof" json:"is_milestone,omitempty"`
 	RecurrenceRule   *string           `protobuf:"bytes,13,opt,name=recurrence_rule,json=recurrenceRule,proto3,oneof" json:"recurrence_rule,omitempty"`
@@ -4287,8 +4291,11 @@ type UpdateTaskRequest struct {
 	TagIds *TaskTagIds `protobuf:"bytes,20,opt,name=tag_ids,json=tagIds,proto3,oneof" json:"tag_ids,omitempty"`
 	// Original description read by the caller. Required when description is set.
 	BaseDescription *string `protobuf:"bytes,21,opt,name=base_description,json=baseDescription,proto3,oneof" json:"base_description,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Replacement set of blocker task ids. Empty list removes every blocker;
+	// field unset (HasField=false) leaves them untouched.
+	BlockedBy     *TaskBlockerIds `protobuf:"bytes,22,opt,name=blocked_by,json=blockedBy,proto3,oneof" json:"blocked_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateTaskRequest) Reset() {
@@ -4391,6 +4398,7 @@ func (x *UpdateTaskRequest) GetParentId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in projects/v1/projects.proto.
 func (x *UpdateTaskRequest) GetBlockedByTaskIds() []string {
 	if x != nil {
 		return x.BlockedByTaskIds
@@ -4461,6 +4469,13 @@ func (x *UpdateTaskRequest) GetBaseDescription() string {
 	return ""
 }
 
+func (x *UpdateTaskRequest) GetBlockedBy() *TaskBlockerIds {
+	if x != nil {
+		return x.BlockedBy
+	}
+	return nil
+}
+
 // Wrapper so callers can distinguish "leave tags alone" from
 // "clear all tags" (proto3 cannot tell empty repeated apart from unset).
 type TaskTagIds struct {
@@ -4507,6 +4522,52 @@ func (x *TaskTagIds) GetIds() []string {
 	return nil
 }
 
+// Wrapper so callers can distinguish "leave blockers alone" from
+// "remove every blocker" (proto3 cannot tell empty repeated apart from unset).
+type TaskBlockerIds struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TaskBlockerIds) Reset() {
+	*x = TaskBlockerIds{}
+	mi := &file_projects_v1_projects_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TaskBlockerIds) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TaskBlockerIds) ProtoMessage() {}
+
+func (x *TaskBlockerIds) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_projects_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TaskBlockerIds.ProtoReflect.Descriptor instead.
+func (*TaskBlockerIds) Descriptor() ([]byte, []int) {
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *TaskBlockerIds) GetIds() []string {
+	if x != nil {
+		return x.Ids
+	}
+	return nil
+}
+
 // Wrapper so callers can distinguish "leave assignees alone" from
 // "clear all assignees" (proto3 cannot tell empty repeated apart from unset).
 type TaskAssigneeIds struct {
@@ -4518,7 +4579,7 @@ type TaskAssigneeIds struct {
 
 func (x *TaskAssigneeIds) Reset() {
 	*x = TaskAssigneeIds{}
-	mi := &file_projects_v1_projects_proto_msgTypes[43]
+	mi := &file_projects_v1_projects_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4530,7 +4591,7 @@ func (x *TaskAssigneeIds) String() string {
 func (*TaskAssigneeIds) ProtoMessage() {}
 
 func (x *TaskAssigneeIds) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[43]
+	mi := &file_projects_v1_projects_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4543,7 +4604,7 @@ func (x *TaskAssigneeIds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskAssigneeIds.ProtoReflect.Descriptor instead.
 func (*TaskAssigneeIds) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{43}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *TaskAssigneeIds) GetIds() []string {
@@ -4565,7 +4626,7 @@ type MoveTaskRequest struct {
 
 func (x *MoveTaskRequest) Reset() {
 	*x = MoveTaskRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[44]
+	mi := &file_projects_v1_projects_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4577,7 +4638,7 @@ func (x *MoveTaskRequest) String() string {
 func (*MoveTaskRequest) ProtoMessage() {}
 
 func (x *MoveTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[44]
+	mi := &file_projects_v1_projects_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4590,7 +4651,7 @@ func (x *MoveTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTaskRequest.ProtoReflect.Descriptor instead.
 func (*MoveTaskRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{44}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *MoveTaskRequest) GetOrganizationId() string {
@@ -4635,7 +4696,7 @@ type BulkUpdateTasksRequest struct {
 
 func (x *BulkUpdateTasksRequest) Reset() {
 	*x = BulkUpdateTasksRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[45]
+	mi := &file_projects_v1_projects_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4647,7 +4708,7 @@ func (x *BulkUpdateTasksRequest) String() string {
 func (*BulkUpdateTasksRequest) ProtoMessage() {}
 
 func (x *BulkUpdateTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[45]
+	mi := &file_projects_v1_projects_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4660,7 +4721,7 @@ func (x *BulkUpdateTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpdateTasksRequest.ProtoReflect.Descriptor instead.
 func (*BulkUpdateTasksRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{45}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *BulkUpdateTasksRequest) GetOrganizationId() string {
@@ -4716,7 +4777,7 @@ type DeleteTaskRequest struct {
 
 func (x *DeleteTaskRequest) Reset() {
 	*x = DeleteTaskRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[46]
+	mi := &file_projects_v1_projects_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4728,7 +4789,7 @@ func (x *DeleteTaskRequest) String() string {
 func (*DeleteTaskRequest) ProtoMessage() {}
 
 func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[46]
+	mi := &file_projects_v1_projects_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4741,7 +4802,7 @@ func (x *DeleteTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTaskRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTaskRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{46}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *DeleteTaskRequest) GetOrganizationId() string {
@@ -4776,7 +4837,7 @@ type DeleteTasksRequest struct {
 
 func (x *DeleteTasksRequest) Reset() {
 	*x = DeleteTasksRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[47]
+	mi := &file_projects_v1_projects_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4788,7 +4849,7 @@ func (x *DeleteTasksRequest) String() string {
 func (*DeleteTasksRequest) ProtoMessage() {}
 
 func (x *DeleteTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[47]
+	mi := &file_projects_v1_projects_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4801,7 +4862,7 @@ func (x *DeleteTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTasksRequest.ProtoReflect.Descriptor instead.
 func (*DeleteTasksRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{47}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *DeleteTasksRequest) GetOrganizationId() string {
@@ -4846,7 +4907,7 @@ type ListTasksRequest struct {
 
 func (x *ListTasksRequest) Reset() {
 	*x = ListTasksRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[48]
+	mi := &file_projects_v1_projects_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4858,7 +4919,7 @@ func (x *ListTasksRequest) String() string {
 func (*ListTasksRequest) ProtoMessage() {}
 
 func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[48]
+	mi := &file_projects_v1_projects_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4871,7 +4932,7 @@ func (x *ListTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListTasksRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{48}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *ListTasksRequest) GetOrganizationId() string {
@@ -4952,7 +5013,7 @@ type ExportTasksRequest struct {
 
 func (x *ExportTasksRequest) Reset() {
 	*x = ExportTasksRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[49]
+	mi := &file_projects_v1_projects_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4964,7 +5025,7 @@ func (x *ExportTasksRequest) String() string {
 func (*ExportTasksRequest) ProtoMessage() {}
 
 func (x *ExportTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[49]
+	mi := &file_projects_v1_projects_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4977,7 +5038,7 @@ func (x *ExportTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportTasksRequest.ProtoReflect.Descriptor instead.
 func (*ExportTasksRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{49}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *ExportTasksRequest) GetOrganizationId() string {
@@ -5053,7 +5114,7 @@ type ExportTasksResponse struct {
 
 func (x *ExportTasksResponse) Reset() {
 	*x = ExportTasksResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[50]
+	mi := &file_projects_v1_projects_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5065,7 +5126,7 @@ func (x *ExportTasksResponse) String() string {
 func (*ExportTasksResponse) ProtoMessage() {}
 
 func (x *ExportTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[50]
+	mi := &file_projects_v1_projects_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5078,7 +5139,7 @@ func (x *ExportTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExportTasksResponse.ProtoReflect.Descriptor instead.
 func (*ExportTasksResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{50}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *ExportTasksResponse) GetPayload() []byte {
@@ -5099,7 +5160,7 @@ type CreateTaskResponse struct {
 
 func (x *CreateTaskResponse) Reset() {
 	*x = CreateTaskResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[51]
+	mi := &file_projects_v1_projects_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5111,7 +5172,7 @@ func (x *CreateTaskResponse) String() string {
 func (*CreateTaskResponse) ProtoMessage() {}
 
 func (x *CreateTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[51]
+	mi := &file_projects_v1_projects_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5124,7 +5185,7 @@ func (x *CreateTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTaskResponse.ProtoReflect.Descriptor instead.
 func (*CreateTaskResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{51}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *CreateTaskResponse) GetTask() *Task {
@@ -5159,7 +5220,7 @@ type GetTaskResponse struct {
 
 func (x *GetTaskResponse) Reset() {
 	*x = GetTaskResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[52]
+	mi := &file_projects_v1_projects_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5171,7 +5232,7 @@ func (x *GetTaskResponse) String() string {
 func (*GetTaskResponse) ProtoMessage() {}
 
 func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[52]
+	mi := &file_projects_v1_projects_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5184,7 +5245,7 @@ func (x *GetTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskResponse.ProtoReflect.Descriptor instead.
 func (*GetTaskResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{52}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *GetTaskResponse) GetTask() *Task {
@@ -5219,7 +5280,7 @@ type UpdateTaskResponse struct {
 
 func (x *UpdateTaskResponse) Reset() {
 	*x = UpdateTaskResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[53]
+	mi := &file_projects_v1_projects_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5231,7 +5292,7 @@ func (x *UpdateTaskResponse) String() string {
 func (*UpdateTaskResponse) ProtoMessage() {}
 
 func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[53]
+	mi := &file_projects_v1_projects_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5244,7 +5305,7 @@ func (x *UpdateTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateTaskResponse.ProtoReflect.Descriptor instead.
 func (*UpdateTaskResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{53}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *UpdateTaskResponse) GetTask() *Task {
@@ -5279,7 +5340,7 @@ type MoveTaskResponse struct {
 
 func (x *MoveTaskResponse) Reset() {
 	*x = MoveTaskResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[54]
+	mi := &file_projects_v1_projects_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5291,7 +5352,7 @@ func (x *MoveTaskResponse) String() string {
 func (*MoveTaskResponse) ProtoMessage() {}
 
 func (x *MoveTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[54]
+	mi := &file_projects_v1_projects_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5304,7 +5365,7 @@ func (x *MoveTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MoveTaskResponse.ProtoReflect.Descriptor instead.
 func (*MoveTaskResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{54}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *MoveTaskResponse) GetTask() *Task {
@@ -5338,7 +5399,7 @@ type DeleteTaskResponse struct {
 
 func (x *DeleteTaskResponse) Reset() {
 	*x = DeleteTaskResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[55]
+	mi := &file_projects_v1_projects_proto_msgTypes[56]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5350,7 +5411,7 @@ func (x *DeleteTaskResponse) String() string {
 func (*DeleteTaskResponse) ProtoMessage() {}
 
 func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[55]
+	mi := &file_projects_v1_projects_proto_msgTypes[56]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5363,7 +5424,7 @@ func (x *DeleteTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTaskResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTaskResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{55}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteTaskResponse) GetSuccess() bool {
@@ -5390,7 +5451,7 @@ type DeleteTasksResponse struct {
 
 func (x *DeleteTasksResponse) Reset() {
 	*x = DeleteTasksResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[56]
+	mi := &file_projects_v1_projects_proto_msgTypes[57]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5402,7 +5463,7 @@ func (x *DeleteTasksResponse) String() string {
 func (*DeleteTasksResponse) ProtoMessage() {}
 
 func (x *DeleteTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[56]
+	mi := &file_projects_v1_projects_proto_msgTypes[57]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5415,7 +5476,7 @@ func (x *DeleteTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteTasksResponse.ProtoReflect.Descriptor instead.
 func (*DeleteTasksResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{56}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{57}
 }
 
 func (x *DeleteTasksResponse) GetSuccess() bool {
@@ -5442,7 +5503,7 @@ type BulkUpdateTasksResponse struct {
 
 func (x *BulkUpdateTasksResponse) Reset() {
 	*x = BulkUpdateTasksResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[57]
+	mi := &file_projects_v1_projects_proto_msgTypes[58]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5454,7 +5515,7 @@ func (x *BulkUpdateTasksResponse) String() string {
 func (*BulkUpdateTasksResponse) ProtoMessage() {}
 
 func (x *BulkUpdateTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[57]
+	mi := &file_projects_v1_projects_proto_msgTypes[58]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5467,7 +5528,7 @@ func (x *BulkUpdateTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkUpdateTasksResponse.ProtoReflect.Descriptor instead.
 func (*BulkUpdateTasksResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{57}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *BulkUpdateTasksResponse) GetTasks() []*Task {
@@ -5494,7 +5555,7 @@ type ListTasksResponse struct {
 
 func (x *ListTasksResponse) Reset() {
 	*x = ListTasksResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[58]
+	mi := &file_projects_v1_projects_proto_msgTypes[59]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5506,7 +5567,7 @@ func (x *ListTasksResponse) String() string {
 func (*ListTasksResponse) ProtoMessage() {}
 
 func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[58]
+	mi := &file_projects_v1_projects_proto_msgTypes[59]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5519,7 +5580,7 @@ func (x *ListTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListTasksResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{58}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{59}
 }
 
 func (x *ListTasksResponse) GetTasks() []*Task {
@@ -5551,7 +5612,7 @@ type CreateFieldRequest struct {
 
 func (x *CreateFieldRequest) Reset() {
 	*x = CreateFieldRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[59]
+	mi := &file_projects_v1_projects_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5563,7 +5624,7 @@ func (x *CreateFieldRequest) String() string {
 func (*CreateFieldRequest) ProtoMessage() {}
 
 func (x *CreateFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[59]
+	mi := &file_projects_v1_projects_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5576,7 +5637,7 @@ func (x *CreateFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFieldRequest.ProtoReflect.Descriptor instead.
 func (*CreateFieldRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{59}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *CreateFieldRequest) GetOrganizationId() string {
@@ -5643,7 +5704,7 @@ type UpdateFieldRequest struct {
 
 func (x *UpdateFieldRequest) Reset() {
 	*x = UpdateFieldRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[60]
+	mi := &file_projects_v1_projects_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5655,7 +5716,7 @@ func (x *UpdateFieldRequest) String() string {
 func (*UpdateFieldRequest) ProtoMessage() {}
 
 func (x *UpdateFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[60]
+	mi := &file_projects_v1_projects_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5668,7 +5729,7 @@ func (x *UpdateFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFieldRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFieldRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{60}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *UpdateFieldRequest) GetOrganizationId() string {
@@ -5731,7 +5792,7 @@ type DeleteFieldRequest struct {
 
 func (x *DeleteFieldRequest) Reset() {
 	*x = DeleteFieldRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[61]
+	mi := &file_projects_v1_projects_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5743,7 +5804,7 @@ func (x *DeleteFieldRequest) String() string {
 func (*DeleteFieldRequest) ProtoMessage() {}
 
 func (x *DeleteFieldRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[61]
+	mi := &file_projects_v1_projects_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5756,7 +5817,7 @@ func (x *DeleteFieldRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFieldRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFieldRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{61}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *DeleteFieldRequest) GetOrganizationId() string {
@@ -5789,7 +5850,7 @@ type CreateFieldResponse struct {
 
 func (x *CreateFieldResponse) Reset() {
 	*x = CreateFieldResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[62]
+	mi := &file_projects_v1_projects_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5801,7 +5862,7 @@ func (x *CreateFieldResponse) String() string {
 func (*CreateFieldResponse) ProtoMessage() {}
 
 func (x *CreateFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[62]
+	mi := &file_projects_v1_projects_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5814,7 +5875,7 @@ func (x *CreateFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFieldResponse.ProtoReflect.Descriptor instead.
 func (*CreateFieldResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{62}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *CreateFieldResponse) GetField() *FieldDefinition {
@@ -5833,7 +5894,7 @@ type UpdateFieldResponse struct {
 
 func (x *UpdateFieldResponse) Reset() {
 	*x = UpdateFieldResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[63]
+	mi := &file_projects_v1_projects_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5845,7 +5906,7 @@ func (x *UpdateFieldResponse) String() string {
 func (*UpdateFieldResponse) ProtoMessage() {}
 
 func (x *UpdateFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[63]
+	mi := &file_projects_v1_projects_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5858,7 +5919,7 @@ func (x *UpdateFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFieldResponse.ProtoReflect.Descriptor instead.
 func (*UpdateFieldResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{63}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *UpdateFieldResponse) GetField() *FieldDefinition {
@@ -5877,7 +5938,7 @@ type DeleteFieldResponse struct {
 
 func (x *DeleteFieldResponse) Reset() {
 	*x = DeleteFieldResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[64]
+	mi := &file_projects_v1_projects_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5889,7 +5950,7 @@ func (x *DeleteFieldResponse) String() string {
 func (*DeleteFieldResponse) ProtoMessage() {}
 
 func (x *DeleteFieldResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[64]
+	mi := &file_projects_v1_projects_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5902,7 +5963,7 @@ func (x *DeleteFieldResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFieldResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFieldResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{64}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *DeleteFieldResponse) GetSuccess() bool {
@@ -5925,7 +5986,7 @@ type CreateViewRequest struct {
 
 func (x *CreateViewRequest) Reset() {
 	*x = CreateViewRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[65]
+	mi := &file_projects_v1_projects_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5937,7 +5998,7 @@ func (x *CreateViewRequest) String() string {
 func (*CreateViewRequest) ProtoMessage() {}
 
 func (x *CreateViewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[65]
+	mi := &file_projects_v1_projects_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5950,7 +6011,7 @@ func (x *CreateViewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateViewRequest.ProtoReflect.Descriptor instead.
 func (*CreateViewRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{65}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *CreateViewRequest) GetOrganizationId() string {
@@ -6002,7 +6063,7 @@ type UpdateViewRequest struct {
 
 func (x *UpdateViewRequest) Reset() {
 	*x = UpdateViewRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[66]
+	mi := &file_projects_v1_projects_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6014,7 +6075,7 @@ func (x *UpdateViewRequest) String() string {
 func (*UpdateViewRequest) ProtoMessage() {}
 
 func (x *UpdateViewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[66]
+	mi := &file_projects_v1_projects_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6027,7 +6088,7 @@ func (x *UpdateViewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateViewRequest.ProtoReflect.Descriptor instead.
 func (*UpdateViewRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{66}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *UpdateViewRequest) GetOrganizationId() string {
@@ -6083,7 +6144,7 @@ type DeleteViewRequest struct {
 
 func (x *DeleteViewRequest) Reset() {
 	*x = DeleteViewRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[67]
+	mi := &file_projects_v1_projects_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6095,7 +6156,7 @@ func (x *DeleteViewRequest) String() string {
 func (*DeleteViewRequest) ProtoMessage() {}
 
 func (x *DeleteViewRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[67]
+	mi := &file_projects_v1_projects_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6108,7 +6169,7 @@ func (x *DeleteViewRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteViewRequest.ProtoReflect.Descriptor instead.
 func (*DeleteViewRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{67}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *DeleteViewRequest) GetOrganizationId() string {
@@ -6141,7 +6202,7 @@ type CreateViewResponse struct {
 
 func (x *CreateViewResponse) Reset() {
 	*x = CreateViewResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[68]
+	mi := &file_projects_v1_projects_proto_msgTypes[69]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6153,7 +6214,7 @@ func (x *CreateViewResponse) String() string {
 func (*CreateViewResponse) ProtoMessage() {}
 
 func (x *CreateViewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[68]
+	mi := &file_projects_v1_projects_proto_msgTypes[69]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6166,7 +6227,7 @@ func (x *CreateViewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateViewResponse.ProtoReflect.Descriptor instead.
 func (*CreateViewResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{68}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *CreateViewResponse) GetView() *ViewConfig {
@@ -6185,7 +6246,7 @@ type UpdateViewResponse struct {
 
 func (x *UpdateViewResponse) Reset() {
 	*x = UpdateViewResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[69]
+	mi := &file_projects_v1_projects_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6197,7 +6258,7 @@ func (x *UpdateViewResponse) String() string {
 func (*UpdateViewResponse) ProtoMessage() {}
 
 func (x *UpdateViewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[69]
+	mi := &file_projects_v1_projects_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6210,7 +6271,7 @@ func (x *UpdateViewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateViewResponse.ProtoReflect.Descriptor instead.
 func (*UpdateViewResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{69}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *UpdateViewResponse) GetView() *ViewConfig {
@@ -6229,7 +6290,7 @@ type DeleteViewResponse struct {
 
 func (x *DeleteViewResponse) Reset() {
 	*x = DeleteViewResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[70]
+	mi := &file_projects_v1_projects_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6241,7 +6302,7 @@ func (x *DeleteViewResponse) String() string {
 func (*DeleteViewResponse) ProtoMessage() {}
 
 func (x *DeleteViewResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[70]
+	mi := &file_projects_v1_projects_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6254,7 +6315,7 @@ func (x *DeleteViewResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteViewResponse.ProtoReflect.Descriptor instead.
 func (*DeleteViewResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{70}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *DeleteViewResponse) GetSuccess() bool {
@@ -6278,7 +6339,7 @@ type ReorderViewsRequest struct {
 
 func (x *ReorderViewsRequest) Reset() {
 	*x = ReorderViewsRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[71]
+	mi := &file_projects_v1_projects_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6290,7 +6351,7 @@ func (x *ReorderViewsRequest) String() string {
 func (*ReorderViewsRequest) ProtoMessage() {}
 
 func (x *ReorderViewsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[71]
+	mi := &file_projects_v1_projects_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6303,7 +6364,7 @@ func (x *ReorderViewsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReorderViewsRequest.ProtoReflect.Descriptor instead.
 func (*ReorderViewsRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{71}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ReorderViewsRequest) GetOrganizationId() string {
@@ -6343,7 +6404,7 @@ type ReorderViewsResponse struct {
 
 func (x *ReorderViewsResponse) Reset() {
 	*x = ReorderViewsResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[72]
+	mi := &file_projects_v1_projects_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6355,7 +6416,7 @@ func (x *ReorderViewsResponse) String() string {
 func (*ReorderViewsResponse) ProtoMessage() {}
 
 func (x *ReorderViewsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[72]
+	mi := &file_projects_v1_projects_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6368,7 +6429,7 @@ func (x *ReorderViewsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReorderViewsResponse.ProtoReflect.Descriptor instead.
 func (*ReorderViewsResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{72}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ReorderViewsResponse) GetViews() []*ViewConfig {
@@ -6391,7 +6452,7 @@ type ViewFieldCapabilities struct {
 
 func (x *ViewFieldCapabilities) Reset() {
 	*x = ViewFieldCapabilities{}
-	mi := &file_projects_v1_projects_proto_msgTypes[73]
+	mi := &file_projects_v1_projects_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6403,7 +6464,7 @@ func (x *ViewFieldCapabilities) String() string {
 func (*ViewFieldCapabilities) ProtoMessage() {}
 
 func (x *ViewFieldCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[73]
+	mi := &file_projects_v1_projects_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6416,7 +6477,7 @@ func (x *ViewFieldCapabilities) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewFieldCapabilities.ProtoReflect.Descriptor instead.
 func (*ViewFieldCapabilities) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{73}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ViewFieldCapabilities) GetOperators() []TaskFilterOperator {
@@ -6457,7 +6518,7 @@ type ViewCatalogFieldType struct {
 
 func (x *ViewCatalogFieldType) Reset() {
 	*x = ViewCatalogFieldType{}
-	mi := &file_projects_v1_projects_proto_msgTypes[74]
+	mi := &file_projects_v1_projects_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6469,7 +6530,7 @@ func (x *ViewCatalogFieldType) String() string {
 func (*ViewCatalogFieldType) ProtoMessage() {}
 
 func (x *ViewCatalogFieldType) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[74]
+	mi := &file_projects_v1_projects_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6482,7 +6543,7 @@ func (x *ViewCatalogFieldType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewCatalogFieldType.ProtoReflect.Descriptor instead.
 func (*ViewCatalogFieldType) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{74}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ViewCatalogFieldType) GetType() FieldType {
@@ -6509,7 +6570,7 @@ type ViewCatalogPseudoField struct {
 
 func (x *ViewCatalogPseudoField) Reset() {
 	*x = ViewCatalogPseudoField{}
-	mi := &file_projects_v1_projects_proto_msgTypes[75]
+	mi := &file_projects_v1_projects_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6521,7 +6582,7 @@ func (x *ViewCatalogPseudoField) String() string {
 func (*ViewCatalogPseudoField) ProtoMessage() {}
 
 func (x *ViewCatalogPseudoField) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[75]
+	mi := &file_projects_v1_projects_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6534,7 +6595,7 @@ func (x *ViewCatalogPseudoField) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewCatalogPseudoField.ProtoReflect.Descriptor instead.
 func (*ViewCatalogPseudoField) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{75}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ViewCatalogPseudoField) GetPseudo() TaskPseudoField {
@@ -6565,7 +6626,7 @@ type ViewFilterLimits struct {
 
 func (x *ViewFilterLimits) Reset() {
 	*x = ViewFilterLimits{}
-	mi := &file_projects_v1_projects_proto_msgTypes[76]
+	mi := &file_projects_v1_projects_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6577,7 +6638,7 @@ func (x *ViewFilterLimits) String() string {
 func (*ViewFilterLimits) ProtoMessage() {}
 
 func (x *ViewFilterLimits) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[76]
+	mi := &file_projects_v1_projects_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6590,7 +6651,7 @@ func (x *ViewFilterLimits) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewFilterLimits.ProtoReflect.Descriptor instead.
 func (*ViewFilterLimits) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{76}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ViewFilterLimits) GetMaxDepth() int32 {
@@ -6636,7 +6697,7 @@ type GetViewCatalogRequest struct {
 
 func (x *GetViewCatalogRequest) Reset() {
 	*x = GetViewCatalogRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[77]
+	mi := &file_projects_v1_projects_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6648,7 +6709,7 @@ func (x *GetViewCatalogRequest) String() string {
 func (*GetViewCatalogRequest) ProtoMessage() {}
 
 func (x *GetViewCatalogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[77]
+	mi := &file_projects_v1_projects_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6661,7 +6722,7 @@ func (x *GetViewCatalogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetViewCatalogRequest.ProtoReflect.Descriptor instead.
 func (*GetViewCatalogRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{77}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{78}
 }
 
 type GetViewCatalogResponse struct {
@@ -6675,7 +6736,7 @@ type GetViewCatalogResponse struct {
 
 func (x *GetViewCatalogResponse) Reset() {
 	*x = GetViewCatalogResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[78]
+	mi := &file_projects_v1_projects_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6687,7 +6748,7 @@ func (x *GetViewCatalogResponse) String() string {
 func (*GetViewCatalogResponse) ProtoMessage() {}
 
 func (x *GetViewCatalogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[78]
+	mi := &file_projects_v1_projects_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6700,7 +6761,7 @@ func (x *GetViewCatalogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetViewCatalogResponse.ProtoReflect.Descriptor instead.
 func (*GetViewCatalogResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{78}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *GetViewCatalogResponse) GetFieldTypes() []*ViewCatalogFieldType {
@@ -6738,7 +6799,7 @@ type CreateSprintRequest struct {
 
 func (x *CreateSprintRequest) Reset() {
 	*x = CreateSprintRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[79]
+	mi := &file_projects_v1_projects_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6750,7 +6811,7 @@ func (x *CreateSprintRequest) String() string {
 func (*CreateSprintRequest) ProtoMessage() {}
 
 func (x *CreateSprintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[79]
+	mi := &file_projects_v1_projects_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6763,7 +6824,7 @@ func (x *CreateSprintRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSprintRequest.ProtoReflect.Descriptor instead.
 func (*CreateSprintRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{79}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *CreateSprintRequest) GetOrganizationId() string {
@@ -6822,7 +6883,7 @@ type UpdateSprintRequest struct {
 
 func (x *UpdateSprintRequest) Reset() {
 	*x = UpdateSprintRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[80]
+	mi := &file_projects_v1_projects_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6834,7 +6895,7 @@ func (x *UpdateSprintRequest) String() string {
 func (*UpdateSprintRequest) ProtoMessage() {}
 
 func (x *UpdateSprintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[80]
+	mi := &file_projects_v1_projects_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6847,7 +6908,7 @@ func (x *UpdateSprintRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSprintRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSprintRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{80}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *UpdateSprintRequest) GetOrganizationId() string {
@@ -6904,7 +6965,7 @@ type StartSprintRequest struct {
 
 func (x *StartSprintRequest) Reset() {
 	*x = StartSprintRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[81]
+	mi := &file_projects_v1_projects_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6916,7 +6977,7 @@ func (x *StartSprintRequest) String() string {
 func (*StartSprintRequest) ProtoMessage() {}
 
 func (x *StartSprintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[81]
+	mi := &file_projects_v1_projects_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6929,7 +6990,7 @@ func (x *StartSprintRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSprintRequest.ProtoReflect.Descriptor instead.
 func (*StartSprintRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{81}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *StartSprintRequest) GetOrganizationId() string {
@@ -6970,7 +7031,7 @@ type CompleteSprintRequest struct {
 
 func (x *CompleteSprintRequest) Reset() {
 	*x = CompleteSprintRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[82]
+	mi := &file_projects_v1_projects_proto_msgTypes[83]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -6982,7 +7043,7 @@ func (x *CompleteSprintRequest) String() string {
 func (*CompleteSprintRequest) ProtoMessage() {}
 
 func (x *CompleteSprintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[82]
+	mi := &file_projects_v1_projects_proto_msgTypes[83]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6995,7 +7056,7 @@ func (x *CompleteSprintRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteSprintRequest.ProtoReflect.Descriptor instead.
 func (*CompleteSprintRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{82}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *CompleteSprintRequest) GetOrganizationId() string {
@@ -7022,7 +7083,7 @@ type DeleteSprintRequest struct {
 
 func (x *DeleteSprintRequest) Reset() {
 	*x = DeleteSprintRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[83]
+	mi := &file_projects_v1_projects_proto_msgTypes[84]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7034,7 +7095,7 @@ func (x *DeleteSprintRequest) String() string {
 func (*DeleteSprintRequest) ProtoMessage() {}
 
 func (x *DeleteSprintRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[83]
+	mi := &file_projects_v1_projects_proto_msgTypes[84]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7047,7 +7108,7 @@ func (x *DeleteSprintRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSprintRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSprintRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{83}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *DeleteSprintRequest) GetOrganizationId() string {
@@ -7075,7 +7136,7 @@ type ListSprintsRequest struct {
 
 func (x *ListSprintsRequest) Reset() {
 	*x = ListSprintsRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[84]
+	mi := &file_projects_v1_projects_proto_msgTypes[85]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7087,7 +7148,7 @@ func (x *ListSprintsRequest) String() string {
 func (*ListSprintsRequest) ProtoMessage() {}
 
 func (x *ListSprintsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[84]
+	mi := &file_projects_v1_projects_proto_msgTypes[85]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7100,7 +7161,7 @@ func (x *ListSprintsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSprintsRequest.ProtoReflect.Descriptor instead.
 func (*ListSprintsRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{84}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ListSprintsRequest) GetOrganizationId() string {
@@ -7133,7 +7194,7 @@ type CreateSprintResponse struct {
 
 func (x *CreateSprintResponse) Reset() {
 	*x = CreateSprintResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[85]
+	mi := &file_projects_v1_projects_proto_msgTypes[86]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7145,7 +7206,7 @@ func (x *CreateSprintResponse) String() string {
 func (*CreateSprintResponse) ProtoMessage() {}
 
 func (x *CreateSprintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[85]
+	mi := &file_projects_v1_projects_proto_msgTypes[86]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7158,7 +7219,7 @@ func (x *CreateSprintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSprintResponse.ProtoReflect.Descriptor instead.
 func (*CreateSprintResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{85}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *CreateSprintResponse) GetSprint() *Sprint {
@@ -7177,7 +7238,7 @@ type UpdateSprintResponse struct {
 
 func (x *UpdateSprintResponse) Reset() {
 	*x = UpdateSprintResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[86]
+	mi := &file_projects_v1_projects_proto_msgTypes[87]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7189,7 +7250,7 @@ func (x *UpdateSprintResponse) String() string {
 func (*UpdateSprintResponse) ProtoMessage() {}
 
 func (x *UpdateSprintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[86]
+	mi := &file_projects_v1_projects_proto_msgTypes[87]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7202,7 +7263,7 @@ func (x *UpdateSprintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSprintResponse.ProtoReflect.Descriptor instead.
 func (*UpdateSprintResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{86}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *UpdateSprintResponse) GetSprint() *Sprint {
@@ -7221,7 +7282,7 @@ type StartSprintResponse struct {
 
 func (x *StartSprintResponse) Reset() {
 	*x = StartSprintResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[87]
+	mi := &file_projects_v1_projects_proto_msgTypes[88]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7233,7 +7294,7 @@ func (x *StartSprintResponse) String() string {
 func (*StartSprintResponse) ProtoMessage() {}
 
 func (x *StartSprintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[87]
+	mi := &file_projects_v1_projects_proto_msgTypes[88]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7246,7 +7307,7 @@ func (x *StartSprintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartSprintResponse.ProtoReflect.Descriptor instead.
 func (*StartSprintResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{87}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *StartSprintResponse) GetSprint() *Sprint {
@@ -7265,7 +7326,7 @@ type CompleteSprintResponse struct {
 
 func (x *CompleteSprintResponse) Reset() {
 	*x = CompleteSprintResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[88]
+	mi := &file_projects_v1_projects_proto_msgTypes[89]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7277,7 +7338,7 @@ func (x *CompleteSprintResponse) String() string {
 func (*CompleteSprintResponse) ProtoMessage() {}
 
 func (x *CompleteSprintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[88]
+	mi := &file_projects_v1_projects_proto_msgTypes[89]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7290,7 +7351,7 @@ func (x *CompleteSprintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompleteSprintResponse.ProtoReflect.Descriptor instead.
 func (*CompleteSprintResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{88}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *CompleteSprintResponse) GetSprint() *Sprint {
@@ -7309,7 +7370,7 @@ type DeleteSprintResponse struct {
 
 func (x *DeleteSprintResponse) Reset() {
 	*x = DeleteSprintResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[89]
+	mi := &file_projects_v1_projects_proto_msgTypes[90]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7321,7 +7382,7 @@ func (x *DeleteSprintResponse) String() string {
 func (*DeleteSprintResponse) ProtoMessage() {}
 
 func (x *DeleteSprintResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[89]
+	mi := &file_projects_v1_projects_proto_msgTypes[90]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7334,7 +7395,7 @@ func (x *DeleteSprintResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSprintResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSprintResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{89}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *DeleteSprintResponse) GetSuccess() bool {
@@ -7353,7 +7414,7 @@ type ListSprintsResponse struct {
 
 func (x *ListSprintsResponse) Reset() {
 	*x = ListSprintsResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[90]
+	mi := &file_projects_v1_projects_proto_msgTypes[91]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7365,7 +7426,7 @@ func (x *ListSprintsResponse) String() string {
 func (*ListSprintsResponse) ProtoMessage() {}
 
 func (x *ListSprintsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[90]
+	mi := &file_projects_v1_projects_proto_msgTypes[91]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7378,7 +7439,7 @@ func (x *ListSprintsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSprintsResponse.ProtoReflect.Descriptor instead.
 func (*ListSprintsResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{90}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ListSprintsResponse) GetSprints() []*Sprint {
@@ -7399,7 +7460,7 @@ type ListActivitiesRequest struct {
 
 func (x *ListActivitiesRequest) Reset() {
 	*x = ListActivitiesRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[91]
+	mi := &file_projects_v1_projects_proto_msgTypes[92]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7411,7 +7472,7 @@ func (x *ListActivitiesRequest) String() string {
 func (*ListActivitiesRequest) ProtoMessage() {}
 
 func (x *ListActivitiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[91]
+	mi := &file_projects_v1_projects_proto_msgTypes[92]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7424,7 +7485,7 @@ func (x *ListActivitiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActivitiesRequest.ProtoReflect.Descriptor instead.
 func (*ListActivitiesRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{91}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ListActivitiesRequest) GetOrganizationId() string {
@@ -7458,7 +7519,7 @@ type ListActivitiesResponse struct {
 
 func (x *ListActivitiesResponse) Reset() {
 	*x = ListActivitiesResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[92]
+	mi := &file_projects_v1_projects_proto_msgTypes[93]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7470,7 +7531,7 @@ func (x *ListActivitiesResponse) String() string {
 func (*ListActivitiesResponse) ProtoMessage() {}
 
 func (x *ListActivitiesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[92]
+	mi := &file_projects_v1_projects_proto_msgTypes[93]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7483,7 +7544,7 @@ func (x *ListActivitiesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListActivitiesResponse.ProtoReflect.Descriptor instead.
 func (*ListActivitiesResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{92}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *ListActivitiesResponse) GetActivities() []*TaskActivity {
@@ -7510,7 +7571,7 @@ type ToggleTaskWatcherRequest struct {
 
 func (x *ToggleTaskWatcherRequest) Reset() {
 	*x = ToggleTaskWatcherRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[93]
+	mi := &file_projects_v1_projects_proto_msgTypes[94]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7522,7 +7583,7 @@ func (x *ToggleTaskWatcherRequest) String() string {
 func (*ToggleTaskWatcherRequest) ProtoMessage() {}
 
 func (x *ToggleTaskWatcherRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[93]
+	mi := &file_projects_v1_projects_proto_msgTypes[94]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7535,7 +7596,7 @@ func (x *ToggleTaskWatcherRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleTaskWatcherRequest.ProtoReflect.Descriptor instead.
 func (*ToggleTaskWatcherRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{93}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *ToggleTaskWatcherRequest) GetOrganizationId() string {
@@ -7561,7 +7622,7 @@ type ToggleTaskWatcherResponse struct {
 
 func (x *ToggleTaskWatcherResponse) Reset() {
 	*x = ToggleTaskWatcherResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[94]
+	mi := &file_projects_v1_projects_proto_msgTypes[95]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7573,7 +7634,7 @@ func (x *ToggleTaskWatcherResponse) String() string {
 func (*ToggleTaskWatcherResponse) ProtoMessage() {}
 
 func (x *ToggleTaskWatcherResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[94]
+	mi := &file_projects_v1_projects_proto_msgTypes[95]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7586,7 +7647,7 @@ func (x *ToggleTaskWatcherResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToggleTaskWatcherResponse.ProtoReflect.Descriptor instead.
 func (*ToggleTaskWatcherResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{94}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *ToggleTaskWatcherResponse) GetIsWatching() bool {
@@ -7606,7 +7667,7 @@ type ListTaskWatchersRequest struct {
 
 func (x *ListTaskWatchersRequest) Reset() {
 	*x = ListTaskWatchersRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[95]
+	mi := &file_projects_v1_projects_proto_msgTypes[96]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7618,7 +7679,7 @@ func (x *ListTaskWatchersRequest) String() string {
 func (*ListTaskWatchersRequest) ProtoMessage() {}
 
 func (x *ListTaskWatchersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[95]
+	mi := &file_projects_v1_projects_proto_msgTypes[96]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7631,7 +7692,7 @@ func (x *ListTaskWatchersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskWatchersRequest.ProtoReflect.Descriptor instead.
 func (*ListTaskWatchersRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{95}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ListTaskWatchersRequest) GetOrganizationId() string {
@@ -7658,7 +7719,7 @@ type ListTaskWatchersResponse struct {
 
 func (x *ListTaskWatchersResponse) Reset() {
 	*x = ListTaskWatchersResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[96]
+	mi := &file_projects_v1_projects_proto_msgTypes[97]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7670,7 +7731,7 @@ func (x *ListTaskWatchersResponse) String() string {
 func (*ListTaskWatchersResponse) ProtoMessage() {}
 
 func (x *ListTaskWatchersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[96]
+	mi := &file_projects_v1_projects_proto_msgTypes[97]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7683,7 +7744,7 @@ func (x *ListTaskWatchersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListTaskWatchersResponse.ProtoReflect.Descriptor instead.
 func (*ListTaskWatchersResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{96}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *ListTaskWatchersResponse) GetWatcherUserIds() []string {
@@ -7710,7 +7771,7 @@ type BulkCheckTaskWatchersRequest struct {
 
 func (x *BulkCheckTaskWatchersRequest) Reset() {
 	*x = BulkCheckTaskWatchersRequest{}
-	mi := &file_projects_v1_projects_proto_msgTypes[97]
+	mi := &file_projects_v1_projects_proto_msgTypes[98]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7722,7 +7783,7 @@ func (x *BulkCheckTaskWatchersRequest) String() string {
 func (*BulkCheckTaskWatchersRequest) ProtoMessage() {}
 
 func (x *BulkCheckTaskWatchersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[97]
+	mi := &file_projects_v1_projects_proto_msgTypes[98]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7735,7 +7796,7 @@ func (x *BulkCheckTaskWatchersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCheckTaskWatchersRequest.ProtoReflect.Descriptor instead.
 func (*BulkCheckTaskWatchersRequest) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{97}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *BulkCheckTaskWatchersRequest) GetOrganizationId() string {
@@ -7761,7 +7822,7 @@ type BulkCheckTaskWatchersResponse struct {
 
 func (x *BulkCheckTaskWatchersResponse) Reset() {
 	*x = BulkCheckTaskWatchersResponse{}
-	mi := &file_projects_v1_projects_proto_msgTypes[98]
+	mi := &file_projects_v1_projects_proto_msgTypes[99]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -7773,7 +7834,7 @@ func (x *BulkCheckTaskWatchersResponse) String() string {
 func (*BulkCheckTaskWatchersResponse) ProtoMessage() {}
 
 func (x *BulkCheckTaskWatchersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_projects_proto_msgTypes[98]
+	mi := &file_projects_v1_projects_proto_msgTypes[99]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7786,7 +7847,7 @@ func (x *BulkCheckTaskWatchersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BulkCheckTaskWatchersResponse.ProtoReflect.Descriptor instead.
 func (*BulkCheckTaskWatchersResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_projects_proto_rawDescGZIP(), []int{98}
+	return file_projects_v1_projects_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *BulkCheckTaskWatchersResponse) GetWatchedTasks() map[string]bool {
@@ -8184,7 +8245,7 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x12_estimated_minutesJ\x04\b\x12\x10\x13R\x12time_spent_minutes\"R\n" +
 	"\x0eGetTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
-	"\atask_id\x18\x02 \x01(\tR\x06taskId\"\xa9\t\n" +
+	"\atask_id\x18\x02 \x01(\tR\x06taskId\"\xfd\t\n" +
 	"\x11UpdateTaskRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n" +
 	"\atask_id\x18\x02 \x01(\tR\x06taskId\x12\x19\n" +
@@ -8197,8 +8258,8 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"start_date\x18\b \x01(\tH\x05R\tstartDate\x88\x01\x01\x12\x1e\n" +
 	"\bdue_date\x18\t \x01(\tH\x06R\adueDate\x88\x01\x01\x12 \n" +
 	"\tparent_id\x18\n" +
-	" \x01(\tH\aR\bparentId\x88\x01\x01\x12-\n" +
-	"\x13blocked_by_task_ids\x18\v \x03(\tR\x10blockedByTaskIds\x12&\n" +
+	" \x01(\tH\aR\bparentId\x88\x01\x01\x121\n" +
+	"\x13blocked_by_task_ids\x18\v \x03(\tB\x02\x18\x01R\x10blockedByTaskIds\x12&\n" +
 	"\fis_milestone\x18\f \x01(\bH\bR\visMilestone\x88\x01\x01\x12,\n" +
 	"\x0frecurrence_rule\x18\r \x01(\tH\tR\x0erecurrenceRule\x88\x01\x01\x12\"\n" +
 	"\n" +
@@ -8209,7 +8270,9 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\tsprint_id\x18\x11 \x01(\tH\fR\bsprintId\x88\x01\x01\x120\n" +
 	"\x11estimated_minutes\x18\x12 \x01(\x05H\rR\x10estimatedMinutes\x88\x01\x01\x125\n" +
 	"\atag_ids\x18\x14 \x01(\v2\x17.projects.v1.TaskTagIdsH\x0eR\x06tagIds\x88\x01\x01\x12.\n" +
-	"\x10base_description\x18\x15 \x01(\tH\x0fR\x0fbaseDescription\x88\x01\x01\x1a>\n" +
+	"\x10base_description\x18\x15 \x01(\tH\x0fR\x0fbaseDescription\x88\x01\x01\x12?\n" +
+	"\n" +
+	"blocked_by\x18\x16 \x01(\v2\x1b.projects.v1.TaskBlockerIdsH\x10R\tblockedBy\x88\x01\x01\x1a>\n" +
 	"\x10FieldValuesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\b\n" +
@@ -8232,9 +8295,12 @@ const file_projects_v1_projects_proto_rawDesc = "" +
 	"\x12_estimated_minutesB\n" +
 	"\n" +
 	"\b_tag_idsB\x13\n" +
-	"\x11_base_descriptionJ\x04\b\x13\x10\x14R\x12time_spent_minutes\"\x1e\n" +
+	"\x11_base_descriptionB\r\n" +
+	"\v_blocked_byJ\x04\b\x13\x10\x14R\x12time_spent_minutes\"\x1e\n" +
 	"\n" +
 	"TaskTagIds\x12\x10\n" +
+	"\x03ids\x18\x01 \x03(\tR\x03ids\"\"\n" +
+	"\x0eTaskBlockerIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"#\n" +
 	"\x0fTaskAssigneeIds\x12\x10\n" +
 	"\x03ids\x18\x01 \x03(\tR\x03ids\"\x8a\x01\n" +
@@ -8731,7 +8797,7 @@ func file_projects_v1_projects_proto_rawDescGZIP() []byte {
 }
 
 var file_projects_v1_projects_proto_enumTypes = make([]protoimpl.EnumInfo, 13)
-var file_projects_v1_projects_proto_msgTypes = make([]protoimpl.MessageInfo, 105)
+var file_projects_v1_projects_proto_msgTypes = make([]protoimpl.MessageInfo, 106)
 var file_projects_v1_projects_proto_goTypes = []any{
 	(FieldType)(0),                            // 0: projects.v1.FieldType
 	(ViewType)(0),                             // 1: projects.v1.ViewType
@@ -8789,146 +8855,147 @@ var file_projects_v1_projects_proto_goTypes = []any{
 	(*GetTaskRequest)(nil),                    // 53: projects.v1.GetTaskRequest
 	(*UpdateTaskRequest)(nil),                 // 54: projects.v1.UpdateTaskRequest
 	(*TaskTagIds)(nil),                        // 55: projects.v1.TaskTagIds
-	(*TaskAssigneeIds)(nil),                   // 56: projects.v1.TaskAssigneeIds
-	(*MoveTaskRequest)(nil),                   // 57: projects.v1.MoveTaskRequest
-	(*BulkUpdateTasksRequest)(nil),            // 58: projects.v1.BulkUpdateTasksRequest
-	(*DeleteTaskRequest)(nil),                 // 59: projects.v1.DeleteTaskRequest
-	(*DeleteTasksRequest)(nil),                // 60: projects.v1.DeleteTasksRequest
-	(*ListTasksRequest)(nil),                  // 61: projects.v1.ListTasksRequest
-	(*ExportTasksRequest)(nil),                // 62: projects.v1.ExportTasksRequest
-	(*ExportTasksResponse)(nil),               // 63: projects.v1.ExportTasksResponse
-	(*CreateTaskResponse)(nil),                // 64: projects.v1.CreateTaskResponse
-	(*GetTaskResponse)(nil),                   // 65: projects.v1.GetTaskResponse
-	(*UpdateTaskResponse)(nil),                // 66: projects.v1.UpdateTaskResponse
-	(*MoveTaskResponse)(nil),                  // 67: projects.v1.MoveTaskResponse
-	(*DeleteTaskResponse)(nil),                // 68: projects.v1.DeleteTaskResponse
-	(*DeleteTasksResponse)(nil),               // 69: projects.v1.DeleteTasksResponse
-	(*BulkUpdateTasksResponse)(nil),           // 70: projects.v1.BulkUpdateTasksResponse
-	(*ListTasksResponse)(nil),                 // 71: projects.v1.ListTasksResponse
-	(*CreateFieldRequest)(nil),                // 72: projects.v1.CreateFieldRequest
-	(*UpdateFieldRequest)(nil),                // 73: projects.v1.UpdateFieldRequest
-	(*DeleteFieldRequest)(nil),                // 74: projects.v1.DeleteFieldRequest
-	(*CreateFieldResponse)(nil),               // 75: projects.v1.CreateFieldResponse
-	(*UpdateFieldResponse)(nil),               // 76: projects.v1.UpdateFieldResponse
-	(*DeleteFieldResponse)(nil),               // 77: projects.v1.DeleteFieldResponse
-	(*CreateViewRequest)(nil),                 // 78: projects.v1.CreateViewRequest
-	(*UpdateViewRequest)(nil),                 // 79: projects.v1.UpdateViewRequest
-	(*DeleteViewRequest)(nil),                 // 80: projects.v1.DeleteViewRequest
-	(*CreateViewResponse)(nil),                // 81: projects.v1.CreateViewResponse
-	(*UpdateViewResponse)(nil),                // 82: projects.v1.UpdateViewResponse
-	(*DeleteViewResponse)(nil),                // 83: projects.v1.DeleteViewResponse
-	(*ReorderViewsRequest)(nil),               // 84: projects.v1.ReorderViewsRequest
-	(*ReorderViewsResponse)(nil),              // 85: projects.v1.ReorderViewsResponse
-	(*ViewFieldCapabilities)(nil),             // 86: projects.v1.ViewFieldCapabilities
-	(*ViewCatalogFieldType)(nil),              // 87: projects.v1.ViewCatalogFieldType
-	(*ViewCatalogPseudoField)(nil),            // 88: projects.v1.ViewCatalogPseudoField
-	(*ViewFilterLimits)(nil),                  // 89: projects.v1.ViewFilterLimits
-	(*GetViewCatalogRequest)(nil),             // 90: projects.v1.GetViewCatalogRequest
-	(*GetViewCatalogResponse)(nil),            // 91: projects.v1.GetViewCatalogResponse
-	(*CreateSprintRequest)(nil),               // 92: projects.v1.CreateSprintRequest
-	(*UpdateSprintRequest)(nil),               // 93: projects.v1.UpdateSprintRequest
-	(*StartSprintRequest)(nil),                // 94: projects.v1.StartSprintRequest
-	(*CompleteSprintRequest)(nil),             // 95: projects.v1.CompleteSprintRequest
-	(*DeleteSprintRequest)(nil),               // 96: projects.v1.DeleteSprintRequest
-	(*ListSprintsRequest)(nil),                // 97: projects.v1.ListSprintsRequest
-	(*CreateSprintResponse)(nil),              // 98: projects.v1.CreateSprintResponse
-	(*UpdateSprintResponse)(nil),              // 99: projects.v1.UpdateSprintResponse
-	(*StartSprintResponse)(nil),               // 100: projects.v1.StartSprintResponse
-	(*CompleteSprintResponse)(nil),            // 101: projects.v1.CompleteSprintResponse
-	(*DeleteSprintResponse)(nil),              // 102: projects.v1.DeleteSprintResponse
-	(*ListSprintsResponse)(nil),               // 103: projects.v1.ListSprintsResponse
-	(*ListActivitiesRequest)(nil),             // 104: projects.v1.ListActivitiesRequest
-	(*ListActivitiesResponse)(nil),            // 105: projects.v1.ListActivitiesResponse
-	(*ToggleTaskWatcherRequest)(nil),          // 106: projects.v1.ToggleTaskWatcherRequest
-	(*ToggleTaskWatcherResponse)(nil),         // 107: projects.v1.ToggleTaskWatcherResponse
-	(*ListTaskWatchersRequest)(nil),           // 108: projects.v1.ListTaskWatchersRequest
-	(*ListTaskWatchersResponse)(nil),          // 109: projects.v1.ListTaskWatchersResponse
-	(*BulkCheckTaskWatchersRequest)(nil),      // 110: projects.v1.BulkCheckTaskWatchersRequest
-	(*BulkCheckTaskWatchersResponse)(nil),     // 111: projects.v1.BulkCheckTaskWatchersResponse
-	nil,                                       // 112: projects.v1.Project.TypeFieldSchemasEntry
-	nil,                                       // 113: projects.v1.Task.FieldValuesEntry
-	nil,                                       // 114: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
-	nil,                                       // 115: projects.v1.CreateTaskRequest.FieldValuesEntry
-	nil,                                       // 116: projects.v1.UpdateTaskRequest.FieldValuesEntry
-	nil,                                       // 117: projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	(v1.AccessMode)(0),                        // 118: common.v1.AccessMode
-	(*timestamppb.Timestamp)(nil),             // 119: google.protobuf.Timestamp
-	(v1.ContentRole)(0),                       // 120: common.v1.ContentRole
-	(*v11.Tag)(nil),                           // 121: tags.v1.Tag
-	(*v1.PaginationRequest)(nil),              // 122: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),             // 123: common.v1.PaginationResponse
-	(*CreateWorklogRequest)(nil),              // 124: projects.v1.CreateWorklogRequest
-	(*UpdateWorklogRequest)(nil),              // 125: projects.v1.UpdateWorklogRequest
-	(*DeleteWorklogRequest)(nil),              // 126: projects.v1.DeleteWorklogRequest
-	(*ListTaskWorklogsRequest)(nil),           // 127: projects.v1.ListTaskWorklogsRequest
-	(*ListUserWorklogsRequest)(nil),           // 128: projects.v1.ListUserWorklogsRequest
-	(*StartTimerRequest)(nil),                 // 129: projects.v1.StartTimerRequest
-	(*PauseTimerRequest)(nil),                 // 130: projects.v1.PauseTimerRequest
-	(*ResumeTimerRequest)(nil),                // 131: projects.v1.ResumeTimerRequest
-	(*StopTimerRequest)(nil),                  // 132: projects.v1.StopTimerRequest
-	(*GetActiveTimerRequest)(nil),             // 133: projects.v1.GetActiveTimerRequest
-	(*GetTimePolicyRequest)(nil),              // 134: projects.v1.GetTimePolicyRequest
-	(*UpdateTimePolicyRequest)(nil),           // 135: projects.v1.UpdateTimePolicyRequest
-	(*AggregateWorklogsRequest)(nil),          // 136: projects.v1.AggregateWorklogsRequest
-	(*GetTimesheetRequest)(nil),               // 137: projects.v1.GetTimesheetRequest
-	(*SubmitTimesheetRequest)(nil),            // 138: projects.v1.SubmitTimesheetRequest
-	(*RecallTimesheetRequest)(nil),            // 139: projects.v1.RecallTimesheetRequest
-	(*ListReviewTimesheetsRequest)(nil),       // 140: projects.v1.ListReviewTimesheetsRequest
-	(*ApproveTimesheetRequest)(nil),           // 141: projects.v1.ApproveTimesheetRequest
-	(*RejectTimesheetRequest)(nil),            // 142: projects.v1.RejectTimesheetRequest
-	(*GrantGraceRequest)(nil),                 // 143: projects.v1.GrantGraceRequest
-	(*ClosePeriodRequest)(nil),                // 144: projects.v1.ClosePeriodRequest
-	(*ReopenPeriodRequest)(nil),               // 145: projects.v1.ReopenPeriodRequest
-	(*ListPeriodsRequest)(nil),                // 146: projects.v1.ListPeriodsRequest
-	(*CreateInternalTimeProjectRequest)(nil),  // 147: projects.v1.CreateInternalTimeProjectRequest
-	(*GetSprintCapacityRequest)(nil),          // 148: projects.v1.GetSprintCapacityRequest
-	(*CreateWorklogResponse)(nil),             // 149: projects.v1.CreateWorklogResponse
-	(*UpdateWorklogResponse)(nil),             // 150: projects.v1.UpdateWorklogResponse
-	(*DeleteWorklogResponse)(nil),             // 151: projects.v1.DeleteWorklogResponse
-	(*ListTaskWorklogsResponse)(nil),          // 152: projects.v1.ListTaskWorklogsResponse
-	(*ListUserWorklogsResponse)(nil),          // 153: projects.v1.ListUserWorklogsResponse
-	(*StartTimerResponse)(nil),                // 154: projects.v1.StartTimerResponse
-	(*PauseTimerResponse)(nil),                // 155: projects.v1.PauseTimerResponse
-	(*ResumeTimerResponse)(nil),               // 156: projects.v1.ResumeTimerResponse
-	(*StopTimerResponse)(nil),                 // 157: projects.v1.StopTimerResponse
-	(*GetActiveTimerResponse)(nil),            // 158: projects.v1.GetActiveTimerResponse
-	(*GetTimePolicyResponse)(nil),             // 159: projects.v1.GetTimePolicyResponse
-	(*UpdateTimePolicyResponse)(nil),          // 160: projects.v1.UpdateTimePolicyResponse
-	(*AggregateWorklogsResponse)(nil),         // 161: projects.v1.AggregateWorklogsResponse
-	(*GetTimesheetResponse)(nil),              // 162: projects.v1.GetTimesheetResponse
-	(*SubmitTimesheetResponse)(nil),           // 163: projects.v1.SubmitTimesheetResponse
-	(*RecallTimesheetResponse)(nil),           // 164: projects.v1.RecallTimesheetResponse
-	(*ListReviewTimesheetsResponse)(nil),      // 165: projects.v1.ListReviewTimesheetsResponse
-	(*ApproveTimesheetResponse)(nil),          // 166: projects.v1.ApproveTimesheetResponse
-	(*RejectTimesheetResponse)(nil),           // 167: projects.v1.RejectTimesheetResponse
-	(*GrantGraceResponse)(nil),                // 168: projects.v1.GrantGraceResponse
-	(*ClosePeriodResponse)(nil),               // 169: projects.v1.ClosePeriodResponse
-	(*ReopenPeriodResponse)(nil),              // 170: projects.v1.ReopenPeriodResponse
-	(*ListPeriodsResponse)(nil),               // 171: projects.v1.ListPeriodsResponse
-	(*CreateInternalTimeProjectResponse)(nil), // 172: projects.v1.CreateInternalTimeProjectResponse
-	(*GetSprintCapacityResponse)(nil),         // 173: projects.v1.GetSprintCapacityResponse
+	(*TaskBlockerIds)(nil),                    // 56: projects.v1.TaskBlockerIds
+	(*TaskAssigneeIds)(nil),                   // 57: projects.v1.TaskAssigneeIds
+	(*MoveTaskRequest)(nil),                   // 58: projects.v1.MoveTaskRequest
+	(*BulkUpdateTasksRequest)(nil),            // 59: projects.v1.BulkUpdateTasksRequest
+	(*DeleteTaskRequest)(nil),                 // 60: projects.v1.DeleteTaskRequest
+	(*DeleteTasksRequest)(nil),                // 61: projects.v1.DeleteTasksRequest
+	(*ListTasksRequest)(nil),                  // 62: projects.v1.ListTasksRequest
+	(*ExportTasksRequest)(nil),                // 63: projects.v1.ExportTasksRequest
+	(*ExportTasksResponse)(nil),               // 64: projects.v1.ExportTasksResponse
+	(*CreateTaskResponse)(nil),                // 65: projects.v1.CreateTaskResponse
+	(*GetTaskResponse)(nil),                   // 66: projects.v1.GetTaskResponse
+	(*UpdateTaskResponse)(nil),                // 67: projects.v1.UpdateTaskResponse
+	(*MoveTaskResponse)(nil),                  // 68: projects.v1.MoveTaskResponse
+	(*DeleteTaskResponse)(nil),                // 69: projects.v1.DeleteTaskResponse
+	(*DeleteTasksResponse)(nil),               // 70: projects.v1.DeleteTasksResponse
+	(*BulkUpdateTasksResponse)(nil),           // 71: projects.v1.BulkUpdateTasksResponse
+	(*ListTasksResponse)(nil),                 // 72: projects.v1.ListTasksResponse
+	(*CreateFieldRequest)(nil),                // 73: projects.v1.CreateFieldRequest
+	(*UpdateFieldRequest)(nil),                // 74: projects.v1.UpdateFieldRequest
+	(*DeleteFieldRequest)(nil),                // 75: projects.v1.DeleteFieldRequest
+	(*CreateFieldResponse)(nil),               // 76: projects.v1.CreateFieldResponse
+	(*UpdateFieldResponse)(nil),               // 77: projects.v1.UpdateFieldResponse
+	(*DeleteFieldResponse)(nil),               // 78: projects.v1.DeleteFieldResponse
+	(*CreateViewRequest)(nil),                 // 79: projects.v1.CreateViewRequest
+	(*UpdateViewRequest)(nil),                 // 80: projects.v1.UpdateViewRequest
+	(*DeleteViewRequest)(nil),                 // 81: projects.v1.DeleteViewRequest
+	(*CreateViewResponse)(nil),                // 82: projects.v1.CreateViewResponse
+	(*UpdateViewResponse)(nil),                // 83: projects.v1.UpdateViewResponse
+	(*DeleteViewResponse)(nil),                // 84: projects.v1.DeleteViewResponse
+	(*ReorderViewsRequest)(nil),               // 85: projects.v1.ReorderViewsRequest
+	(*ReorderViewsResponse)(nil),              // 86: projects.v1.ReorderViewsResponse
+	(*ViewFieldCapabilities)(nil),             // 87: projects.v1.ViewFieldCapabilities
+	(*ViewCatalogFieldType)(nil),              // 88: projects.v1.ViewCatalogFieldType
+	(*ViewCatalogPseudoField)(nil),            // 89: projects.v1.ViewCatalogPseudoField
+	(*ViewFilterLimits)(nil),                  // 90: projects.v1.ViewFilterLimits
+	(*GetViewCatalogRequest)(nil),             // 91: projects.v1.GetViewCatalogRequest
+	(*GetViewCatalogResponse)(nil),            // 92: projects.v1.GetViewCatalogResponse
+	(*CreateSprintRequest)(nil),               // 93: projects.v1.CreateSprintRequest
+	(*UpdateSprintRequest)(nil),               // 94: projects.v1.UpdateSprintRequest
+	(*StartSprintRequest)(nil),                // 95: projects.v1.StartSprintRequest
+	(*CompleteSprintRequest)(nil),             // 96: projects.v1.CompleteSprintRequest
+	(*DeleteSprintRequest)(nil),               // 97: projects.v1.DeleteSprintRequest
+	(*ListSprintsRequest)(nil),                // 98: projects.v1.ListSprintsRequest
+	(*CreateSprintResponse)(nil),              // 99: projects.v1.CreateSprintResponse
+	(*UpdateSprintResponse)(nil),              // 100: projects.v1.UpdateSprintResponse
+	(*StartSprintResponse)(nil),               // 101: projects.v1.StartSprintResponse
+	(*CompleteSprintResponse)(nil),            // 102: projects.v1.CompleteSprintResponse
+	(*DeleteSprintResponse)(nil),              // 103: projects.v1.DeleteSprintResponse
+	(*ListSprintsResponse)(nil),               // 104: projects.v1.ListSprintsResponse
+	(*ListActivitiesRequest)(nil),             // 105: projects.v1.ListActivitiesRequest
+	(*ListActivitiesResponse)(nil),            // 106: projects.v1.ListActivitiesResponse
+	(*ToggleTaskWatcherRequest)(nil),          // 107: projects.v1.ToggleTaskWatcherRequest
+	(*ToggleTaskWatcherResponse)(nil),         // 108: projects.v1.ToggleTaskWatcherResponse
+	(*ListTaskWatchersRequest)(nil),           // 109: projects.v1.ListTaskWatchersRequest
+	(*ListTaskWatchersResponse)(nil),          // 110: projects.v1.ListTaskWatchersResponse
+	(*BulkCheckTaskWatchersRequest)(nil),      // 111: projects.v1.BulkCheckTaskWatchersRequest
+	(*BulkCheckTaskWatchersResponse)(nil),     // 112: projects.v1.BulkCheckTaskWatchersResponse
+	nil,                                       // 113: projects.v1.Project.TypeFieldSchemasEntry
+	nil,                                       // 114: projects.v1.Task.FieldValuesEntry
+	nil,                                       // 115: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
+	nil,                                       // 116: projects.v1.CreateTaskRequest.FieldValuesEntry
+	nil,                                       // 117: projects.v1.UpdateTaskRequest.FieldValuesEntry
+	nil,                                       // 118: projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
+	(v1.AccessMode)(0),                        // 119: common.v1.AccessMode
+	(*timestamppb.Timestamp)(nil),             // 120: google.protobuf.Timestamp
+	(v1.ContentRole)(0),                       // 121: common.v1.ContentRole
+	(*v11.Tag)(nil),                           // 122: tags.v1.Tag
+	(*v1.PaginationRequest)(nil),              // 123: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),             // 124: common.v1.PaginationResponse
+	(*CreateWorklogRequest)(nil),              // 125: projects.v1.CreateWorklogRequest
+	(*UpdateWorklogRequest)(nil),              // 126: projects.v1.UpdateWorklogRequest
+	(*DeleteWorklogRequest)(nil),              // 127: projects.v1.DeleteWorklogRequest
+	(*ListTaskWorklogsRequest)(nil),           // 128: projects.v1.ListTaskWorklogsRequest
+	(*ListUserWorklogsRequest)(nil),           // 129: projects.v1.ListUserWorklogsRequest
+	(*StartTimerRequest)(nil),                 // 130: projects.v1.StartTimerRequest
+	(*PauseTimerRequest)(nil),                 // 131: projects.v1.PauseTimerRequest
+	(*ResumeTimerRequest)(nil),                // 132: projects.v1.ResumeTimerRequest
+	(*StopTimerRequest)(nil),                  // 133: projects.v1.StopTimerRequest
+	(*GetActiveTimerRequest)(nil),             // 134: projects.v1.GetActiveTimerRequest
+	(*GetTimePolicyRequest)(nil),              // 135: projects.v1.GetTimePolicyRequest
+	(*UpdateTimePolicyRequest)(nil),           // 136: projects.v1.UpdateTimePolicyRequest
+	(*AggregateWorklogsRequest)(nil),          // 137: projects.v1.AggregateWorklogsRequest
+	(*GetTimesheetRequest)(nil),               // 138: projects.v1.GetTimesheetRequest
+	(*SubmitTimesheetRequest)(nil),            // 139: projects.v1.SubmitTimesheetRequest
+	(*RecallTimesheetRequest)(nil),            // 140: projects.v1.RecallTimesheetRequest
+	(*ListReviewTimesheetsRequest)(nil),       // 141: projects.v1.ListReviewTimesheetsRequest
+	(*ApproveTimesheetRequest)(nil),           // 142: projects.v1.ApproveTimesheetRequest
+	(*RejectTimesheetRequest)(nil),            // 143: projects.v1.RejectTimesheetRequest
+	(*GrantGraceRequest)(nil),                 // 144: projects.v1.GrantGraceRequest
+	(*ClosePeriodRequest)(nil),                // 145: projects.v1.ClosePeriodRequest
+	(*ReopenPeriodRequest)(nil),               // 146: projects.v1.ReopenPeriodRequest
+	(*ListPeriodsRequest)(nil),                // 147: projects.v1.ListPeriodsRequest
+	(*CreateInternalTimeProjectRequest)(nil),  // 148: projects.v1.CreateInternalTimeProjectRequest
+	(*GetSprintCapacityRequest)(nil),          // 149: projects.v1.GetSprintCapacityRequest
+	(*CreateWorklogResponse)(nil),             // 150: projects.v1.CreateWorklogResponse
+	(*UpdateWorklogResponse)(nil),             // 151: projects.v1.UpdateWorklogResponse
+	(*DeleteWorklogResponse)(nil),             // 152: projects.v1.DeleteWorklogResponse
+	(*ListTaskWorklogsResponse)(nil),          // 153: projects.v1.ListTaskWorklogsResponse
+	(*ListUserWorklogsResponse)(nil),          // 154: projects.v1.ListUserWorklogsResponse
+	(*StartTimerResponse)(nil),                // 155: projects.v1.StartTimerResponse
+	(*PauseTimerResponse)(nil),                // 156: projects.v1.PauseTimerResponse
+	(*ResumeTimerResponse)(nil),               // 157: projects.v1.ResumeTimerResponse
+	(*StopTimerResponse)(nil),                 // 158: projects.v1.StopTimerResponse
+	(*GetActiveTimerResponse)(nil),            // 159: projects.v1.GetActiveTimerResponse
+	(*GetTimePolicyResponse)(nil),             // 160: projects.v1.GetTimePolicyResponse
+	(*UpdateTimePolicyResponse)(nil),          // 161: projects.v1.UpdateTimePolicyResponse
+	(*AggregateWorklogsResponse)(nil),         // 162: projects.v1.AggregateWorklogsResponse
+	(*GetTimesheetResponse)(nil),              // 163: projects.v1.GetTimesheetResponse
+	(*SubmitTimesheetResponse)(nil),           // 164: projects.v1.SubmitTimesheetResponse
+	(*RecallTimesheetResponse)(nil),           // 165: projects.v1.RecallTimesheetResponse
+	(*ListReviewTimesheetsResponse)(nil),      // 166: projects.v1.ListReviewTimesheetsResponse
+	(*ApproveTimesheetResponse)(nil),          // 167: projects.v1.ApproveTimesheetResponse
+	(*RejectTimesheetResponse)(nil),           // 168: projects.v1.RejectTimesheetResponse
+	(*GrantGraceResponse)(nil),                // 169: projects.v1.GrantGraceResponse
+	(*ClosePeriodResponse)(nil),               // 170: projects.v1.ClosePeriodResponse
+	(*ReopenPeriodResponse)(nil),              // 171: projects.v1.ReopenPeriodResponse
+	(*ListPeriodsResponse)(nil),               // 172: projects.v1.ListPeriodsResponse
+	(*CreateInternalTimeProjectResponse)(nil), // 173: projects.v1.CreateInternalTimeProjectResponse
+	(*GetSprintCapacityResponse)(nil),         // 174: projects.v1.GetSprintCapacityResponse
 }
 var file_projects_v1_projects_proto_depIdxs = []int32{
-	118, // 0: projects.v1.Project.access_mode:type_name -> common.v1.AccessMode
+	119, // 0: projects.v1.Project.access_mode:type_name -> common.v1.AccessMode
 	15,  // 1: projects.v1.Project.field_definitions:type_name -> projects.v1.FieldDefinition
 	37,  // 2: projects.v1.Project.views:type_name -> projects.v1.ViewConfig
-	119, // 3: projects.v1.Project.created_at:type_name -> google.protobuf.Timestamp
-	119, // 4: projects.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
-	119, // 5: projects.v1.Project.deleted_at:type_name -> google.protobuf.Timestamp
-	120, // 6: projects.v1.Project.user_role:type_name -> common.v1.ContentRole
-	112, // 7: projects.v1.Project.type_field_schemas:type_name -> projects.v1.Project.TypeFieldSchemasEntry
-	120, // 8: projects.v1.Project.baseline_role:type_name -> common.v1.ContentRole
-	121, // 9: projects.v1.Project.tags:type_name -> tags.v1.Tag
-	119, // 10: projects.v1.Task.completed_at:type_name -> google.protobuf.Timestamp
-	113, // 11: projects.v1.Task.field_values:type_name -> projects.v1.Task.FieldValuesEntry
-	119, // 12: projects.v1.Task.created_at:type_name -> google.protobuf.Timestamp
-	119, // 13: projects.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
-	119, // 14: projects.v1.Task.deleted_at:type_name -> google.protobuf.Timestamp
-	120, // 15: projects.v1.Task.user_role:type_name -> common.v1.ContentRole
-	121, // 16: projects.v1.Task.tags:type_name -> tags.v1.Tag
+	120, // 3: projects.v1.Project.created_at:type_name -> google.protobuf.Timestamp
+	120, // 4: projects.v1.Project.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 5: projects.v1.Project.deleted_at:type_name -> google.protobuf.Timestamp
+	121, // 6: projects.v1.Project.user_role:type_name -> common.v1.ContentRole
+	113, // 7: projects.v1.Project.type_field_schemas:type_name -> projects.v1.Project.TypeFieldSchemasEntry
+	121, // 8: projects.v1.Project.baseline_role:type_name -> common.v1.ContentRole
+	122, // 9: projects.v1.Project.tags:type_name -> tags.v1.Tag
+	120, // 10: projects.v1.Task.completed_at:type_name -> google.protobuf.Timestamp
+	114, // 11: projects.v1.Task.field_values:type_name -> projects.v1.Task.FieldValuesEntry
+	120, // 12: projects.v1.Task.created_at:type_name -> google.protobuf.Timestamp
+	120, // 13: projects.v1.Task.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 14: projects.v1.Task.deleted_at:type_name -> google.protobuf.Timestamp
+	121, // 15: projects.v1.Task.user_role:type_name -> common.v1.ContentRole
+	122, // 16: projects.v1.Task.tags:type_name -> tags.v1.Tag
 	0,   // 17: projects.v1.FieldDefinition.type:type_name -> projects.v1.FieldType
-	119, // 18: projects.v1.FieldDefinition.created_at:type_name -> google.protobuf.Timestamp
-	119, // 19: projects.v1.FieldDefinition.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 18: projects.v1.FieldDefinition.created_at:type_name -> google.protobuf.Timestamp
+	120, // 19: projects.v1.FieldDefinition.updated_at:type_name -> google.protobuf.Timestamp
 	3,   // 20: projects.v1.TaskFieldRef.pseudo:type_name -> projects.v1.TaskPseudoField
 	7,   // 21: projects.v1.RelativeDate.anchor:type_name -> projects.v1.RelativeDateAnchor
 	19,  // 22: projects.v1.TaskFilterDate.relative:type_name -> projects.v1.RelativeDate
@@ -8963,203 +9030,204 @@ var file_projects_v1_projects_proto_depIdxs = []int32{
 	17,  // 51: projects.v1.ViewDefinition.visible_fields:type_name -> projects.v1.TaskFieldRef
 	35,  // 52: projects.v1.ViewDefinition.column_widths:type_name -> projects.v1.ColumnWidth
 	1,   // 53: projects.v1.ViewConfig.type:type_name -> projects.v1.ViewType
-	119, // 54: projects.v1.ViewConfig.created_at:type_name -> google.protobuf.Timestamp
-	119, // 55: projects.v1.ViewConfig.updated_at:type_name -> google.protobuf.Timestamp
+	120, // 54: projects.v1.ViewConfig.created_at:type_name -> google.protobuf.Timestamp
+	120, // 55: projects.v1.ViewConfig.updated_at:type_name -> google.protobuf.Timestamp
 	36,  // 56: projects.v1.ViewConfig.definition:type_name -> projects.v1.ViewDefinition
 	2,   // 57: projects.v1.ViewConfig.visibility:type_name -> projects.v1.ViewVisibility
 	12,  // 58: projects.v1.TaskActivity.action:type_name -> projects.v1.ActivityAction
-	119, // 59: projects.v1.TaskActivity.timestamp:type_name -> google.protobuf.Timestamp
-	119, // 60: projects.v1.Sprint.created_at:type_name -> google.protobuf.Timestamp
-	119, // 61: projects.v1.Sprint.updated_at:type_name -> google.protobuf.Timestamp
-	118, // 62: projects.v1.CreateProjectRequest.access_mode:type_name -> common.v1.AccessMode
-	120, // 63: projects.v1.CreateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
-	118, // 64: projects.v1.UpdateProjectRequest.access_mode:type_name -> common.v1.AccessMode
-	114, // 65: projects.v1.UpdateProjectRequest.type_field_schemas:type_name -> projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
-	120, // 66: projects.v1.UpdateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
+	120, // 59: projects.v1.TaskActivity.timestamp:type_name -> google.protobuf.Timestamp
+	120, // 60: projects.v1.Sprint.created_at:type_name -> google.protobuf.Timestamp
+	120, // 61: projects.v1.Sprint.updated_at:type_name -> google.protobuf.Timestamp
+	119, // 62: projects.v1.CreateProjectRequest.access_mode:type_name -> common.v1.AccessMode
+	121, // 63: projects.v1.CreateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
+	119, // 64: projects.v1.UpdateProjectRequest.access_mode:type_name -> common.v1.AccessMode
+	115, // 65: projects.v1.UpdateProjectRequest.type_field_schemas:type_name -> projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry
+	121, // 66: projects.v1.UpdateProjectRequest.baseline_role:type_name -> common.v1.ContentRole
 	44,  // 67: projects.v1.UpdateProjectRequest.tag_ids:type_name -> projects.v1.ProjectTagIds
-	122, // 68: projects.v1.ListProjectsRequest.pagination:type_name -> common.v1.PaginationRequest
-	118, // 69: projects.v1.ListProjectsRequest.access_mode:type_name -> common.v1.AccessMode
+	123, // 68: projects.v1.ListProjectsRequest.pagination:type_name -> common.v1.PaginationRequest
+	119, // 69: projects.v1.ListProjectsRequest.access_mode:type_name -> common.v1.AccessMode
 	13,  // 70: projects.v1.CreateProjectResponse.project:type_name -> projects.v1.Project
 	13,  // 71: projects.v1.GetProjectResponse.project:type_name -> projects.v1.Project
 	13,  // 72: projects.v1.UpdateProjectResponse.project:type_name -> projects.v1.Project
 	13,  // 73: projects.v1.ListProjectsResponse.projects:type_name -> projects.v1.Project
-	123, // 74: projects.v1.ListProjectsResponse.pagination:type_name -> common.v1.PaginationResponse
-	115, // 75: projects.v1.CreateTaskRequest.field_values:type_name -> projects.v1.CreateTaskRequest.FieldValuesEntry
-	56,  // 76: projects.v1.UpdateTaskRequest.assignee_ids:type_name -> projects.v1.TaskAssigneeIds
-	116, // 77: projects.v1.UpdateTaskRequest.field_values:type_name -> projects.v1.UpdateTaskRequest.FieldValuesEntry
+	124, // 74: projects.v1.ListProjectsResponse.pagination:type_name -> common.v1.PaginationResponse
+	116, // 75: projects.v1.CreateTaskRequest.field_values:type_name -> projects.v1.CreateTaskRequest.FieldValuesEntry
+	57,  // 76: projects.v1.UpdateTaskRequest.assignee_ids:type_name -> projects.v1.TaskAssigneeIds
+	117, // 77: projects.v1.UpdateTaskRequest.field_values:type_name -> projects.v1.UpdateTaskRequest.FieldValuesEntry
 	55,  // 78: projects.v1.UpdateTaskRequest.tag_ids:type_name -> projects.v1.TaskTagIds
-	122, // 79: projects.v1.ListTasksRequest.pagination:type_name -> common.v1.PaginationRequest
-	26,  // 80: projects.v1.ListTasksRequest.filter:type_name -> projects.v1.TaskFilterGroup
-	27,  // 81: projects.v1.ListTasksRequest.sort:type_name -> projects.v1.TaskSort
-	26,  // 82: projects.v1.ExportTasksRequest.filter:type_name -> projects.v1.TaskFilterGroup
-	27,  // 83: projects.v1.ExportTasksRequest.sort:type_name -> projects.v1.TaskSort
-	9,   // 84: projects.v1.ExportTasksRequest.format:type_name -> projects.v1.TaskExportFormat
-	10,  // 85: projects.v1.ExportTasksRequest.layout:type_name -> projects.v1.TaskExportLayout
-	14,  // 86: projects.v1.CreateTaskResponse.task:type_name -> projects.v1.Task
-	14,  // 87: projects.v1.CreateTaskResponse.updated_parent:type_name -> projects.v1.Task
-	14,  // 88: projects.v1.CreateTaskResponse.spawned_task:type_name -> projects.v1.Task
-	14,  // 89: projects.v1.GetTaskResponse.task:type_name -> projects.v1.Task
-	14,  // 90: projects.v1.GetTaskResponse.updated_parent:type_name -> projects.v1.Task
-	14,  // 91: projects.v1.GetTaskResponse.spawned_task:type_name -> projects.v1.Task
-	14,  // 92: projects.v1.UpdateTaskResponse.task:type_name -> projects.v1.Task
-	14,  // 93: projects.v1.UpdateTaskResponse.updated_parent:type_name -> projects.v1.Task
-	14,  // 94: projects.v1.UpdateTaskResponse.spawned_task:type_name -> projects.v1.Task
-	14,  // 95: projects.v1.MoveTaskResponse.task:type_name -> projects.v1.Task
-	14,  // 96: projects.v1.MoveTaskResponse.updated_parent:type_name -> projects.v1.Task
-	14,  // 97: projects.v1.MoveTaskResponse.spawned_task:type_name -> projects.v1.Task
-	14,  // 98: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
-	14,  // 99: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
-	123, // 100: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
-	0,   // 101: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
-	15,  // 102: projects.v1.CreateFieldResponse.field:type_name -> projects.v1.FieldDefinition
-	15,  // 103: projects.v1.UpdateFieldResponse.field:type_name -> projects.v1.FieldDefinition
-	36,  // 104: projects.v1.CreateViewRequest.definition:type_name -> projects.v1.ViewDefinition
-	2,   // 105: projects.v1.CreateViewRequest.visibility:type_name -> projects.v1.ViewVisibility
-	36,  // 106: projects.v1.UpdateViewRequest.definition:type_name -> projects.v1.ViewDefinition
-	2,   // 107: projects.v1.UpdateViewRequest.visibility:type_name -> projects.v1.ViewVisibility
-	37,  // 108: projects.v1.CreateViewResponse.view:type_name -> projects.v1.ViewConfig
-	37,  // 109: projects.v1.UpdateViewResponse.view:type_name -> projects.v1.ViewConfig
-	2,   // 110: projects.v1.ReorderViewsRequest.visibility:type_name -> projects.v1.ViewVisibility
-	37,  // 111: projects.v1.ReorderViewsResponse.views:type_name -> projects.v1.ViewConfig
-	4,   // 112: projects.v1.ViewFieldCapabilities.operators:type_name -> projects.v1.TaskFilterOperator
-	8,   // 113: projects.v1.ViewFieldCapabilities.id_flags:type_name -> projects.v1.ViewIdFlag
-	0,   // 114: projects.v1.ViewCatalogFieldType.type:type_name -> projects.v1.FieldType
-	86,  // 115: projects.v1.ViewCatalogFieldType.capabilities:type_name -> projects.v1.ViewFieldCapabilities
-	3,   // 116: projects.v1.ViewCatalogPseudoField.pseudo:type_name -> projects.v1.TaskPseudoField
-	86,  // 117: projects.v1.ViewCatalogPseudoField.capabilities:type_name -> projects.v1.ViewFieldCapabilities
-	87,  // 118: projects.v1.GetViewCatalogResponse.field_types:type_name -> projects.v1.ViewCatalogFieldType
-	88,  // 119: projects.v1.GetViewCatalogResponse.pseudo_fields:type_name -> projects.v1.ViewCatalogPseudoField
-	89,  // 120: projects.v1.GetViewCatalogResponse.filter_limits:type_name -> projects.v1.ViewFilterLimits
-	40,  // 121: projects.v1.CreateSprintResponse.sprint:type_name -> projects.v1.Sprint
-	40,  // 122: projects.v1.UpdateSprintResponse.sprint:type_name -> projects.v1.Sprint
-	40,  // 123: projects.v1.StartSprintResponse.sprint:type_name -> projects.v1.Sprint
-	40,  // 124: projects.v1.CompleteSprintResponse.sprint:type_name -> projects.v1.Sprint
-	40,  // 125: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
-	122, // 126: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
-	38,  // 127: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
-	123, // 128: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
-	117, // 129: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
-	16,  // 130: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	16,  // 131: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
-	41,  // 132: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
-	42,  // 133: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
-	43,  // 134: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
-	45,  // 135: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
-	46,  // 136: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
-	52,  // 137: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
-	53,  // 138: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
-	54,  // 139: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
-	59,  // 140: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
-	61,  // 141: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
-	57,  // 142: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
-	58,  // 143: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
-	60,  // 144: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
-	62,  // 145: projects.v1.ProjectsService.ExportTasks:input_type -> projects.v1.ExportTasksRequest
-	72,  // 146: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
-	73,  // 147: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
-	74,  // 148: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
-	78,  // 149: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
-	79,  // 150: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
-	80,  // 151: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
-	84,  // 152: projects.v1.ProjectsService.ReorderViews:input_type -> projects.v1.ReorderViewsRequest
-	90,  // 153: projects.v1.ProjectsService.GetViewCatalog:input_type -> projects.v1.GetViewCatalogRequest
-	104, // 154: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
-	92,  // 155: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
-	93,  // 156: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
-	94,  // 157: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
-	95,  // 158: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
-	96,  // 159: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
-	97,  // 160: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
-	106, // 161: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
-	108, // 162: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
-	110, // 163: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
-	124, // 164: projects.v1.ProjectsService.CreateWorklog:input_type -> projects.v1.CreateWorklogRequest
-	125, // 165: projects.v1.ProjectsService.UpdateWorklog:input_type -> projects.v1.UpdateWorklogRequest
-	126, // 166: projects.v1.ProjectsService.DeleteWorklog:input_type -> projects.v1.DeleteWorklogRequest
-	127, // 167: projects.v1.ProjectsService.ListTaskWorklogs:input_type -> projects.v1.ListTaskWorklogsRequest
-	128, // 168: projects.v1.ProjectsService.ListUserWorklogs:input_type -> projects.v1.ListUserWorklogsRequest
-	129, // 169: projects.v1.ProjectsService.StartTimer:input_type -> projects.v1.StartTimerRequest
-	130, // 170: projects.v1.ProjectsService.PauseTimer:input_type -> projects.v1.PauseTimerRequest
-	131, // 171: projects.v1.ProjectsService.ResumeTimer:input_type -> projects.v1.ResumeTimerRequest
-	132, // 172: projects.v1.ProjectsService.StopTimer:input_type -> projects.v1.StopTimerRequest
-	133, // 173: projects.v1.ProjectsService.GetActiveTimer:input_type -> projects.v1.GetActiveTimerRequest
-	134, // 174: projects.v1.ProjectsService.GetTimePolicy:input_type -> projects.v1.GetTimePolicyRequest
-	135, // 175: projects.v1.ProjectsService.UpdateTimePolicy:input_type -> projects.v1.UpdateTimePolicyRequest
-	136, // 176: projects.v1.ProjectsService.AggregateWorklogs:input_type -> projects.v1.AggregateWorklogsRequest
-	137, // 177: projects.v1.ProjectsService.GetTimesheet:input_type -> projects.v1.GetTimesheetRequest
-	138, // 178: projects.v1.ProjectsService.SubmitTimesheet:input_type -> projects.v1.SubmitTimesheetRequest
-	139, // 179: projects.v1.ProjectsService.RecallTimesheet:input_type -> projects.v1.RecallTimesheetRequest
-	140, // 180: projects.v1.ProjectsService.ListReviewTimesheets:input_type -> projects.v1.ListReviewTimesheetsRequest
-	141, // 181: projects.v1.ProjectsService.ApproveTimesheet:input_type -> projects.v1.ApproveTimesheetRequest
-	142, // 182: projects.v1.ProjectsService.RejectTimesheet:input_type -> projects.v1.RejectTimesheetRequest
-	143, // 183: projects.v1.ProjectsService.GrantGrace:input_type -> projects.v1.GrantGraceRequest
-	144, // 184: projects.v1.ProjectsService.ClosePeriod:input_type -> projects.v1.ClosePeriodRequest
-	145, // 185: projects.v1.ProjectsService.ReopenPeriod:input_type -> projects.v1.ReopenPeriodRequest
-	146, // 186: projects.v1.ProjectsService.ListPeriods:input_type -> projects.v1.ListPeriodsRequest
-	147, // 187: projects.v1.ProjectsService.CreateInternalTimeProject:input_type -> projects.v1.CreateInternalTimeProjectRequest
-	148, // 188: projects.v1.ProjectsService.GetSprintCapacity:input_type -> projects.v1.GetSprintCapacityRequest
-	47,  // 189: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.CreateProjectResponse
-	48,  // 190: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.GetProjectResponse
-	49,  // 191: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.UpdateProjectResponse
-	50,  // 192: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
-	51,  // 193: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
-	64,  // 194: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.CreateTaskResponse
-	65,  // 195: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.GetTaskResponse
-	66,  // 196: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.UpdateTaskResponse
-	68,  // 197: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
-	71,  // 198: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
-	67,  // 199: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.MoveTaskResponse
-	70,  // 200: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
-	69,  // 201: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
-	63,  // 202: projects.v1.ProjectsService.ExportTasks:output_type -> projects.v1.ExportTasksResponse
-	75,  // 203: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.CreateFieldResponse
-	76,  // 204: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.UpdateFieldResponse
-	77,  // 205: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
-	81,  // 206: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.CreateViewResponse
-	82,  // 207: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.UpdateViewResponse
-	83,  // 208: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
-	85,  // 209: projects.v1.ProjectsService.ReorderViews:output_type -> projects.v1.ReorderViewsResponse
-	91,  // 210: projects.v1.ProjectsService.GetViewCatalog:output_type -> projects.v1.GetViewCatalogResponse
-	105, // 211: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
-	98,  // 212: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.CreateSprintResponse
-	99,  // 213: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.UpdateSprintResponse
-	100, // 214: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.StartSprintResponse
-	101, // 215: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.CompleteSprintResponse
-	102, // 216: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
-	103, // 217: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
-	107, // 218: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
-	109, // 219: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
-	111, // 220: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
-	149, // 221: projects.v1.ProjectsService.CreateWorklog:output_type -> projects.v1.CreateWorklogResponse
-	150, // 222: projects.v1.ProjectsService.UpdateWorklog:output_type -> projects.v1.UpdateWorklogResponse
-	151, // 223: projects.v1.ProjectsService.DeleteWorklog:output_type -> projects.v1.DeleteWorklogResponse
-	152, // 224: projects.v1.ProjectsService.ListTaskWorklogs:output_type -> projects.v1.ListTaskWorklogsResponse
-	153, // 225: projects.v1.ProjectsService.ListUserWorklogs:output_type -> projects.v1.ListUserWorklogsResponse
-	154, // 226: projects.v1.ProjectsService.StartTimer:output_type -> projects.v1.StartTimerResponse
-	155, // 227: projects.v1.ProjectsService.PauseTimer:output_type -> projects.v1.PauseTimerResponse
-	156, // 228: projects.v1.ProjectsService.ResumeTimer:output_type -> projects.v1.ResumeTimerResponse
-	157, // 229: projects.v1.ProjectsService.StopTimer:output_type -> projects.v1.StopTimerResponse
-	158, // 230: projects.v1.ProjectsService.GetActiveTimer:output_type -> projects.v1.GetActiveTimerResponse
-	159, // 231: projects.v1.ProjectsService.GetTimePolicy:output_type -> projects.v1.GetTimePolicyResponse
-	160, // 232: projects.v1.ProjectsService.UpdateTimePolicy:output_type -> projects.v1.UpdateTimePolicyResponse
-	161, // 233: projects.v1.ProjectsService.AggregateWorklogs:output_type -> projects.v1.AggregateWorklogsResponse
-	162, // 234: projects.v1.ProjectsService.GetTimesheet:output_type -> projects.v1.GetTimesheetResponse
-	163, // 235: projects.v1.ProjectsService.SubmitTimesheet:output_type -> projects.v1.SubmitTimesheetResponse
-	164, // 236: projects.v1.ProjectsService.RecallTimesheet:output_type -> projects.v1.RecallTimesheetResponse
-	165, // 237: projects.v1.ProjectsService.ListReviewTimesheets:output_type -> projects.v1.ListReviewTimesheetsResponse
-	166, // 238: projects.v1.ProjectsService.ApproveTimesheet:output_type -> projects.v1.ApproveTimesheetResponse
-	167, // 239: projects.v1.ProjectsService.RejectTimesheet:output_type -> projects.v1.RejectTimesheetResponse
-	168, // 240: projects.v1.ProjectsService.GrantGrace:output_type -> projects.v1.GrantGraceResponse
-	169, // 241: projects.v1.ProjectsService.ClosePeriod:output_type -> projects.v1.ClosePeriodResponse
-	170, // 242: projects.v1.ProjectsService.ReopenPeriod:output_type -> projects.v1.ReopenPeriodResponse
-	171, // 243: projects.v1.ProjectsService.ListPeriods:output_type -> projects.v1.ListPeriodsResponse
-	172, // 244: projects.v1.ProjectsService.CreateInternalTimeProject:output_type -> projects.v1.CreateInternalTimeProjectResponse
-	173, // 245: projects.v1.ProjectsService.GetSprintCapacity:output_type -> projects.v1.GetSprintCapacityResponse
-	189, // [189:246] is the sub-list for method output_type
-	132, // [132:189] is the sub-list for method input_type
-	132, // [132:132] is the sub-list for extension type_name
-	132, // [132:132] is the sub-list for extension extendee
-	0,   // [0:132] is the sub-list for field type_name
+	56,  // 79: projects.v1.UpdateTaskRequest.blocked_by:type_name -> projects.v1.TaskBlockerIds
+	123, // 80: projects.v1.ListTasksRequest.pagination:type_name -> common.v1.PaginationRequest
+	26,  // 81: projects.v1.ListTasksRequest.filter:type_name -> projects.v1.TaskFilterGroup
+	27,  // 82: projects.v1.ListTasksRequest.sort:type_name -> projects.v1.TaskSort
+	26,  // 83: projects.v1.ExportTasksRequest.filter:type_name -> projects.v1.TaskFilterGroup
+	27,  // 84: projects.v1.ExportTasksRequest.sort:type_name -> projects.v1.TaskSort
+	9,   // 85: projects.v1.ExportTasksRequest.format:type_name -> projects.v1.TaskExportFormat
+	10,  // 86: projects.v1.ExportTasksRequest.layout:type_name -> projects.v1.TaskExportLayout
+	14,  // 87: projects.v1.CreateTaskResponse.task:type_name -> projects.v1.Task
+	14,  // 88: projects.v1.CreateTaskResponse.updated_parent:type_name -> projects.v1.Task
+	14,  // 89: projects.v1.CreateTaskResponse.spawned_task:type_name -> projects.v1.Task
+	14,  // 90: projects.v1.GetTaskResponse.task:type_name -> projects.v1.Task
+	14,  // 91: projects.v1.GetTaskResponse.updated_parent:type_name -> projects.v1.Task
+	14,  // 92: projects.v1.GetTaskResponse.spawned_task:type_name -> projects.v1.Task
+	14,  // 93: projects.v1.UpdateTaskResponse.task:type_name -> projects.v1.Task
+	14,  // 94: projects.v1.UpdateTaskResponse.updated_parent:type_name -> projects.v1.Task
+	14,  // 95: projects.v1.UpdateTaskResponse.spawned_task:type_name -> projects.v1.Task
+	14,  // 96: projects.v1.MoveTaskResponse.task:type_name -> projects.v1.Task
+	14,  // 97: projects.v1.MoveTaskResponse.updated_parent:type_name -> projects.v1.Task
+	14,  // 98: projects.v1.MoveTaskResponse.spawned_task:type_name -> projects.v1.Task
+	14,  // 99: projects.v1.BulkUpdateTasksResponse.tasks:type_name -> projects.v1.Task
+	14,  // 100: projects.v1.ListTasksResponse.tasks:type_name -> projects.v1.Task
+	124, // 101: projects.v1.ListTasksResponse.pagination:type_name -> common.v1.PaginationResponse
+	0,   // 102: projects.v1.CreateFieldRequest.type:type_name -> projects.v1.FieldType
+	15,  // 103: projects.v1.CreateFieldResponse.field:type_name -> projects.v1.FieldDefinition
+	15,  // 104: projects.v1.UpdateFieldResponse.field:type_name -> projects.v1.FieldDefinition
+	36,  // 105: projects.v1.CreateViewRequest.definition:type_name -> projects.v1.ViewDefinition
+	2,   // 106: projects.v1.CreateViewRequest.visibility:type_name -> projects.v1.ViewVisibility
+	36,  // 107: projects.v1.UpdateViewRequest.definition:type_name -> projects.v1.ViewDefinition
+	2,   // 108: projects.v1.UpdateViewRequest.visibility:type_name -> projects.v1.ViewVisibility
+	37,  // 109: projects.v1.CreateViewResponse.view:type_name -> projects.v1.ViewConfig
+	37,  // 110: projects.v1.UpdateViewResponse.view:type_name -> projects.v1.ViewConfig
+	2,   // 111: projects.v1.ReorderViewsRequest.visibility:type_name -> projects.v1.ViewVisibility
+	37,  // 112: projects.v1.ReorderViewsResponse.views:type_name -> projects.v1.ViewConfig
+	4,   // 113: projects.v1.ViewFieldCapabilities.operators:type_name -> projects.v1.TaskFilterOperator
+	8,   // 114: projects.v1.ViewFieldCapabilities.id_flags:type_name -> projects.v1.ViewIdFlag
+	0,   // 115: projects.v1.ViewCatalogFieldType.type:type_name -> projects.v1.FieldType
+	87,  // 116: projects.v1.ViewCatalogFieldType.capabilities:type_name -> projects.v1.ViewFieldCapabilities
+	3,   // 117: projects.v1.ViewCatalogPseudoField.pseudo:type_name -> projects.v1.TaskPseudoField
+	87,  // 118: projects.v1.ViewCatalogPseudoField.capabilities:type_name -> projects.v1.ViewFieldCapabilities
+	88,  // 119: projects.v1.GetViewCatalogResponse.field_types:type_name -> projects.v1.ViewCatalogFieldType
+	89,  // 120: projects.v1.GetViewCatalogResponse.pseudo_fields:type_name -> projects.v1.ViewCatalogPseudoField
+	90,  // 121: projects.v1.GetViewCatalogResponse.filter_limits:type_name -> projects.v1.ViewFilterLimits
+	40,  // 122: projects.v1.CreateSprintResponse.sprint:type_name -> projects.v1.Sprint
+	40,  // 123: projects.v1.UpdateSprintResponse.sprint:type_name -> projects.v1.Sprint
+	40,  // 124: projects.v1.StartSprintResponse.sprint:type_name -> projects.v1.Sprint
+	40,  // 125: projects.v1.CompleteSprintResponse.sprint:type_name -> projects.v1.Sprint
+	40,  // 126: projects.v1.ListSprintsResponse.sprints:type_name -> projects.v1.Sprint
+	123, // 127: projects.v1.ListActivitiesRequest.pagination:type_name -> common.v1.PaginationRequest
+	38,  // 128: projects.v1.ListActivitiesResponse.activities:type_name -> projects.v1.TaskActivity
+	124, // 129: projects.v1.ListActivitiesResponse.pagination:type_name -> common.v1.PaginationResponse
+	118, // 130: projects.v1.BulkCheckTaskWatchersResponse.watched_tasks:type_name -> projects.v1.BulkCheckTaskWatchersResponse.WatchedTasksEntry
+	16,  // 131: projects.v1.Project.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	16,  // 132: projects.v1.UpdateProjectRequest.TypeFieldSchemasEntry.value:type_name -> projects.v1.TypeFieldSchema
+	41,  // 133: projects.v1.ProjectsService.CreateProject:input_type -> projects.v1.CreateProjectRequest
+	42,  // 134: projects.v1.ProjectsService.GetProject:input_type -> projects.v1.GetProjectRequest
+	43,  // 135: projects.v1.ProjectsService.UpdateProject:input_type -> projects.v1.UpdateProjectRequest
+	45,  // 136: projects.v1.ProjectsService.DeleteProject:input_type -> projects.v1.DeleteProjectRequest
+	46,  // 137: projects.v1.ProjectsService.ListProjects:input_type -> projects.v1.ListProjectsRequest
+	52,  // 138: projects.v1.ProjectsService.CreateTask:input_type -> projects.v1.CreateTaskRequest
+	53,  // 139: projects.v1.ProjectsService.GetTask:input_type -> projects.v1.GetTaskRequest
+	54,  // 140: projects.v1.ProjectsService.UpdateTask:input_type -> projects.v1.UpdateTaskRequest
+	60,  // 141: projects.v1.ProjectsService.DeleteTask:input_type -> projects.v1.DeleteTaskRequest
+	62,  // 142: projects.v1.ProjectsService.ListTasks:input_type -> projects.v1.ListTasksRequest
+	58,  // 143: projects.v1.ProjectsService.MoveTask:input_type -> projects.v1.MoveTaskRequest
+	59,  // 144: projects.v1.ProjectsService.BulkUpdateTasks:input_type -> projects.v1.BulkUpdateTasksRequest
+	61,  // 145: projects.v1.ProjectsService.DeleteTasks:input_type -> projects.v1.DeleteTasksRequest
+	63,  // 146: projects.v1.ProjectsService.ExportTasks:input_type -> projects.v1.ExportTasksRequest
+	73,  // 147: projects.v1.ProjectsService.CreateField:input_type -> projects.v1.CreateFieldRequest
+	74,  // 148: projects.v1.ProjectsService.UpdateField:input_type -> projects.v1.UpdateFieldRequest
+	75,  // 149: projects.v1.ProjectsService.DeleteField:input_type -> projects.v1.DeleteFieldRequest
+	79,  // 150: projects.v1.ProjectsService.CreateView:input_type -> projects.v1.CreateViewRequest
+	80,  // 151: projects.v1.ProjectsService.UpdateView:input_type -> projects.v1.UpdateViewRequest
+	81,  // 152: projects.v1.ProjectsService.DeleteView:input_type -> projects.v1.DeleteViewRequest
+	85,  // 153: projects.v1.ProjectsService.ReorderViews:input_type -> projects.v1.ReorderViewsRequest
+	91,  // 154: projects.v1.ProjectsService.GetViewCatalog:input_type -> projects.v1.GetViewCatalogRequest
+	105, // 155: projects.v1.ProjectsService.ListActivities:input_type -> projects.v1.ListActivitiesRequest
+	93,  // 156: projects.v1.ProjectsService.CreateSprint:input_type -> projects.v1.CreateSprintRequest
+	94,  // 157: projects.v1.ProjectsService.UpdateSprint:input_type -> projects.v1.UpdateSprintRequest
+	95,  // 158: projects.v1.ProjectsService.StartSprint:input_type -> projects.v1.StartSprintRequest
+	96,  // 159: projects.v1.ProjectsService.CompleteSprint:input_type -> projects.v1.CompleteSprintRequest
+	97,  // 160: projects.v1.ProjectsService.DeleteSprint:input_type -> projects.v1.DeleteSprintRequest
+	98,  // 161: projects.v1.ProjectsService.ListSprints:input_type -> projects.v1.ListSprintsRequest
+	107, // 162: projects.v1.ProjectsService.ToggleTaskWatcher:input_type -> projects.v1.ToggleTaskWatcherRequest
+	109, // 163: projects.v1.ProjectsService.ListTaskWatchers:input_type -> projects.v1.ListTaskWatchersRequest
+	111, // 164: projects.v1.ProjectsService.BulkCheckTaskWatchers:input_type -> projects.v1.BulkCheckTaskWatchersRequest
+	125, // 165: projects.v1.ProjectsService.CreateWorklog:input_type -> projects.v1.CreateWorklogRequest
+	126, // 166: projects.v1.ProjectsService.UpdateWorklog:input_type -> projects.v1.UpdateWorklogRequest
+	127, // 167: projects.v1.ProjectsService.DeleteWorklog:input_type -> projects.v1.DeleteWorklogRequest
+	128, // 168: projects.v1.ProjectsService.ListTaskWorklogs:input_type -> projects.v1.ListTaskWorklogsRequest
+	129, // 169: projects.v1.ProjectsService.ListUserWorklogs:input_type -> projects.v1.ListUserWorklogsRequest
+	130, // 170: projects.v1.ProjectsService.StartTimer:input_type -> projects.v1.StartTimerRequest
+	131, // 171: projects.v1.ProjectsService.PauseTimer:input_type -> projects.v1.PauseTimerRequest
+	132, // 172: projects.v1.ProjectsService.ResumeTimer:input_type -> projects.v1.ResumeTimerRequest
+	133, // 173: projects.v1.ProjectsService.StopTimer:input_type -> projects.v1.StopTimerRequest
+	134, // 174: projects.v1.ProjectsService.GetActiveTimer:input_type -> projects.v1.GetActiveTimerRequest
+	135, // 175: projects.v1.ProjectsService.GetTimePolicy:input_type -> projects.v1.GetTimePolicyRequest
+	136, // 176: projects.v1.ProjectsService.UpdateTimePolicy:input_type -> projects.v1.UpdateTimePolicyRequest
+	137, // 177: projects.v1.ProjectsService.AggregateWorklogs:input_type -> projects.v1.AggregateWorklogsRequest
+	138, // 178: projects.v1.ProjectsService.GetTimesheet:input_type -> projects.v1.GetTimesheetRequest
+	139, // 179: projects.v1.ProjectsService.SubmitTimesheet:input_type -> projects.v1.SubmitTimesheetRequest
+	140, // 180: projects.v1.ProjectsService.RecallTimesheet:input_type -> projects.v1.RecallTimesheetRequest
+	141, // 181: projects.v1.ProjectsService.ListReviewTimesheets:input_type -> projects.v1.ListReviewTimesheetsRequest
+	142, // 182: projects.v1.ProjectsService.ApproveTimesheet:input_type -> projects.v1.ApproveTimesheetRequest
+	143, // 183: projects.v1.ProjectsService.RejectTimesheet:input_type -> projects.v1.RejectTimesheetRequest
+	144, // 184: projects.v1.ProjectsService.GrantGrace:input_type -> projects.v1.GrantGraceRequest
+	145, // 185: projects.v1.ProjectsService.ClosePeriod:input_type -> projects.v1.ClosePeriodRequest
+	146, // 186: projects.v1.ProjectsService.ReopenPeriod:input_type -> projects.v1.ReopenPeriodRequest
+	147, // 187: projects.v1.ProjectsService.ListPeriods:input_type -> projects.v1.ListPeriodsRequest
+	148, // 188: projects.v1.ProjectsService.CreateInternalTimeProject:input_type -> projects.v1.CreateInternalTimeProjectRequest
+	149, // 189: projects.v1.ProjectsService.GetSprintCapacity:input_type -> projects.v1.GetSprintCapacityRequest
+	47,  // 190: projects.v1.ProjectsService.CreateProject:output_type -> projects.v1.CreateProjectResponse
+	48,  // 191: projects.v1.ProjectsService.GetProject:output_type -> projects.v1.GetProjectResponse
+	49,  // 192: projects.v1.ProjectsService.UpdateProject:output_type -> projects.v1.UpdateProjectResponse
+	50,  // 193: projects.v1.ProjectsService.DeleteProject:output_type -> projects.v1.DeleteProjectResponse
+	51,  // 194: projects.v1.ProjectsService.ListProjects:output_type -> projects.v1.ListProjectsResponse
+	65,  // 195: projects.v1.ProjectsService.CreateTask:output_type -> projects.v1.CreateTaskResponse
+	66,  // 196: projects.v1.ProjectsService.GetTask:output_type -> projects.v1.GetTaskResponse
+	67,  // 197: projects.v1.ProjectsService.UpdateTask:output_type -> projects.v1.UpdateTaskResponse
+	69,  // 198: projects.v1.ProjectsService.DeleteTask:output_type -> projects.v1.DeleteTaskResponse
+	72,  // 199: projects.v1.ProjectsService.ListTasks:output_type -> projects.v1.ListTasksResponse
+	68,  // 200: projects.v1.ProjectsService.MoveTask:output_type -> projects.v1.MoveTaskResponse
+	71,  // 201: projects.v1.ProjectsService.BulkUpdateTasks:output_type -> projects.v1.BulkUpdateTasksResponse
+	70,  // 202: projects.v1.ProjectsService.DeleteTasks:output_type -> projects.v1.DeleteTasksResponse
+	64,  // 203: projects.v1.ProjectsService.ExportTasks:output_type -> projects.v1.ExportTasksResponse
+	76,  // 204: projects.v1.ProjectsService.CreateField:output_type -> projects.v1.CreateFieldResponse
+	77,  // 205: projects.v1.ProjectsService.UpdateField:output_type -> projects.v1.UpdateFieldResponse
+	78,  // 206: projects.v1.ProjectsService.DeleteField:output_type -> projects.v1.DeleteFieldResponse
+	82,  // 207: projects.v1.ProjectsService.CreateView:output_type -> projects.v1.CreateViewResponse
+	83,  // 208: projects.v1.ProjectsService.UpdateView:output_type -> projects.v1.UpdateViewResponse
+	84,  // 209: projects.v1.ProjectsService.DeleteView:output_type -> projects.v1.DeleteViewResponse
+	86,  // 210: projects.v1.ProjectsService.ReorderViews:output_type -> projects.v1.ReorderViewsResponse
+	92,  // 211: projects.v1.ProjectsService.GetViewCatalog:output_type -> projects.v1.GetViewCatalogResponse
+	106, // 212: projects.v1.ProjectsService.ListActivities:output_type -> projects.v1.ListActivitiesResponse
+	99,  // 213: projects.v1.ProjectsService.CreateSprint:output_type -> projects.v1.CreateSprintResponse
+	100, // 214: projects.v1.ProjectsService.UpdateSprint:output_type -> projects.v1.UpdateSprintResponse
+	101, // 215: projects.v1.ProjectsService.StartSprint:output_type -> projects.v1.StartSprintResponse
+	102, // 216: projects.v1.ProjectsService.CompleteSprint:output_type -> projects.v1.CompleteSprintResponse
+	103, // 217: projects.v1.ProjectsService.DeleteSprint:output_type -> projects.v1.DeleteSprintResponse
+	104, // 218: projects.v1.ProjectsService.ListSprints:output_type -> projects.v1.ListSprintsResponse
+	108, // 219: projects.v1.ProjectsService.ToggleTaskWatcher:output_type -> projects.v1.ToggleTaskWatcherResponse
+	110, // 220: projects.v1.ProjectsService.ListTaskWatchers:output_type -> projects.v1.ListTaskWatchersResponse
+	112, // 221: projects.v1.ProjectsService.BulkCheckTaskWatchers:output_type -> projects.v1.BulkCheckTaskWatchersResponse
+	150, // 222: projects.v1.ProjectsService.CreateWorklog:output_type -> projects.v1.CreateWorklogResponse
+	151, // 223: projects.v1.ProjectsService.UpdateWorklog:output_type -> projects.v1.UpdateWorklogResponse
+	152, // 224: projects.v1.ProjectsService.DeleteWorklog:output_type -> projects.v1.DeleteWorklogResponse
+	153, // 225: projects.v1.ProjectsService.ListTaskWorklogs:output_type -> projects.v1.ListTaskWorklogsResponse
+	154, // 226: projects.v1.ProjectsService.ListUserWorklogs:output_type -> projects.v1.ListUserWorklogsResponse
+	155, // 227: projects.v1.ProjectsService.StartTimer:output_type -> projects.v1.StartTimerResponse
+	156, // 228: projects.v1.ProjectsService.PauseTimer:output_type -> projects.v1.PauseTimerResponse
+	157, // 229: projects.v1.ProjectsService.ResumeTimer:output_type -> projects.v1.ResumeTimerResponse
+	158, // 230: projects.v1.ProjectsService.StopTimer:output_type -> projects.v1.StopTimerResponse
+	159, // 231: projects.v1.ProjectsService.GetActiveTimer:output_type -> projects.v1.GetActiveTimerResponse
+	160, // 232: projects.v1.ProjectsService.GetTimePolicy:output_type -> projects.v1.GetTimePolicyResponse
+	161, // 233: projects.v1.ProjectsService.UpdateTimePolicy:output_type -> projects.v1.UpdateTimePolicyResponse
+	162, // 234: projects.v1.ProjectsService.AggregateWorklogs:output_type -> projects.v1.AggregateWorklogsResponse
+	163, // 235: projects.v1.ProjectsService.GetTimesheet:output_type -> projects.v1.GetTimesheetResponse
+	164, // 236: projects.v1.ProjectsService.SubmitTimesheet:output_type -> projects.v1.SubmitTimesheetResponse
+	165, // 237: projects.v1.ProjectsService.RecallTimesheet:output_type -> projects.v1.RecallTimesheetResponse
+	166, // 238: projects.v1.ProjectsService.ListReviewTimesheets:output_type -> projects.v1.ListReviewTimesheetsResponse
+	167, // 239: projects.v1.ProjectsService.ApproveTimesheet:output_type -> projects.v1.ApproveTimesheetResponse
+	168, // 240: projects.v1.ProjectsService.RejectTimesheet:output_type -> projects.v1.RejectTimesheetResponse
+	169, // 241: projects.v1.ProjectsService.GrantGrace:output_type -> projects.v1.GrantGraceResponse
+	170, // 242: projects.v1.ProjectsService.ClosePeriod:output_type -> projects.v1.ClosePeriodResponse
+	171, // 243: projects.v1.ProjectsService.ReopenPeriod:output_type -> projects.v1.ReopenPeriodResponse
+	172, // 244: projects.v1.ProjectsService.ListPeriods:output_type -> projects.v1.ListPeriodsResponse
+	173, // 245: projects.v1.ProjectsService.CreateInternalTimeProject:output_type -> projects.v1.CreateInternalTimeProjectResponse
+	174, // 246: projects.v1.ProjectsService.GetSprintCapacity:output_type -> projects.v1.GetSprintCapacityResponse
+	190, // [190:247] is the sub-list for method output_type
+	133, // [133:190] is the sub-list for method input_type
+	133, // [133:133] is the sub-list for extension type_name
+	133, // [133:133] is the sub-list for extension extendee
+	0,   // [0:133] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_projects_proto_init() }
@@ -9207,28 +9275,28 @@ func file_projects_v1_projects_proto_init() {
 	file_projects_v1_projects_proto_msgTypes[33].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[39].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[41].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[45].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[48].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[46].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[49].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[51].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[50].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[52].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[53].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[54].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[59].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[55].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[60].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[66].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[79].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[61].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[67].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[80].OneofWrappers = []any{}
 	file_projects_v1_projects_proto_msgTypes[81].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[84].OneofWrappers = []any{}
-	file_projects_v1_projects_proto_msgTypes[91].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[82].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[85].OneofWrappers = []any{}
+	file_projects_v1_projects_proto_msgTypes[92].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_projects_v1_projects_proto_rawDesc), len(file_projects_v1_projects_proto_rawDesc)),
 			NumEnums:      13,
-			NumMessages:   105,
+			NumMessages:   106,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

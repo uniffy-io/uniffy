@@ -126,6 +126,29 @@ export const fetchProjectTasks = createAsyncThunk<
 });
 
 /**
+ * Server matches for a task picker query, merged into the store, so a project loaded only in
+ * part still finds tasks the client never fetched.
+ */
+export const searchProjectTasks = createAsyncThunk<
+  Task[],
+  { projectId: string; query: string; limit?: number },
+  { dispatch: AppDispatch; rejectValue: string }
+>(
+  "projects/searchProjectTasks",
+  async ({ projectId, query, limit = 20 }, { getState, dispatch, rejectWithValue, signal }) => {
+    try {
+      const orgId = (getState() as RootState).auth.currentOrganizationId;
+      if (!orgId) return rejectWithValue("No organization selected");
+      const response = await projectsApi.searchTasks(projectId, orgId, query, { limit, signal });
+      hydrateTaskTags(dispatch, response.protoTasks);
+      return response.tasks;
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : "Failed to search tasks");
+    }
+  },
+);
+
+/**
  * Stream an export from the server and save it. "view" narrows one project to the active view's
  * filter, sort and layout; "project" exports every task of each project.
  */

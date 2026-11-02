@@ -94,7 +94,9 @@ def update_task_arguments(request: UpdateTaskRequest) -> dict[str, Any]:
         updates["parent_id"] = (
             parse_uuid(request.parent_id, "parent_id") if request.parent_id else None
         )
-    if request.blocked_by_task_ids:
+    if request.has_field("blocked_by"):
+        updates["blocked_by_task_ids"] = list(request.blocked_by.ids)
+    elif request.blocked_by_task_ids:
         updates["blocked_by_task_ids"] = list(request.blocked_by_task_ids)
     if request.has_field("is_milestone"):
         updates["is_milestone"] = request.is_milestone
