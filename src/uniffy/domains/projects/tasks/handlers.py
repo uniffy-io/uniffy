@@ -5,6 +5,7 @@ from uuid import UUID
 
 from connectrpc.errors import ConnectError
 from connectrpc.request import RequestContext
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy_proto.common.v1.common_pb import PaginationResponse
 from uniffy_proto.projects.v1.projects_pb import (
@@ -33,6 +34,7 @@ from uniffy_proto.projects.v1.projects_pb import (
 
 from uniffy.core.auth.principal import current_user_id
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.realtime.buffer import UpdateBuffer
@@ -468,10 +470,20 @@ class TaskHandlers:
                     page_size=page_size,
                 )
 
+                agent_ids = {a.agent_id for a in activities if a.agent_id}
+                agent_names: dict[UUID, str] = {}
+                if agent_ids:
+                    rows = await session.execute(
+                        select(Agent.id, Agent.name).where(
+                            Agent.id.in_(agent_ids), Agent.organization_id == organization_id
+                        )
+                    )
+                    agent_names = {row.id: row.name for row in rows}
+
                 total_pages = (total + page_size - 1) // page_size
 
                 return ListActivitiesResponse(
-                    activities=[activity_to_proto(a) for a in activities],
+                    activities=[activity_to_proto(a, agent_names) for a in activities],
                     pagination=PaginationResponse(
                         page=page,
                         page_size=page_size,

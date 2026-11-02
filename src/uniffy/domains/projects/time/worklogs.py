@@ -18,6 +18,7 @@ from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationE
 from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.login.user import User
+from uniffy.core.models.projects.activity import TaskActivityAction
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.worklog import Worklog, WorklogSource
@@ -342,7 +343,7 @@ class WorklogOperations:
         await self.session.flush()
         rollup = await self.stage_task_rollup(task.id)
         await TaskNotifications(self.session).log_activity(
-            task.id, actor_id, "time_logged", new_value=str(duration_minutes)
+            task.id, actor_id, TaskActivityAction.TIME_LOGGED, new_value=str(duration_minutes)
         )
         if on_behalf or override:
             await self._write_audit(
@@ -411,7 +412,7 @@ class WorklogOperations:
         await TaskNotifications(self.session).log_activity(
             worklog.task_id,
             actor_id,
-            "time_updated",
+            TaskActivityAction.TIME_UPDATED,
             previous_value=str(previous_minutes),
             new_value=str(new_minutes),
         )
@@ -450,7 +451,7 @@ class WorklogOperations:
         await TaskNotifications(self.session).log_activity(
             worklog.task_id,
             actor_id,
-            "time_removed",
+            TaskActivityAction.TIME_REMOVED,
             previous_value=str(worklog.duration_minutes),
         )
         if on_behalf or override:

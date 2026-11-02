@@ -8,6 +8,7 @@ from loguru import logger
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.models.projects.activity import TaskActivityAction
 from uniffy.core.models.projects.field_definition import TaskStatusSemantic
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
@@ -102,7 +103,9 @@ async def spawn_next_recurring_instance(
     await session.flush()
     await session.refresh(next_task)
 
-    await TaskNotifications(session).log_activity(next_task.id, completed_task.owner_id, "created")
+    await TaskNotifications(session).log_activity(
+        next_task.id, completed_task.owner_id, TaskActivityAction.CREATED
+    )
 
     await session.commit()
     await session.refresh(next_task)

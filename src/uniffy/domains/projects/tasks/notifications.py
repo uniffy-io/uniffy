@@ -1,10 +1,12 @@
 """Task activity and notification side effects."""
 
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.auth.acting_agent import current_acting_agent
 from uniffy.core.content.team_mentions import expand_team_mentions
 from uniffy.core.events import (
     NotificationEvent,
@@ -15,12 +17,14 @@ from uniffy.core.events import (
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization_member import OrganizationMember
-from uniffy.core.models.projects.activity import TaskActivity
+from uniffy.core.models.projects.activity import TaskActivity, TaskActivityAction
 from uniffy.core.models.projects.field_definition import FieldDefinition, SystemProjectFieldId
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NotificationType
 from uniffy.domains.projects.watchers.operations import WatcherOperations
+
+DESCRIPTION_SESSION_IDLE = timedelta(minutes=5)
 
 
 class TaskNotifications:
@@ -218,7 +222,7 @@ class TaskNotifications:
         self,
         task_id: UUID,
         actor_id: UUID,
-        action: str,
+        action: TaskActivityAction,
         field_id: str | None = None,
         previous_value: str | None = None,
         new_value: str | None = None,
@@ -226,6 +230,7 @@ class TaskNotifications:
         activity = TaskActivity(
             task_id=task_id,
             actor_id=actor_id,
+            agent_id=current_acting_agent(),
             action=action,
             field_id=field_id,
             previous_value=previous_value,
@@ -234,3 +239,29 @@ class TaskNotifications:
         self.session.add(activity)
         await self.session.flush()
         return activity
+
+    async def log_description_edit(self, task_id: UUID, actor_id: UUID) -> TaskActivity:
+        """One entry per editing session: edits by the same person (and agent) within the idle
+        window extend the open entry instead of adding another.
+        """
+        agent_id = current_acting_agent()
+        now = datetime.now(UTC)
+        latest = (
+            await self.session.execute(
+                select(TaskActivity)
+                .where(TaskActivity.task_id == task_id)
+                .order_by(TaskActivity.timestamp.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if (
+            latest is not None
+            and latest.action == TaskActivityAction.DESCRIPTION_EDITED
+            and latest.actor_id == actor_id
+            and latest.agent_id == agent_id
+            and now - latest.timestamp <= DESCRIPTION_SESSION_IDLE
+        ):
+            latest.timestamp = now
+            await self.session.flush()
+            return latest
+        return await self.log_activity(task_id, actor_id, TaskActivityAction.DESCRIPTION_EDITED)

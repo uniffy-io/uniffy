@@ -8,6 +8,7 @@ from loguru import logger
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import tool_call_action
+from uniffy.core.auth.acting_agent import acting_agent
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.audit.event import AuditActorKind
 from uniffy.core.realtime.live import LiveStateUnavailable
@@ -139,10 +140,12 @@ class ToolExecutor:
                 tool_call.input,
                 tool_def.parameter_schema,
             )
-            result = await asyncio.wait_for(
-                tool_def.executor(self._context, tool_input),
-                timeout=tool_def.timeout_seconds,
-            )
+            # wait_for runs the tool in a task that copies this context, agent included.
+            with acting_agent(self._context.agent_id):
+                result = await asyncio.wait_for(
+                    tool_def.executor(self._context, tool_input),
+                    timeout=tool_def.timeout_seconds,
+                )
             if result.success and result.data:
                 result = ToolResult(
                     success=result.success,

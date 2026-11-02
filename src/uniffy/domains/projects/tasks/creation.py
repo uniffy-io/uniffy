@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.realtime import ContentAccessAction
+from uniffy.core.models.projects.activity import TaskActivityAction
 from uniffy.core.models.projects.field_definition import (
     TaskStatusSemantic,
 )
@@ -129,7 +130,9 @@ class TaskCreateOperations:
         await self.session.flush()
         await self.session.refresh(task)
 
-        await TaskNotifications(self.session).log_activity(task.id, user_id, "created")
+        await TaskNotifications(self.session).log_activity(
+            task.id, user_id, TaskActivityAction.CREATED
+        )
 
         watcher_user_ids = [user_id]
         if task.assignee_ids:

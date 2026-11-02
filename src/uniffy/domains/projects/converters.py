@@ -1,5 +1,8 @@
 """Projects proto converters."""
 
+from collections.abc import Mapping
+from uuid import UUID
+
 from uniffy_proto.projects.v1.projects_pb import (
     ActivityAction,
     FieldType,
@@ -35,7 +38,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import ValidationError
 from uniffy.core.json_codec import dumps_str
-from uniffy.core.models.projects.activity import TaskActivity
+from uniffy.core.models.projects.activity import TaskActivity, TaskActivityAction
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint
@@ -82,18 +85,29 @@ VIEW_VISIBILITY_FROM_PROTO: dict[ViewVisibility, ProjectViewVisibility] = {
 }
 
 ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction] = {
-    "created": ActivityAction.CREATED,
-    "status_changed": ActivityAction.STATUS_CHANGED,
-    "priority_changed": ActivityAction.PRIORITY_CHANGED,
-    "field_updated": ActivityAction.FIELD_UPDATED,
-    "blocked_by_added": ActivityAction.BLOCKED_BY_ADDED,
-    "blocked_by_removed": ActivityAction.BLOCKED_BY_REMOVED,
-    "assigned": ActivityAction.ASSIGNED,
-    "type_changed": ActivityAction.TYPE_CHANGED,
-    "sprint_changed": ActivityAction.SPRINT_CHANGED,
-    "time_logged": ActivityAction.TIME_LOGGED,
-    "time_updated": ActivityAction.TIME_UPDATED,
-    "time_removed": ActivityAction.TIME_REMOVED,
+    TaskActivityAction.CREATED: ActivityAction.CREATED,
+    TaskActivityAction.TITLE_CHANGED: ActivityAction.TITLE_CHANGED,
+    TaskActivityAction.DESCRIPTION_EDITED: ActivityAction.DESCRIPTION_EDITED,
+    TaskActivityAction.STATUS_CHANGED: ActivityAction.STATUS_CHANGED,
+    TaskActivityAction.PRIORITY_CHANGED: ActivityAction.PRIORITY_CHANGED,
+    TaskActivityAction.TYPE_CHANGED: ActivityAction.TYPE_CHANGED,
+    TaskActivityAction.ASSIGNED: ActivityAction.ASSIGNED,
+    TaskActivityAction.START_DATE_CHANGED: ActivityAction.START_DATE_CHANGED,
+    TaskActivityAction.DUE_DATE_CHANGED: ActivityAction.DUE_DATE_CHANGED,
+    TaskActivityAction.SPRINT_CHANGED: ActivityAction.SPRINT_CHANGED,
+    TaskActivityAction.ESTIMATE_CHANGED: ActivityAction.ESTIMATE_CHANGED,
+    TaskActivityAction.PARENT_CHANGED: ActivityAction.PARENT_CHANGED,
+    TaskActivityAction.RECURRENCE_CHANGED: ActivityAction.RECURRENCE_CHANGED,
+    TaskActivityAction.MILESTONE_CHANGED: ActivityAction.MILESTONE_CHANGED,
+    TaskActivityAction.TAGS_CHANGED: ActivityAction.TAGS_CHANGED,
+    TaskActivityAction.FIELD_UPDATED: ActivityAction.FIELD_UPDATED,
+    TaskActivityAction.BLOCKED_BY_ADDED: ActivityAction.BLOCKED_BY_ADDED,
+    TaskActivityAction.BLOCKED_BY_REMOVED: ActivityAction.BLOCKED_BY_REMOVED,
+    TaskActivityAction.BLOCKING_ADDED: ActivityAction.BLOCKING_ADDED,
+    TaskActivityAction.BLOCKING_REMOVED: ActivityAction.BLOCKING_REMOVED,
+    TaskActivityAction.TIME_LOGGED: ActivityAction.TIME_LOGGED,
+    TaskActivityAction.TIME_UPDATED: ActivityAction.TIME_UPDATED,
+    TaskActivityAction.TIME_REMOVED: ActivityAction.TIME_REMOVED,
 }
 
 
@@ -284,7 +298,9 @@ def view_to_proto(view: ViewConfig) -> ProtoViewConfig:
     )
 
 
-def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
+def activity_to_proto(
+    activity: TaskActivity, agent_names: Mapping[UUID, str] | None = None
+) -> ProtoTaskActivity:
     proto = ProtoTaskActivity(
         id=str(activity.id),
         task_id=str(activity.task_id),
@@ -299,6 +315,10 @@ def activity_to_proto(activity: TaskActivity) -> ProtoTaskActivity:
         proto.previous_value = activity.previous_value
     if activity.new_value:
         proto.new_value = activity.new_value
+    if activity.agent_id:
+        proto.agent_id = str(activity.agent_id)
+        if agent_names and activity.agent_id in agent_names:
+            proto.agent_name = agent_names[activity.agent_id]
     return proto
 
 

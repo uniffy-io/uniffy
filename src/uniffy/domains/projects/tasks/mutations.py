@@ -15,7 +15,6 @@ from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.field_definition import (
-    SystemProjectFieldId,
     TaskStatusSemantic,
 )
 from uniffy.core.models.projects.task import Task
@@ -34,6 +33,7 @@ from uniffy.domains.projects import queries
 from uniffy.domains.projects.statuses import (
     load_task_status_semantics,
 )
+from uniffy.domains.projects.tasks.activity import FIELD_ACTIONS, TaskActivityRecorder
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.recurrence import spawn_next_recurring_instance
@@ -155,6 +155,9 @@ class TaskMutationOperations:
         previous_parent_id = task.parent_id
         parent_changed = "parent_id" in kwargs and kwargs.get("parent_id") != task.parent_id  # noqa: PLR2004
 
+        old_description = task.description or ""
+        recorder = TaskActivityRecorder(self.session)
+
         nullable_fields = {
             "start_date",
             "due_date",
@@ -176,58 +179,24 @@ class TaskMutationOperations:
                 merged = dict(task.field_values or {})
                 merged.update(value)
                 setattr(task, key, merged)
-            else:
-                setattr(task, key, value)
+                await recorder.custom_fields(task_id, user_id, old_value, value)
+                continue
 
-            if key == "status" and old_value != value:  # noqa: PLR2004
+            setattr(task, key, value)
+            if old_value == value:
+                continue
+            if key == "status":  # noqa: PLR2004
                 if new_status_completed and not old_status_completed:
                     task.completed_at = datetime.now(UTC)
                 elif old_status_completed and not new_status_completed:
                     task.completed_at = None
+            if key in FIELD_ACTIONS:
+                await recorder.field_change(task_id, user_id, key, old_value, value)
+            elif key == "blocked_by_task_ids":  # noqa: PLR2004
+                await recorder.blockers(task_id, user_id, old_value, value)
 
-                await TaskNotifications(self.session).log_activity(
-                    task_id,
-                    user_id,
-                    "status_changed",
-                    field_id=SystemProjectFieldId.STATUS,
-                    previous_value=str(old_value),
-                    new_value=str(value),
-                )
-            elif key == "priority" and old_value != value:  # noqa: PLR2004
-                await TaskNotifications(self.session).log_activity(
-                    task_id,
-                    user_id,
-                    "priority_changed",
-                    field_id=SystemProjectFieldId.PRIORITY,
-                    previous_value=str(old_value),
-                    new_value=str(value),
-                )
-            elif key == "task_type" and old_value != value:  # noqa: PLR2004
-                await TaskNotifications(self.session).log_activity(
-                    task_id,
-                    user_id,
-                    "type_changed",
-                    field_id=SystemProjectFieldId.TYPE,
-                    previous_value=str(old_value),
-                    new_value=str(value),
-                )
-            elif key == "sprint_id" and old_value != value:  # noqa: PLR2004
-                await TaskNotifications(self.session).log_activity(
-                    task_id,
-                    user_id,
-                    "sprint_changed",
-                    previous_value=str(old_value) if old_value else None,
-                    new_value=str(value) if value else None,
-                )
-            elif key == "assignee_ids" and old_value != value:  # noqa: PLR2004
-                await TaskNotifications(self.session).log_activity(
-                    task_id,
-                    user_id,
-                    "assigned",
-                    field_id=SystemProjectFieldId.ASSIGNEE,
-                    previous_value=",".join(old_value) if old_value else None,
-                    new_value=",".join(value) if value else None,
-                )
+        if merge is not None and (task.description or "") != old_description:
+            await TaskNotifications(self.session).log_description_edit(task_id, user_id)
 
         if merge is not None:
             task.outgoing_references = queries.extract_urns_from_content(task.description) or None
@@ -271,7 +240,9 @@ class TaskMutationOperations:
             await publish_content_changed(ContentType.TASK, task_id, organization_id)
             await publish_content_replace(ContentType.TASK, task_id)
 
-        await self.content._sync_task_tags(actor_id=user_id, task=task, tag_ids=tag_ids)
+        await self.content._sync_task_tags(
+            actor_id=user_id, task=task, tag_ids=tag_ids, record_activity=True
+        )
 
         await self.content._index_for_search(task)
 
@@ -360,17 +331,11 @@ class TaskMutationOperations:
                     parent.completed_at = datetime.now(UTC)
                     parent.version += 1
                     parent.updated_at = datetime.now(UTC)
+                    await recorder.field_change(
+                        parent.id, user_id, "status", old_parent_status, parent.status
+                    )
                     await self.session.commit()
                     await self.session.refresh(parent)
-
-                    await TaskNotifications(self.session).log_activity(
-                        parent.id,
-                        user_id,
-                        "status_changed",
-                        field_id=SystemProjectFieldId.STATUS,
-                        previous_value=old_parent_status,
-                        new_value=parent.status,
-                    )
         elif task.parent_id and became_incomplete:
             parent = await self.session.get(Task, task.parent_id)
             if parent and parent.completed_at is not None and not parent.is_deleted:
@@ -379,17 +344,11 @@ class TaskMutationOperations:
                 parent.completed_at = None
                 parent.version += 1
                 parent.updated_at = datetime.now(UTC)
+                await recorder.field_change(
+                    parent.id, user_id, "status", old_parent_status, parent.status
+                )
                 await self.session.commit()
                 await self.session.refresh(parent)
-
-                await TaskNotifications(self.session).log_activity(
-                    parent.id,
-                    user_id,
-                    "status_changed",
-                    field_id=SystemProjectFieldId.STATUS,
-                    previous_value=old_parent_status,
-                    new_value=parent.status,
-                )
 
         spawned_task: Task | None = None
         if task.recurrence_rule and became_completed:

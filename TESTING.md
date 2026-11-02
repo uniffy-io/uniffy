@@ -2862,6 +2862,26 @@ epic, and a few unrelated tasks, some done.
       mode.
 - [ ] Mobile: the Blocked by sheet shows Selected first, then the same sections; `12` alone matches
       task #12; toggling the last blocker off saves.
+
+## Projects: task activity history
+
+Needs a project with an epic, a story with two subtasks (one still open, the others done), a
+custom single-select field, two sprints and an agent with a working provider key.
+
+- [ ] `(both products)` Web: change the title, start and due dates, estimate, sprint, type,
+      recurrence and milestone flag, add and remove an assignee and a tag, set the custom field,
+      and add then remove a blocker. Each change appears in Activity as "from -> to" with real
+      names, option pills and sprint names, and the database holds one row per change.
+- [ ] Change priority three times in a row: one entry shows the first value to the last with
+      "(3 changes)".
+- [ ] The blocker shows on both tasks: "marked it blocked by" here, "made it block" on the other.
+- [ ] Complete the last open subtask: the parent's automatic completion is in its Activity after a
+      reload.
+- [ ] Edit the description live twice within five minutes, then again after five idle minutes:
+      two "edited the description" entries, credited to the editor.
+- [ ] Ask an agent in chat to change a task's priority: the entry reads "<agent> for <person>".
+- [ ] Hover a relative time for the exact date and time; the filter narrows the list by kind.
+- [ ] Mobile task detail shows the same wording, with the agent credit and from -> to details.
 ## Projects: table sort, assignee filter and large projects
 
 A project with tasks in every status and priority, assigned to at least three people (one task with
