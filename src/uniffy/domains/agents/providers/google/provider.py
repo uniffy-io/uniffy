@@ -297,28 +297,20 @@ class GoogleProvider(LLMProvider):
         contents: list[types.Content],
         config: types.GenerateContentConfig,
     ) -> CompletionResult:
-        """Execute a non-streaming completion.
-
-        Parameters
-        ----------
-        model : str
-            Model identifier.
-        contents : list[types.Content]
-            Conversation contents in Google format.
-        config : types.GenerateContentConfig
-            Generation config.
-
-        Returns
-        -------
-        CompletionResult
-            The completion result.
-
-        """
-        response = await self._client.aio.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config,
-        )
+        spent = (0, 0, 0)
+        for attempt in range(MALFORMED_CALL_RETRIES + 1):
+            response = await self._client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            usage = _split_google_usage(response.usage_metadata)
+            spent = (spent[0] + usage[0], spent[1] + usage[1], spent[2] + usage[2])
+            if not _malformed_tool_call(response) or attempt == MALFORMED_CALL_RETRIES:
+                break
+            logger.warning(
+                "Gemini returned a malformed function call; retrying", attempt=attempt + 1
+            )
 
         content = ""
         tool_calls: list[ToolCall] = []
@@ -347,9 +339,11 @@ class GoogleProvider(LLMProvider):
         blocked = bool(_google_block_reason(response))
         if not content and not tool_calls and blocked:
             content = VISIBLE_REFUSAL_MESSAGE
+        elif not content and not tool_calls and _malformed_tool_call(response):
+            content = MALFORMED_TOOL_CALL_MESSAGE
         stop_reason = _google_stop_reason(response, tool_calls, blocked=blocked)
 
-        prompt_tokens, cached_tokens, output_tokens = _split_google_usage(response.usage_metadata)
+        prompt_tokens, cached_tokens, output_tokens = spent
 
         return CompletionResult(
             content=content,
@@ -377,103 +371,125 @@ class GoogleProvider(LLMProvider):
         try:
             accumulated_content = ""
             tool_calls: list[ToolCall] = []
-            prompt_tokens = 0
-            cached_tokens = 0
-            output_tokens = 0
+            spent = (0, 0, 0)
             thinking_block_id = ""
             text_block_id = ""
             blocked = False
+            malformed = False
 
-            stream = await self._client.aio.models.generate_content_stream(
-                model=model,
-                contents=contents,
-                config=config,
-            )
-            yield StreamEvent(type=EventType.MODEL_CALL_START, model=model)
+            for attempt in range(MALFORMED_CALL_RETRIES + 1):
+                stream = await self._client.aio.models.generate_content_stream(
+                    model=model,
+                    contents=contents,
+                    config=config,
+                )
+                if attempt == 0:
+                    yield StreamEvent(type=EventType.MODEL_CALL_START, model=model)
+                attempt_usage = (0, 0, 0)
+                malformed = False
 
-            async for chunk in stream:
-                blocked = blocked or bool(_google_block_reason(chunk))
-                if chunk.usage_metadata:
-                    prompt_tokens, cached_tokens, output_tokens = _split_google_usage(
-                        chunk.usage_metadata
-                    )
+                async for chunk in stream:
+                    blocked = blocked or bool(_google_block_reason(chunk))
+                    malformed = malformed or _malformed_tool_call(chunk)
+                    if chunk.usage_metadata:
+                        attempt_usage = _split_google_usage(chunk.usage_metadata)
 
-                if not chunk.candidates:
-                    continue
+                    if not chunk.candidates:
+                        continue
 
-                candidate = chunk.candidates[0]
-                if not candidate.content or not candidate.content.parts:
-                    continue
+                    candidate = chunk.candidates[0]
+                    if not candidate.content or not candidate.content.parts:
+                        continue
 
-                for part in candidate.content.parts:
-                    if part.text and getattr(part, "thought", False):
-                        if not thinking_block_id:
-                            thinking_block_id = uuid.uuid4().hex[:12]
+                    for part in candidate.content.parts:
+                        if part.text and getattr(part, "thought", False):
+                            if not thinking_block_id:
+                                thinking_block_id = uuid.uuid4().hex[:12]
+                                yield StreamEvent(
+                                    type=EventType.THINKING_BLOCK_START,
+                                    block_id=thinking_block_id,
+                                )
                             yield StreamEvent(
-                                type=EventType.THINKING_BLOCK_START,
+                                type=EventType.THINKING_BLOCK_DELTA,
                                 block_id=thinking_block_id,
+                                delta=part.text,
                             )
-                        yield StreamEvent(
-                            type=EventType.THINKING_BLOCK_DELTA,
-                            block_id=thinking_block_id,
-                            delta=part.text,
-                        )
-                    elif part.text:
-                        if thinking_block_id:
+                        elif part.text:
+                            if thinking_block_id:
+                                yield StreamEvent(
+                                    type=EventType.THINKING_BLOCK_END,
+                                    block_id=thinking_block_id,
+                                )
+                                thinking_block_id = ""
+                            if not text_block_id:
+                                text_block_id = uuid.uuid4().hex[:12]
+                                yield StreamEvent(
+                                    type=EventType.TEXT_BLOCK_START,
+                                    block_id=text_block_id,
+                                )
+                            accumulated_content += part.text
                             yield StreamEvent(
-                                type=EventType.THINKING_BLOCK_END,
-                                block_id=thinking_block_id,
-                            )
-                            thinking_block_id = ""
-                        if not text_block_id:
-                            text_block_id = uuid.uuid4().hex[:12]
-                            yield StreamEvent(
-                                type=EventType.TEXT_BLOCK_START,
+                                type=EventType.TEXT_BLOCK_DELTA,
                                 block_id=text_block_id,
+                                delta=part.text,
                             )
-                        accumulated_content += part.text
-                        yield StreamEvent(
-                            type=EventType.TEXT_BLOCK_DELTA,
-                            block_id=text_block_id,
-                            delta=part.text,
-                        )
-                    elif part.function_call:
-                        if thinking_block_id:
+                        elif part.function_call:
+                            if thinking_block_id:
+                                yield StreamEvent(
+                                    type=EventType.THINKING_BLOCK_END,
+                                    block_id=thinking_block_id,
+                                )
+                                thinking_block_id = ""
+                            tc_id = f"toolu_{uuid.uuid4().hex[:24]}"
+                            fc_args = part.function_call.args
+                            tc_metadata: dict = {}
+                            if part.thought_signature:
+                                tc_metadata["thought_signature"] = part.thought_signature
+                            tc = ToolCall(
+                                id=tc_id,
+                                name=part.function_call.name or "",
+                                input=dict(fc_args) if fc_args else {},
+                                metadata=tc_metadata,
+                            )
+                            tool_calls.append(tc)
+                            tool_block_id = uuid.uuid4().hex[:12]
                             yield StreamEvent(
-                                type=EventType.THINKING_BLOCK_END,
-                                block_id=thinking_block_id,
+                                type=EventType.TOOL_CALL_START,
+                                block_id=tool_block_id,
+                                tool_call_id=tc.id,
+                                tool_name=tc.name,
                             )
-                            thinking_block_id = ""
-                        tc_id = f"toolu_{uuid.uuid4().hex[:24]}"
-                        fc_args = part.function_call.args
-                        tc_metadata: dict = {}
-                        if part.thought_signature:
-                            tc_metadata["thought_signature"] = part.thought_signature
-                        tc = ToolCall(
-                            id=tc_id,
-                            name=part.function_call.name or "",
-                            input=dict(fc_args) if fc_args else {},
-                            metadata=tc_metadata,
-                        )
-                        tool_calls.append(tc)
-                        tool_block_id = uuid.uuid4().hex[:12]
-                        yield StreamEvent(
-                            type=EventType.TOOL_CALL_START,
-                            block_id=tool_block_id,
-                            tool_call_id=tc.id,
-                            tool_name=tc.name,
-                        )
-                        yield StreamEvent(
-                            type=EventType.TOOL_CALL_END,
-                            block_id=tool_block_id,
-                            tool_call_id=tc.id,
-                            tool_name=tc.name,
-                            tool_args=tc.input,
-                        )
+                            yield StreamEvent(
+                                type=EventType.TOOL_CALL_END,
+                                block_id=tool_block_id,
+                                tool_call_id=tc.id,
+                                tool_name=tc.name,
+                                tool_args=tc.input,
+                            )
 
-            if not accumulated_content and not tool_calls and blocked:
+                spent = (
+                    spent[0] + attempt_usage[0],
+                    spent[1] + attempt_usage[1],
+                    spent[2] + attempt_usage[2],
+                )
+                # Nothing visible reached the user yet, so the same request can be asked again.
+                retry = malformed and not accumulated_content and not tool_calls
+                if not retry or attempt == MALFORMED_CALL_RETRIES:
+                    break
+                if thinking_block_id:
+                    yield StreamEvent(type=EventType.THINKING_BLOCK_END, block_id=thinking_block_id)
+                    thinking_block_id = ""
+                logger.warning(
+                    "Gemini returned a malformed function call; retrying", attempt=attempt + 1
+                )
+
+            prompt_tokens, cached_tokens, output_tokens = spent
+
+            if not accumulated_content and not tool_calls and (blocked or malformed):
                 text_block_id = uuid.uuid4().hex[:12]
-                accumulated_content = VISIBLE_REFUSAL_MESSAGE
+                accumulated_content = (
+                    VISIBLE_REFUSAL_MESSAGE if blocked else MALFORMED_TOOL_CALL_MESSAGE
+                )
                 yield StreamEvent(type=EventType.TEXT_BLOCK_START, block_id=text_block_id)
                 yield StreamEvent(
                     type=EventType.TEXT_BLOCK_DELTA,
@@ -517,6 +533,22 @@ def _enum_token(value: object) -> str:
         return str(name).upper()
     raw = getattr(value, "value", value)
     return str(raw).rsplit(".", 1)[-1].upper()
+
+
+# Gemini sometimes ends a turn with a function call it could not encode: no text, no call,
+# finish reason MALFORMED_FUNCTION_CALL. Re-asking the same request usually succeeds.
+_MALFORMED_CALL_FINISHES = frozenset({"MALFORMED_FUNCTION_CALL", "UNEXPECTED_TOOL_CALL"})
+MALFORMED_CALL_RETRIES = 2
+MALFORMED_TOOL_CALL_MESSAGE = (
+    "The model could not produce a valid tool call. Please try again or rephrase the request."
+)
+
+
+def _malformed_tool_call(response: Any) -> bool:
+    candidates = getattr(response, "candidates", None) or []
+    if not candidates:
+        return False
+    return _enum_token(getattr(candidates[0], "finish_reason", None)) in _MALFORMED_CALL_FINISHES
 
 
 def _google_block_reason(response: Any) -> str:
