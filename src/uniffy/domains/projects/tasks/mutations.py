@@ -155,7 +155,6 @@ class TaskMutationOperations:
         previous_parent_id = task.parent_id
         parent_changed = "parent_id" in kwargs and kwargs.get("parent_id") != task.parent_id  # noqa: PLR2004
 
-        old_description = task.description or ""
         recorder = TaskActivityRecorder(self.session)
 
         nullable_fields = {
@@ -195,7 +194,7 @@ class TaskMutationOperations:
             elif key == "blocked_by_task_ids":  # noqa: PLR2004
                 await recorder.blockers(task_id, user_id, old_value, value)
 
-        if merge is not None and (task.description or "") != old_description:
+        if merge is not None and merge.contributed:
             await TaskNotifications(self.session).log_description_edit(task_id, user_id)
 
         if merge is not None:
@@ -358,6 +357,7 @@ class TaskMutationOperations:
                 task,
                 organization_id,
                 status_semantics,
+                actor_id=user_id,
                 buffer=self.buffer,
             )
 

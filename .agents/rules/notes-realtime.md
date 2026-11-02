@@ -97,7 +97,7 @@ ids, generations, epochs and seed tokens hold at most 128 UTF-8 bytes and intege
 | 3 | both | Awareness query, exactly one byte. Peers answer with their awareness, so the server relays only that byte and at most once per handle every five seconds. Clients send it once per attach. |
 | 4 | server | Fragment seed role: varuint 1 granted or 0 revoked, then an optional lease token. |
 | 5 | server | Authoritative generation. Sent before synchronization on attach, on every resync and on a generation change. |
-| 6 | client | Generation, update id, update bytes. Every client write, including replies derived from sync. |
+| 6 | client | Generation, update id, update bytes. Authored client update. |
 | 7 | server | Update id. PostgreSQL holds that update: a committed seed proposal, or an update that adds nothing to a document whose checkpoint holds all live state. Never sent for a buffer-only append. |
 | 8 | client | Generation, request id, lease token, source Markdown, update bytes. Isolated fragment seed proposal. |
 | 9 | server | Request id. Seed proposal rejected without changing state. |
@@ -105,6 +105,7 @@ ids, generations, epochs and seed tokens hold at most 128 UTF-8 bytes and intege
 | 11 | server | Update id, generation, epoch, accepted sequence (at least 1). The buffer holds the update. |
 | 12 | server | Generation, epoch, covered sequence, checkpoint revision. PostgreSQL holds every update of that epoch through the covered sequence. |
 | 13 | server | Generation, epoch, head sequence, checkpoint sequence, checkpoint revision. The checkpoint sequence never exceeds the head. Sent after 5 on attach and resync, and on every epoch reset. |
+| 14 | client | Generation, update id, update bytes. Derived repair or synchronization state, with the same authorization and coverage contract as type 6. |
 
 Type 2 reasons are exact strings. `read only` goes to a viewer on attach, ahead of any sync frame.
 `edit access removed` is a live downgrade. `no view access` and `access revoked` use scope 1. Write
@@ -171,7 +172,7 @@ On open, every attached document of the socket's organization sends SyncStep1 fi
 it; seed capability and, for documents with presence, awareness and an awareness query follow. When
 type 5 arrives on a new socket, ids still local are resent. Accepted ids wait for type 13 to prove
 or refute their presence. A type 13 that changes the epoch on a live socket resends in-flight local
-ids. A server SyncStep1 is answered with full state, as one type 6 update under a new id, only when
+ids. A server SyncStep1 is answered with full state, as one derived update under a new id, only when
 the client's coverage epoch changed under it; a Yjs reply always repeats the whole delete set.
 Otherwise the client only flushes its unsent batch. Read-only documents never answer.
 
@@ -235,10 +236,10 @@ budget of twice `REALTIME_MAX_DOCS_PER_SOCKET` that refills by that limit every 
 empty budget delays the socket's next frame instead of dropping it. The attaching SyncStep1 is
 free.
 
-Type 6 runs `admission.admit_update` under the resident session lock and a PostgreSQL document lock:
+Types 6 and 14 run `admission.admit_update` under the resident session lock and a PostgreSQL document lock:
 
 1. Edit access is read fresh from PostgreSQL. The role also applies to the writer's handle, so a
-   type 6 frame needs no separate inbound recheck: a downgrade sends `edit access removed`, a lost
+   type 6 or 14 frame needs no separate inbound recheck: a downgrade sends `edit access removed`, a lost
    view detaches the document.
 2. Latest state comes from narrow row facts, the control head and, unless the resident document
    already holds the checkpoint, the cached or read checkpoint plus tail. An unusable epoch settles
@@ -307,7 +308,7 @@ including failed acceptance and cancellation. The counter is per global user, ac
 of organization, type and id. A bucket's keys share the hash tag `rtbuf:{v2:NN}`, so every script
 stays single slot; maintenance state is `rtbuf:v2:maintenance`. Each document generation and epoch
 has a stream of `<seq>-0` records (`i` update id, `u` sealed update, `a` actor, `t` acceptance
-time, `v` format `RECORD_FORMAT` 2), a control hash (head, pending bytes and records, committed
+time, `v` format `RECORD_FORMAT` 2, `m` authored update with a server-verified Markdown change), a control hash (head, pending bytes and records, committed
 hint, first and last append time, starting revision) and a receipts hash. Each bucket has a due
 sorted set, an early sorted set, a scope set and an accounting hash. The early set names documents
 past 1 MiB or 1024 pending records; a trim below both removes them. The scope set names every scope
@@ -428,6 +429,14 @@ A record that cannot be decoded or unsealed marks the document poisoned: its byt
 from 15 s doubling to ten minutes, and other documents continue. Other errors back off the same
 way, except an unavailable Valkey, which a later dispatch retries once the claim expires. Checkpoint
 success never depends on rendering.
+
+Task adapters stage description-session facts with checkpoint advancement, recovery and live-write
+barriers, before buffered records can be trimmed. Admission compares validated Markdown with resident
+Markdown and stamps `m` only for authored updates; derived repairs, fragment hydration and metadata
+alone do not credit an editor. Records
+without that evidence do not infer contributors. Sessions use acceptance times and group per human
+and agent, with five minutes of idle time starting another entry. Buffered edits carry no agent
+identity even when an agent's plain write folds them. Projection never recreates contributor facts.
 
 `cron:maintain_realtime_buffer` runs each minute at second 40. It walks a rotating slice of the
 bucket scope sets (20 SSCAN calls, up to 1000 documents) and, per scope:
@@ -589,7 +598,7 @@ retryable unavailable responses. Live sockets repeat the durable check through t
 watchdog.
 
 Fresh PostgreSQL authorization runs at inbound document handling, admission and outbound
-disclosure; a type 6 frame takes its inbound read from admission. Scalar statement structures are reused with bound actor, resource and check-time values.
+disclosure; a type 6 or 14 frame takes its inbound read from admission. Scalar statement structures are reused with bound actor, resource and check-time values.
 Outbound frames and content hints coalesce waiting recipients into fresh batches of at most 256
 requests, with eight concurrent batches and 4096 pending recipients per process and delivery class.
 Each batch seals before database I/O. Later requests start a separate read, even while an earlier
@@ -633,6 +642,11 @@ open is not cached, so a later read retries.
 `linkRecovery` joins local recovery to the transport on attach. Every coverage transition writes or
 deletes a pending row; only a checkpointed transition deletes one. After hydration, `restorePending`
 hands back the updates an earlier session left unconfirmed, under their original ids and receipts.
+Web batches retain whether any transaction had a persisted origin. Authored batches use type 6;
+hydration, reconciliation and standalone mirror batches use type 14. Pending rows preserve that
+classification through reconnect and replay; rows without evidence replay as derived. Hydration
+restores original pending ids before flushing derived snapshot state, so replay preserves authorship.
+Mobile task descriptions use ordinary RPC and have no rich repair batches.
 Snapshot writes coalesce while storage is busy and replace earlier rows of the same epoch only.
 While edits continue, a full snapshot goes at most every two seconds (`SNAPSHOT_INTERVAL_MS`); a
 flush, pagehide, a hidden tab, close and compaction write one at once. Between snapshots each

@@ -9,6 +9,7 @@ import {
   replaceProsemirrorFragment,
 } from "@/features/realtime/markdown";
 import { MarkdownReconciler, mergeMarkdownEdits } from "@/features/realtime/markdownReconciliation";
+import { isPersistedOrigin } from "@/features/realtime/persistence/encryptedYjsPersistence";
 
 const schema = new Schema({
   nodes: {
@@ -65,6 +66,25 @@ function setup(initial: string, clientID?: number, source?: Y.Doc, leader = true
 }
 
 describe("Markdown reconciliation", () => {
+  it("classifies a passive leader's repair of concurrent rich edits as derived", () => {
+    const leader = setup("base", 1000);
+    const alice = setup("base", 3000, leader.doc, false);
+    const bob = setup("base", 2000, leader.doc, false);
+    const stops = [leader, alice, bob].map((editor) =>
+      editor.reconciler.bindLocalMirror(() => true),
+    );
+    alice.typeRich("base Alice");
+    bob.typeRich("base\n\nBob");
+    Y.applyUpdate(leader.doc, Y.encodeStateAsUpdate(alice.doc), "remote");
+    Y.applyUpdate(leader.doc, Y.encodeStateAsUpdate(bob.doc), "remote");
+    expect(leader.doc.getText("markdown").toString()).not.toBe(leader.rich());
+    const authored: boolean[] = [];
+    leader.doc.on("update", (_update, origin) => authored.push(isPersistedOrigin(origin)));
+    leader.reconciler.flush();
+    expect(leader.doc.getText("markdown").toString()).toBe("base Alice\n\nBob");
+    expect(authored).toEqual([false]);
+    stops.forEach((stop) => stop());
+  });
   it.each([
     [1000, 2000],
     [2000, 1000],

@@ -20,6 +20,16 @@ function activity(id: string, overrides: Partial<TaskActivity> = {}): TaskActivi
 }
 
 describe("mergeActivityRuns", () => {
+  it("keeps separate description sessions from the same editor", () => {
+    const entries = mergeActivityRuns([
+      activity("2", { action: "description_edited" }),
+      activity("1", { action: "description_edited", timestamp: "2026-10-01T10:00:00Z" }),
+    ]);
+    expect(entries.map((entry) => [entry.id, entry.count])).toEqual([
+      ["2", 1],
+      ["1", 1],
+    ]);
+  });
   it("merges a run of one person's changes to one field into the net change", () => {
     const merged = mergeActivityRuns([
       activity("3", { previousValue: "high", newValue: "urgent" }),

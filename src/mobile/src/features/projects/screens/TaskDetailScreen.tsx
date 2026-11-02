@@ -49,6 +49,7 @@ import { getTaskTypeConfig, getHierarchyRuleViolation } from "@features/projects
 import { formatMinutes } from "@features/projects/timeFormatting";
 import { formatDateShort, formatRelativeTime } from "@shared/lib/dateFormatting";
 import { describeActivity, type ActivityLookups } from "@features/projects/activityText";
+import { FieldType } from "@uniffy/proto/projects/v1/projects_pb";
 import { parseRecurrence, describeRecurrence } from "@features/projects/taskRecurrence";
 import { useTheme } from "@shared/hooks/useTheme";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
@@ -224,6 +225,8 @@ export function TaskDetailScreen() {
         .find((f) => f.id === fieldId)
         ?.options.find((o) => o.id === optionId)?.label,
     fieldName: (fieldId) => project?.fieldDefinitions.find((f) => f.id === fieldId)?.name,
+    isMultiSelect: (fieldId) =>
+      project?.fieldDefinitions.find((f) => f.id === fieldId)?.type === FieldType.MULTI_SELECT,
     personName: (userId) => directory.byId.get(userId)?.name,
     taskLabel: (id) => {
       const linked = tasksById.get(id);

@@ -1,6 +1,6 @@
 """Task activity and notification side effects."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import and_, select
@@ -22,9 +22,8 @@ from uniffy.core.models.projects.field_definition import FieldDefinition, System
 from uniffy.core.models.projects.task import Task
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType, NotificationType
+from uniffy.domains.projects.tasks.description_activity import stage_description_edits
 from uniffy.domains.projects.watchers.operations import WatcherOperations
-
-DESCRIPTION_SESSION_IDLE = timedelta(minutes=5)
 
 
 class TaskNotifications:
@@ -237,31 +236,13 @@ class TaskNotifications:
             new_value=new_value,
         )
         self.session.add(activity)
-        await self.session.flush()
         return activity
 
     async def log_description_edit(self, task_id: UUID, actor_id: UUID) -> TaskActivity:
-        """One entry per editing session: edits by the same person (and agent) within the idle
-        window extend the open entry instead of adding another.
-        """
-        agent_id = current_acting_agent()
-        now = datetime.now(UTC)
-        latest = (
-            await self.session.execute(
-                select(TaskActivity)
-                .where(TaskActivity.task_id == task_id)
-                .order_by(TaskActivity.timestamp.desc())
-                .limit(1)
-            )
-        ).scalar_one_or_none()
-        if (
-            latest is not None
-            and latest.action == TaskActivityAction.DESCRIPTION_EDITED
-            and latest.actor_id == actor_id
-            and latest.agent_id == agent_id
-            and now - latest.timestamp <= DESCRIPTION_SESSION_IDLE
-        ):
-            latest.timestamp = now
-            await self.session.flush()
-            return latest
-        return await self.log_activity(task_id, actor_id, TaskActivityAction.DESCRIPTION_EDITED)
+        entries = await stage_description_edits(
+            self.session,
+            task_id,
+            [(actor_id, datetime.now(UTC))],
+            agent_id=current_acting_agent(),
+        )
+        return entries[0]

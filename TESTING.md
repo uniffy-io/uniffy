@@ -2875,13 +2875,26 @@ custom single-select field, two sprints and an agent with a working provider key
 - [ ] Change priority three times in a row: one entry shows the first value to the last with
       "(3 changes)".
 - [ ] The blocker shows on both tasks: "marked it blocked by" here, "made it block" on the other.
+- [ ] Create a task with an initial blocker. Both tasks show the dependency activity.
 - [ ] Complete the last open subtask: the parent's automatic completion is in its Activity after a
       reload.
 - [ ] Edit the description live twice within five minutes, then again after five idle minutes:
       two "edited the description" entries, credited to the editor.
+- [ ] Two people edit before one checkpoint. Both receive their own description entry. Alternating
+      edits within five minutes extend each person's session. Keep Activity open and confirm each
+      persisted edit appears without reopening it. Opening an editor without typing adds no entry.
 - [ ] Ask an agent in chat to change a task's priority: the entry reads "<agent> for <person>".
+- [ ] Ask an agent to complete another person's recurring task. The next task keeps its owner and
+      credits the person who requested completion.
 - [ ] Hover a relative time for the exact date and time; the filter narrows the list by kind.
 - [ ] Mobile task detail shows the same wording, with the agent credit and from -> to details.
+- [ ] Change and clear a custom multiselect field. Mobile history shows option labels and "none"
+      for the cleared selection.
+
+Database regression suite: `src/uniffy/tests/integration/access/test_task_activity.py` covers
+checkpoint contributors, recovery, rollback, passive hydration, agent merges, recurring creation,
+initial blockers and batched inserts for 100 field changes or 100 dependency links.
+
 ## Projects: table sort, assignee filter and large projects
 
 A project with tasks in every status and priority, assigned to at least three people (one task with

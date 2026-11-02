@@ -54,6 +54,7 @@ export function statusFromCloseCode(code: number): RealtimeStatus | null {
 
 export const MESSAGE_GENERATION = 5;
 export const MESSAGE_UPDATE = 6;
+export const MESSAGE_DERIVED_UPDATE = 14;
 // Committed: PostgreSQL holds the update. Never sent for a buffer-only append.
 export const MESSAGE_COMMITTED = 7;
 export const MESSAGE_ACCEPTED_RECEIPT = 11;

@@ -20,6 +20,7 @@ from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.statuses import (
     load_task_status_semantics,
 )
+from uniffy.domains.projects.tasks.activity import TaskActivityRecorder
 from uniffy.domains.projects.tasks.content import TaskContentOperations
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.validation import TaskValidator
@@ -132,6 +133,9 @@ class TaskCreateOperations:
 
         await TaskNotifications(self.session).log_activity(
             task.id, user_id, TaskActivityAction.CREATED
+        )
+        await TaskActivityRecorder(self.session).blockers(
+            task.id, user_id, [], task.blocked_by_task_ids or []
         )
 
         watcher_user_ids = [user_id]

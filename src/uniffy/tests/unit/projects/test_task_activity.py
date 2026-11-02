@@ -1,4 +1,3 @@
-from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID
 
@@ -95,7 +94,10 @@ async def test_custom_fields_record_only_changed_values() -> None:
     await recorder.custom_fields(
         task_id, actor, {"f1": "a", "f2": ["x"]}, {"f1": "a", "f2": ["x", "y"], "f3": 5}
     )
-    calls = [(c.kwargs["field_id"], c.kwargs["previous_value"], c.kwargs["new_value"]) for c in log.await_args_list]
+    calls = [
+        (c.kwargs["field_id"], c.kwargs["previous_value"], c.kwargs["new_value"])
+        for c in log.await_args_list
+    ]
     assert calls == [("f2", '["x"]', '["x","y"]'), ("f3", None, "5")]
 
 
@@ -122,55 +124,9 @@ async def test_blockers_skip_the_far_end_of_a_purged_task() -> None:
     assert [c.args[2] for c in log.await_args_list] == [TaskActivityAction.BLOCKED_BY_REMOVED]
 
 
-def _writer(latest: TaskActivity | None) -> tuple[TaskNotifications, MagicMock]:
-    session = MagicMock()
-    session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=lambda: latest))
-    session.flush = AsyncMock()
-    return TaskNotifications(session), session
-
-
-def _edit(actor, *, minutes_ago: int, agent=None, action=TaskActivityAction.DESCRIPTION_EDITED):
-    return TaskActivity(
-        task_id=generate_id(),
-        actor_id=actor,
-        agent_id=agent,
-        action=action,
-        timestamp=datetime.now(UTC) - timedelta(minutes=minutes_ago),
-    )
-
-
-async def test_description_edits_in_one_session_extend_the_entry() -> None:
-    actor = generate_id()
-    latest = _edit(actor, minutes_ago=3)
-    before = latest.timestamp
-    writer, session = _writer(latest)
-    entry = await writer.log_description_edit(latest.task_id, actor)
-    assert entry is latest
-    assert latest.timestamp > before
-    session.add.assert_not_called()
-
-
-@pytest.mark.parametrize(
-    "latest_kind", ["idle", "other_person", "other_action", "agent", "none"]
-)
-async def test_description_edit_starts_a_new_entry(latest_kind: str) -> None:
-    actor = generate_id()
-    latest = {
-        "idle": _edit(actor, minutes_ago=6),
-        "other_person": _edit(generate_id(), minutes_ago=1),
-        "other_action": _edit(actor, minutes_ago=1, action=TaskActivityAction.TITLE_CHANGED),
-        "agent": _edit(actor, minutes_ago=1, agent=generate_id()),
-        "none": None,
-    }[latest_kind]
-    writer, session = _writer(latest)
-    entry = await writer.log_description_edit(generate_id(), actor)
-    assert entry is not latest
-    assert entry.action == TaskActivityAction.DESCRIPTION_EDITED
-    session.add.assert_called_once()
-
-
 async def test_entries_written_during_a_tool_call_credit_the_agent() -> None:
-    writer, session = _writer(None)
+    session = MagicMock()
+    writer = TaskNotifications(session)
     agent = generate_id()
     with acting_agent(agent):
         entry = await writer.log_activity(

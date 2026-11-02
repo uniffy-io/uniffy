@@ -16,6 +16,7 @@ from uniffy_proto.projects.v1.projects_pb import UpdateTaskRequest
 
 from uniffy.core.models.projects.field_definition import FieldDefinition, TaskStatusSemantic
 from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 - FK metadata
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
@@ -72,7 +73,8 @@ class LiveProject:
 @pytest_asyncio.fixture(loop_scope="session")
 async def live_project(access, valkey_namespace) -> AsyncIterator[LiveProject]:
     """A member's project whose two task descriptions are seeded and bound to buffer epochs."""
-    register_realtime_adapter(TaskRealtimeAdapter(AsyncMock()))
+    adapter = TaskRealtimeAdapter(AsyncMock())
+    register_realtime_adapter(adapter, stage_edits=adapter.stage_edits)
     async with open_session() as db:
         project = Project(
             organization_id=access.org_id,
@@ -135,6 +137,11 @@ async def live_project(access, valkey_namespace) -> AsyncIterator[LiveProject]:
                 )
             )
             await db.execute(delete(FieldDefinition).where(FieldDefinition.project_id == project_id))
+            await db.execute(
+                delete(TaskActivity).where(
+                    TaskActivity.task_id.in_(select(Task.id).where(Task.project_id == project_id))
+                )
+            )
             await db.execute(delete(Task).where(Task.project_id == project_id))
             await db.execute(delete(Project).where(Project.id == project_id))
             await db.commit()

@@ -28,6 +28,7 @@ from uniffy.core.realtime.state import DocKey, TokenBucket, WSSession, doc_name_
 from uniffy.core.realtime.wire import (
     MESSAGE_ACCEPTED_RECEIPT,
     MESSAGE_CHECKPOINT_PROGRESS,
+    MESSAGE_DERIVED_UPDATE,
     MESSAGE_SEED_UPDATE,
     MESSAGE_SESSION_STATE,
     MESSAGE_UPDATE,
@@ -110,9 +111,11 @@ class Client:
     def sync(self) -> None:
         self.send(create_sync_message(self.doc))
 
-    def write(self, update_id: str, update: bytes, generation: str) -> None:
+    def write(
+        self, update_id: str, update: bytes, generation: str, *, authored: bool = True
+    ) -> None:
         self.send(
-            bytes([MESSAGE_UPDATE])
+            bytes([MESSAGE_UPDATE if authored else MESSAGE_DERIVED_UPDATE])
             + write_var_string(generation)
             + write_var_string(update_id)
             + write_var_uint(len(update))

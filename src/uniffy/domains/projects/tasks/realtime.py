@@ -67,7 +67,6 @@ class TaskRealtimePersistence:
             if task is None:
                 return None
             old_refs = task.outgoing_references
-            old_description = task.description
             if (task.description or "") == content and (old_refs or []) == (references or []):
 
                 async def refresh_projection() -> None:
@@ -101,10 +100,6 @@ class TaskRealtimePersistence:
             raise RealtimeRenderConflict(f"Task {task_id} remained contended after three attempts")
 
         await self.session.refresh(task)
-
-        # An unknown editor (recovery after a lost buffer tail) is not guessed at.
-        if actor_id is not None and (old_description or "") != content:
-            await TaskNotifications(self.session).log_description_edit(task_id, actor_id)
 
         await stage_inline_reconciliation(self.session, ContentType.TASK, task_id, organization_id)
         with stage_notification_events(self.session):

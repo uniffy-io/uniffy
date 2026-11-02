@@ -23,6 +23,7 @@ import {
 import { encodeDocFrame, peekVarString } from "@/features/realtime/multiplex";
 import {
   MESSAGE_UPDATE,
+  MESSAGE_DERIVED_UPDATE,
   encodeAcceptedReceipt,
   encodeCheckpointProgress,
   encodeCommitted,
@@ -31,6 +32,10 @@ import {
   type RealtimeStatus,
 } from "@/features/realtime/protocol";
 import { hasUnsyncedEdits } from "@/features/realtime/unsyncedEdits";
+import {
+  HYDRATION_ORIGIN,
+  MARKDOWN_MIRROR_ORIGIN,
+} from "@/features/realtime/persistence/encryptedYjsPersistence";
 import { resolveCloseDisposal } from "@/features/realtime/hooks/useDocSession";
 import { encodeCorpusFrame, fromHex, wireCorpus } from "@/features/realtime/__tests__/wireCorpus";
 
@@ -220,7 +225,7 @@ function applyClientFramesToServer(ws: FakeWebSocket, docName: string, serverDoc
     const { docName: name, payloadOffset } = peekVarString(bytes);
     if (name !== docName) continue;
     const payload = bytes.subarray(payloadOffset);
-    if (payload[0] !== MESSAGE_UPDATE) continue;
+    if (![MESSAGE_UPDATE, MESSAGE_DERIVED_UPDATE].includes(payload[0])) continue;
     const decoder = decoding.createDecoder(payload);
     decoding.readVarUint(decoder);
     decoding.readVarString(decoder);
@@ -900,6 +905,31 @@ it("sends observer-generated projection in the same update frame", () => {
   server.destroy();
 });
 
+it("keeps derived repairs distinct from authored edits through batching and retry", () => {
+  const doc = attachDoc("repair-provenance");
+  const ws = currentWs();
+  ws.open();
+  doc.ydoc.transact(() => doc.ydoc.getText("markdown").insert(0, "repair"), HYDRATION_ORIGIN);
+  vi.advanceTimersByTime(50);
+  const derived = updateFrames(ws, doc.docName).at(-1)!;
+  expect(derived[peekVarString(derived).payloadOffset]).toBe(MESSAGE_DERIVED_UPDATE);
+  ws.close();
+  realtimeMultiplexer.retryConnection();
+  const retry = currentWs();
+  retry.open();
+  expect(updateFrames(retry, doc.docName)[0]).toEqual(derived);
+  acknowledgeFrame(retry, updateFrames(retry, doc.docName)[0]);
+
+  doc.ydoc.transact(() => doc.ydoc.getText("markdown").insert(6, " own"), "editor");
+  doc.ydoc.transact(
+    () => doc.ydoc.getText("markdown").insert(10, " mirror"),
+    MARKDOWN_MIRROR_ORIGIN,
+  );
+  vi.advanceTimersByTime(50);
+  const authored = updateFrames(retry, doc.docName).at(-1)!;
+  expect(authored[peekVarString(authored).payloadOffset]).toBe(MESSAGE_UPDATE);
+});
+
 it("reconnects a socket whose initial sync never receives a reply", async () => {
   vi.useFakeTimers();
   attachDoc("half-open");
@@ -911,7 +941,10 @@ it("reconnects a socket whose initial sync never receives a reply", async () => 
 function updateFrames(ws: FakeWebSocket, docName: string): Uint8Array[] {
   return ws.sent.filter((frame) => {
     const prefix = peekVarString(frame);
-    return prefix.docName === docName && frame[prefix.payloadOffset] === MESSAGE_UPDATE;
+    return (
+      prefix.docName === docName &&
+      [MESSAGE_UPDATE, MESSAGE_DERIVED_UPDATE].includes(frame[prefix.payloadOffset])
+    );
   });
 }
 
@@ -1193,7 +1226,7 @@ describe("checkpoint coverage", () => {
     ws.receive(receipt(doc, id, "E1", 1));
     ws.receive(progress(doc, "E1", 1));
     expect(events).toEqual([
-      { updateId: id, coverage: "local", editedAt: expect.any(Number), update },
+      { updateId: id, coverage: "local", authored: true, editedAt: expect.any(Number), update },
       {
         updateId: id,
         coverage: "accepted",
@@ -1285,10 +1318,17 @@ describe("checkpoint coverage", () => {
     const replays = updateFrames(ws, doc.docName).slice(before).map(readUpdate);
     expect(replays).toEqual([first, second]);
     expect(events.slice(-2)).toEqual([
-      { updateId: first.id, coverage: "local", editedAt: expect.any(Number), update: first.update },
+      {
+        updateId: first.id,
+        coverage: "local",
+        authored: true,
+        editedAt: expect.any(Number),
+        update: first.update,
+      },
       {
         updateId: second.id,
         coverage: "local",
+        authored: true,
         editedAt: expect.any(Number),
         update: second.update,
       },

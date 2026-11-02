@@ -10,6 +10,7 @@ import pytest_asyncio
 from sqlalchemy import delete
 
 from uniffy.core.models.projects.project import Project
+from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.sprint import Sprint as _Sprint  # noqa: F401 - FK metadata
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
@@ -51,7 +52,7 @@ async def document(session, access, valkey_namespace) -> AsyncIterator[SimpleNam
     engine = RecordingSearchEngine()
     indexer = recording_indexer(engine)
     adapter = TaskRealtimeAdapter(indexer)
-    register_realtime_adapter(adapter)
+    register_realtime_adapter(adapter, stage_edits=adapter.stage_edits)
     key = ContentType.TASK, task.id
     live = await buffered(key, access, valkey_namespace)
     yield SimpleNamespace(
@@ -67,6 +68,7 @@ async def document(session, access, valkey_namespace) -> AsyncIterator[SimpleNam
     await session.execute(
         delete(RealtimeYjsSnapshot).where(RealtimeYjsSnapshot.content_id == task.id)
     )
+    await session.execute(delete(TaskActivity).where(TaskActivity.task_id == task.id))
     await session.execute(delete(Task).where(Task.id == task.id))
     await session.execute(delete(Project).where(Project.id == project.id))
     await session.commit()
@@ -101,11 +103,13 @@ class _RenderGate:
 
 @contextlib.contextmanager
 def gated_render(document, before: Callable[[], Awaitable[None]]) -> Iterator[None]:
-    register_realtime_adapter(_RenderGate(document.adapter, before))
+    register_realtime_adapter(
+        _RenderGate(document.adapter, before), stage_edits=document.adapter.stage_edits
+    )
     try:
         yield
     finally:
-        register_realtime_adapter(document.adapter)
+        register_realtime_adapter(document.adapter, stage_edits=document.adapter.stage_edits)
 
 
 async def lease(document: SimpleNamespace, candidate: str) -> SeedLease:

@@ -260,6 +260,13 @@ def check_update(session: YDocSession, generation: str, update: bytes) -> bool:
     return True
 
 
+def changes_markdown(session: YDocSession) -> bool:
+    """Fragment hydration and mirror metadata alone do not credit a description editor."""
+    return session.shadow is not None and (
+        str(markdown_text(session.ydoc)) != str(markdown_text(session.shadow))
+    )
+
+
 def accept_update(session: YDocSession, update: bytes, seq: int) -> None:
     """Apply an update the buffer accepted at ``seq``; the shadow took it when it was checked."""
     session.ydoc.apply_update(update)

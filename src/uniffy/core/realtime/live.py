@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions import role_can_edit
 from uniffy.core.errors import UnavailableError
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
-from uniffy.core.realtime.adapter import get_realtime_adapter
+from uniffy.core.realtime.adapter import get_realtime_adapter, stage_buffered_edits
 from uniffy.core.realtime.buffer import (
     AdmissionUnknown,
     BufferUnavailable,
@@ -126,6 +126,7 @@ class LiveDocument:
 class TextMerge:
     text: str
     after_commit: AfterCommit
+    contributed: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -298,6 +299,7 @@ async def stage_live_checkpoint(
             scope = await start_epoch(buffer, row, organization_id, identity)
     row.organization_id = organization_id
     db.add(row)
+    await stage_buffered_edits(db, (row.content_type, row.content_id), organization_id, live.tail)
     staged = _Staged(
         (row.content_type, row.content_id),
         organization_id,
@@ -332,9 +334,10 @@ async def stage_text_merge(
     if live is None:
         merged = merge_plain_text(base=base, live=stored, incoming=incoming)
         validate_document_size(merged)
-        return TextMerge(merged, _settled)
+        return TextMerge(merged, _settled, merged != stored)
     doc = live.decode()
-    merged = merge_plain_text(base=base, live=str(markdown_text(doc)), incoming=incoming)
+    live_text = str(markdown_text(doc))
+    merged = merge_plain_text(base=base, live=live_text, incoming=incoming)
     validate_document_size(merged)
     before = doc.get_state()
     after_commit = _settled
@@ -354,7 +357,7 @@ async def stage_text_merge(
     row.actor_id = actor_id
     row.updated_at = datetime.now(UTC)
     db.add(row)
-    return TextMerge(merged, after_commit)
+    return TextMerge(merged, after_commit, merged != live_text)
 
 
 async def claim_seed(

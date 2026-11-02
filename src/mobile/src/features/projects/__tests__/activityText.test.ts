@@ -8,6 +8,7 @@ const look: ActivityLookups = {
       fieldId as "field_status" | "f1"
     ]?.[id as never],
   fieldName: (id) => (id === "f1" ? "Colour" : undefined),
+  isMultiSelect: () => false,
   personName: (id) => ({ u1: "Ana", u2: "Ben" })[id as "u1" | "u2"],
   taskLabel: (id) => (id === "t9" ? "#9 Login" : undefined),
   sprintName: (id) => (id === "s1" ? "Sprint 5" : undefined),
@@ -21,6 +22,38 @@ function act(action: string, overrides: Partial<SerializedActivity> = {}): Seria
 }
 
 describe("describeActivity", () => {
+  it("resolves multiselect options, removed options and cleared values", () => {
+    const multi = { ...look, isMultiSelect: () => true };
+    expect(
+      describeActivity(
+        act("FIELD_UPDATED", {
+          fieldId: "f1",
+          previousValue: '["o1"]',
+          newValue: '["o1","removed"]',
+        }),
+        multi,
+      ).detail,
+    ).toBe("Red -> Red, removed");
+    expect(
+      describeActivity(
+        act("FIELD_UPDATED", {
+          fieldId: "f1",
+          previousValue: '["o1"]',
+          newValue: "[]",
+        }),
+        multi,
+      ).detail,
+    ).toBe("Red -> none");
+    expect(
+      describeActivity(
+        act("FIELD_UPDATED", {
+          fieldId: "f1",
+          newValue: '["o1"]',
+        }),
+        look,
+      ).detail,
+    ).toBe('none -> ["o1"]');
+  });
   it("names status options from and to", () => {
     expect(
       describeActivity(

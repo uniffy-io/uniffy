@@ -14,6 +14,8 @@ import {
   TextAa,
 } from "@phosphor-icons/react";
 import { formatDistanceToNow } from "date-fns";
+import { ContentType } from "@uniffy/proto/common/v1/common_pb";
+import { useContentRefresh } from "@/features/notifications/hooks/useContentRefresh";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
   selectActivitiesForTask,
@@ -84,6 +86,9 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
   useEffect(() => {
     dispatch(fetchActivities(taskId));
   }, [dispatch, taskId]);
+  useContentRefresh(ContentType.TASK, taskId, () => {
+    void dispatch(fetchActivities(taskId));
+  });
 
   const entries = useMemo(() => {
     const newestFirst = [...activities].sort(

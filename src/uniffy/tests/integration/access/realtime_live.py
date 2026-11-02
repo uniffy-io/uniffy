@@ -124,13 +124,19 @@ class BufferedDocument:
 
     async def admit(self, update_id: str, update: bytes, actor: UUID | None = None) -> int:
         outcome = await self.buffer.admit(
-            self.head, update_id=update_id, update=update, actor_id=actor or self.owner
+            self.head,
+            update_id=update_id,
+            update=update,
+            actor_id=actor or self.owner,
+            markdown_changed=True,
         )
         assert outcome.status is AdmissionStatus.ACCEPTED
         assert outcome.receipt is not None
         return outcome.receipt.seq
 
-    async def admit_live(self, update_id: str, update: bytes, actor: UUID | None = None) -> Admitted:
+    async def admit_live(
+        self, update_id: str, update: bytes, actor: UUID | None = None, *, authored: bool = True
+    ) -> Admitted:
         """Admit ``update`` the way a live socket does: fresh PostgreSQL checks, then the buffer."""
         session = YDocSession(key=self.key, ydoc=pycrdt.Doc(), organization_id=self.org)
         return await admit_update(
@@ -141,6 +147,7 @@ class BufferedDocument:
             update_id,
             update,
             lambda *_: None,
+            authored=authored,
         )
 
     async def checkpointed(self) -> RealtimeYjsSnapshot:

@@ -31,6 +31,7 @@ from uniffy.core.realtime.checkpoint import stage_recovered
 from uniffy.core.realtime.epoch import ensure_epoch
 from uniffy.core.realtime.resident import (
     accept_update,
+    changes_markdown,
     check_update,
     follow,
     follow_tail,
@@ -218,17 +219,14 @@ async def admit_update(
     update_id: str,
     update: bytes,
     broadcast: Broadcast,
+    *,
+    authored: bool = True,
 ) -> Admitted:
-    """Append one update and apply it to the resident document once acceptance is confirmed.
-
-    The caller holds ``session.lock``. Frames that realign the resident document, including a
-    fresh session state after an epoch reset, reach every attached client before any receipt
-    of the new epoch. An update that adds nothing, such as a sync reply carrying only known
-    deletions, appends no record. Raises ``ValueError`` for undecodable bytes and
-    :class:`RoleRefused` with the fresh role when the writer may not edit.
-    """
+    """The caller holds the session lock; realignment precedes receipts of the new epoch."""
     try:
-        return await _admit(buffer, session, actor_id, generation, update_id, update, broadcast)
+        return await _admit(
+            buffer, session, actor_id, generation, update_id, update, broadcast, authored
+        )
     finally:
         release_update(session)
 
@@ -241,6 +239,7 @@ async def _admit(
     update_id: str,
     update: bytes,
     broadcast: Broadcast,
+    authored: bool,
 ) -> Admitted:
     async with open_session() as db:
         await lock_document(db, session.key, session.organization_id)
@@ -265,7 +264,11 @@ async def _admit(
                 return _already_held(state.head, update_id, role)
             async with _unverified():
                 outcome = await buffer.admit(
-                    state.head, update_id=update_id, update=update, actor_id=actor_id
+                    state.head,
+                    update_id=update_id,
+                    update=update,
+                    actor_id=actor_id,
+                    markdown_changed=authored and changes_markdown(session),
                 )
             if outcome.status is not AdmissionStatus.RECOVERY_REQUIRED:
                 break

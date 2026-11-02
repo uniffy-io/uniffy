@@ -284,6 +284,7 @@ class YDocManager:
         source_conn_id: int,
         generation: str,
         update_id: str,
+        authored: bool = True,
     ) -> Receipt | None:
         """Admit a client's update into the buffer; local peers receive it once it is accepted.
 
@@ -296,7 +297,7 @@ class YDocManager:
             raise EditDenied
         async with session.lock:
             admitted = await self._admit(
-                session, source.user_id, generation, update_id, update_bytes
+                session, source.user_id, generation, update_id, update_bytes, authored=authored
             )
             if isinstance(admitted, Admitted) and admitted.applied:
                 broadcast(session, [create_update_message(update_bytes)], skip=source_conn_id)
@@ -319,10 +320,19 @@ class YDocManager:
         generation: str,
         update_id: str,
         update_bytes: bytes,
+        *,
+        authored: bool = True,
     ) -> Admitted | RoleRefused:
         try:
             return await admit_update(
-                self._buffer, session, actor_id, generation, update_id, update_bytes, broadcast
+                self._buffer,
+                session,
+                actor_id,
+                generation,
+                update_id,
+                update_bytes,
+                broadcast,
+                authored=authored,
             )
         except RoleRefused as refused:
             return refused

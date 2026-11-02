@@ -27,6 +27,7 @@ import {
   encodeGeneration,
   encodeSessionState,
   MESSAGE_UPDATE,
+  MESSAGE_DERIVED_UPDATE,
 } from "@/features/realtime/protocol";
 import {
   initStorageEncryption,
@@ -217,7 +218,11 @@ export function updateWrites(ws: FakeWebSocket, docName: string): UpdateWrite[] 
   const writes: UpdateWrite[] = [];
   for (const frame of ws.sent) {
     const { docName: name, payloadOffset } = peekVarString(frame);
-    if (name !== docName || frame[payloadOffset] !== MESSAGE_UPDATE) continue;
+    if (
+      name !== docName ||
+      ![MESSAGE_UPDATE, MESSAGE_DERIVED_UPDATE].includes(frame[payloadOffset])
+    )
+      continue;
     const decoder = decoding.createDecoder(frame.subarray(payloadOffset));
     decoding.readVarUint(decoder);
     decoding.readVarString(decoder);
@@ -482,10 +487,13 @@ export function openEditor(contentId: string, options: { discardOnClean?: boolea
     ydoc,
     awareness,
     onSync: () => {
-      void persistence.hydrate({ serverGeneration: docGeneration(ydoc) }).then(() => {
-        if (hydrationRetainsDraft(docName)) retainDraft();
-        markHydrated();
-      });
+      void persistence
+        .hydrate({ serverGeneration: docGeneration(ydoc) })
+        .catch(() => null)
+        .then(() => {
+          if (hydrationRetainsDraft(docName)) retainDraft();
+          markHydrated();
+        });
     },
     onWriteDenied: (reason, noView) => {
       const keepDraft = denialRetainsDraft(reason, realtimeMultiplexer.getDocState(docName));

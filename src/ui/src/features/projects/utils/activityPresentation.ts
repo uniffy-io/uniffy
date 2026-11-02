@@ -54,7 +54,6 @@ export function activityCategory(action: ActivityAction): ActivityCategory {
 /** A value replaced by the next one, so a quick run of changes reads as one net change. */
 const MERGEABLE = new Set<ActivityAction>([
   "title_changed",
-  "description_edited",
   "status_changed",
   "priority_changed",
   "type_changed",

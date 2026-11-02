@@ -4,6 +4,7 @@ import type { SerializedActivity } from "@features/projects/projectsSerializer";
 export interface ActivityLookups {
   optionLabel: (fieldId: string, optionId: string) => string | undefined;
   fieldName: (fieldId: string) => string | undefined;
+  isMultiSelect: (fieldId: string) => boolean;
   personName: (userId: string) => string | undefined;
   taskLabel: (taskId: string) => string | undefined;
   sprintName: (sprintId: string) => string | undefined;
@@ -112,7 +113,17 @@ export function describeActivity(act: SerializedActivity, look: ActivityLookups)
     }
     case "FIELD_UPDATED": {
       const fieldId = act.fieldId ?? "";
-      const value = (v?: string) => (v ? (look.optionLabel(fieldId, v) ?? v) : undefined);
+      const value = (v?: string) => {
+        if (!v) return undefined;
+        if (look.isMultiSelect(fieldId)) {
+          return (
+            nameList(v)
+              .map((id) => look.optionLabel(fieldId, id) ?? id)
+              .join(", ") || undefined
+          );
+        }
+        return look.optionLabel(fieldId, v) ?? v;
+      };
       return {
         headline: `changed ${look.fieldName(fieldId) ?? "a field"}`,
         detail: fromTo(value(from), value(to)),
