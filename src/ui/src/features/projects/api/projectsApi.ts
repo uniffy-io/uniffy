@@ -242,35 +242,35 @@ function protoFieldDefinitionToFrontend(proto: ProtoFieldDefinition): FieldDefin
   };
 }
 
-function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAction {
-  switch (action) {
-    case ProtoActivityAction.CREATED:
-      return "created";
-    case ProtoActivityAction.STATUS_CHANGED:
-      return "status_changed";
-    case ProtoActivityAction.PRIORITY_CHANGED:
-      return "priority_changed";
-    case ProtoActivityAction.FIELD_UPDATED:
-      return "field_updated";
-    case ProtoActivityAction.BLOCKED_BY_ADDED:
-      return "blocked_by_added";
-    case ProtoActivityAction.BLOCKED_BY_REMOVED:
-      return "blocked_by_removed";
-    case ProtoActivityAction.ASSIGNED:
-      return "assigned";
-    case ProtoActivityAction.TYPE_CHANGED:
-      return "type_changed";
-    case ProtoActivityAction.SPRINT_CHANGED:
-      return "sprint_changed";
-    case ProtoActivityAction.TIME_LOGGED:
-      return "time_logged";
-    case ProtoActivityAction.TIME_UPDATED:
-      return "time_updated";
-    case ProtoActivityAction.TIME_REMOVED:
-      return "time_removed";
-    default:
-      return "created";
-  }
+const ACTIVITY_ACTIONS: Partial<Record<ProtoActivityAction, ActivityAction>> = {
+  [ProtoActivityAction.CREATED]: "created",
+  [ProtoActivityAction.TITLE_CHANGED]: "title_changed",
+  [ProtoActivityAction.DESCRIPTION_EDITED]: "description_edited",
+  [ProtoActivityAction.STATUS_CHANGED]: "status_changed",
+  [ProtoActivityAction.PRIORITY_CHANGED]: "priority_changed",
+  [ProtoActivityAction.TYPE_CHANGED]: "type_changed",
+  [ProtoActivityAction.ASSIGNED]: "assigned",
+  [ProtoActivityAction.START_DATE_CHANGED]: "start_date_changed",
+  [ProtoActivityAction.DUE_DATE_CHANGED]: "due_date_changed",
+  [ProtoActivityAction.SPRINT_CHANGED]: "sprint_changed",
+  [ProtoActivityAction.ESTIMATE_CHANGED]: "estimate_changed",
+  [ProtoActivityAction.PARENT_CHANGED]: "parent_changed",
+  [ProtoActivityAction.RECURRENCE_CHANGED]: "recurrence_changed",
+  [ProtoActivityAction.MILESTONE_CHANGED]: "milestone_changed",
+  [ProtoActivityAction.TAGS_CHANGED]: "tags_changed",
+  [ProtoActivityAction.FIELD_UPDATED]: "field_updated",
+  [ProtoActivityAction.BLOCKED_BY_ADDED]: "blocked_by_added",
+  [ProtoActivityAction.BLOCKED_BY_REMOVED]: "blocked_by_removed",
+  [ProtoActivityAction.BLOCKING_ADDED]: "blocking_added",
+  [ProtoActivityAction.BLOCKING_REMOVED]: "blocking_removed",
+  [ProtoActivityAction.TIME_LOGGED]: "time_logged",
+  [ProtoActivityAction.TIME_UPDATED]: "time_updated",
+  [ProtoActivityAction.TIME_REMOVED]: "time_removed",
+};
+
+/** A newer server can send an action this client does not know; it renders generically. */
+export function protoActivityActionToFrontend(action: ProtoActivityAction): ActivityAction {
+  return ACTIVITY_ACTIONS[action] ?? "unknown";
 }
 
 function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
@@ -285,6 +285,8 @@ function protoActivityToFrontend(proto: ProtoTaskActivity): TaskActivity {
     fieldId: proto.fieldId,
     previousValue: proto.previousValue,
     newValue: proto.newValue,
+    agentId: proto.agentId,
+    agentName: proto.agentName,
   };
 }
 

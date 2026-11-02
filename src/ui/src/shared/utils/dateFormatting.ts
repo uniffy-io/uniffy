@@ -60,6 +60,18 @@ export function formatDateFull(dateStr: string): string {
   });
 }
 
+/** "Jan 22, 2026, 2:30 PM" in the display zone, for exact-time tooltips. */
+export function formatDateTimeFull(dateStr: string): string {
+  return new Date(dateStr).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: displayTimeZone(),
+  });
+}
+
 /** "Mon, Jan 22" */
 export function formatDateWithWeekday(dateStr: string): string {
   const date = toDate(dateStr);
