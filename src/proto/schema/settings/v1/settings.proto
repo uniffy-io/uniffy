@@ -234,6 +234,14 @@ message AppearanceSettings {
   optional string timezone = 10;
   // First day of the week for calendar grids: "monday", "saturday", "sunday"
   optional string week_start = 11;
+  // Task fields shown as pills under the task title; unset means the default set
+  optional TaskPinnedFields task_pinned_fields = 12;
+}
+
+// A wrapper so an empty list (nothing pinned) differs from "not set"
+message TaskPinnedFields {
+  // System field ids in display order, for example "status", "priority", "assignees"
+  repeated string field_ids = 1;
 }
 
 // Scheduling settings - working hours used everywhere availability is computed

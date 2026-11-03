@@ -15,6 +15,7 @@ import { SubjectAvatarStack } from "@/components/subject";
 import { MentionChipCompact } from "@/components/mention";
 import { useMentionState } from "@/components/mention/useMentionState";
 import type { Task, SelectOption } from "@/features/projects/types";
+import { TaskTitleLink } from "@/features/projects/components/TaskTitleLink";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TaskParentChip } from "@/features/projects/components/TaskParentChip";
 import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
@@ -109,7 +110,7 @@ export function TaskCard({
           <div className="flex items-start gap-2 min-w-0">
             <div className="min-w-0">
               <h3 className="text-sm font-medium text-foreground line-clamp-2 leading-tight pt-0.5">
-                {task.title}
+                <TaskTitleLink taskId={task.id}>{task.title}</TaskTitleLink>
               </h3>
             </div>
           </div>

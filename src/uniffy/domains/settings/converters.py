@@ -21,6 +21,9 @@ from uniffy_proto.settings.v1.settings_pb import (
 from uniffy_proto.settings.v1.settings_pb import (
     SettingsProfile as ProtoSettingsProfile,
 )
+from uniffy_proto.settings.v1.settings_pb import (
+    TaskPinnedFields as ProtoTaskPinnedFields,
+)
 
 from uniffy.core.converters import datetime_to_timestamp
 from uniffy.core.models.settings.settings_profile import SettingsProfile
@@ -131,6 +134,11 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
 
     if settings.get("week_start") is not None:
         proto.week_start = settings["week_start"]
+
+    pinned = settings.get("task_pinned_fields")
+    if pinned is not None:
+        # Set even when empty: pinning nothing is a choice, not an absent preference.
+        proto.task_pinned_fields = ProtoTaskPinnedFields(field_ids=list(pinned))
 
     return proto
 
@@ -245,6 +253,9 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.has_field("week_start"):
         result["week_start"] = proto.week_start or None
+
+    if proto.has_field("task_pinned_fields"):
+        result["task_pinned_fields"] = list(proto.task_pinned_fields.field_ids)
 
     return result if result else None
 

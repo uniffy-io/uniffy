@@ -85,6 +85,29 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
 }
 
 
+class TaskPinnableField(StrEnum):
+    """Task system fields a user can pin under the task title."""
+
+    STATUS = "status"
+    PRIORITY = "priority"
+    ASSIGNEES = "assignees"
+    DUE_DATE = "due_date"
+    START_DATE = "start_date"
+    TAGS = "tags"
+    TYPE = "type"
+    SPRINT = "sprint"
+    ESTIMATE = "estimate"
+
+
+MAX_TASK_PINNED_FIELDS = 6
+DEFAULT_TASK_PINNED_FIELDS: tuple[TaskPinnableField, ...] = (
+    TaskPinnableField.STATUS,
+    TaskPinnableField.PRIORITY,
+    TaskPinnableField.ASSIGNEES,
+    TaskPinnableField.DUE_DATE,
+)
+
+
 @dataclass(frozen=True)
 class AppearanceDefaults:
     theme: str = "system"
@@ -98,6 +121,7 @@ class AppearanceDefaults:
     markdown_show_line_numbers: bool = True
     timezone: str | None = None  # IANA zone; None = automatic (browser/device)
     week_start: str = "monday"  # one of: "monday", "saturday", "sunday"
+    task_pinned_fields: tuple[TaskPinnableField, ...] = DEFAULT_TASK_PINNED_FIELDS
 
 
 WORKDAY_NAMES: tuple[str, ...] = (
@@ -236,6 +260,7 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "markdown_show_line_numbers": APPEARANCE_DEFAULTS.markdown_show_line_numbers,
         "timezone": APPEARANCE_DEFAULTS.timezone,
         "week_start": APPEARANCE_DEFAULTS.week_start,
+        "task_pinned_fields": [field.value for field in APPEARANCE_DEFAULTS.task_pinned_fields],
     }
 
 

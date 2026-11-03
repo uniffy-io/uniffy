@@ -200,10 +200,7 @@ const PortfolioPage = lazyImport(
   () => import("@/features/projects/pages/PortfolioPage"),
   "PortfolioPage",
 );
-const TaskRedirectPage = lazyImport(
-  () => import("@/features/projects/pages/TaskRedirectPage"),
-  "TaskRedirectPage",
-);
+const TaskPage = lazyImport(() => import("@/features/projects/pages/TaskPage"), "TaskPage");
 const MyTimePage = lazyImport(() => import("@/features/projects/pages/MyTimePage"), "MyTimePage");
 const ReviewTimePage = lazyImport(
   () => import("@/features/projects/pages/ReviewTimePage"),
@@ -1000,7 +997,17 @@ export function App() {
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <TaskRedirectPage />
+                          <TaskPage openInProject />
+                        </LazyRoute>
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/projects/task/:taskId/page"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <TaskPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }

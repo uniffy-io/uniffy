@@ -92,6 +92,8 @@ import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
 import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
+import { PublishTaskOrder } from "@/features/projects/components/views/PublishTaskOrder";
+import { TaskTitleLink } from "@/features/projects/components/TaskTitleLink";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { getTaskFieldValue, toIdList } from "@/features/projects/utils/taskFieldValue";
@@ -837,6 +839,7 @@ export function TableView() {
 
   return (
     <div className="flex flex-col h-full relative">
+      <PublishTaskOrder orderKey={orderedTaskIds.join(",")} />
       {/* Scrollable Table (header + body scroll together horizontally) */}
       <ScrollArea className="flex-1">
         <div style={{ minWidth: totalTableWidth }}>
@@ -1973,7 +1976,9 @@ function TaskTitleCell({ task, showParent }: { task: Task; showParent: boolean }
     <div className="flex items-center gap-2 min-w-0">
       {showParent && <TaskParentChip task={task} className="text-xs max-w-[120px]" />}
       <TaskTypeIcon type={task.taskType} className="text-muted-foreground" />
-      <span className="truncate text-foreground text-sm">{task.title}</span>
+      <TaskTitleLink taskId={task.id} className="truncate text-foreground text-sm">
+        {task.title}
+      </TaskTitleLink>
       <BlockedBadge task={task} variant="icon" />
     </div>
   );

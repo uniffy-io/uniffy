@@ -19,9 +19,11 @@ from uniffy.core.types import NotificationType
 from uniffy.domains.notifications.cache import invalidate_cached_settings
 from uniffy.domains.settings.defaults import (
     DEFAULT_REMINDER_INTERVALS,
+    MAX_TASK_PINNED_FIELDS,
     SCHEDULING_DEFAULTS,
     WORKDAY_NAMES,
     EmailFrequency,
+    TaskPinnableField,
     get_appearance_defaults_dict,
     get_effective_appearance,
     get_effective_keyboard_shortcuts,
@@ -50,6 +52,24 @@ def _validate_appearance(appearance: dict[str, Any] | None) -> None:
     week_start = appearance.get("week_start")
     if week_start and week_start not in WEEK_START_WEEKDAYS:
         raise ValidationError("week_start", f"Unknown week start '{week_start}'")
+    _validate_task_pinned_fields(appearance.get("task_pinned_fields"))
+
+
+def _validate_task_pinned_fields(pinned: Any) -> None:
+    if pinned is None:
+        return
+    if not isinstance(pinned, list):
+        raise ValidationError("task_pinned_fields", "Pinned fields must be a list")
+    if len(pinned) > MAX_TASK_PINNED_FIELDS:
+        raise ValidationError(
+            "task_pinned_fields", f"At most {MAX_TASK_PINNED_FIELDS} fields can be pinned"
+        )
+    known = {field.value for field in TaskPinnableField}
+    unknown = [field for field in pinned if field not in known]
+    if unknown:
+        raise ValidationError("task_pinned_fields", f"Unknown task field '{unknown[0]}'")
+    if len(set(pinned)) != len(pinned):
+        raise ValidationError("task_pinned_fields", "A field can be pinned only once")
 
 
 def _validate_notifications(notifications: dict[str, Any] | None) -> None:

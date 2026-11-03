@@ -59,6 +59,9 @@ export interface ProjectsUiState {
   /** Transient: a search never belongs to a view and never makes one dirty. */
   searchQuery: string;
 
+  /** Transient: the visible task order of the open view, which the full task page walks. */
+  taskNavigationOrder: string[];
+
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
 }
@@ -88,6 +91,8 @@ export const initialProjectsUiState: ProjectsUiState = {
   projectScope: "all",
 
   searchQuery: "",
+
+  taskNavigationOrder: [],
 
   undoStack: [],
   redoStack: [],

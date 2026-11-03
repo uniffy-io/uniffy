@@ -16,6 +16,13 @@ export const projectsUiSlice = createSlice({
   name: "projectsUi",
   initialState: initialProjectsUiState,
   reducers: {
+    setTaskNavigationOrder: (state, action: PayloadAction<string[]>) => {
+      const next = action.payload;
+      const current = state.taskNavigationOrder;
+      if (current.length === next.length && current.every((id, index) => id === next[index]))
+        return;
+      state.taskNavigationOrder = next;
+    },
     // Checkbox selection is a per-view gesture: not every view can show it, so it never carries across.
     openView: (state, action: PayloadAction<ViewKey>) => {
       const { projectId, viewId } = action.payload;
@@ -198,6 +205,7 @@ export const projectsUiSlice = createSlice({
 });
 
 export const {
+  setTaskNavigationOrder,
   openView,
   setViewTabOrder,
   putViewDraft,
@@ -249,3 +257,4 @@ export const selectCanUndo = (state: RootState) => state.projectsUi.undoStack.le
 export const selectCanRedo = (state: RootState) => state.projectsUi.redoStack.length > 0;
 
 export const projectsUiReducer = projectsUiSlice.reducer;
+export const selectTaskNavigationOrder = (state: RootState) => state.projectsUi.taskNavigationOrder;

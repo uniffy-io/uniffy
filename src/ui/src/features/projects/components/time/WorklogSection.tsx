@@ -129,7 +129,7 @@ function TaskWorklogs({ task }: { task: Task }) {
   };
 
   return (
-    <div className="px-4 py-3 border-b border-border" data-testid="worklog-section">
+    <div className="pt-1" data-testid="worklog-section">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
           <Clock size={12} />

@@ -2895,6 +2895,54 @@ Database regression suite: `src/uniffy/tests/integration/access/test_task_activi
 checkpoint contributors, recovery, rollback, passive hydration, agent merges, recurring creation,
 initial blockers and batched inserts for 100 field changes or 100 dependency links.
 
+## Projects: task detail, description first and full page
+
+Needs a project you edit, a task with a description of about 5,000 words, and a second person
+who can only view that project (add them as Viewer under Project settings > Access & Members).
+Use two browsers, one per person.
+
+- [ ] In the side panel the order is: title, pinned field pills, the description at its full
+      height, then More fields, Subtasks, Dependencies, References, Comments and Activity, with
+      exactly one scrollbar even for the 5,000-word description.
+- [ ] On a wide screen the modal (1024px and up) and the full page (1280px and up) keep the title,
+      pins and description on the left and a rail on the right holding More fields, Subtasks,
+      Dependencies, References, Comments and Activity. Each column scrolls on its own. Drag the
+      line between them: the rail resizes, and the modal and the page each remember their width
+      after a reload. Narrower, and in the side panel, the same sections stack under the
+      description with a single scroll. A pinned field appears only as a pill; unpin it and it
+      moves back into More fields.
+- [ ] The Activity filter sits on the Activity heading row and still filters the list.
+- [ ] Open the pin menu next to the pills: pin Tags and Sprint, unpin Priority. The pills follow
+      at once, the change survives a reload, and the other browser signed in as you shows the
+      same pins. Six pins is the limit; the rest of the menu greys out. Unpin everything and the
+      row reads "No pinned fields".
+- [ ] Collapse Comments and open Activity, then open another task and reload: the sections keep
+      that state on this device.
+- [ ] As the viewer: pills and every field editor are disabled, the pin menu still works (it is
+      a personal setting), an empty description reads "No description", and a filled one offers
+      Expand. Expand opens a View only window with no toolbar; closing it sends no update. Keep
+      it open while the editor changes the description: the text updates after the save (about
+      ten seconds) without reopening.
+- [ ] Ctrl or Cmd click a task title in the table or on a board card: the full page opens in a
+      new tab and the original tab neither opens the panel nor changes the selection. A middle
+      click does the same. A plain click still opens the panel.
+- [ ] Open full page from the panel or modal header. Previous and next walk the list the view
+      showed (table rows, or the board column by column) and stop at either end. Back returns to
+      the view with the task still open.
+- [ ] Open a task from an `@` mention, a notification and a search result: each opens the task
+      inside its project, in the panel or modal you use there. Only "Open full page" and a new
+      tab from a task title open the full page.
+- [ ] The full page edits the description live like the panel (Synced, then Saved), the tab title
+      reads "KEY-12 Task title | Uniffy", and Ctrl+\ (Zen Mode) hides the app header.
+- [ ] As someone without access, open a task address: the lock state offers Request access and
+      opens the request dialog, with no error toast. A deleted task reads "This task was deleted".
+      Sending the request lists it for the project's managers. A task in another of your
+      organizations offers to switch, with "Stay here" on one line, and switching opens it.
+- [ ] New task: Enter in the title creates the task and stays on the project; Create and open
+      lands on the new task's full page.
+- [ ] 1280px, 768px and 375px, light and dark: no horizontal scroll, pills wrap, the pin menu is a
+      bottom sheet on a phone. `(both products)`
+
 ## Projects: table sort, assignee filter and large projects
 
 A project with tasks in every status and priority, assigned to at least three people (one task with

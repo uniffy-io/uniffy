@@ -57,6 +57,7 @@ import type {
   UpdateTaskRequest,
 } from "@/features/projects/types";
 import { BoardColumn } from "@/features/projects/components/views/board/BoardColumn";
+import { PublishTaskOrder } from "@/features/projects/components/views/PublishTaskOrder";
 import { TaskCard } from "@/features/projects/components/views/board/TaskCard";
 import {
   BoardSwimlane,
@@ -220,6 +221,14 @@ export function BoardView() {
     });
   }
 
+  // The order cards read in, which the full task page walks with previous and next.
+  const navigationKey = lanes
+    .filter((lane) => !isSwimlaneMode || !collapsedLanes.has(lane.key))
+    .flatMap((lane) => {
+      const byColumn = bucketByColumn(lane.tasks, columnKeyOf);
+      return columns.flatMap((column) => (byColumn.get(column.key) ?? []).map((t) => t.id));
+    })
+    .join(",");
   const doneStatusIds = new Set(
     statusOptions.filter((s) => statusSemanticOf(s) === "completed").map((s) => s.id),
   );
@@ -571,6 +580,7 @@ export function BoardView() {
           )}
         </DragOverlay>
       </DndContext>
+      <PublishTaskOrder orderKey={navigationKey} />
     </div>
   );
 }

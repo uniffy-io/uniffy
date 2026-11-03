@@ -48,6 +48,8 @@ interface ExpandableEditorProps {
   previewMaxHeight?: string;
   /** When true, render the label as a header row with Edit aligned right; otherwise the host owns the heading. */
   showHeader?: boolean;
+  /** Lets a read-only user open the large view to read; it shows the host's value and never writes. */
+  expandReadonly?: boolean;
 }
 
 export function ExpandableEditor({
@@ -65,6 +67,7 @@ export function ExpandableEditor({
   fullPreview = false,
   previewMaxHeight,
   showHeader = false,
+  expandReadonly = false,
 }: ExpandableEditorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editorReady, setEditorReady] = useState(false);
@@ -136,8 +139,17 @@ export function ExpandableEditor({
   );
   const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
 
+  const readView = readonly && expandReadonly;
+  // The edit overlay belongs to an open session; a session still draining after Done does not count.
+  const editing = sessionOpen && !closing;
+
   const handleOpen = useCallback(() => {
-    if (readonly) return;
+    if (readonly) {
+      // A reader gets the overlay without a realtime session: nothing to send, and a viewer
+      // cannot seed a description no editor has opened yet.
+      if (expandReadonly) setIsExpanded(true);
+      return;
+    }
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
     setClosing(false);
     setSessionOpen(true);
@@ -154,9 +166,14 @@ export function ExpandableEditor({
     openTimerRef.current = setTimeout(() => {
       setEditorReady(true);
     }, 50);
-  }, [readonly, value]);
+  }, [readonly, expandReadonly, value]);
 
   const handleClose = useCallback(() => {
+    // The read view opened no session; an editor demoted mid-edit still closes and saves.
+    if (!editing) {
+      setIsExpanded(false);
+      return;
+    }
     setIsExpanded(false);
     setEditorReady(false);
     if (openTimerRef.current) clearTimeout(openTimerRef.current);
@@ -177,6 +194,7 @@ export function ExpandableEditor({
       baseContent: draftInitial,
     });
   }, [
+    editing,
     onDone,
     editorHandle,
     realtimeOwned,
@@ -280,6 +298,17 @@ export function ExpandableEditor({
                 Edit
               </button>
             )}
+            {readView && hasContent && (
+              <button
+                type="button"
+                onClick={handleOpen}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="expandable-editor-expand"
+              >
+                <ArrowsOut size={12} />
+                Expand
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -304,6 +333,10 @@ export function ExpandableEditor({
                 className="border-none bg-transparent"
               />
             </div>
+          ) : readView ? (
+            <p className="text-sm text-subtle-foreground italic rounded-md bg-muted/50 px-3 py-2">
+              No {label.toLowerCase()}
+            </p>
           ) : (
             <div
               role="button"
@@ -380,8 +413,49 @@ export function ExpandableEditor({
         </div>
       )}
 
+      {isExpanded &&
+        !editing &&
+        createPortal(
+          <div className="fixed inset-0 z-[200] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={label}
+              className={cn(
+                dialogShellClass,
+                "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
+              )}
+              data-testid="expandable-editor-read-view"
+            >
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border/60 px-4 py-2.5">
+                <h2 className="text-sm font-semibold text-foreground">{label}</h2>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-subtle-foreground">View only</span>
+                  <Button type="button" size="md" onClick={handleClose}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0 relative">
+                <CrepeEditor
+                  contentType={contentType}
+                  contentId={contentId}
+                  value={value}
+                  readonly
+                  enableUpload={false}
+                  floatingToolbar={false}
+                  className="pt-6"
+                />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {/* Expanded overlay */}
       {isExpanded &&
+        editing &&
         createPortal(
           <div className="fixed inset-0 z-[200] flex items-center justify-center">
             {/* Backdrop */}
