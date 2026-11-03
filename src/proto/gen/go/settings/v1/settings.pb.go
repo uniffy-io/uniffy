@@ -1537,7 +1537,7 @@ var File_settings_v1_settings_proto protoreflect.FileDescriptor
 
 const file_settings_v1_settings_proto_rawDesc = "" +
 	"\n" +
-	"\x1asettings/v1/settings.proto\x12\vsettings.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x02\n" +
+	"\x1asettings/v1/settings.proto\x12\vsettings.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bsettings/v1/dashboard.proto\"\xec\x02\n" +
 	"\x14CreateProfileRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12?\n" +
 	"\n" +
@@ -1701,7 +1701,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\a_in_appB\n" +
 	"\n" +
 	"\b_browserB\b\n" +
-	"\x06_email2\x82\x06\n" +
+	"\x06_email2\x9a\t\n" +
 	"\x0fSettingsService\x12X\n" +
 	"\rCreateProfile\x12!.settings.v1.CreateProfileRequest\x1a\".settings.v1.CreateProfileResponse\"\x00\x12O\n" +
 	"\n" +
@@ -1711,7 +1711,11 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\fListProfiles\x12 .settings.v1.ListProfilesRequest\x1a!.settings.v1.ListProfilesResponse\"\x00\x12m\n" +
 	"\x14GetEffectiveSettings\x12(.settings.v1.GetEffectiveSettingsRequest\x1a).settings.v1.GetEffectiveSettingsResponse\"\x00\x12d\n" +
 	"\x11GetSettingsSchema\x12%.settings.v1.GetSettingsSchemaRequest\x1a&.settings.v1.GetSettingsSchemaResponse\"\x00\x12d\n" +
-	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a&.settings.v1.SetDefaultProfileResponse\"\x00B=Z;github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
+	"\x11SetDefaultProfile\x12%.settings.v1.SetDefaultProfileRequest\x1a&.settings.v1.SetDefaultProfileResponse\"\x00\x12j\n" +
+	"\x13GetDashboardCatalog\x12'.settings.v1.GetDashboardCatalogRequest\x1a(.settings.v1.GetDashboardCatalogResponse\"\x00\x12U\n" +
+	"\fGetDashboard\x12 .settings.v1.GetDashboardRequest\x1a!.settings.v1.GetDashboardResponse\"\x00\x12X\n" +
+	"\rSaveDashboard\x12!.settings.v1.SaveDashboardRequest\x1a\".settings.v1.SaveDashboardResponse\"\x00\x12y\n" +
+	"\x18RestorePreviousDashboard\x12,.settings.v1.RestorePreviousDashboardRequest\x1a-.settings.v1.RestorePreviousDashboardResponse\"\x00B=Z;github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1b\x06proto3"
 
 var (
 	file_settings_v1_settings_proto_rawDescOnce sync.Once
@@ -1727,32 +1731,40 @@ func file_settings_v1_settings_proto_rawDescGZIP() []byte {
 
 var file_settings_v1_settings_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
 var file_settings_v1_settings_proto_goTypes = []any{
-	(*CreateProfileRequest)(nil),          // 0: settings.v1.CreateProfileRequest
-	(*GetProfileRequest)(nil),             // 1: settings.v1.GetProfileRequest
-	(*UpdateProfileRequest)(nil),          // 2: settings.v1.UpdateProfileRequest
-	(*DeleteProfileRequest)(nil),          // 3: settings.v1.DeleteProfileRequest
-	(*DeleteProfileResponse)(nil),         // 4: settings.v1.DeleteProfileResponse
-	(*CreateProfileResponse)(nil),         // 5: settings.v1.CreateProfileResponse
-	(*GetProfileResponse)(nil),            // 6: settings.v1.GetProfileResponse
-	(*UpdateProfileResponse)(nil),         // 7: settings.v1.UpdateProfileResponse
-	(*SetDefaultProfileResponse)(nil),     // 8: settings.v1.SetDefaultProfileResponse
-	(*ListProfilesRequest)(nil),           // 9: settings.v1.ListProfilesRequest
-	(*ListProfilesResponse)(nil),          // 10: settings.v1.ListProfilesResponse
-	(*GetEffectiveSettingsRequest)(nil),   // 11: settings.v1.GetEffectiveSettingsRequest
-	(*GetEffectiveSettingsResponse)(nil),  // 12: settings.v1.GetEffectiveSettingsResponse
-	(*GetSettingsSchemaRequest)(nil),      // 13: settings.v1.GetSettingsSchemaRequest
-	(*GetSettingsSchemaResponse)(nil),     // 14: settings.v1.GetSettingsSchemaResponse
-	(*SetDefaultProfileRequest)(nil),      // 15: settings.v1.SetDefaultProfileRequest
-	(*SettingsProfile)(nil),               // 16: settings.v1.SettingsProfile
-	(*EffectiveSettings)(nil),             // 17: settings.v1.EffectiveSettings
-	(*AppearanceSettings)(nil),            // 18: settings.v1.AppearanceSettings
-	(*SchedulingSettings)(nil),            // 19: settings.v1.SchedulingSettings
-	(*KeyboardShortcutsSettings)(nil),     // 20: settings.v1.KeyboardShortcutsSettings
-	(*NotificationsSettings)(nil),         // 21: settings.v1.NotificationsSettings
-	(*NotificationChannelPreference)(nil), // 22: settings.v1.NotificationChannelPreference
-	nil,                                   // 23: settings.v1.KeyboardShortcutsSettings.BindingsEntry
-	nil,                                   // 24: settings.v1.NotificationsSettings.ChannelOverridesEntry
-	(*timestamppb.Timestamp)(nil),         // 25: google.protobuf.Timestamp
+	(*CreateProfileRequest)(nil),             // 0: settings.v1.CreateProfileRequest
+	(*GetProfileRequest)(nil),                // 1: settings.v1.GetProfileRequest
+	(*UpdateProfileRequest)(nil),             // 2: settings.v1.UpdateProfileRequest
+	(*DeleteProfileRequest)(nil),             // 3: settings.v1.DeleteProfileRequest
+	(*DeleteProfileResponse)(nil),            // 4: settings.v1.DeleteProfileResponse
+	(*CreateProfileResponse)(nil),            // 5: settings.v1.CreateProfileResponse
+	(*GetProfileResponse)(nil),               // 6: settings.v1.GetProfileResponse
+	(*UpdateProfileResponse)(nil),            // 7: settings.v1.UpdateProfileResponse
+	(*SetDefaultProfileResponse)(nil),        // 8: settings.v1.SetDefaultProfileResponse
+	(*ListProfilesRequest)(nil),              // 9: settings.v1.ListProfilesRequest
+	(*ListProfilesResponse)(nil),             // 10: settings.v1.ListProfilesResponse
+	(*GetEffectiveSettingsRequest)(nil),      // 11: settings.v1.GetEffectiveSettingsRequest
+	(*GetEffectiveSettingsResponse)(nil),     // 12: settings.v1.GetEffectiveSettingsResponse
+	(*GetSettingsSchemaRequest)(nil),         // 13: settings.v1.GetSettingsSchemaRequest
+	(*GetSettingsSchemaResponse)(nil),        // 14: settings.v1.GetSettingsSchemaResponse
+	(*SetDefaultProfileRequest)(nil),         // 15: settings.v1.SetDefaultProfileRequest
+	(*SettingsProfile)(nil),                  // 16: settings.v1.SettingsProfile
+	(*EffectiveSettings)(nil),                // 17: settings.v1.EffectiveSettings
+	(*AppearanceSettings)(nil),               // 18: settings.v1.AppearanceSettings
+	(*SchedulingSettings)(nil),               // 19: settings.v1.SchedulingSettings
+	(*KeyboardShortcutsSettings)(nil),        // 20: settings.v1.KeyboardShortcutsSettings
+	(*NotificationsSettings)(nil),            // 21: settings.v1.NotificationsSettings
+	(*NotificationChannelPreference)(nil),    // 22: settings.v1.NotificationChannelPreference
+	nil,                                      // 23: settings.v1.KeyboardShortcutsSettings.BindingsEntry
+	nil,                                      // 24: settings.v1.NotificationsSettings.ChannelOverridesEntry
+	(*timestamppb.Timestamp)(nil),            // 25: google.protobuf.Timestamp
+	(*GetDashboardCatalogRequest)(nil),       // 26: settings.v1.GetDashboardCatalogRequest
+	(*GetDashboardRequest)(nil),              // 27: settings.v1.GetDashboardRequest
+	(*SaveDashboardRequest)(nil),             // 28: settings.v1.SaveDashboardRequest
+	(*RestorePreviousDashboardRequest)(nil),  // 29: settings.v1.RestorePreviousDashboardRequest
+	(*GetDashboardCatalogResponse)(nil),      // 30: settings.v1.GetDashboardCatalogResponse
+	(*GetDashboardResponse)(nil),             // 31: settings.v1.GetDashboardResponse
+	(*SaveDashboardResponse)(nil),            // 32: settings.v1.SaveDashboardResponse
+	(*RestorePreviousDashboardResponse)(nil), // 33: settings.v1.RestorePreviousDashboardResponse
 }
 var file_settings_v1_settings_proto_depIdxs = []int32{
 	18, // 0: settings.v1.CreateProfileRequest.appearance:type_name -> settings.v1.AppearanceSettings
@@ -1795,16 +1807,24 @@ var file_settings_v1_settings_proto_depIdxs = []int32{
 	11, // 37: settings.v1.SettingsService.GetEffectiveSettings:input_type -> settings.v1.GetEffectiveSettingsRequest
 	13, // 38: settings.v1.SettingsService.GetSettingsSchema:input_type -> settings.v1.GetSettingsSchemaRequest
 	15, // 39: settings.v1.SettingsService.SetDefaultProfile:input_type -> settings.v1.SetDefaultProfileRequest
-	5,  // 40: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.CreateProfileResponse
-	6,  // 41: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.GetProfileResponse
-	7,  // 42: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.UpdateProfileResponse
-	4,  // 43: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
-	10, // 44: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
-	12, // 45: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.GetEffectiveSettingsResponse
-	14, // 46: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.GetSettingsSchemaResponse
-	8,  // 47: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.SetDefaultProfileResponse
-	40, // [40:48] is the sub-list for method output_type
-	32, // [32:40] is the sub-list for method input_type
+	26, // 40: settings.v1.SettingsService.GetDashboardCatalog:input_type -> settings.v1.GetDashboardCatalogRequest
+	27, // 41: settings.v1.SettingsService.GetDashboard:input_type -> settings.v1.GetDashboardRequest
+	28, // 42: settings.v1.SettingsService.SaveDashboard:input_type -> settings.v1.SaveDashboardRequest
+	29, // 43: settings.v1.SettingsService.RestorePreviousDashboard:input_type -> settings.v1.RestorePreviousDashboardRequest
+	5,  // 44: settings.v1.SettingsService.CreateProfile:output_type -> settings.v1.CreateProfileResponse
+	6,  // 45: settings.v1.SettingsService.GetProfile:output_type -> settings.v1.GetProfileResponse
+	7,  // 46: settings.v1.SettingsService.UpdateProfile:output_type -> settings.v1.UpdateProfileResponse
+	4,  // 47: settings.v1.SettingsService.DeleteProfile:output_type -> settings.v1.DeleteProfileResponse
+	10, // 48: settings.v1.SettingsService.ListProfiles:output_type -> settings.v1.ListProfilesResponse
+	12, // 49: settings.v1.SettingsService.GetEffectiveSettings:output_type -> settings.v1.GetEffectiveSettingsResponse
+	14, // 50: settings.v1.SettingsService.GetSettingsSchema:output_type -> settings.v1.GetSettingsSchemaResponse
+	8,  // 51: settings.v1.SettingsService.SetDefaultProfile:output_type -> settings.v1.SetDefaultProfileResponse
+	30, // 52: settings.v1.SettingsService.GetDashboardCatalog:output_type -> settings.v1.GetDashboardCatalogResponse
+	31, // 53: settings.v1.SettingsService.GetDashboard:output_type -> settings.v1.GetDashboardResponse
+	32, // 54: settings.v1.SettingsService.SaveDashboard:output_type -> settings.v1.SaveDashboardResponse
+	33, // 55: settings.v1.SettingsService.RestorePreviousDashboard:output_type -> settings.v1.RestorePreviousDashboardResponse
+	44, // [44:56] is the sub-list for method output_type
+	32, // [32:44] is the sub-list for method input_type
 	32, // [32:32] is the sub-list for extension type_name
 	32, // [32:32] is the sub-list for extension extendee
 	0,  // [0:32] is the sub-list for field type_name
@@ -1815,6 +1835,7 @@ func file_settings_v1_settings_proto_init() {
 	if File_settings_v1_settings_proto != nil {
 		return
 	}
+	file_settings_v1_dashboard_proto_init()
 	file_settings_v1_settings_proto_msgTypes[2].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[11].OneofWrappers = []any{}
 	file_settings_v1_settings_proto_msgTypes[18].OneofWrappers = []any{}

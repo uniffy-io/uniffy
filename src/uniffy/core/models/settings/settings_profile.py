@@ -27,6 +27,8 @@ class SettingsProfile(SQLModel, table=True):
     notifications: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     scheduling: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     custom_status: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    # Organization id -> {revision, definition, previous}; a layout names projects of one org.
+    dashboards: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     is_default: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

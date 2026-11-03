@@ -57,6 +57,18 @@ const (
 	// SettingsServiceSetDefaultProfileProcedure is the fully-qualified name of the SettingsService's
 	// SetDefaultProfile RPC.
 	SettingsServiceSetDefaultProfileProcedure = "/settings.v1.SettingsService/SetDefaultProfile"
+	// SettingsServiceGetDashboardCatalogProcedure is the fully-qualified name of the SettingsService's
+	// GetDashboardCatalog RPC.
+	SettingsServiceGetDashboardCatalogProcedure = "/settings.v1.SettingsService/GetDashboardCatalog"
+	// SettingsServiceGetDashboardProcedure is the fully-qualified name of the SettingsService's
+	// GetDashboard RPC.
+	SettingsServiceGetDashboardProcedure = "/settings.v1.SettingsService/GetDashboard"
+	// SettingsServiceSaveDashboardProcedure is the fully-qualified name of the SettingsService's
+	// SaveDashboard RPC.
+	SettingsServiceSaveDashboardProcedure = "/settings.v1.SettingsService/SaveDashboard"
+	// SettingsServiceRestorePreviousDashboardProcedure is the fully-qualified name of the
+	// SettingsService's RestorePreviousDashboard RPC.
+	SettingsServiceRestorePreviousDashboardProcedure = "/settings.v1.SettingsService/RestorePreviousDashboard"
 )
 
 // SettingsServiceClient is a client for the settings.v1.SettingsService service.
@@ -77,6 +89,14 @@ type SettingsServiceClient interface {
 	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error)
 	// Set a profile as the default for the user
 	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error)
+	// The widget catalog, the role presets and the default layout
+	GetDashboardCatalog(context.Context, *connect.Request[v1.GetDashboardCatalogRequest]) (*connect.Response[v1.GetDashboardCatalogResponse], error)
+	// The viewer's dashboard layout in one organization
+	GetDashboard(context.Context, *connect.Request[v1.GetDashboardRequest]) (*connect.Response[v1.GetDashboardResponse], error)
+	// Replace the dashboard layout, checked against the revision it was based on
+	SaveDashboard(context.Context, *connect.Request[v1.SaveDashboardRequest]) (*connect.Response[v1.SaveDashboardResponse], error)
+	// Put back the layout a preset or a proposal replaced
+	RestorePreviousDashboard(context.Context, *connect.Request[v1.RestorePreviousDashboardRequest]) (*connect.Response[v1.RestorePreviousDashboardResponse], error)
 }
 
 // NewSettingsServiceClient constructs a client for the settings.v1.SettingsService service. By
@@ -138,19 +158,47 @@ func NewSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(settingsServiceMethods.ByName("SetDefaultProfile")),
 			connect.WithClientOptions(opts...),
 		),
+		getDashboardCatalog: connect.NewClient[v1.GetDashboardCatalogRequest, v1.GetDashboardCatalogResponse](
+			httpClient,
+			baseURL+SettingsServiceGetDashboardCatalogProcedure,
+			connect.WithSchema(settingsServiceMethods.ByName("GetDashboardCatalog")),
+			connect.WithClientOptions(opts...),
+		),
+		getDashboard: connect.NewClient[v1.GetDashboardRequest, v1.GetDashboardResponse](
+			httpClient,
+			baseURL+SettingsServiceGetDashboardProcedure,
+			connect.WithSchema(settingsServiceMethods.ByName("GetDashboard")),
+			connect.WithClientOptions(opts...),
+		),
+		saveDashboard: connect.NewClient[v1.SaveDashboardRequest, v1.SaveDashboardResponse](
+			httpClient,
+			baseURL+SettingsServiceSaveDashboardProcedure,
+			connect.WithSchema(settingsServiceMethods.ByName("SaveDashboard")),
+			connect.WithClientOptions(opts...),
+		),
+		restorePreviousDashboard: connect.NewClient[v1.RestorePreviousDashboardRequest, v1.RestorePreviousDashboardResponse](
+			httpClient,
+			baseURL+SettingsServiceRestorePreviousDashboardProcedure,
+			connect.WithSchema(settingsServiceMethods.ByName("RestorePreviousDashboard")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // settingsServiceClient implements SettingsServiceClient.
 type settingsServiceClient struct {
-	createProfile        *connect.Client[v1.CreateProfileRequest, v1.CreateProfileResponse]
-	getProfile           *connect.Client[v1.GetProfileRequest, v1.GetProfileResponse]
-	updateProfile        *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
-	deleteProfile        *connect.Client[v1.DeleteProfileRequest, v1.DeleteProfileResponse]
-	listProfiles         *connect.Client[v1.ListProfilesRequest, v1.ListProfilesResponse]
-	getEffectiveSettings *connect.Client[v1.GetEffectiveSettingsRequest, v1.GetEffectiveSettingsResponse]
-	getSettingsSchema    *connect.Client[v1.GetSettingsSchemaRequest, v1.GetSettingsSchemaResponse]
-	setDefaultProfile    *connect.Client[v1.SetDefaultProfileRequest, v1.SetDefaultProfileResponse]
+	createProfile            *connect.Client[v1.CreateProfileRequest, v1.CreateProfileResponse]
+	getProfile               *connect.Client[v1.GetProfileRequest, v1.GetProfileResponse]
+	updateProfile            *connect.Client[v1.UpdateProfileRequest, v1.UpdateProfileResponse]
+	deleteProfile            *connect.Client[v1.DeleteProfileRequest, v1.DeleteProfileResponse]
+	listProfiles             *connect.Client[v1.ListProfilesRequest, v1.ListProfilesResponse]
+	getEffectiveSettings     *connect.Client[v1.GetEffectiveSettingsRequest, v1.GetEffectiveSettingsResponse]
+	getSettingsSchema        *connect.Client[v1.GetSettingsSchemaRequest, v1.GetSettingsSchemaResponse]
+	setDefaultProfile        *connect.Client[v1.SetDefaultProfileRequest, v1.SetDefaultProfileResponse]
+	getDashboardCatalog      *connect.Client[v1.GetDashboardCatalogRequest, v1.GetDashboardCatalogResponse]
+	getDashboard             *connect.Client[v1.GetDashboardRequest, v1.GetDashboardResponse]
+	saveDashboard            *connect.Client[v1.SaveDashboardRequest, v1.SaveDashboardResponse]
+	restorePreviousDashboard *connect.Client[v1.RestorePreviousDashboardRequest, v1.RestorePreviousDashboardResponse]
 }
 
 // CreateProfile calls settings.v1.SettingsService.CreateProfile.
@@ -193,6 +241,26 @@ func (c *settingsServiceClient) SetDefaultProfile(ctx context.Context, req *conn
 	return c.setDefaultProfile.CallUnary(ctx, req)
 }
 
+// GetDashboardCatalog calls settings.v1.SettingsService.GetDashboardCatalog.
+func (c *settingsServiceClient) GetDashboardCatalog(ctx context.Context, req *connect.Request[v1.GetDashboardCatalogRequest]) (*connect.Response[v1.GetDashboardCatalogResponse], error) {
+	return c.getDashboardCatalog.CallUnary(ctx, req)
+}
+
+// GetDashboard calls settings.v1.SettingsService.GetDashboard.
+func (c *settingsServiceClient) GetDashboard(ctx context.Context, req *connect.Request[v1.GetDashboardRequest]) (*connect.Response[v1.GetDashboardResponse], error) {
+	return c.getDashboard.CallUnary(ctx, req)
+}
+
+// SaveDashboard calls settings.v1.SettingsService.SaveDashboard.
+func (c *settingsServiceClient) SaveDashboard(ctx context.Context, req *connect.Request[v1.SaveDashboardRequest]) (*connect.Response[v1.SaveDashboardResponse], error) {
+	return c.saveDashboard.CallUnary(ctx, req)
+}
+
+// RestorePreviousDashboard calls settings.v1.SettingsService.RestorePreviousDashboard.
+func (c *settingsServiceClient) RestorePreviousDashboard(ctx context.Context, req *connect.Request[v1.RestorePreviousDashboardRequest]) (*connect.Response[v1.RestorePreviousDashboardResponse], error) {
+	return c.restorePreviousDashboard.CallUnary(ctx, req)
+}
+
 // SettingsServiceHandler is an implementation of the settings.v1.SettingsService service.
 type SettingsServiceHandler interface {
 	// Create a new settings profile
@@ -211,6 +279,14 @@ type SettingsServiceHandler interface {
 	GetSettingsSchema(context.Context, *connect.Request[v1.GetSettingsSchemaRequest]) (*connect.Response[v1.GetSettingsSchemaResponse], error)
 	// Set a profile as the default for the user
 	SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error)
+	// The widget catalog, the role presets and the default layout
+	GetDashboardCatalog(context.Context, *connect.Request[v1.GetDashboardCatalogRequest]) (*connect.Response[v1.GetDashboardCatalogResponse], error)
+	// The viewer's dashboard layout in one organization
+	GetDashboard(context.Context, *connect.Request[v1.GetDashboardRequest]) (*connect.Response[v1.GetDashboardResponse], error)
+	// Replace the dashboard layout, checked against the revision it was based on
+	SaveDashboard(context.Context, *connect.Request[v1.SaveDashboardRequest]) (*connect.Response[v1.SaveDashboardResponse], error)
+	// Put back the layout a preset or a proposal replaced
+	RestorePreviousDashboard(context.Context, *connect.Request[v1.RestorePreviousDashboardRequest]) (*connect.Response[v1.RestorePreviousDashboardResponse], error)
 }
 
 // NewSettingsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -268,6 +344,30 @@ func NewSettingsServiceHandler(svc SettingsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(settingsServiceMethods.ByName("SetDefaultProfile")),
 		connect.WithHandlerOptions(opts...),
 	)
+	settingsServiceGetDashboardCatalogHandler := connect.NewUnaryHandler(
+		SettingsServiceGetDashboardCatalogProcedure,
+		svc.GetDashboardCatalog,
+		connect.WithSchema(settingsServiceMethods.ByName("GetDashboardCatalog")),
+		connect.WithHandlerOptions(opts...),
+	)
+	settingsServiceGetDashboardHandler := connect.NewUnaryHandler(
+		SettingsServiceGetDashboardProcedure,
+		svc.GetDashboard,
+		connect.WithSchema(settingsServiceMethods.ByName("GetDashboard")),
+		connect.WithHandlerOptions(opts...),
+	)
+	settingsServiceSaveDashboardHandler := connect.NewUnaryHandler(
+		SettingsServiceSaveDashboardProcedure,
+		svc.SaveDashboard,
+		connect.WithSchema(settingsServiceMethods.ByName("SaveDashboard")),
+		connect.WithHandlerOptions(opts...),
+	)
+	settingsServiceRestorePreviousDashboardHandler := connect.NewUnaryHandler(
+		SettingsServiceRestorePreviousDashboardProcedure,
+		svc.RestorePreviousDashboard,
+		connect.WithSchema(settingsServiceMethods.ByName("RestorePreviousDashboard")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/settings.v1.SettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SettingsServiceCreateProfileProcedure:
@@ -286,6 +386,14 @@ func NewSettingsServiceHandler(svc SettingsServiceHandler, opts ...connect.Handl
 			settingsServiceGetSettingsSchemaHandler.ServeHTTP(w, r)
 		case SettingsServiceSetDefaultProfileProcedure:
 			settingsServiceSetDefaultProfileHandler.ServeHTTP(w, r)
+		case SettingsServiceGetDashboardCatalogProcedure:
+			settingsServiceGetDashboardCatalogHandler.ServeHTTP(w, r)
+		case SettingsServiceGetDashboardProcedure:
+			settingsServiceGetDashboardHandler.ServeHTTP(w, r)
+		case SettingsServiceSaveDashboardProcedure:
+			settingsServiceSaveDashboardHandler.ServeHTTP(w, r)
+		case SettingsServiceRestorePreviousDashboardProcedure:
+			settingsServiceRestorePreviousDashboardHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -325,4 +433,20 @@ func (UnimplementedSettingsServiceHandler) GetSettingsSchema(context.Context, *c
 
 func (UnimplementedSettingsServiceHandler) SetDefaultProfile(context.Context, *connect.Request[v1.SetDefaultProfileRequest]) (*connect.Response[v1.SetDefaultProfileResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.SetDefaultProfile is not implemented"))
+}
+
+func (UnimplementedSettingsServiceHandler) GetDashboardCatalog(context.Context, *connect.Request[v1.GetDashboardCatalogRequest]) (*connect.Response[v1.GetDashboardCatalogResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.GetDashboardCatalog is not implemented"))
+}
+
+func (UnimplementedSettingsServiceHandler) GetDashboard(context.Context, *connect.Request[v1.GetDashboardRequest]) (*connect.Response[v1.GetDashboardResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.GetDashboard is not implemented"))
+}
+
+func (UnimplementedSettingsServiceHandler) SaveDashboard(context.Context, *connect.Request[v1.SaveDashboardRequest]) (*connect.Response[v1.SaveDashboardResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.SaveDashboard is not implemented"))
+}
+
+func (UnimplementedSettingsServiceHandler) RestorePreviousDashboard(context.Context, *connect.Request[v1.RestorePreviousDashboardRequest]) (*connect.Response[v1.RestorePreviousDashboardResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("settings.v1.SettingsService.RestorePreviousDashboard is not implemented"))
 }

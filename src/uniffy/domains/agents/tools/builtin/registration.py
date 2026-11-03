@@ -2,6 +2,7 @@
 
 from uniffy.domains.agents.tools.builtin.calendar import CALENDAR_TOOLS
 from uniffy.domains.agents.tools.builtin.cron import CRON_TOOLS
+from uniffy.domains.agents.tools.builtin.dashboard import DASHBOARD_TOOLS
 from uniffy.domains.agents.tools.builtin.discovery import DISCOVERY_TOOLS
 from uniffy.domains.agents.tools.builtin.files import FILES_TOOLS
 from uniffy.domains.agents.tools.builtin.images import IMAGES_TOOLS
@@ -30,6 +31,8 @@ def register_all(registry: ToolRegistry) -> None:
     for tool in TASK_TOOLS:
         registry.register(tool)
     for tool in TIME_TOOLS:
+        registry.register(tool)
+    for tool in DASHBOARD_TOOLS:
         registry.register(tool)
     for tool in SEARCH_TOOLS:
         registry.register(tool)

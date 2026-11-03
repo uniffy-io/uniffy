@@ -203,6 +203,9 @@ const (
 	// ProjectsServiceGetSprintCapacityProcedure is the fully-qualified name of the ProjectsService's
 	// GetSprintCapacity RPC.
 	ProjectsServiceGetSprintCapacityProcedure = "/projects.v1.ProjectsService/GetSprintCapacity"
+	// ProjectsServiceGetTaskMetricsProcedure is the fully-qualified name of the ProjectsService's
+	// GetTaskMetrics RPC.
+	ProjectsServiceGetTaskMetricsProcedure = "/projects.v1.ProjectsService/GetTaskMetrics"
 )
 
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
@@ -273,6 +276,9 @@ type ProjectsServiceClient interface {
 	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
 	CreateInternalTimeProject(context.Context, *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error)
 	GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error)
+	// ----- Metrics -----
+	// Permission-scoped task aggregates for dashboard widgets.
+	GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error)
 }
 
 // NewProjectsServiceClient constructs a client for the projects.v1.ProjectsService service. By
@@ -628,6 +634,12 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("GetSprintCapacity")),
 			connect.WithClientOptions(opts...),
 		),
+		getTaskMetrics: connect.NewClient[v1.GetTaskMetricsRequest, v1.GetTaskMetricsResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetTaskMetricsProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetTaskMetrics")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -690,6 +702,7 @@ type projectsServiceClient struct {
 	listPeriods               *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
 	createInternalTimeProject *connect.Client[v1.CreateInternalTimeProjectRequest, v1.CreateInternalTimeProjectResponse]
 	getSprintCapacity         *connect.Client[v1.GetSprintCapacityRequest, v1.GetSprintCapacityResponse]
+	getTaskMetrics            *connect.Client[v1.GetTaskMetricsRequest, v1.GetTaskMetricsResponse]
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
@@ -977,6 +990,11 @@ func (c *projectsServiceClient) GetSprintCapacity(ctx context.Context, req *conn
 	return c.getSprintCapacity.CallUnary(ctx, req)
 }
 
+// GetTaskMetrics calls projects.v1.ProjectsService.GetTaskMetrics.
+func (c *projectsServiceClient) GetTaskMetrics(ctx context.Context, req *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error) {
+	return c.getTaskMetrics.CallUnary(ctx, req)
+}
+
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
@@ -1045,6 +1063,9 @@ type ProjectsServiceHandler interface {
 	ListPeriods(context.Context, *connect.Request[v1.ListPeriodsRequest]) (*connect.Response[v1.ListPeriodsResponse], error)
 	CreateInternalTimeProject(context.Context, *connect.Request[v1.CreateInternalTimeProjectRequest]) (*connect.Response[v1.CreateInternalTimeProjectResponse], error)
 	GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error)
+	// ----- Metrics -----
+	// Permission-scoped task aggregates for dashboard widgets.
+	GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error)
 }
 
 // NewProjectsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1396,6 +1417,12 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("GetSprintCapacity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceGetTaskMetricsHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetTaskMetricsProcedure,
+		svc.GetTaskMetrics,
+		connect.WithSchema(projectsServiceMethods.ByName("GetTaskMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/projects.v1.ProjectsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectsServiceCreateProjectProcedure:
@@ -1512,6 +1539,8 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceCreateInternalTimeProjectHandler.ServeHTTP(w, r)
 		case ProjectsServiceGetSprintCapacityProcedure:
 			projectsServiceGetSprintCapacityHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetTaskMetricsProcedure:
+			projectsServiceGetTaskMetricsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1747,4 +1776,8 @@ func (UnimplementedProjectsServiceHandler) CreateInternalTimeProject(context.Con
 
 func (UnimplementedProjectsServiceHandler) GetSprintCapacity(context.Context, *connect.Request[v1.GetSprintCapacityRequest]) (*connect.Response[v1.GetSprintCapacityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetSprintCapacity is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetTaskMetrics is not implemented"))
 }

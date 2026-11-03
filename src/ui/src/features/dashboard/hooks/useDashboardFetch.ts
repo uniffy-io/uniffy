@@ -10,6 +10,7 @@ import { fetchEventsInRange, fetchCategories } from "@/features/calendar/store/c
 import { fetchCalendars } from "@/features/calendar/store/calendarsThunks";
 import { fetchProjects, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { selectTaskListLoadedIds } from "@/features/projects/store/projectsSlice";
+import { refreshTaskMetrics } from "@/features/dashboard/store/dashboardThunks";
 
 function fetchUpcomingEvents(dispatch: AppDispatch) {
   const now = new Date();
@@ -90,6 +91,7 @@ export function useDashboardFetch(): { refresh: () => void } {
     dispatch(initializeFilesData());
     fetchUpcomingEvents(dispatch);
     dispatch(fetchNotifications());
+    void dispatch(refreshTaskMetrics());
     void dispatch(fetchProjects())
       .unwrap()
       .then((fresh) => {

@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useContext, type ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
+import { WidgetSizeContext } from "@/features/dashboard/components/widgets/widgetSize";
 
 export type FetchPriority = 1 | 2 | 3;
 
@@ -32,11 +33,14 @@ export function WidgetCard({
   footer,
   minHeight,
 }: WidgetCardProps) {
+  const chosenSize = useContext(WidgetSizeContext);
+  if (chosenSize === "compact") colSpan = 1;
+  else if (chosenSize === "expanded" && colSpan === 1) colSpan = 2;
   const colSpanClass = {
     1: "",
     2: "md:col-span-2",
-    3: "md:col-span-3",
-    4: "md:col-span-4",
+    3: "md:col-span-2 lg:col-span-3",
+    4: "md:col-span-2 lg:col-span-4",
   }[colSpan];
 
   return (

@@ -16,6 +16,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import projects_pb
+from .metrics_pb import GetTaskMetricsRequest, GetTaskMetricsResponse
 from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
 from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetSprintCapacityRequest, GetSprintCapacityResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
 
@@ -225,6 +226,13 @@ class ProjectsService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_task_metrics(self, request: GetTaskMetricsRequest, ctx: RequestContext[GetTaskMetricsRequest, GetTaskMetricsResponse], /) -> GetTaskMetricsResponse:
+        """
+        ----- Metrics -----
+        Permission-scoped task aggregates for dashboard widgets.
+        """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -814,6 +822,16 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=svc.get_sprint_capacity,
+                ),
+                "/projects.v1.ProjectsService/GetTaskMetrics": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetTaskMetrics",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTaskMetricsRequest,
+                        output=GetTaskMetricsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=svc.get_task_metrics,
                 ),
             },
             interceptors=interceptors,
@@ -1996,6 +2014,30 @@ class ProjectsServiceClient(ConnectClient):
             timeout_ms=timeout_ms,
         )
 
+    async def get_task_metrics(
+        self,
+        request: GetTaskMetricsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTaskMetricsResponse:
+        """
+        ----- Metrics -----
+        Permission-scoped task aggregates for dashboard widgets.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTaskMetrics",
+                service_name="projects.v1.ProjectsService",
+                input=GetTaskMetricsRequest,
+                output=GetTaskMetricsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: CreateProjectRequest, ctx: RequestContext[CreateProjectRequest, CreateProjectResponse], /) -> CreateProjectResponse:
         """
@@ -2193,6 +2235,13 @@ class ProjectsServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def get_sprint_capacity(self, request: GetSprintCapacityRequest, ctx: RequestContext[GetSprintCapacityRequest, GetSprintCapacityResponse], /) -> GetSprintCapacityResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_task_metrics(self, request: GetTaskMetricsRequest, ctx: RequestContext[GetTaskMetricsRequest, GetTaskMetricsResponse], /) -> GetTaskMetricsResponse:
+        """
+        ----- Metrics -----
+        Permission-scoped task aggregates for dashboard widgets.
+        """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -2780,6 +2829,16 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         idempotency_level=IdempotencyLevel.UNKNOWN,
                     ),
                     function=service.get_sprint_capacity,
+                ),
+                "/projects.v1.ProjectsService/GetTaskMetrics": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetTaskMetrics",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetTaskMetricsRequest,
+                        output=GetTaskMetricsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                    ),
+                    function=service.get_task_metrics,
                 ),
             },
             interceptors=interceptors,
@@ -3900,6 +3959,29 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=GetSprintCapacityRequest,
                 output=GetSprintCapacityResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_task_metrics(
+        self,
+        request: GetTaskMetricsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetTaskMetricsResponse:
+        """
+        ----- Metrics -----
+        Permission-scoped task aggregates for dashboard widgets.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetTaskMetrics",
+                service_name="projects.v1.ProjectsService",
+                input=GetTaskMetricsRequest,
+                output=GetTaskMetricsResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
             ),
             headers=headers,

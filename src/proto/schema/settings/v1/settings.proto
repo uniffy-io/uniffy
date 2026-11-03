@@ -3,6 +3,7 @@ syntax = "proto3";
 package settings.v1;
 
 import "google/protobuf/timestamp.proto";
+import "settings/v1/dashboard.proto";
 
 option go_package = "github.com/uniffy-io/uniffy-proto-go/settings/v1;settingsv1";
 
@@ -31,6 +32,18 @@ service SettingsService {
 
   // Set a profile as the default for the user
   rpc SetDefaultProfile(SetDefaultProfileRequest) returns (SetDefaultProfileResponse) {}
+
+  // The widget catalog, the role presets and the default layout
+  rpc GetDashboardCatalog(GetDashboardCatalogRequest) returns (GetDashboardCatalogResponse) {}
+
+  // The viewer's dashboard layout in one organization
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse) {}
+
+  // Replace the dashboard layout, checked against the revision it was based on
+  rpc SaveDashboard(SaveDashboardRequest) returns (SaveDashboardResponse) {}
+
+  // Put back the layout a preset or a proposal replaced
+  rpc RestorePreviousDashboard(RestorePreviousDashboardRequest) returns (RestorePreviousDashboardResponse) {}
 }
 
 // Request to create a new settings profile

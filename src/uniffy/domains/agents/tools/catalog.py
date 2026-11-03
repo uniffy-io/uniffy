@@ -19,6 +19,7 @@ GROUP_ORDER: list[str] = [
     "Files",
     "Projects",
     "Tasks",
+    "Dashboard",
     "Calendar",
     "Rooms",
     "Search",

@@ -20,6 +20,8 @@ interface MultiSelectProps<T extends string | number = string> {
   /** A filter box above the options, for long lists. */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** Reports the filter text instead of filtering locally, for options searched on the server. */
+  onQueryChange?: (query: string) => void;
 }
 
 interface DropdownPosition {
@@ -41,6 +43,7 @@ export function MultiSelect<T extends string | number = string>({
   triggerClassName,
   searchable = false,
   searchPlaceholder = "Search...",
+  onQueryChange,
 }: MultiSelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -122,13 +125,15 @@ export function MultiSelect<T extends string | number = string>({
 
   const selectedOptions = options.filter((opt) => selectedSet.has(opt.value));
   const needle = query.trim().toLowerCase();
-  const shownOptions = needle
-    ? options.filter((option) => option.label.toLowerCase().includes(needle))
-    : options;
+  const shownOptions =
+    needle && !onQueryChange
+      ? options.filter((option) => option.label.toLowerCase().includes(needle))
+      : options;
 
   const toggleOpen = () => {
     if (disabled) return;
     setQuery("");
+    onQueryChange?.("");
     setIsOpen(!isOpen);
   };
 
@@ -171,7 +176,10 @@ export function MultiSelect<T extends string | number = string>({
                 autoFocus
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  onQueryChange?.(e.target.value);
+                }}
                 placeholder={searchPlaceholder}
                 className="flex-1 min-w-0 bg-transparent outline-none text-xs text-foreground placeholder:text-subtle-foreground"
               />

@@ -1,158 +1,207 @@
-import { useState, useCallback } from "react";
-import { useAppSelector } from "@/app/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import {
+  selectDashboardCatalog,
+  selectDashboardCatalogStatus,
+  selectDashboardSaving,
+  selectSavedDashboard,
+  selectSavedDashboardStatus,
+} from "@/features/dashboard/store/dashboardSlice";
+import {
+  fetchDashboard,
+  fetchDashboardCatalog,
+  restorePreviousDashboard,
+  saveDashboard,
+} from "@/features/dashboard/store/dashboardThunks";
+import type {
+  DashboardDefinition,
+  DashboardWidget,
+  WidgetFilters,
+} from "@/features/dashboard/types";
+import {
+  fullLayout,
+  legacyLayoutKey,
+  moveWidget as moveInList,
+  parseLegacyLayout,
+} from "@/features/dashboard/utils/layout";
 
-export type WidgetId =
-  | "today-agenda"
-  | "my-tasks"
-  | "my-time"
-  | "recent-activity"
-  | "quick-actions"
-  | "team-presence"
-  | "people"
-  | "notifications"
-  | "recent-notes"
-  | "recent-files"
-  | "bookmarks"
-  | "analytics"
-  | "agents";
-
-export type WidgetSize = "compact" | "expanded";
-
-export interface WidgetPreference {
-  id: WidgetId;
-  visible: boolean;
-  size: WidgetSize;
-}
-
-const DEFAULT_LAYOUT: WidgetPreference[] = [
-  { id: "today-agenda", visible: true, size: "expanded" },
-  { id: "my-tasks", visible: true, size: "expanded" },
-  { id: "my-time", visible: true, size: "compact" },
-  { id: "recent-activity", visible: true, size: "expanded" },
-  { id: "quick-actions", visible: true, size: "expanded" },
-  { id: "team-presence", visible: true, size: "compact" },
-  { id: "people", visible: true, size: "compact" },
-  { id: "notifications", visible: true, size: "compact" },
-  { id: "recent-notes", visible: true, size: "expanded" },
-  { id: "recent-files", visible: true, size: "expanded" },
-  { id: "bookmarks", visible: true, size: "expanded" },
-  { id: "analytics", visible: true, size: "expanded" },
-  { id: "agents", visible: true, size: "expanded" },
-];
-
-const STORAGE_KEY_PREFIX = "uniffy_dashboard_layout_";
-
-function getStorageKey(userId: string): string {
-  return `${STORAGE_KEY_PREFIX}${userId}`;
-}
-
-function loadPreferences(userId: string): WidgetPreference[] | null {
+function readLegacy(userId: string): DashboardDefinition | null {
   try {
-    const raw = localStorage.getItem(getStorageKey(userId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return null;
-    // A widget added after the layout was saved joins at its default spot; retired ids drop.
-    const known = new Set(DEFAULT_LAYOUT.map((widget) => widget.id));
-    const stored = (parsed as WidgetPreference[]).filter((widget) => known.has(widget.id));
-    const present = new Set(stored.map((widget) => widget.id));
-    return [...stored, ...DEFAULT_LAYOUT.filter((widget) => !present.has(widget.id))];
+    return parseLegacyLayout(localStorage.getItem(legacyLayoutKey(userId)));
   } catch {
     return null;
   }
 }
 
-function savePreferences(userId: string, prefs: WidgetPreference[]): void {
+function dropLegacy(userId: string): void {
   try {
-    localStorage.setItem(getStorageKey(userId), JSON.stringify(prefs));
+    localStorage.removeItem(legacyLayoutKey(userId));
   } catch {
-    // localStorage full or unavailable
+    // Storage unavailable; the server copy is what loads from now on.
   }
 }
 
+/** The viewer's server-saved layout for this organization, with an edit buffer for the customizer. */
 export function useDashboardLayout() {
-  const userId = useAppSelector((state) => state.auth.user?.id ?? "anonymous");
+  const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id ?? "");
+  const orgId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const catalog = useAppSelector(selectDashboardCatalog);
+  const catalogStatus = useAppSelector(selectDashboardCatalogStatus);
+  const saved = useAppSelector(selectSavedDashboard);
+  const savedStatus = useAppSelector(selectSavedDashboardStatus);
+  const saving = useAppSelector(selectDashboardSaving);
 
-  const [widgets, setWidgets] = useState<WidgetPreference[]>(() => {
-    return loadPreferences(userId) ?? [...DEFAULT_LAYOUT];
-  });
+  const [editBuffer, setEditBuffer] = useState<DashboardWidget[] | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editOrgId, setEditOrgId] = useState(orgId);
+  const migratedRef = useRef(false);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editBuffer, setEditBuffer] = useState<WidgetPreference[]>([]);
+  // An open edit belongs to the organization it started in; a switch drops it.
+  if (editOrgId !== orgId) {
+    setEditOrgId(orgId);
+    setEditBuffer(null);
+    setEditName("");
+  }
 
+  // A switch resets the slice without remounting the page, so this reloads on idle, not on mount.
+  useEffect(() => {
+    if (catalogStatus === "idle") void dispatch(fetchDashboardCatalog());
+  }, [catalogStatus, dispatch]);
+
+  useEffect(() => {
+    if (orgId) void dispatch(fetchDashboard());
+  }, [orgId, dispatch]);
+
+  // A layout kept in this browser by older versions moves to the server once, then the copy goes.
+  useEffect(() => {
+    if (migratedRef.current || !catalog || savedStatus !== "ready" || !userId) return;
+    migratedRef.current = true;
+    const legacy = readLegacy(userId);
+    if (!legacy) return;
+    if (saved.definition) {
+      dropLegacy(userId);
+      return;
+    }
+    void dispatch(saveDashboard({ definition: legacy }))
+      .unwrap()
+      .then(() => dropLegacy(userId))
+      // The rejected thunk already surfaced through the error toast middleware.
+      .catch(() => {});
+  }, [catalog, savedStatus, saved.definition, userId, dispatch]);
+
+  const definition = saved.definition ?? catalog?.defaultDefinition ?? null;
+  const layout = useMemo(
+    () => (definition && catalog ? fullLayout(definition, catalog) : []),
+    [definition, catalog],
+  );
+  const widgets = editBuffer ?? layout;
+  const isEditing = editBuffer !== null;
+  const ready = catalog !== null && savedStatus !== "idle" && savedStatus !== "loading";
+
+  const name = definition?.name ?? "";
   const startEditing = useCallback(() => {
-    setEditBuffer([...widgets]);
-    setIsEditing(true);
-  }, [widgets]);
+    setEditBuffer([...layout]);
+    setEditName(name);
+  }, [layout, name]);
+  const cancelEditing = useCallback(() => setEditBuffer(null), []);
 
-  const cancelEditing = useCallback(() => {
-    setEditBuffer([]);
-    setIsEditing(false);
-  }, []);
+  const persist = useCallback(
+    async (next: DashboardDefinition, keepPrevious = false) => {
+      try {
+        await dispatch(saveDashboard({ definition: next, keepPrevious })).unwrap();
+        setEditBuffer(null);
+      } catch {
+        // Surfaced by the error toast middleware; the editor stays open with the edit.
+      }
+    },
+    [dispatch],
+  );
 
   const saveEditing = useCallback(() => {
-    setWidgets(editBuffer);
-    savePreferences(userId, editBuffer);
-    setIsEditing(false);
-    setEditBuffer([]);
-  }, [editBuffer, userId]);
+    if (!editBuffer) return;
+    // A hand edit is no longer the template itself, but it keeps the name it was given.
+    void persist({ widgets: editBuffer, preset: "", name: editName.trim() });
+  }, [editBuffer, editName, persist]);
 
-  const toggleVisibility = useCallback((id: WidgetId) => {
-    setEditBuffer((prev) => prev.map((w) => (w.id === id ? { ...w, visible: !w.visible } : w)));
-  }, []);
+  const update = useCallback(
+    (id: string, change: (widget: DashboardWidget) => DashboardWidget) =>
+      setEditBuffer((prev) => (prev ? prev.map((w) => (w.id === id ? change(w) : w)) : prev)),
+    [],
+  );
 
-  const toggleSize = useCallback((id: WidgetId) => {
-    setEditBuffer((prev) =>
-      prev.map((w) =>
-        w.id === id ? { ...w, size: w.size === "compact" ? "expanded" : "compact" } : w,
-      ),
-    );
-  }, []);
+  const toggleVisibility = useCallback(
+    (id: string) => update(id, (w) => ({ ...w, visible: !w.visible })),
+    [update],
+  );
+  const toggleSize = useCallback(
+    (id: string) =>
+      update(id, (w) => ({ ...w, size: w.size === "compact" ? "expanded" : "compact" })),
+    [update],
+  );
+  const setFilters = useCallback(
+    (id: string, filters: WidgetFilters) =>
+      update(id, (w) => ({ ...w, filters, unsupportedFilters: [] })),
+    [update],
+  );
+  const moveWidget = useCallback(
+    (from: number, to: number) =>
+      setEditBuffer((prev) => (prev ? moveInList(prev, from, to) : prev)),
+    [],
+  );
 
-  const moveWidget = useCallback((fromIndex: number, toIndex: number) => {
-    setEditBuffer((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
-  }, []);
-
+  const applyDefinition = useCallback(
+    (next: DashboardDefinition) => persist(next, true),
+    [persist],
+  );
+  const applyPreset = useCallback(
+    (presetId: string) => {
+      const preset = catalog?.presets.find((p) => p.id === presetId);
+      if (preset) void applyDefinition(preset.definition);
+    },
+    [catalog, applyDefinition],
+  );
   const resetToDefault = useCallback(() => {
-    const defaults = [...DEFAULT_LAYOUT];
-    setWidgets(defaults);
-    savePreferences(userId, defaults);
-    setEditBuffer([]);
-    setIsEditing(false);
-  }, [userId]);
-
-  const isWidgetVisible = useCallback(
-    (id: WidgetId): boolean => {
-      const pref = widgets.find((w) => w.id === id);
-      return pref?.visible ?? true;
+    if (catalog) void applyDefinition(catalog.defaultDefinition);
+  }, [catalog, applyDefinition]);
+  /** Renames the dashboard as it stands; widgets, template and restore point stay. */
+  const rename = useCallback(
+    (nextName: string) => {
+      if (definition) void persist({ ...definition, name: nextName });
     },
-    [widgets],
+    [definition, persist],
   );
-
-  const getWidgetSize = useCallback(
-    (id: WidgetId): WidgetSize => {
-      const pref = widgets.find((w) => w.id === id);
-      return pref?.size ?? "expanded";
-    },
-    [widgets],
-  );
+  const restorePrevious = useCallback(async () => {
+    try {
+      await dispatch(restorePreviousDashboard()).unwrap();
+      setEditBuffer(null);
+    } catch {
+      // Surfaced by the error toast middleware.
+    }
+  }, [dispatch]);
 
   return {
-    widgets: isEditing ? editBuffer : widgets,
+    ready,
+    catalog,
+    widgets,
+    visibleWidgets: widgets.filter((w) => w.visible),
+    activePreset: saved.definition?.preset ?? "",
+    name: isEditing ? editName : name,
+    setName: setEditName,
+    hasPrevious: saved.hasPrevious,
+    saving,
     isEditing,
     startEditing,
     cancelEditing,
     saveEditing,
     toggleVisibility,
     toggleSize,
+    setFilters,
     moveWidget,
+    applyPreset,
+    applyDefinition,
     resetToDefault,
-    isWidgetVisible,
-    getWidgetSize,
+    restorePrevious,
+    rename,
   };
 }

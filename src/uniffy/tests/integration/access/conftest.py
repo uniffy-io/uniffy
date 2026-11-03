@@ -52,6 +52,7 @@ from uniffy.core.models.projects.sprint import Sprint
 from uniffy.core.models.projects.task import Task
 from uniffy.core.models.projects.view_config import ViewConfig
 from uniffy.core.models.realtime.yjs_snapshot import RealtimeYjsSnapshot
+from uniffy.core.models.settings.settings_profile import SettingsProfile
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.storage import lock_documents
@@ -456,6 +457,7 @@ async def _delete_organizations(
         delete(OrganizationMember).where(OrganizationMember.organization_id.in_(org_ids))
     )
     await db_session.execute(delete(Organization).where(Organization.id.in_(org_ids)))
+    await db_session.execute(delete(SettingsProfile).where(SettingsProfile.user_id.in_(user_ids)))
     await db_session.execute(delete(User).where(User.id.in_(user_ids)))
 
 

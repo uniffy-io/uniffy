@@ -556,3 +556,98 @@ class TestGoogleStream:
         ]
         assert events[-1].result.stop_reason == "refusal"
         assert events[-1].result.content
+
+
+def _install_google_attempts(provider: GoogleProvider, attempts: list[list]) -> list[int]:
+    """Each call to generate_content_stream serves the next attempt's chunks."""
+    calls: list[int] = []
+
+    async def _gen(chunks: list):
+        for chunk in chunks:
+            yield chunk
+
+    async def _stream(**kwargs):
+        calls.append(len(calls))
+        return _gen(attempts[len(calls) - 1])
+
+    provider._client = SimpleNamespace(
+        aio=SimpleNamespace(models=SimpleNamespace(generate_content_stream=_stream))
+    )
+    return calls
+
+
+def _usage(prompt: int, output: int) -> SimpleNamespace:
+    return SimpleNamespace(
+        prompt_token_count=prompt, candidates_token_count=output, cached_content_token_count=0
+    )
+
+
+class TestGoogleMalformedToolCall:
+    async def test_a_malformed_call_is_asked_again_and_usage_adds_up(self) -> None:
+        provider = GoogleProvider("google-test-key")
+        call = SimpleNamespace(name="dashboard-propose", args={"description": "Team pulse"})
+        calls = _install_google_attempts(
+            provider,
+            [
+                [_google_chunk([], _usage(100, 0), finish_reason="MALFORMED_FUNCTION_CALL")],
+                [_google_chunk([_google_part(function_call=call)], _usage(100, 12))],
+            ],
+        )
+
+        events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-flash", stream=True))
+
+        assert len(calls) == 2
+        assert _types(events).count(EventType.MODEL_CALL_START) == 1
+        result = events[-1].result
+        assert [tc.name for tc in result.tool_calls] == ["dashboard-propose"]
+        assert result.stop_reason == "tool_use"
+        assert (result.input_tokens, result.output_tokens) == (200, 12)
+
+    async def test_retries_stop_with_a_visible_message(self) -> None:
+        provider = GoogleProvider("google-test-key")
+        malformed = [_google_chunk([], finish_reason="MALFORMED_FUNCTION_CALL")]
+        calls = _install_google_attempts(provider, [malformed, malformed, malformed, malformed])
+
+        events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-flash", stream=True))
+
+        assert len(calls) == 3
+        assert _types(events) == [
+            EventType.MODEL_CALL_START,
+            EventType.TEXT_BLOCK_START,
+            EventType.TEXT_BLOCK_DELTA,
+            EventType.TEXT_BLOCK_END,
+            EventType.MODEL_CALL_END,
+        ]
+        assert "valid tool call" in events[-1].result.content
+
+    async def test_text_already_shown_is_never_asked_again(self) -> None:
+        provider = GoogleProvider("google-test-key")
+        calls = _install_google_attempts(
+            provider,
+            [[_google_chunk([_google_part(text="Working on it")], finish_reason="MALFORMED_FUNCTION_CALL")]],
+        )
+
+        events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-flash", stream=True))
+
+        assert len(calls) == 1
+        assert events[-1].result.content == "Working on it"
+
+    async def test_the_unary_path_retries_too(self) -> None:
+        provider = GoogleProvider("google-test-key")
+        call = SimpleNamespace(name="dashboard-propose", args={"description": "x"})
+        responses = [
+            _google_chunk([], _usage(50, 0), finish_reason="MALFORMED_FUNCTION_CALL"),
+            _google_chunk([_google_part(function_call=call)], _usage(50, 5)),
+        ]
+
+        async def _generate(**kwargs):
+            return responses.pop(0)
+
+        provider._client = SimpleNamespace(
+            aio=SimpleNamespace(models=SimpleNamespace(generate_content=_generate))
+        )
+
+        result = await provider.chat_completion(MESSAGES, "gemini-2.5-flash", stream=False)
+
+        assert [tc.name for tc in result.tool_calls] == ["dashboard-propose"]
+        assert (result.input_tokens, result.output_tokens) == (100, 5)
