@@ -20,7 +20,7 @@
     { "id": "recent-files", "label": "Recent files", "description": "Files you opened or uploaded recently.", "filterable": false, "size": "expanded" },
     { "id": "bookmarks", "label": "Bookmarks", "description": "Items you bookmarked.", "filterable": false, "size": "expanded" },
     { "id": "analytics", "label": "Your activity", "description": "Your own activity over the last two weeks.", "filterable": false, "size": "expanded" },
-    { "id": "agents", "label": "Agent sessions", "description": "Your recent agent sessions.", "filterable": false, "size": "expanded" }
+    { "id": "agents", "label": "Agents", "description": "Quick access to your agents, opening a chat with one.", "filterable": false, "size": "expanded" }
   ],
   "default": [
     { "id": "today-agenda" },
