@@ -1,19 +1,25 @@
 import { Link } from "react-router-dom";
 import { Flag } from "@phosphor-icons/react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { useAppSelector } from "@/app/hooks";
 import { EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
 import { MetricWidgetCard } from "@/features/dashboard/components/widgets/metrics/MetricWidgetCard";
 import { useTaskMetric } from "@/features/dashboard/hooks/useTaskMetric";
-import type { DashboardWidget, SprintProgress } from "@/features/dashboard/types";
+import type { DashboardWidget, MetricProjectRef, SprintProgress } from "@/features/dashboard/types";
 import { CHART_THEME, chartSeriesColors } from "@/config/theme/chartPalette";
 import { formatDateShort } from "@/shared/utils/dateFormatting";
 
 const ROWS = 4;
 const [LINE] = chartSeriesColors(1);
 
-function SprintRow({ sprint, chart }: { sprint: SprintProgress; chart: boolean }) {
-  const project = useAppSelector((state) => state.projects.projects[sprint.projectId]);
+function SprintRow({
+  sprint,
+  project,
+  chart,
+}: {
+  sprint: SprintProgress;
+  project?: MetricProjectRef;
+  chart: boolean;
+}) {
   const percent = sprint.total > 0 ? Math.round((sprint.completed / sprint.total) * 100) : 0;
   const dates = [sprint.startDate, sprint.endDate].filter(Boolean).map(formatDateShort).join(" - ");
 
@@ -104,7 +110,12 @@ export function SprintProgressWidget({ widget }: { widget: DashboardWidget }) {
       ) : (
         <ul className="space-y-4">
           {sprints.map((sprint, index) => (
-            <SprintRow key={sprint.sprintId} sprint={sprint} chart={index === 0} />
+            <SprintRow
+              key={sprint.sprintId}
+              sprint={sprint}
+              project={data?.projects[sprint.projectId]}
+              chart={index === 0}
+            />
           ))}
         </ul>
       )}

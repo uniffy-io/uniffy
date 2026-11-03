@@ -37,21 +37,34 @@ export const HEALTH_CONFIG: Record<HealthStatus, { label: string; className: str
   not_started: { label: "Not Started", className: "bg-muted text-muted-foreground" },
 };
 
+export function healthStats(
+  totalTasks: number,
+  completedTasks: number,
+  overdueTasks: number,
+  totalEstimated: number,
+  totalSpent: number,
+): ProjectStats {
+  return {
+    totalTasks,
+    completedTasks,
+    completionPct: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+    overdueTasks,
+    totalEstimated,
+    totalSpent,
+  };
+}
+
 /**
  * Read off the project row rather than recomputed from tasks: the server sums
  * the whole tree in one query, so the numbers match the mobile app and stay
  * exact past the task-list page size.
  */
 export function projectStats(project: Project): ProjectStats {
-  return {
-    totalTasks: project.taskCount,
-    completedTasks: project.completedTaskCount,
-    completionPct:
-      project.taskCount > 0
-        ? Math.round((project.completedTaskCount / project.taskCount) * 100)
-        : 0,
-    overdueTasks: project.overdueTaskCount,
-    totalEstimated: project.estimatedMinutes,
-    totalSpent: project.timeSpentMinutes,
-  };
+  return healthStats(
+    project.taskCount,
+    project.completedTaskCount,
+    project.overdueTaskCount,
+    project.estimatedMinutes,
+    project.timeSpentMinutes,
+  );
 }

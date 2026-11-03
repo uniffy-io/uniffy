@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   selectDashboardCatalog,
+  selectDashboardCatalogStatus,
   selectDashboardSaving,
   selectSavedDashboard,
   selectSavedDashboardStatus,
@@ -46,18 +47,27 @@ export function useDashboardLayout() {
   const userId = useAppSelector((state) => state.auth.user?.id ?? "");
   const orgId = useAppSelector((state) => state.auth.currentOrganizationId);
   const catalog = useAppSelector(selectDashboardCatalog);
+  const catalogStatus = useAppSelector(selectDashboardCatalogStatus);
   const saved = useAppSelector(selectSavedDashboard);
   const savedStatus = useAppSelector(selectSavedDashboardStatus);
   const saving = useAppSelector(selectDashboardSaving);
 
   const [editBuffer, setEditBuffer] = useState<DashboardWidget[] | null>(null);
   const [editName, setEditName] = useState("");
+  const [editOrgId, setEditOrgId] = useState(orgId);
   const migratedRef = useRef(false);
 
+  // An open edit belongs to the organization it started in; a switch drops it.
+  if (editOrgId !== orgId) {
+    setEditOrgId(orgId);
+    setEditBuffer(null);
+    setEditName("");
+  }
+
+  // A switch resets the slice without remounting the page, so this reloads on idle, not on mount.
   useEffect(() => {
-    if (!catalog) void dispatch(fetchDashboardCatalog());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (catalogStatus === "idle") void dispatch(fetchDashboardCatalog());
+  }, [catalogStatus, dispatch]);
 
   useEffect(() => {
     if (orgId) void dispatch(fetchDashboard());

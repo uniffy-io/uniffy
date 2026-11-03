@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { ChartBar } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
 import { EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
 import { MetricWidgetCard } from "@/features/dashboard/components/widgets/metrics/MetricWidgetCard";
 import { useTaskMetric } from "@/features/dashboard/hooks/useTaskMetric";
@@ -23,7 +22,6 @@ export function StatusByProjectWidget({ widget }: { widget: DashboardWidget }) {
     widget.filters,
     ROWS,
   );
-  const projects = useAppSelector((state) => state.projects.projects);
   const rows = data?.statusByProject ?? [];
 
   return (
@@ -54,7 +52,7 @@ export function StatusByProjectWidget({ widget }: { widget: DashboardWidget }) {
           <ul className="space-y-2.5">
             {rows.map((row) => {
               const total = SEGMENTS.reduce((sum, segment) => sum + row[segment.key], 0);
-              const project = projects[row.projectId];
+              const project = data?.projects[row.projectId];
               return (
                 <li key={row.projectId}>
                   <div className="flex items-baseline justify-between gap-2 text-xs">

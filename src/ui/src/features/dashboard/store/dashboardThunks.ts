@@ -67,20 +67,27 @@ export const saveDashboard = createAsyncThunk<SavedDashboard, SaveDashboardArgs,
   },
 );
 
-export const restorePreviousDashboard = createAsyncThunk<SavedDashboard, void, ThunkConfig>(
-  "dashboard/restorePrevious",
-  async (_, { getState, dispatch, rejectWithValue }) => {
-    const state = getState();
-    const orgId = state.auth.currentOrganizationId;
-    if (!orgId) return rejectWithValue("No organization selected");
-    try {
-      return await dashboardApi.restorePrevious(orgId, state.dashboard.saved.revision);
-    } catch (error) {
-      void dispatch(fetchDashboard());
-      return rejectWithValue(message(error, "Failed to restore the dashboard"));
-    }
-  },
-);
+export const restorePreviousDashboard = createAsyncThunk<
+  SavedDashboard,
+  { expectedRevision: number; organizationId: string } | void,
+  ThunkConfig
+>("dashboard/restorePrevious", async (args, { getState, dispatch, rejectWithValue }) => {
+  const state = getState();
+  const orgId = state.auth.currentOrganizationId;
+  if (!orgId) return rejectWithValue("No organization selected");
+  // The pinned version belongs to one organization; restoring it in another would be a guess.
+  if (args && args.organizationId !== orgId) {
+    return rejectWithValue("The dashboard belongs to another organization");
+  }
+  try {
+    // A caller holding the revision it wrote restores only if nothing saved since.
+    const revision = args?.expectedRevision ?? state.dashboard.saved.revision;
+    return await dashboardApi.restorePrevious(orgId, revision);
+  } catch (error) {
+    void dispatch(fetchDashboard());
+    return rejectWithValue(message(error, "Failed to restore the dashboard"));
+  }
+});
 
 export interface FetchMetricArgs {
   /** Cache key: one widget's metric under its filters. */
@@ -90,31 +97,40 @@ export interface FetchMetricArgs {
   limit?: number;
 }
 
-export const fetchTaskMetric = createAsyncThunk<TaskMetrics, FetchMetricArgs, ThunkConfig>(
+export interface FetchedMetric {
+  metrics: TaskMetrics;
+  /** The invalidation generation the request started in; older answers are dropped. */
+  generation: number;
+}
+
+export const fetchTaskMetric = createAsyncThunk<FetchedMetric, FetchMetricArgs, ThunkConfig>(
   "dashboard/fetchTaskMetric",
   async ({ metric, filters, limit }, { getState, rejectWithValue }) => {
-    const orgId = getState().auth.currentOrganizationId;
+    const state = getState();
+    const orgId = state.auth.currentOrganizationId;
     if (!orgId) return rejectWithValue("No organization selected");
+    const generation = state.dashboard.metricsGeneration;
     try {
-      return await dashboardApi.getTaskMetrics(
+      const metrics = await dashboardApi.getTaskMetrics(
         orgId,
         metric,
         filters,
         getEffectiveTimeZone(),
         limit,
       );
+      return { metrics, generation };
     } catch (error) {
       return rejectWithValue(message(error, "Failed to load the widget"));
     }
   },
 );
 
-/** Re-runs every metric a widget on screen asked for, under the same filters. */
+/** Re-runs the metrics of widgets on screen; hidden widgets and old filters stay unloaded. */
 export const refreshTaskMetrics = createAsyncThunk<void, void, ThunkConfig>(
   "dashboard/refreshTaskMetrics",
   async (_, { getState, dispatch }) => {
     for (const entry of Object.values(getState().dashboard.metrics)) {
-      if (entry.args) void dispatch(fetchTaskMetric(entry.args));
+      if (entry.args && entry.mounted > 0) void dispatch(fetchTaskMetric(entry.args));
     }
   },
 );

@@ -3532,6 +3532,26 @@ Home dashboard (`/`). Use two users who see different projects, for example `bob
       Click the card title to rename the draft before applying. Discard leaves the dashboard
       untouched; Apply to my dashboard replaces it, titles it with the (possibly renamed) draft name,
       and Undo puts the previous layout back. A project name the asker cannot open is refused by the tool.
+- [ ] Agent, two proposals: apply proposal A, then proposal B. A's Undo is disabled ("The dashboard
+      changed after this was applied"); B's Undo restores A's layout. Apply A, rename the dashboard,
+      then Undo on A: refused with the conflict message and the dashboard is unchanged.
+- [ ] Project health under Assigned to Me grades only your tasks: a project where your one task is
+      done reads 100% and is not "Behind" because of other people's overdue work.
+- [ ] Sprint progress under Me with several running sprints lists the sprints that hold your tasks
+      first, never only empty `0/0` sprints.
+- [ ] Revocation: Alice narrows Project health to a project Bob shares with her. Bob removes her (or
+      makes the project Only owner). Without a reload, the project leaves Alice's widgets within a
+      second or two, and Refresh does not bring it back.
+- [ ] Organization switch with the customizer open: the open edit is dropped and the new
+      organization's dashboard loads (no endless skeletons). Switching back loads the first one.
+- [ ] More than 50 readable projects: Project health, Tasks by status, Sprint progress and the task
+      lists name every project they show (none read "Project" or go missing). In the filter
+      editor, Selected projects searches on the server as you type, so project 51 and beyond can
+      be picked; the chip and the widget subtitle show its name.
+- [ ] Apply an agent proposal, switch organization and back, then use another organization's
+      card: Undo stays disabled outside the organization it was applied in.
+- [ ] Hide a metric widget or change its filters, Save, then Refresh: Network shows
+      `GetTaskMetrics` only for the widgets on screen with their current filters.
 - [ ] Responsive at 1024px, 768px (compact widgets take half a row, wide ones the full row) and
       375px (single column, customizer rows stack the name above 44px buttons). Light and dark
       themes: charts and bars use the brand ramp and theme-token axes.

@@ -1,24 +1,16 @@
 import { Link } from "react-router-dom";
 import { Heartbeat } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
 import { EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
 import { MetricWidgetCard } from "@/features/dashboard/components/widgets/metrics/MetricWidgetCard";
 import { useTaskMetric } from "@/features/dashboard/hooks/useTaskMetric";
 import type { DashboardWidget } from "@/features/dashboard/types";
-import {
-  HEALTH_CONFIG,
-  computeHealth,
-  projectStats,
-} from "@/features/projects/utils/projectHealth";
+import { HEALTH_CONFIG, computeHealth } from "@/features/projects/utils/projectHealth";
 import { cn } from "@/shared/utils/cn";
 
 const ROWS = 6;
 const IN_SCOPE_LIMIT = 50;
 
-/**
- * Health comes off each project's server rollup, the same numbers the portfolio shows; the
- * metric only decides which projects the widget's filters reach.
- */
+/** Scored on the server's counts under the widget's filters, so "Me" grades only the viewer's work. */
 export function ProjectHealthWidget({ widget }: { widget: DashboardWidget }) {
   const { data, loading, failed } = useTaskMetric(
     widget.id,
@@ -26,14 +18,11 @@ export function ProjectHealthWidget({ widget }: { widget: DashboardWidget }) {
     widget.filters,
     IN_SCOPE_LIMIT,
   );
-  const projects = useAppSelector((state) => state.projects.projects);
-  const rows = (data?.statusByProject ?? [])
-    .map((row) => projects[row.projectId])
-    .filter((project) => project !== undefined)
-    .map((project) => {
-      const stats = projectStats(project);
-      return { project, stats, health: computeHealth(stats) };
-    });
+  const rows = (data?.statusByProject ?? []).map((row) => ({
+    project: { id: row.projectId, name: data?.projects[row.projectId]?.name ?? "Project" },
+    stats: row.health,
+    health: computeHealth(row.health),
+  }));
   const rank = { behind: 0, at_risk: 1, on_track: 2, not_started: 3 } as const;
   rows.sort(
     (a, b) => rank[a.health] - rank[b.health] || a.project.name.localeCompare(b.project.name),

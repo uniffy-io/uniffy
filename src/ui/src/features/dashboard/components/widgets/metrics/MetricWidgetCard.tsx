@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { WarningCircle } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
+import { useProjectNames } from "@/features/dashboard/hooks/useProjectNames";
 import { WidgetCard, WidgetSkeleton } from "@/features/dashboard/components/widgets/WidgetCard";
 import type { DashboardWidget } from "@/features/dashboard/types";
 import { describeFilters } from "@/features/dashboard/utils/layout";
@@ -33,10 +33,10 @@ export function MetricWidgetCard({
   children,
   skeleton = "list",
 }: MetricWidgetCardProps) {
-  const projects = useAppSelector((state) => state.projects.projects);
-  const names = widget.filters.projectIds
-    .map((id) => projects[id]?.name)
-    .filter((name): name is string => Boolean(name));
+  const known = useProjectNames(
+    widget.filters.projects === "selected" ? widget.filters.projectIds : [],
+  );
+  const names = widget.filters.projectIds.flatMap((id) => (known[id] ? [known[id]] : []));
   const subtitle = describeFilters(widget.filters, names) || undefined;
 
   return (

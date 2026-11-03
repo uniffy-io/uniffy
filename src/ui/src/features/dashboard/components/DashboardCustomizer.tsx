@@ -15,6 +15,8 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useAppSelector } from "@/app/hooks";
+import { useProjectNames } from "@/features/dashboard/hooks/useProjectNames";
+import { useProjectSearch } from "@/features/dashboard/hooks/useProjectSearch";
 import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,11 +176,22 @@ const SPRINT_OPTIONS = (Object.keys(FILTER_LABELS.sprint) as SprintScope[]).map(
 }));
 
 function FilterEditor({ label, filters, onClose, onSave }: FilterEditorProps) {
-  const projects = useAppSelector((state) => state.projects.projects);
+  const loaded = useAppSelector((state) => state.projects.projects);
   const [draft, setDraft] = useState<WidgetFilters>(filters);
-  const projectOptions = Object.values(projects)
-    .map((project) => ({ value: project.id, label: project.name }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+  const [query, setQuery] = useState("");
+  const hits = useProjectSearch(query);
+  const pickedNames = useProjectNames(draft.projectIds);
+  // Picked projects stay listed so their chips render; the rest come from the server search,
+  // or from the loaded project list before anything is typed.
+  const projectOptions = [
+    ...draft.projectIds.map((id) => ({ value: id, label: pickedNames[id] ?? "Project" })),
+    ...(query.trim()
+      ? hits.map((hit) => ({ value: hit.id, label: hit.name }))
+      : Object.values(loaded)
+          .map((project) => ({ value: project.id, label: project.name }))
+          .sort((a, b) => a.label.localeCompare(b.label))
+    ).filter((option) => !draft.projectIds.includes(option.value)),
+  ];
   const invalid = draft.projects === "selected" && draft.projectIds.length === 0;
 
   return (
@@ -205,6 +218,8 @@ function FilterEditor({ label, filters, onClose, onSave }: FilterEditorProps) {
                 options={projectOptions}
                 placeholder="Pick projects"
                 searchable
+                searchPlaceholder="Search projects"
+                onQueryChange={setQuery}
                 ariaLabel="Selected projects"
               />
             )}
@@ -276,7 +291,11 @@ export function DashboardCustomizerPanel({
   onMove,
   onReset,
 }: DashboardCustomizerPanelProps) {
-  const projects = useAppSelector((state) => state.projects.projects);
+  const projectNames = useProjectNames(
+    widgets.flatMap((widget) =>
+      widget.filters.projects === "selected" ? widget.filters.projectIds : [],
+    ),
+  );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
@@ -341,9 +360,9 @@ export function DashboardCustomizerPanel({
         {widgets.map((widget, index) => {
           const type = types.get(widget.id);
           if (!type) return null;
-          const names = widget.filters.projectIds
-            .map((id) => projects[id]?.name)
-            .filter((name): name is string => Boolean(name));
+          const names = widget.filters.projectIds.flatMap((id) =>
+            projectNames[id] ? [projectNames[id]] : [],
+          );
           const summary = type.filterable ? describeFilters(widget.filters, names) : "";
           return (
             <li

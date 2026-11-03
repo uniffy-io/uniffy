@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowCounterClockwise, Check, SquaresFour, X } from "@phosphor-icons/react";
 import { useState } from "react";
-import { useAppSelector } from "@/app/hooks";
+import { useProjectNames } from "@/features/dashboard/hooks/useProjectNames";
 import { Button } from "@/components/ui/button";
 import { DashboardNameField } from "@/features/dashboard/components/DashboardNameField";
 import { useDashboardProposal } from "@/features/dashboard/hooks/useDashboardProposal";
@@ -9,9 +9,13 @@ import { describeFilters, type DashboardProposal } from "@/features/dashboard/ut
 
 /** Preview of a layout an agent drafted; nothing changes until the viewer applies it. */
 export function DashboardProposalCard({ proposal }: { proposal: DashboardProposal }) {
-  const { catalog, saving, state, sameOrganization, apply, undo, discard } =
+  const { catalog, saving, state, sameOrganization, apply, undo, canUndo, discard } =
     useDashboardProposal(proposal);
-  const projects = useAppSelector((s) => s.projects.projects);
+  const projectNames = useProjectNames(
+    proposal.definition.widgets.flatMap((widget) =>
+      widget.filters.projects === "selected" ? widget.filters.projectIds : [],
+    ),
+  );
   const [draftName, setDraftName] = useState(proposal.definition.name);
   const labels = new Map(catalog?.widgets.map((widget) => [widget.id, widget.label]) ?? []);
 
@@ -52,9 +56,9 @@ export function DashboardProposalCard({ proposal }: { proposal: DashboardProposa
 
       <ol className="mt-3 space-y-1">
         {proposal.definition.widgets.map((widget, index) => {
-          const names = widget.filters.projectIds
-            .map((id) => projects[id]?.name)
-            .filter((name): name is string => Boolean(name));
+          const names = widget.filters.projectIds.flatMap((id) =>
+            projectNames[id] ? [projectNames[id]] : [],
+          );
           const summary = describeFilters(widget.filters, names);
           return (
             <li key={widget.id} className="flex items-baseline gap-2 text-xs">
@@ -80,7 +84,14 @@ export function DashboardProposalCard({ proposal }: { proposal: DashboardProposa
             <Link to="/" className="text-xs font-medium text-primary hover:text-primary/80">
               Open dashboard
             </Link>
-            <Button variant="ghost" size="sm" onClick={() => void undo()} disabled={saving}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void undo()}
+              disabled={saving || !canUndo}
+              title={canUndo ? undefined : "The dashboard changed after this was applied"}
+              data-testid="dashboard-proposal-undo"
+            >
               <ArrowCounterClockwise size={12} />
               Undo
             </Button>

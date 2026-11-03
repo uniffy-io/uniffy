@@ -1,4 +1,4 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import {
   type FetchMetricArgs,
@@ -12,10 +12,17 @@ import type { DashboardCatalog, SavedDashboard, TaskMetrics } from "@/features/d
 
 type LoadStatus = "idle" | "loading" | "ready" | "failed";
 
+/** Results no widget shows any more are kept for a quick return, up to this many. */
+export const MAX_UNMOUNTED_METRICS = 12;
+
 interface MetricEntry {
   status: LoadStatus;
   data?: TaskMetrics;
   args?: FetchMetricArgs;
+  /** Widgets on screen showing this result; refresh and invalidation reach only these. */
+  mounted: number;
+  /** Order the entry lost its last widget in, so the oldest unused result goes first. */
+  releasedAt?: number;
 }
 
 interface DashboardState {
@@ -25,6 +32,8 @@ interface DashboardState {
   savedStatus: LoadStatus;
   saving: boolean;
   metrics: Record<string, MetricEntry>;
+  metricsGeneration: number;
+  releaseCounter: number;
 }
 
 const initialState: DashboardState = {
@@ -34,12 +43,53 @@ const initialState: DashboardState = {
   savedStatus: "idle",
   saving: false,
   metrics: {},
+  metricsGeneration: 0,
+  releaseCounter: 0,
 };
+
+function pruneUnmounted(state: DashboardState): void {
+  const released = Object.entries(state.metrics)
+    .filter(([, entry]) => entry.mounted === 0)
+    .sort(([, a], [, b]) => (a.releasedAt ?? 0) - (b.releasedAt ?? 0));
+  for (const [key] of released.slice(0, Math.max(0, released.length - MAX_UNMOUNTED_METRICS))) {
+    delete state.metrics[key];
+  }
+}
 
 const dashboardSlice = createSlice({
   name: "dashboard",
   initialState,
-  reducers: {},
+  reducers: {
+    metricMounted(state, action: PayloadAction<string>) {
+      const entry = state.metrics[action.payload];
+      if (entry) {
+        entry.mounted += 1;
+        entry.releasedAt = undefined;
+      } else {
+        state.metrics[action.payload] = { status: "idle", mounted: 1 };
+      }
+    },
+    metricUnmounted(state, action: PayloadAction<string>) {
+      const entry = state.metrics[action.payload];
+      if (!entry) return;
+      entry.mounted = Math.max(0, entry.mounted - 1);
+      if (entry.mounted > 0) return;
+      state.releaseCounter += 1;
+      entry.releasedAt = state.releaseCounter;
+      pruneUnmounted(state);
+    },
+    /** Project access changed: drop every cached result and any answer already on its way. */
+    metricsInvalidated(state) {
+      state.metricsGeneration += 1;
+      for (const [key, entry] of Object.entries(state.metrics)) {
+        if (entry.mounted > 0) {
+          state.metrics[key] = { status: "idle", args: entry.args, mounted: entry.mounted };
+        } else {
+          delete state.metrics[key];
+        }
+      }
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchDashboardCatalog.pending, (state) => {
@@ -80,33 +130,37 @@ const dashboardSlice = createSlice({
     builder
       .addCase(fetchTaskMetric.pending, (state, action) => {
         const key = action.meta.arg.key;
+        const entry = state.metrics[key];
         state.metrics[key] = {
           status: "loading",
-          data: state.metrics[key]?.data,
+          data: entry?.data,
           args: action.meta.arg,
+          mounted: entry?.mounted ?? 0,
+          releasedAt: entry?.releasedAt,
         };
       })
       .addCase(fetchTaskMetric.fulfilled, (state, action) => {
-        state.metrics[action.meta.arg.key] = {
-          status: "ready",
-          data: action.payload,
-          args: action.meta.arg,
-        };
+        const entry = state.metrics[action.meta.arg.key];
+        // Started before an access change or after its widget went away: the answer is dropped.
+        if (!entry || action.payload.generation !== state.metricsGeneration) return;
+        entry.status = "ready";
+        entry.data = action.payload.metrics;
+        entry.args = action.meta.arg;
       })
       .addCase(fetchTaskMetric.rejected, (state, action) => {
-        const key = action.meta.arg.key;
-        state.metrics[key] = {
-          status: "failed",
-          data: state.metrics[key]?.data,
-          args: action.meta.arg,
-        };
+        const entry = state.metrics[action.meta.arg.key];
+        if (!entry) return;
+        entry.status = "failed";
+        entry.args = action.meta.arg;
       });
   },
 });
 
 export const dashboardReducer = dashboardSlice.reducer;
+export const { metricMounted, metricUnmounted, metricsInvalidated } = dashboardSlice.actions;
 
 export const selectDashboardCatalog = (state: RootState) => state.dashboard.catalog;
+export const selectDashboardCatalogStatus = (state: RootState) => state.dashboard.catalogStatus;
 export const selectSavedDashboard = (state: RootState) => state.dashboard.saved;
 export const selectSavedDashboardStatus = (state: RootState) => state.dashboard.savedStatus;
 export const selectDashboardSaving = (state: RootState) => state.dashboard.saving;

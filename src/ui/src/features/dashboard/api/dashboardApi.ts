@@ -1,5 +1,6 @@
 import { createClient } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
+import { healthStats } from "@/features/projects/utils/projectHealth";
 import { SettingsService } from "@uniffy/proto/settings/v1/settings_pb";
 import {
   DashboardPeopleScope,
@@ -150,6 +151,13 @@ function metricsFromProto(response: GetTaskMetricsResponse): TaskMetrics {
       inProgress: row.inProgress,
       review: row.review,
       completed: row.completed,
+      health: healthStats(
+        row.topLevelTotal,
+        row.topLevelCompleted,
+        row.overdue,
+        Number(row.estimatedMinutes),
+        Number(row.timeSpentMinutes),
+      ),
     })),
     bugTrend: response.bugTrend.map((point) => ({
       date: point.date,
@@ -169,6 +177,9 @@ function metricsFromProto(response: GetTaskMetricsResponse): TaskMetrics {
         remaining: point.remaining,
       })),
     })),
+    projects: Object.fromEntries(
+      response.projects.map((project) => [project.id, { name: project.name, slug: project.slug }]),
+    ),
   };
 }
 

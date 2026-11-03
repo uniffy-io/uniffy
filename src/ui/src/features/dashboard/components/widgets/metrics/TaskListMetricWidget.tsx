@@ -1,11 +1,15 @@
 import { Link } from "react-router-dom";
 import type { Icon } from "@phosphor-icons/react";
 import { Eye, Prohibit, WarningCircle } from "@phosphor-icons/react";
-import { useAppSelector } from "@/app/hooks";
 import { EmptyWidget } from "@/features/dashboard/components/widgets/WidgetCard";
 import { MetricWidgetCard } from "@/features/dashboard/components/widgets/metrics/MetricWidgetCard";
 import { useTaskMetric } from "@/features/dashboard/hooks/useTaskMetric";
-import type { DashboardWidget, MetricTask, TaskMetricKind } from "@/features/dashboard/types";
+import type {
+  DashboardWidget,
+  MetricProjectRef,
+  MetricTask,
+  TaskMetricKind,
+} from "@/features/dashboard/types";
 import type { TaskListWidgetId } from "@/features/dashboard/utils/layout";
 import { taskPath } from "@/features/projects/utils/taskPath";
 import { cn } from "@/shared/utils/cn";
@@ -45,8 +49,7 @@ const CONFIG: Record<TaskListWidgetId, TaskListConfig> = {
   },
 };
 
-function MetricTaskRow({ task }: { task: MetricTask }) {
-  const project = useAppSelector((state) => state.projects.projects[task.projectId]);
+function MetricTaskRow({ task, project }: { task: MetricTask; project?: MetricProjectRef }) {
   const late = task.dueDate ? isOverdue(task.dueDate) : false;
   return (
     <Link
@@ -109,7 +112,7 @@ export function TaskListMetricWidget({
       ) : (
         <div className="space-y-0.5">
           {data?.items.map((task) => (
-            <MetricTaskRow key={task.taskId} task={task} />
+            <MetricTaskRow key={task.taskId} task={task} project={data?.projects[task.projectId]} />
           ))}
         </div>
       )}

@@ -17,6 +17,7 @@ import { DashboardWidgetView } from "@/features/dashboard/components/DashboardWi
 import { WidgetSkeleton } from "@/features/dashboard/components/widgets/WidgetCard";
 import { useDashboardRefresh } from "@/features/dashboard/hooks/useDashboardRefresh";
 import { useDashboardLayout } from "@/features/dashboard/hooks/useDashboardLayout";
+import { useMetricAccessInvalidation } from "@/features/dashboard/hooks/useMetricAccessInvalidation";
 import { ArrowsClockwise, WarningCircle, ArrowRight } from "@phosphor-icons/react";
 import { formatInTimeZone } from "date-fns-tz";
 import { effectiveDayKey, formatTimeInZone } from "@/shared/utils/dateFormatting";
@@ -76,6 +77,7 @@ export function Dashboard() {
     onManualRefresh: refresh,
   });
   const layout = useDashboardLayout();
+  useMetricAccessInvalidation();
 
   const { summary, overdueCount } = useContextualSummary();
   const [isOverdueDialogOpen, setIsOverdueDialogOpen] = useState(false);

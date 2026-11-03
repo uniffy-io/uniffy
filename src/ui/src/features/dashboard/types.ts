@@ -1,3 +1,5 @@
+import type { ProjectStats } from "@/features/projects/utils/projectHealth";
+
 export type ProjectScope = "all" | "my_projects" | "selected";
 export type PeopleScope = "everyone" | "me" | "my_teams";
 export type SprintScope = "any" | "active";
@@ -87,6 +89,8 @@ export interface ProjectStatusCounts {
   inProgress: number;
   review: number;
   completed: number;
+  /** Health inputs under the widget's filters, counted like the project rollup. */
+  health: ProjectStats;
 }
 
 export interface BugTrendDay {
@@ -113,6 +117,13 @@ export interface TaskMetrics {
   statusByProject: ProjectStatusCounts[];
   bugTrend: BugTrendDay[];
   sprints: SprintProgress[];
+  /** The projects the rows reference, by id; every one is readable by the viewer. */
+  projects: Record<string, MetricProjectRef>;
+}
+
+export interface MetricProjectRef {
+  name: string;
+  slug: string;
 }
 
 export const DEFAULT_FILTERS: WidgetFilters = {
