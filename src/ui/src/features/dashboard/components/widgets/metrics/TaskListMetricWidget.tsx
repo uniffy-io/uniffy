@@ -11,7 +11,7 @@ import type {
   TaskMetricKind,
 } from "@/features/dashboard/types";
 import type { TaskListWidgetId } from "@/features/dashboard/utils/layout";
-import { taskPath } from "@/features/projects/utils/taskPath";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 
@@ -53,7 +53,7 @@ function MetricTaskRow({ task, project }: { task: MetricTask; project?: MetricPr
   const late = task.dueDate ? isOverdue(task.dueDate) : false;
   return (
     <Link
-      to={taskPath(task.projectId, task.taskId)}
+      to={taskLinkPath(task.taskId)}
       className="group -mx-2 flex min-h-11 items-center gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50 lg:min-h-0"
     >
       <div className="min-w-0 flex-1">

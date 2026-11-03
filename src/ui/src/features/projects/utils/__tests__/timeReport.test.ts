@@ -7,6 +7,8 @@ import {
   dayTick,
   hoursTick,
   presetRange,
+  readTimeReportState,
+  timeReportSearchParams,
   rangeIsValid,
   shareOf,
 } from "@/features/projects/utils/timeReport";
@@ -16,6 +18,72 @@ const row = (key: string, minutes: number): AggregateRow => ({
   label: key,
   minutes,
   entries: 1,
+});
+
+describe("report URL state", () => {
+  const saved = { preset: null, from: "2026-09-01", to: "2026-10-20", groupBy: "task" as const };
+
+  it("restores the saved selection when reopening without report parameters", () => {
+    expect(
+      readTimeReportState(new URLSearchParams("source=project"), "2026-11-03", "monday", saved),
+    ).toEqual(saved);
+  });
+
+  it("lets explicit links override remembered selections", () => {
+    expect(
+      readTimeReportState(new URLSearchParams("groupBy=day"), "2026-11-03", "monday", saved),
+    ).toEqual({
+      preset: "month",
+      groupBy: "day",
+      from: "2026-10-07",
+      to: "2026-11-03",
+    });
+  });
+
+  it("defaults to four weeks grouped by person", () => {
+    expect(readTimeReportState(new URLSearchParams(), "2026-10-22", "monday")).toEqual({
+      preset: "month",
+      groupBy: "user",
+      from: "2026-09-25",
+      to: "2026-10-22",
+    });
+  });
+
+  it.each(["user", "task", "day"] as const)(
+    "restores %s grouping and exact dates after returning",
+    (groupBy) => {
+      const state = { preset: "quarter" as const, from: "2026-07-31", to: "2026-10-22", groupBy };
+      const params = timeReportSearchParams(new URLSearchParams("source=project"), state);
+      expect(params.get("source")).toBe("project");
+      expect(readTimeReportState(params, "2026-11-03", "sunday")).toEqual(state);
+    },
+  );
+
+  it("restores custom ranges including a cleared date", () => {
+    const state = { preset: null, from: "", to: "2026-10-22", groupBy: "task" as const };
+    const params = timeReportSearchParams(new URLSearchParams(), state);
+    expect(readTimeReportState(params, "2026-11-03", "monday")).toEqual(state);
+  });
+
+  it("rejects malformed dates and unsupported grouping", () => {
+    const params = new URLSearchParams("preset=week&from=2026-02-30&to=bad&groupBy=other");
+    expect(readTimeReportState(params, "2026-10-22", "monday")).toEqual({
+      preset: "week",
+      groupBy: "user",
+      from: "2026-10-19",
+      to: "2026-10-25",
+    });
+  });
+
+  it("treats explicit dates without a preset as custom", () => {
+    const params = new URLSearchParams("from=2026-10-01&to=2026-10-15&groupBy=day");
+    expect(readTimeReportState(params, "2026-11-03", "monday")).toEqual({
+      preset: null,
+      groupBy: "day",
+      from: "2026-10-01",
+      to: "2026-10-15",
+    });
+  });
 });
 
 describe("presetRange", () => {

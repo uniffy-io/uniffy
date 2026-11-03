@@ -25,7 +25,6 @@ import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { DIRECTORY_MEMBERS_PAGE_SIZE, fetchMembers } from "@/features/admin";
 import {
   selectIsDetailPanelOpen,
-  selectDetailViewMode,
   selectIsSidebarOpen,
   selectSelectedTaskId,
   toggleSidebar,
@@ -35,6 +34,7 @@ import {
 import { selectCurrentProject, selectProjects } from "@/features/projects/store/projectsSlice";
 import { selectActiveDefinition, selectActiveView } from "@/features/projects/store/viewSelectors";
 import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
+import type { TaskOpenView } from "@/features/projects/utils/taskPath";
 import {
   CollapsibleSidebarRail,
   type SidebarSection,
@@ -46,7 +46,7 @@ const PROJECTS_SECTIONS: SidebarSection[] = [
   { id: "organization", icon: Buildings, label: "Organization" },
 ];
 
-export function ProjectsLayout() {
+export function ProjectsLayout({ taskView }: { taskView: TaskOpenView }) {
   const dispatch = useAppDispatch();
   const { isMobile, isMobileOrTablet } = useBreakpoint();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -95,13 +95,11 @@ export function ProjectsLayout() {
 
   // Responsive panel mode
   const sidebarAsDrawer = isMobile;
-  const detailViewMode = useAppSelector(selectDetailViewMode);
-  // Use modal for mobile/tablet always, or when user prefers modal on desktop
-  const useModalForDetail = isMobileOrTablet || detailViewMode === "modal";
+  const useModalForDetail = isMobileOrTablet || taskView === "modal";
 
   // Determine if we should show each panel
   const showSidebar = !isZenMode && isSidebarOpen;
-  const showDetailPanel = !isZenMode && isDetailPanelOpen && selectedTaskId;
+  const showDetailPanel = taskView !== "page" && isDetailPanelOpen && selectedTaskId;
   const showCollapsedRail = !isZenMode && !isSidebarOpen && !sidebarAsDrawer;
 
   const handleCloseDetailPanel = () => {
@@ -192,7 +190,7 @@ export function ProjectsLayout() {
                 maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
                 className="bg-background"
               >
-                <TaskDetailPanel taskId={selectedTaskId} />
+                <TaskDetailPanel taskId={selectedTaskId} view={taskView} />
               </Panel>
             </>
           )}
@@ -214,7 +212,7 @@ export function ProjectsLayout() {
 
       {/* Detail modal (modal mode on desktop, or always on mobile/tablet) */}
       {showDetailPanel && useModalForDetail && selectedTaskId && (
-        <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} />
+        <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} view={taskView} />
       )}
 
       {/* Modals */}

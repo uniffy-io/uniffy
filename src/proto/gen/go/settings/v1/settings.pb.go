@@ -1120,8 +1120,10 @@ type AppearanceSettings struct {
 	WeekStart *string `protobuf:"bytes,11,opt,name=week_start,json=weekStart,proto3,oneof" json:"week_start,omitempty"`
 	// Task fields shown as pills under the task title; unset means the default set
 	TaskPinnedFields *TaskPinnedFields `protobuf:"bytes,12,opt,name=task_pinned_fields,json=taskPinnedFields,proto3,oneof" json:"task_pinned_fields,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Default task presentation: "panel", "modal", "page"
+	TaskOpenView  *string `protobuf:"bytes,13,opt,name=task_open_view,json=taskOpenView,proto3,oneof" json:"task_open_view,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AppearanceSettings) Reset() {
@@ -1236,6 +1238,13 @@ func (x *AppearanceSettings) GetTaskPinnedFields() *TaskPinnedFields {
 		return x.TaskPinnedFields
 	}
 	return nil
+}
+
+func (x *AppearanceSettings) GetTaskOpenView() string {
+	if x != nil && x.TaskOpenView != nil {
+		return *x.TaskOpenView
+	}
+	return ""
 }
 
 // A wrapper so an empty list (nothing pinned) differs from "not set"
@@ -1686,7 +1695,7 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\rnotifications\x18\x03 \x01(\v2\".settings.v1.NotificationsSettingsR\rnotifications\x12?\n" +
 	"\n" +
 	"scheduling\x18\x04 \x01(\v2\x1f.settings.v1.SchedulingSettingsR\n" +
-	"scheduling\"\xa8\x06\n" +
+	"scheduling\"\xe6\x06\n" +
 	"\x12AppearanceSettings\x12\x19\n" +
 	"\x05theme\x18\x01 \x01(\tH\x00R\x05theme\x88\x01\x01\x12&\n" +
 	"\faccent_color\x18\x02 \x01(\tH\x01R\vaccentColor\x88\x01\x01\x12$\n" +
@@ -1703,7 +1712,8 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\n" +
 	"week_start\x18\v \x01(\tH\n" +
 	"R\tweekStart\x88\x01\x01\x12P\n" +
-	"\x12task_pinned_fields\x18\f \x01(\v2\x1d.settings.v1.TaskPinnedFieldsH\vR\x10taskPinnedFields\x88\x01\x01B\b\n" +
+	"\x12task_pinned_fields\x18\f \x01(\v2\x1d.settings.v1.TaskPinnedFieldsH\vR\x10taskPinnedFields\x88\x01\x01\x12)\n" +
+	"\x0etask_open_view\x18\r \x01(\tH\fR\ftaskOpenView\x88\x01\x01B\b\n" +
 	"\x06_themeB\x0f\n" +
 	"\r_accent_colorB\x0e\n" +
 	"\f_font_familyB\x14\n" +
@@ -1715,7 +1725,8 @@ const file_settings_v1_settings_proto_rawDesc = "" +
 	"\x1b_markdown_show_line_numbersB\v\n" +
 	"\t_timezoneB\r\n" +
 	"\v_week_startB\x15\n" +
-	"\x13_task_pinned_fields\"/\n" +
+	"\x13_task_pinned_fieldsB\x11\n" +
+	"\x0f_task_open_view\"/\n" +
 	"\x10TaskPinnedFields\x12\x1b\n" +
 	"\tfield_ids\x18\x01 \x03(\tR\bfieldIds\"\xa2\x01\n" +
 	"\x12SchedulingSettings\x12(\n" +

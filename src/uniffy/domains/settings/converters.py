@@ -135,6 +135,9 @@ def appearance_dict_to_proto(settings: dict[str, Any] | None) -> ProtoAppearance
     if settings.get("week_start") is not None:
         proto.week_start = settings["week_start"]
 
+    if settings.get("task_open_view") is not None:
+        proto.task_open_view = settings["task_open_view"]
+
     pinned = settings.get("task_pinned_fields")
     if pinned is not None:
         # Set even when empty: pinning nothing is a choice, not an absent preference.
@@ -256,6 +259,9 @@ def appearance_from_proto(proto: ProtoAppearance | None) -> dict[str, Any] | Non
 
     if proto.has_field("task_pinned_fields"):
         result["task_pinned_fields"] = list(proto.task_pinned_fields.field_ids)
+
+    if proto.has_field("task_open_view"):
+        result["task_open_view"] = proto.task_open_view
 
     return result if result else None
 

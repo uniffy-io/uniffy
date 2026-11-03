@@ -236,6 +236,8 @@ message AppearanceSettings {
   optional string week_start = 11;
   // Task fields shown as pills under the task title; unset means the default set
   optional TaskPinnedFields task_pinned_fields = 12;
+  // Default task presentation: "panel", "modal", "page"
+  optional string task_open_view = 13;
 }
 
 // A wrapper so an empty list (nothing pinned) differs from "not set"

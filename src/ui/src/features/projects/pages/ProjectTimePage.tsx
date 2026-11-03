@@ -3,7 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import { CaretLeft, ClockCountdown } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { PaneBackLink, PaneHeader, PaneHeaderBar } from "@/components/ui/pane-header";
+import {
+  PaneBackLink,
+  PaneHeader,
+  PaneHeaderBar,
+  PaneHeaderControls,
+} from "@/components/ui/pane-header";
+import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 import { roleCanView } from "@/shared/utils/contentRoles";
@@ -22,6 +28,7 @@ export function ProjectTimePage() {
   const { projectId = "" } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { isWide } = useBreakpoint();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const selectProject = useMemo(() => selectProjectById(projectId), [projectId]);
   const project = useAppSelector(selectProject);
@@ -73,25 +80,34 @@ export function ProjectTimePage() {
           <TimeReport
             projectId={project.id}
             renderHeader={(controls) => (
-              <PaneHeaderBar
-                divided
-                icon={<ClockCountdown size={16} />}
-                title="Time"
-                subtitle={`Logged on ${project.name}`}
-                eyebrow={
-                  <PaneBackLink onClick={() => navigate(`/projects/${projectId}`)}>
-                    <CaretLeft size={12} />
-                    {project.name}
-                  </PaneBackLink>
-                }
-              >
-                {controls}
-              </PaneHeaderBar>
+              <>
+                <PaneHeaderBar
+                  compact
+                  divided={!isWide}
+                  icon={<ClockCountdown size={16} />}
+                  title="Time"
+                  leading={
+                    <>
+                      <PaneBackLink
+                        onClick={() => navigate(`/projects/${projectId}`)}
+                        className="max-w-48 shrink-0"
+                      >
+                        <CaretLeft size={12} className="shrink-0" />
+                        <span className="truncate">{project.name}</span>
+                      </PaneBackLink>
+                      <span className="h-4 w-px shrink-0 bg-border" aria-hidden="true" />
+                    </>
+                  }
+                >
+                  {isWide && controls}
+                </PaneHeaderBar>
+                {!isWide && <PaneHeaderControls>{controls}</PaneHeaderControls>}
+              </>
             )}
           />
         ) : (
           <PaneHeader>
-            <PaneHeaderBar icon={<ClockCountdown size={16} />} title="Time" subtitle="Loading..." />
+            <PaneHeaderBar compact icon={<ClockCountdown size={16} />} title="Time" />
             <div className="animate-pulse space-y-4 p-4" data-testid="report-loading">
               <div className="h-8 w-64 rounded bg-muted" />
               <div className="h-60 rounded-lg bg-muted" />

@@ -1,11 +1,8 @@
 import type { MouseEvent, ReactNode } from "react";
-import { taskPagePath } from "@/features/projects/utils/taskPath";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { cn } from "@/shared/utils/cn";
 
-/**
- * A task title as a real link: a plain click is left to the host (it opens the panel), while
- * Ctrl, Cmd, Shift or a middle click opens the full page through the browser.
- */
+/** Modified clicks follow the task link without selecting the host row. */
 export function TaskTitleLink({
   taskId,
   className,
@@ -25,7 +22,7 @@ export function TaskTitleLink({
   };
   return (
     <a
-      href={taskPagePath(taskId)}
+      href={taskLinkPath(taskId)}
       onClick={onClick}
       draggable={false}
       className={cn("text-inherit no-underline", className)}

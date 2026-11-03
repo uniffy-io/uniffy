@@ -2,11 +2,7 @@ import * as React from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 
-/**
- * The header band of a content pane (projects, notifications, agents, ...):
- * a bar with a leading icon, title, subtitle, and right-aligned actions, plus
- * an optional controls row beneath it. One shell so every domain reads alike.
- */
+/** Keeps pane titles, actions and controls in one shared header shell. */
 export function PaneHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
@@ -27,6 +23,7 @@ interface PaneHeaderBarProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
   eyebrow?: React.ReactNode;
   /** Draws the seam under the bar when a controls row follows. */
   divided?: boolean;
+  compact?: boolean;
 }
 
 function isPhosphorIcon(icon: PaneHeaderBarProps["icon"]): icon is Icon {
@@ -42,6 +39,7 @@ export function PaneHeaderBar({
   subtitle,
   eyebrow,
   divided = false,
+  compact = false,
   className,
   children,
   ...props
@@ -58,7 +56,12 @@ export function PaneHeaderBar({
       {eyebrow && (
         <div className="flex items-center gap-3 px-3 pt-2 md:px-4 md:pt-3">{eyebrow}</div>
       )}
-      <div className="flex items-center gap-2 px-3 py-2 md:gap-3 md:px-4 md:py-3">
+      <div
+        className={cn(
+          "flex items-center gap-2 px-3 md:gap-3 md:px-4",
+          compact ? "py-1" : "py-2 md:py-3",
+        )}
+      >
         {leading}
         {iconNode}
         <div className="min-w-0 flex-1">

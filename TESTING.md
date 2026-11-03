@@ -2912,6 +2912,10 @@ Use two browsers, one per person.
       description with a single scroll. A pinned field appears only as a pill; unpin it and it
       moves back into More fields.
 - [ ] The Activity filter sits on the Activity heading row and still filters the list.
+- [ ] In side panel, modal and full page, Description > Edit opens the rich editor inside the
+      description area. No extra overlay appears. Formatting, mentions and uploads stay available.
+      Done returns to preview with saved text. Escape finishes editing without closing the task.
+      Reopen and reload to verify persistence. Empty descriptions open the same inline editor.
 - [ ] Open the pin menu next to the pills: pin Tags and Sprint, unpin Priority. The pills follow
       at once, the change survives a reload, and the other browser signed in as you shows the
       same pins. Six pins is the limit; the rest of the menu greys out. Unpin everything and the
@@ -2923,15 +2927,21 @@ Use two browsers, one per person.
       Expand. Expand opens a View only window with no toolbar; closing it sends no update. Keep
       it open while the editor changes the description: the text updates after the save (about
       ten seconds) without reopening.
-- [ ] Ctrl or Cmd click a task title in the table or on a board card: the full page opens in a
-      new tab and the original tab neither opens the panel nor changes the selection. A middle
-      click does the same. A plain click still opens the panel.
-- [ ] Open full page from the panel or modal header. Previous and next walk the list the view
-      showed (table rows, or the board column by column) and stop at either end. Back returns to
-      the view with the task still open.
-- [ ] Open a task from an `@` mention, a notification and a search result: each opens the task
-      inside its project, in the panel or modal you use there. Only "Open full page" and a new
-      tab from a task title open the full page.
+- [ ] Personal settings > Appearance > Open tasks in: choose Side panel, Modal and Full page.
+      Each choice survives reload and applies in another browser signed in as you.
+- [ ] Plain click a task title: it opens using your preference. Ctrl, Cmd or middle click opens
+      its canonical link in another tab without selecting a task in the original tab.
+- [ ] Task header > Task view switches between all three views without changing your default.
+      Make default saves the current view. Copy task link copies `/projects/task/:id` without
+      a view override, so recipients use their own preference.
+- [ ] `/projects/task/:id?view=panel`, `?view=modal` and `?view=page` override your preference
+      and survive reload. Panel and modal links load the parent project behind the task.
+      Existing `/projects/task/:id/page` and `/projects/:projectId/tasks/:taskId` links still work.
+- [ ] Switch from a filtered project view into a task and then Full page. Previous and next walk
+      the visible task order. Back returns to the originating project view. Switching between
+      task views preserves the saved project view, and browser Back does not reopen a closed task.
+- [ ] Open a task from an `@` mention, a notification, dashboard and search: each uses your
+      preference. Invalid view values fall back to that preference.
 - [ ] The full page edits the description live like the panel (Synced, then Saved), the tab title
       reads "KEY-12 Task title | Uniffy", and Ctrl+\ (Zen Mode) hides the app header.
 - [ ] As someone without access, open a task address: the lock state offers Request access and
@@ -2939,7 +2949,7 @@ Use two browsers, one per person.
       Sending the request lists it for the project's managers. A task in another of your
       organizations offers to switch, with "Stay here" on one line, and switching opens it.
 - [ ] New task: Enter in the title creates the task and stays on the project; Create and open
-      lands on the new task's full page.
+      uses your task view preference.
 - [ ] 1280px, 768px and 375px, light and dark: no horizontal scroll, pills wrap, the pin menu is a
       bottom sheet on a phone. `(both products)`
 
@@ -3508,6 +3518,12 @@ they belong to; with neither, org admins review.
       mark days off; Add entry picks a task from this week, the internal project or a search and
       logs it on the chosen day; tapping an entry edits it; the bin deletes it after a confirm; the
       week refreshes after a timer stops. (`(both products)`)
+- [ ] Project Time report: choose Task grouping and a date preset or custom range, open a task,
+      then use task Back or browser Back. Grouping and exact dates remain selected. Reload keeps
+      them too. Repeat with Person and Day grouping; copied report URLs restore their selection.
+- [ ] Leave Time report for the project, then reopen Time from its header. Last grouping and
+      range return even without URL parameters. A fresh load of the plain Time URL does too.
+      Other projects keep separate selections; explicit report URLs override saved preferences.
 - [ ] Project header > Time report (`/projects/:id/time`): This week, 4 weeks and 12 weeks change
       the range; grouping by person, task and day keeps the same total; the total matches the sum
       of the task worklog lists in range. A member without access to the project lands on

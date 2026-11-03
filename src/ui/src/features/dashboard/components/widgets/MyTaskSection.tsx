@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/shared/utils/cn";
 import { formatDateShort } from "@/shared/utils/dateFormatting";
-import { taskPath } from "@/features/projects/utils/taskPath";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import type { Project, Task } from "@/features/projects/types/project";
 
 export type MyTaskTone = "overdue" | "today" | "upcoming";
@@ -33,7 +33,7 @@ function MyTaskRow({
 
   return (
     <Link
-      to={taskPath(task.projectId, task.id)}
+      to={taskLinkPath(task.id)}
       className="group flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted/50"
     >
       <div className={cn("w-4 h-4 rounded border-2 flex-shrink-0", TONE_BORDER[tone])} />

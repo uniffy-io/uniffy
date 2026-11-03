@@ -42,13 +42,16 @@ interface TaskPinnedFieldsProps {
   canEdit: boolean;
 }
 
+const pinnedControlClass =
+  "focus-ring inline-flex h-7 min-h-11 md:min-h-0 touch:min-h-11 items-center gap-2 rounded-md -mx-2 border-0 bg-transparent px-2 py-0 text-[13px] font-normal shadow-none transition-colors hover:bg-muted/50";
+
 function Pin({ field, children }: { field: PinnableTaskField; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1" data-testid={`task-pin-${field}`}>
+    <div className="flex min-w-0 flex-col gap-0.5" data-testid={`task-pin-${field}`}>
       <span className="text-[11px] font-medium text-subtle-foreground">
         {PINNABLE_TASK_FIELD_LABELS[field]}
       </span>
-      <div className="flex min-h-7 items-center">{children}</div>
+      <div className="flex min-h-11 md:min-h-7 touch:min-h-11 items-center">{children}</div>
     </div>
   );
 }
@@ -74,7 +77,7 @@ function TypePin({
         type="button"
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        className="focus-ring inline-flex items-center gap-1.5 rounded-md px-2 py-1 -mx-2 text-sm text-foreground transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className={cn(pinnedControlClass, "text-foreground disabled:cursor-not-allowed")}
       >
         <TaskTypeIcon type={current?.value ?? "task"} size={14} />
         {current?.label ?? "Task"}
@@ -110,11 +113,7 @@ function TypePin({
   );
 }
 
-/**
- * Saves pin changes one at a time and always sends the latest list, so quick toggles cannot
- * land out of order. One refetch at the end settles the pills on what the server kept, which
- * also rolls back a save it refused.
- */
+/** Serializes pin updates so quick toggles cannot save out of order. */
 function usePinnedFieldsSave() {
   const dispatch = useAppDispatch();
   const inFlight = useRef(false);
@@ -154,7 +153,7 @@ function PinMenu({ pinned }: { pinned: PinnableTaskField[] }) {
         onClick={() => setOpen((value) => !value)}
         aria-label="Choose pinned fields"
         title="Choose pinned fields"
-        className="focus-ring inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="focus-ring mt-4 inline-flex size-8 shrink-0 touch:size-11 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         data-testid="task-pin-menu"
       >
         <PushPin size={14} />
@@ -187,7 +186,6 @@ function PinMenu({ pinned }: { pinned: PinnableTaskField[] }) {
   );
 }
 
-/** The fields this person pinned, editable in place, right under the task title. */
 export function TaskPinnedFields({
   task,
   project,
@@ -207,6 +205,8 @@ export function TaskPinnedFields({
       case "status":
         return statusOption && statusField ? (
           <StatusPicker
+            appearance="plain"
+            triggerClassName={pinnedControlClass}
             currentOption={statusOption}
             options={(statusField.config.options ?? []) as SelectOption[]}
             onSelect={(status) => update({ status })}
@@ -216,6 +216,8 @@ export function TaskPinnedFields({
       case "priority":
         return priorityOption && priorityField ? (
           <PriorityPicker
+            appearance="plain"
+            triggerClassName={pinnedControlClass}
             currentOption={priorityOption}
             options={(priorityField.config.options ?? []) as SelectOption[]}
             onSelect={(priority) => update({ priority })}
@@ -225,6 +227,7 @@ export function TaskPinnedFields({
       case "assignees":
         return (
           <AssigneeField
+            triggerClassName={pinnedControlClass}
             assigneeIds={task.assigneeIds}
             onChange={(assigneeIds) => update({ assigneeIds })}
             disabled={!canEdit}
@@ -239,6 +242,7 @@ export function TaskPinnedFields({
             disabled={!canEdit}
             placeholder="No due date"
             triggerClassName={cn(
+              pinnedControlClass,
               !task.completedAt && task.dueDate && isOverdue(task.dueDate) && "text-destructive",
             )}
           />
@@ -251,11 +255,14 @@ export function TaskPinnedFields({
             onChange={(value) => update({ startDate: value || null })}
             disabled={!canEdit}
             placeholder="No start date"
+            triggerClassName={pinnedControlClass}
           />
         );
       case "tags":
         return (
           <TagPicker
+            triggerClassName={cn(pinnedControlClass, "mx-0 justify-center")}
+            chipClassName={cn(pinnedControlClass, "mx-0")}
             selectedTagIds={task.tagIds}
             onChange={(tagIds) => update({ tagIds })}
             disabled={!canEdit}
@@ -274,6 +281,7 @@ export function TaskPinnedFields({
       case "sprint":
         return sprints.length > 0 ? (
           <SprintSelector
+            triggerClassName={pinnedControlClass}
             sprints={sprints}
             currentSprintId={task.sprintId}
             onSelect={(sprintId) => update({ sprintId })}
@@ -283,6 +291,7 @@ export function TaskPinnedFields({
       case "estimate":
         return (
           <TimeField
+            triggerClassName={pinnedControlClass}
             compact
             label="Estimate"
             minutes={task.estimatedMinutes}
@@ -300,7 +309,7 @@ export function TaskPinnedFields({
 
   return (
     <div className="flex items-start gap-2" data-testid="task-pinned-fields">
-      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-5 gap-y-3">
+      <div className="flex min-w-0 flex-1 flex-wrap items-start gap-x-7 gap-y-3">
         {pins.map(({ field, control }) => (
           <Pin key={field} field={field}>
             {control}
@@ -311,11 +320,9 @@ export function TaskPinnedFields({
             <span className="text-[11px] font-medium text-subtle-foreground">Milestone</span>
             <Badge
               variant="secondary"
-              className="gap-1 self-start"
+              className={cn(pinnedControlClass, "self-start")}
               style={{
                 color: "var(--status-warning)",
-                borderColor: "color-mix(in srgb, var(--status-warning) 30%, transparent)",
-                backgroundColor: "color-mix(in srgb, var(--status-warning) 10%, transparent)",
               }}
             >
               <Diamond weight="fill" />

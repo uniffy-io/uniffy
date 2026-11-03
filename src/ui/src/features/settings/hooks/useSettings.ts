@@ -71,6 +71,7 @@ export function useAppearanceSettings() {
     timezone: effectiveSettings?.appearance.timezone ?? "",
     weekStart: effectiveSettings?.appearance.weekStart ?? "monday",
     taskPinnedFields: normalizePinnedFields(effectiveSettings?.appearance.taskPinnedFields),
+    taskOpenView: effectiveSettings?.appearance.taskOpenView ?? "panel",
   };
 }
 

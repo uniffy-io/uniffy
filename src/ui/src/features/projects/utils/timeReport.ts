@@ -1,7 +1,54 @@
-import type { AggregateGroupBy, AggregateRow } from "@/features/projects/types/time";
+import { isMatch } from "date-fns";
+import type {
+  AggregateGroupBy,
+  AggregateRow,
+  ReportPreset,
+  TimeReportState,
+} from "@/features/projects/types/time";
 import { addDays, weekStartOf, type WeekStart } from "@/features/projects/utils/timeWeek";
 
-export type ReportPreset = "week" | "month" | "quarter";
+export type { ReportPreset, TimeReportState } from "@/features/projects/types/time";
+
+export function readTimeReportState(
+  params: URLSearchParams,
+  today: string,
+  weekStart: WeekStart,
+  saved?: TimeReportState,
+): TimeReportState {
+  if (saved && !["preset", "from", "to", "groupBy"].some((key) => params.has(key))) {
+    return readTimeReportState(timeReportSearchParams(params, saved), today, weekStart);
+  }
+  const rawPreset = params.get("preset");
+  const preset =
+    rawPreset === "week" || rawPreset === "month" || rawPreset === "quarter"
+      ? rawPreset
+      : rawPreset === "custom" || params.has("from") || params.has("to")
+        ? null
+        : "month";
+  const fallback = presetRange(preset ?? "month", today, weekStart);
+  const date = (edge: "from" | "to") => {
+    const value = params.get(edge);
+    return value !== null && (value === "" || isMatch(value, "yyyy-MM-dd"))
+      ? value
+      : fallback[edge];
+  };
+  const groupBy = params.get("groupBy");
+  return {
+    preset,
+    from: date("from"),
+    to: date("to"),
+    groupBy: groupBy === "task" || groupBy === "day" ? groupBy : "user",
+  };
+}
+
+export function timeReportSearchParams(params: URLSearchParams, state: TimeReportState) {
+  const next = new URLSearchParams(params);
+  next.set("preset", state.preset ?? "custom");
+  next.set("from", state.from);
+  next.set("to", state.to);
+  next.set("groupBy", state.groupBy);
+  return next;
+}
 
 export const PRESET_LABEL: Record<ReportPreset, string> = {
   week: "This week",

@@ -6,9 +6,15 @@ interface AssigneeFieldProps {
   assigneeIds: string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  triggerClassName?: string;
 }
 
-export function AssigneeField({ assigneeIds, onChange, disabled }: AssigneeFieldProps) {
+export function AssigneeField({
+  assigneeIds,
+  onChange,
+  disabled,
+  triggerClassName,
+}: AssigneeFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -22,6 +28,7 @@ export function AssigneeField({ assigneeIds, onChange, disabled }: AssigneeField
         className={cn(
           "flex items-center gap-2 rounded-md px-2 py-1 -mx-2 text-sm transition-colors",
           disabled ? "cursor-not-allowed" : "cursor-pointer hover:bg-muted/50",
+          triggerClassName,
         )}
       >
         {assigneeIds.length > 0 ? (
@@ -37,6 +44,9 @@ export function AssigneeField({ assigneeIds, onChange, disabled }: AssigneeField
           value={assigneeIds}
           onChange={(ids) => onChange(ids)}
           portal
+          align="left"
+          dropdownWidth={320}
+          placeholder="Search assignees..."
           anchorRef={triggerRef}
           onClose={() => setIsOpen(false)}
           autoFocus

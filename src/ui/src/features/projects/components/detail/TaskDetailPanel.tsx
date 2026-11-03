@@ -1,6 +1,5 @@
-import { ArrowSquareOut, CaretRight, SidebarSimple, X } from "@phosphor-icons/react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useAppDispatch, useAppSelector } from "@/app/hooks";
+import { CaretRight, SidebarSimple, X } from "@phosphor-icons/react";
+import { useAppDispatch } from "@/app/hooks";
 import { PageLoader } from "@/components/feedback/PageLoader";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { WatchButton } from "@/features/projects/components/detail/fields/WatchButton";
@@ -11,23 +10,28 @@ import {
 } from "@/features/projects/components/detail/TaskUnavailable";
 import { TimerButton } from "@/features/projects/components/time/TimerButton";
 import { useTaskDetail } from "@/features/projects/hooks/useTaskDetail";
-import {
-  closeDetailPanel,
-  selectTask,
-  selectTaskNavigationOrder,
-} from "@/features/projects/store/projectsUiSlice";
-import type { TaskPageState } from "@/features/projects/utils/taskNavigation";
-import { taskPagePath } from "@/features/projects/utils/taskPath";
+import { useOpenTask } from "@/features/projects/hooks/useOpenTask";
+import { closeDetailPanel, selectTask } from "@/features/projects/store/projectsUiSlice";
+import type { TaskOpenView } from "@/features/projects/utils/taskPath";
+import { TaskViewMenu } from "@/features/projects/components/detail/TaskViewMenu";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 
 interface TaskDetailPanelProps {
   taskId: string;
   variant?: "sidebar" | "modal";
+  view?: TaskOpenView;
+  onClose?: () => void;
 }
 
-export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanelProps) {
+export function TaskDetailPanel({
+  taskId,
+  variant = "sidebar",
+  view = "panel",
+  onClose,
+}: TaskDetailPanelProps) {
   const dispatch = useAppDispatch();
+  const openTask = useOpenTask();
   const { isMobileOrTablet } = useBreakpoint();
   const {
     task,
@@ -44,19 +48,11 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
     retry,
   } = useTaskDetail(taskId);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const navigationOrder = useAppSelector(selectTaskNavigationOrder);
-  // Back on the page returns here, and the project page reopens this task from the address.
-  const openFullPage = () => {
-    const state: TaskPageState = {
-      order: navigationOrder.includes(taskId) ? navigationOrder : undefined,
-      from: `${location.pathname}${location.search}`,
-    };
-    navigate(taskPagePath(taskId), { state });
-  };
-
   const handleClose = () => {
+    if (onClose) {
+      onClose();
+      return;
+    }
     dispatch(closeDetailPanel());
     dispatch(selectTask(null));
   };
@@ -95,7 +91,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 border-b border-border">
+      <div className="flex items-center justify-between px-3 md:px-4 py-1 border-b border-border">
         <div className="flex items-center gap-2">
           {isMobileOrTablet && (
             <button
@@ -116,16 +112,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={openFullPage}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Open full page"
-            title="Open full page"
-            data-testid="task-open-full-page"
-          >
-            <ArrowSquareOut size={16} />
-          </button>
+          <TaskViewMenu taskId={task.id} projectId={task.projectId} view={view} />
           <TimerButton task={task} />
           <WatchButton taskId={task.id} />
           {!isMobileOrTablet && (
@@ -148,7 +135,7 @@ export function TaskDetailPanel({ taskId, variant = "sidebar" }: TaskDetailPanel
               <button
                 type="button"
                 className="font-mono hover:text-foreground hover:underline transition-colors truncate max-w-[150px]"
-                onClick={() => dispatch(selectTask(ancestor.id))}
+                onClick={() => openTask(ancestor.id)}
                 title={ancestor.title}
               >
                 {project?.slug}-{ancestor.number}

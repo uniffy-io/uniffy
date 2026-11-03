@@ -39,6 +39,7 @@ interface SubjectPickerProps {
   disabled?: boolean;
   autoFocus?: boolean;
   dropdownWidth?: number;
+  align?: "left" | "right";
   pinnedOptions?: SubjectPickerPinnedOption[];
 }
 
@@ -55,10 +56,13 @@ export function SubjectPicker({
   disabled = false,
   autoFocus = false,
   dropdownWidth = 240,
+  align = "right",
   pinnedOptions = [],
 }: SubjectPickerProps) {
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -81,9 +85,12 @@ export function SubjectPicker({
     const updatePosition = () => {
       const rect = anchorRef.current?.getBoundingClientRect();
       if (rect) {
+        const width = Math.min(dropdownWidth, window.innerWidth - 16);
+        const left = align === "left" ? rect.left : rect.right - width;
         setPosition({
           top: rect.bottom + 4,
-          left: rect.right - dropdownWidth,
+          left: Math.max(8, Math.min(left, window.innerWidth - width - 8)),
+          width,
         });
       }
     };
@@ -95,7 +102,7 @@ export function SubjectPicker({
       window.removeEventListener("scroll", updatePosition, true);
       window.removeEventListener("resize", updatePosition);
     };
-  }, [portal, anchorRef, dropdownWidth]);
+  }, [portal, anchorRef, dropdownWidth, align]);
 
   useEffect(() => {
     if (autoFocus || portal) {
@@ -223,7 +230,7 @@ export function SubjectPicker({
               position: "fixed",
               top: position.top,
               left: position.left,
-              width: dropdownWidth,
+              width: position.width,
             }
           : undefined
       }
@@ -243,7 +250,7 @@ export function SubjectPicker({
             onKeyDown={(e) => e.stopPropagation()}
             placeholder={placeholder || defaultPlaceholder}
             disabled={disabled}
-            className="flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
+            className="min-w-0 flex-1 text-sm bg-transparent outline-none text-foreground placeholder:text-subtle-foreground"
           />
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CaretDown, CaretUp, Kanban } from "@phosphor-icons/react";
+import { ArrowLeft, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { PageLoader } from "@/components/feedback/PageLoader";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -26,24 +26,36 @@ import { setCurrentProject } from "@/features/projects/store/projectsSlice";
 import { fetchProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { neighbours, readTaskPageState } from "@/features/projects/utils/taskNavigation";
-import { taskPagePath, taskPath, taskUrn } from "@/features/projects/utils/taskPath";
+import {
+  parseTaskOpenView,
+  taskLinkPath,
+  taskProjectPath,
+  taskUrn,
+} from "@/features/projects/utils/taskPath";
+import { ProjectsWorkspace } from "@/features/projects/pages/ProjectsPage";
+import { TaskViewMenu } from "@/features/projects/components/detail/TaskViewMenu";
+import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 
 interface TaskPageProps {
-  /** Links that only carry the task id hand over to the project view once the task loads. */
-  openInProject?: boolean;
+  fullPage?: boolean;
 }
 
-/**
- * A task as its own page: the same document layout as the panel, in a reading column. It also
- * owns the states a task link can land on: no access, deleted, or another organization.
- */
-export function TaskPage({ openInProject = false }: TaskPageProps) {
-  const { taskId = "" } = useParams<{ taskId: string }>();
+export function TaskPage({ fullPage = false }: TaskPageProps) {
+  const { taskId = "", projectId: routedProjectId } = useParams<{
+    taskId: string;
+    projectId?: string;
+  }>();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { taskOpenView } = useAppearanceSettings();
+  const settingsInitialized = useAppSelector((state) => state.settings.initialized);
+  const params = new URLSearchParams(location.search);
+  const explicitView = parseTaskOpenView(params.get("view"));
+  const view = fullPage ? "page" : (explicitView ?? taskOpenView);
+  const projectView = routedProjectId ? params.get("view") : params.get("projectView");
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
   const detail = useTaskDetail(taskId);
@@ -57,13 +69,13 @@ export function TaskPage({ openInProject = false }: TaskPageProps) {
 
   // Hosted outside the project page, so the project, its tasks and sprints load here.
   useEffect(() => {
-    if (!projectId || openInProject) return;
+    if (!projectId || view !== "page") return;
     dispatch(setCurrentProject(projectId));
     void dispatch(fetchProject(projectId));
     void dispatch(fetchSprints(projectId));
     const tasksLoad = dispatch(fetchProjectTasks(projectId));
     return () => tasksLoad.abort();
-  }, [dispatch, projectId, organizationId, openInProject]);
+  }, [dispatch, projectId, organizationId, view]);
 
   const { order, from } = readTaskPageState(location.state);
   const { prev, next } = neighbours(order, taskId);
@@ -71,15 +83,14 @@ export function TaskPage({ openInProject = false }: TaskPageProps) {
   useDocumentTitle(task ? `${ticketId} ${task.title}` : "Task");
 
   const goToTask = (id: string) =>
-    navigate(taskPagePath(id), { state: { order, from }, replace: true });
-  // A subtask or the parent opens as its own page; Back still returns to where this one came from.
+    navigate(taskLinkPath(id, view, projectView), { state: { order, from }, replace: true });
   const openTask = useCallback(
-    (id: string) => navigate(taskPagePath(id), { state: { from } }),
-    [navigate, from],
+    (id: string) => navigate(taskLinkPath(id, view, projectView), { state: { from } }),
+    [navigate, from, view, projectView],
   );
   const goBack = () => {
     if (from) navigate(from);
-    else if (projectId) navigate(taskPath(projectId, taskId));
+    else if (projectId) navigate(taskProjectPath(projectId, projectView));
     else navigate("/projects");
   };
 
@@ -87,6 +98,13 @@ export function TaskPage({ openInProject = false }: TaskPageProps) {
     "flex flex-col bg-background transition-[height] duration-300",
     isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
   );
+
+  if (!explicitView && !fullPage && !settingsInitialized) {
+    return <PageLoader />;
+  }
+  if (!explicitView || fullPage || routedProjectId) {
+    return <Navigate to={taskLinkPath(taskId, view, projectView)} state={location.state} replace />;
+  }
 
   let body;
   if (loadFailed && otherOrganization) {
@@ -105,13 +123,18 @@ export function TaskPage({ openInProject = false }: TaskPageProps) {
     body = <TaskLoadError onRetry={detail.retry} />;
   } else if (!task) {
     body = <PageLoader />;
-  } else if (openInProject) {
-    return <Navigate to={taskPath(task.projectId, task.id)} replace />;
+  } else if (view !== "page") {
+    return (
+      <OpenTaskContext.Provider value={openTask}>
+        <ProjectsWorkspace taskRoute={{ projectId: task.projectId, taskId, view }} />
+      </OpenTaskContext.Provider>
+    );
   } else {
     body = (
       <>
         <PaneHeader>
           <PaneHeaderBar
+            compact
             leading={
               <>
                 <PaneBackLink
@@ -153,14 +176,7 @@ export function TaskPage({ openInProject = false }: TaskPageProps) {
               )}
               <TimerButton task={task} />
               <WatchButton taskId={task.id} />
-              <PaneIconButton
-                aria-label="Open in project"
-                title="Open in project"
-                onClick={() => navigate(taskPath(task.projectId, task.id))}
-                data-testid="task-page-open-in-project"
-              >
-                <Kanban size={16} />
-              </PaneIconButton>
+              <TaskViewMenu taskId={task.id} projectId={task.projectId} view="page" />
             </div>
           </PaneHeaderBar>
         </PaneHeader>

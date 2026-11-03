@@ -23,6 +23,7 @@ from uniffy.domains.settings.defaults import (
     SCHEDULING_DEFAULTS,
     WORKDAY_NAMES,
     EmailFrequency,
+    TaskOpenView,
     TaskPinnableField,
     get_appearance_defaults_dict,
     get_effective_appearance,
@@ -53,6 +54,9 @@ def _validate_appearance(appearance: dict[str, Any] | None) -> None:
     if week_start and week_start not in WEEK_START_WEEKDAYS:
         raise ValidationError("week_start", f"Unknown week start '{week_start}'")
     _validate_task_pinned_fields(appearance.get("task_pinned_fields"))
+    task_open_view = appearance.get("task_open_view")
+    if task_open_view is not None and task_open_view not in tuple(TaskOpenView):
+        raise ValidationError("task_open_view", "Unknown task view")
 
 
 def _validate_task_pinned_fields(pinned: Any) -> None:

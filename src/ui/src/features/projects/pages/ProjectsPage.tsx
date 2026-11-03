@@ -4,8 +4,8 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useShortcutHandlers } from "@/features/settings";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { ProjectsLayout } from "../components/layout/ProjectsLayout";
-import { setCurrentProject, selectCurrentProject } from "../store/projectsSlice";
+import { ProjectsLayout } from "@/features/projects/components/layout/ProjectsLayout";
+import { setCurrentProject, selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import {
   selectTask,
   openDetailPanel,
@@ -16,26 +16,57 @@ import {
   selectSelectedTaskId,
   selectIsDetailPanelOpen,
   openView,
-} from "../store/projectsUiSlice";
-import { selectActiveView, selectProjectViews } from "../store/viewSelectors";
+  selectTaskNavigationOrder,
+} from "@/features/projects/store/projectsUiSlice";
+import { selectActiveView, selectProjectViews } from "@/features/projects/store/viewSelectors";
 import { VIEW_PARAM, nextViewParamStep } from "@/features/projects/utils/viewLinks";
-import { fetchProject, fetchProjects, fetchProjectTasks } from "../store/projectsThunks";
-import { useProjectPermission } from "../hooks/useProjectPermissions";
+import {
+  fetchProject,
+  fetchProjects,
+  fetchProjectTasks,
+} from "@/features/projects/store/projectsThunks";
+import { useProjectPermission } from "@/features/projects/hooks/useProjectPermissions";
 import { useContentAccessRefetch } from "@/features/notifications/hooks/useContentAccessRefetch";
-import { taskPath } from "@/features/projects/utils/taskPath";
+import {
+  taskLinkPath,
+  taskProjectPath,
+  type TaskOpenView,
+} from "@/features/projects/utils/taskPath";
+import {
+  readTaskPageState,
+  reconcileTaskSelection,
+  type TaskSelectionSync,
+} from "@/features/projects/utils/taskNavigation";
+import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { WrongOrganizationNotice } from "@/features/auth/components/WrongOrganizationNotice";
 import { useContentOrganizationResolver } from "@/features/auth/hooks/useContentOrganizationResolver";
 import { cn } from "@/shared/utils/cn";
 import { buildUrn, UrnType } from "@/shared/utils/urn";
 
+interface ProjectsWorkspaceProps {
+  taskRoute?: { projectId: string; taskId: string; view: TaskOpenView };
+}
+
 export function ProjectsPage() {
+  const currentProject = useAppSelector(selectCurrentProject);
+  useDocumentTitle(currentProject?.name || "Projects");
+  return <ProjectsWorkspace />;
+}
+
+export function ProjectsWorkspace({ taskRoute }: ProjectsWorkspaceProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { projectId, taskId } = useParams<{ projectId?: string; taskId?: string }>();
+  const routeParams = useParams<{ projectId?: string }>();
+  const projectId = taskRoute?.projectId ?? routeParams.projectId;
+  const taskId = taskRoute?.taskId;
   const [searchParams, setSearchParams] = useSearchParams();
-  const viewParam = searchParams.get(VIEW_PARAM);
+  const projectViewParam = taskRoute ? "projectView" : VIEW_PARAM;
+  const viewParam = searchParams.get(projectViewParam);
+  const { taskOpenView } = useAppearanceSettings();
+  const settingsInitialized = useAppSelector((state) => state.settings.initialized);
+  const navigationOrder = useAppSelector(selectTaskNavigationOrder);
 
   const currentProject = useAppSelector(selectCurrentProject);
   const selectedTaskId = useAppSelector(selectSelectedTaskId);
@@ -57,10 +88,7 @@ export function ProjectsPage() {
     projectLoadFailed,
   );
 
-  // Suppresses the URL->state effect immediately after a state->URL navigation.
-  const isProgrammaticNav = useRef(false);
-
-  useDocumentTitle(currentProject?.name || "Projects");
+  const syncedRoute = useRef<TaskSelectionSync | null>(null);
 
   useShortcutHandlers({
     "app.toggleSidebar": () => {
@@ -110,10 +138,10 @@ export function ProjectsPage() {
       setSearchParams(
         (params) => {
           const next = new URLSearchParams(params);
-          next.set(VIEW_PARAM, step.viewId);
+          next.set(projectViewParam, step.viewId);
           return next;
         },
-        { replace: true },
+        { replace: true, state: location.state },
       );
     }
   }, [
@@ -124,6 +152,8 @@ export function ProjectsPage() {
     projectViews,
     activeViewId,
     viewParam,
+    projectViewParam,
+    location.state,
   ]);
   // A project load spans several pages; a newer load or a project switch cancels the pending one.
   const tasksLoadRef = useRef<{ abort: () => void } | null>(null);
@@ -174,42 +204,63 @@ export function ProjectsPage() {
   );
 
   useEffect(() => {
-    if (isProgrammaticNav.current) {
-      isProgrammaticNav.current = false;
+    const route = `${organizationId}:${projectId ?? ""}:${taskId ?? ""}`;
+    const { step, state } = reconcileTaskSelection(
+      syncedRoute.current,
+      route,
+      taskId,
+      selectedTaskId,
+      isDetailPanelOpen,
+    );
+    syncedRoute.current = state;
+    if (step === "sync") {
+      dispatch(selectTask(taskId ?? null));
+      dispatch(taskId ? openDetailPanel() : closeDetailPanel());
       return;
     }
-    if (taskId) {
-      dispatch(selectTask(taskId));
-      dispatch(openDetailPanel());
-    } else {
-      dispatch(selectTask(null));
-      dispatch(closeDetailPanel());
-    }
-  }, [dispatch, taskId]);
-
-  useEffect(() => {
+    // Mount effects can repeat before Redux renders the route's selection.
+    if (step === "wait") return;
     const openProjectId = currentProject?.id;
     if (!openProjectId) return;
-    // On arrival the store still names the previously open project; rewriting the URL from it
-    // would move a task deep link into the wrong project. The route wins until the store follows.
     if (projectId && projectId !== openProjectId) return;
-
+    const previous = readTaskPageState(location.state);
     if (selectedTaskId && isDetailPanelOpen) {
       if (taskId !== selectedTaskId) {
-        isProgrammaticNav.current = true;
         navigate(
-          { pathname: taskPath(openProjectId, selectedTaskId), search: window.location.search },
-          { replace: true },
+          taskLinkPath(
+            selectedTaskId,
+            settingsInitialized ? taskOpenView : undefined,
+            viewParam ?? activeViewId,
+          ),
+          {
+            state: {
+              order: navigationOrder.includes(selectedTaskId) ? navigationOrder : undefined,
+              from: taskId
+                ? previous.from
+                : taskProjectPath(openProjectId, viewParam ?? activeViewId),
+            },
+          },
         );
       }
     } else if (taskId) {
-      isProgrammaticNav.current = true;
-      navigate(
-        { pathname: `/projects/${openProjectId}`, search: window.location.search },
-        { replace: true },
-      );
+      navigate(previous.from ?? taskProjectPath(openProjectId, viewParam), { replace: true });
     }
-  }, [selectedTaskId, isDetailPanelOpen, currentProject?.id, projectId, taskId, navigate]);
+  }, [
+    dispatch,
+    organizationId,
+    selectedTaskId,
+    isDetailPanelOpen,
+    currentProject?.id,
+    projectId,
+    taskId,
+    taskOpenView,
+    settingsInitialized,
+    viewParam,
+    activeViewId,
+    navigationOrder,
+    location,
+    navigate,
+  ]);
 
   return (
     <>
@@ -223,7 +274,7 @@ export function ProjectsPage() {
           className={cn("bg-background", isZenMode ? "h-dvh" : "h-[calc(100dvh-3rem)]")}
         />
       ) : (
-        <ProjectsLayout />
+        <ProjectsLayout taskView={taskRoute?.view ?? taskOpenView} />
       )}
     </>
   );

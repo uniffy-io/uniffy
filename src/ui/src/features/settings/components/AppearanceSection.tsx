@@ -1,6 +1,6 @@
 import { Sun, Moon, Desktop, Check } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { controlShellClass } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { TimezoneSelect } from "@/components/ui/timezone-select";
 import { cn } from "@/shared/utils/cn";
@@ -11,6 +11,8 @@ import {
 } from "@/features/settings/hooks/useSettings";
 import { ACCENT_COLORS, hexToHsl, hslToHex } from "@/config/theme/accentColors";
 import { MentionDisplayPicker } from "@/features/settings/components/MentionDisplayPicker";
+import { TaskViewPicker } from "@/features/settings/components/TaskViewPicker";
+import { useTaskViewPreference } from "@/features/settings/hooks/useTaskViewPreference";
 
 const WORKDAY_OPTIONS = [
   { id: "monday", label: "Mon" },
@@ -25,7 +27,8 @@ const WORKDAY_OPTIONS = [
 const CLOCK_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const hours = Math.floor(i / 2);
   const minutes = i % 2 === 0 ? "00" : "30";
-  return `${String(hours).padStart(2, "0")}:${minutes}`;
+  const value = `${String(hours).padStart(2, "0")}:${minutes}`;
+  return { value, label: value };
 });
 
 const FONT_FAMILIES = [
@@ -54,6 +57,7 @@ export function AppearanceSection() {
   const { updateSettings, saving } = useSettings();
   const appearance = useAppearanceSettings();
   const scheduling = useSchedulingSettings();
+  const taskView = useTaskViewPreference();
 
   const handleThemeChange = (theme: string) => {
     updateSettings({ appearance: { theme } });
@@ -205,35 +209,25 @@ export function AppearanceSection() {
           <div className="flex shrink-0 items-end gap-2">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">From</label>
-              <select
+              <Select
                 value={scheduling.workdayStart}
                 disabled={saving}
-                onChange={(e) => handleWorkdayHoursChange(e.target.value, scheduling.workdayEnd)}
-                className={cn(controlShellClass, "focus-ring h-10 px-3 text-sm text-foreground")}
-                aria-label="Workday start"
-              >
-                {CLOCK_OPTIONS.map((value) => (
-                  <option key={value} value={value} disabled={value >= scheduling.workdayEnd}>
-                    {value}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleWorkdayHoursChange(value, scheduling.workdayEnd)}
+                options={CLOCK_OPTIONS.filter((option) => option.value < scheduling.workdayEnd)}
+                triggerClassName="h-10"
+                ariaLabel="Workday start"
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-foreground">To</label>
-              <select
+              <Select
                 value={scheduling.workdayEnd}
                 disabled={saving}
-                onChange={(e) => handleWorkdayHoursChange(scheduling.workdayStart, e.target.value)}
-                className={cn(controlShellClass, "focus-ring h-10 px-3 text-sm text-foreground")}
-                aria-label="Workday end"
-              >
-                {CLOCK_OPTIONS.map((value) => (
-                  <option key={value} value={value} disabled={value <= scheduling.workdayStart}>
-                    {value}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => handleWorkdayHoursChange(scheduling.workdayStart, value)}
+                options={CLOCK_OPTIONS.filter((option) => option.value > scheduling.workdayStart)}
+                triggerClassName="h-10"
+                ariaLabel="Workday end"
+              />
             </div>
           </div>
           <div className="min-w-0 space-y-1.5">
@@ -272,6 +266,20 @@ export function AppearanceSection() {
           value={appearance.mentionDisplay === "compact" ? "compact" : "expanded"}
           onChange={handleMentionDisplayChange}
           disabled={saving}
+        />
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Task Display</h2>
+          <p className="text-sm font-medium text-muted-foreground">
+            Choose how tasks open. This follows you across devices.
+          </p>
+        </div>
+        <TaskViewPicker
+          value={taskView.taskOpenView}
+          onChange={(view) => void taskView.save(view)}
+          disabled={taskView.disabled}
         />
       </section>
 

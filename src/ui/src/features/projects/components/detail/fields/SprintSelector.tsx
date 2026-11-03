@@ -9,6 +9,7 @@ interface SprintSelectorProps {
   currentSprintId: string | null;
   onSelect: (sprintId: string | null) => void;
   disabled?: boolean;
+  triggerClassName?: string;
 }
 
 export function SprintSelector({
@@ -16,6 +17,7 @@ export function SprintSelector({
   currentSprintId,
   onSelect,
   disabled,
+  triggerClassName,
 }: SprintSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,6 +53,7 @@ export function SprintSelector({
           currentSprint
             ? "border-primary/30 bg-primary/10 text-primary"
             : "border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+          triggerClassName,
         )}
       >
         {currentSprint ? currentSprint.name : "Backlog"}

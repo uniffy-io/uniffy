@@ -4,20 +4,16 @@ import { initialProjectsUiState, type ProjectsUiState } from "@/features/project
 /** Layout prefs, open views and unsaved view drafts survive a reload; everything else starts fresh. */
 const PERSISTED_KEYS = [
   "activeViewIds",
+  "timeReportStates",
   "viewTabOrder",
   "viewDrafts",
   "outlineExpanded",
   "isSidebarOpen",
   "sidebarWidth",
-  "detailViewMode",
   "projectScope",
 ] as const satisfies readonly (keyof ProjectsUiState)[];
 
-/**
- * What an organization switch keeps: layout plus open views, tab order, drafts and outlines. They are
- * keyed by globally unique project ids, so another organization never resolves them, and switching
- * back finds them again. Logout clears the per-person part in the slice itself.
- */
+/** Project ids keep personal view preferences separate across organization switches. */
 export function retainProjectsUi(state: ProjectsUiState): ProjectsUiState {
   return rehydrateProjectsUi(state);
 }

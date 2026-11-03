@@ -997,7 +997,7 @@ export function App() {
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <TaskPage openInProject />
+                          <TaskPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }
@@ -1007,7 +1007,7 @@ export function App() {
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <TaskPage />
+                          <TaskPage fullPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }
@@ -1086,7 +1086,7 @@ export function App() {
                     element={
                       <ProtectedRoute>
                         <LazyRoute>
-                          <ProjectsPage />
+                          <TaskPage />
                         </LazyRoute>
                       </ProtectedRoute>
                     }

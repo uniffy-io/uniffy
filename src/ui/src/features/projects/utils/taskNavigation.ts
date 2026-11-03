@@ -1,4 +1,3 @@
-/** Router state a task view hands the full page, so it can walk the same list. */
 export interface TaskPageState {
   /** Task ids in the order the originating view showed them. */
   order?: string[];
@@ -6,10 +5,7 @@ export interface TaskPageState {
   from?: string;
 }
 
-/**
- * In-app paths only. "//host" is protocol-relative, and browsers read a backslash as a slash and
- * drop tabs and newlines, so "/\\host" or "/\t/host" would leave the origin too.
- */
+/** Browsers normalize backslashes and control characters before resolving origins. */
 function isInAppPath(path: string): boolean {
   // eslint-disable-next-line no-control-regex
   return path.startsWith("/") && !path.startsWith("//") && !/[\\\u0000-\u001f]/.test(path);
@@ -24,7 +20,6 @@ export function readTaskPageState(state: unknown): TaskPageState {
   };
 }
 
-/** The tasks before and after `taskId` in `order`, or null at either end or when it is absent. */
 export function neighbours(
   order: readonly string[] | undefined,
   taskId: string,
@@ -35,4 +30,24 @@ export function neighbours(
     prev: index > 0 ? order[index - 1] : null,
     next: index < order.length - 1 ? order[index + 1] : null,
   };
+}
+
+export interface TaskSelectionSync {
+  key: string;
+  settled: boolean;
+}
+
+export function reconcileTaskSelection(
+  previous: TaskSelectionSync | null,
+  key: string,
+  taskId: string | undefined,
+  selectedTaskId: string | null,
+  detailOpen: boolean,
+): { step: "sync" | "wait" | "ready"; state: TaskSelectionSync } {
+  const matches = selectedTaskId === (taskId ?? null) && detailOpen === !!taskId;
+  if (previous?.key !== key) {
+    return { step: "sync", state: { key, settled: matches } };
+  }
+  if (!previous.settled && !matches) return { step: "wait", state: previous };
+  return { step: "ready", state: { key, settled: true } };
 }

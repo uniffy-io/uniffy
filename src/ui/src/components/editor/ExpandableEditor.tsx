@@ -33,9 +33,10 @@ interface ExpandableEditorProps {
   value: string;
   /** Fires on every keystroke. Hosts that only want one write per edit can skip it and use `onDone`. */
   onChange?: (markdown: string) => void;
-  /** Fires once when the overlay closes, carrying the final markdown. */
+  /** Fires once when editing finishes, carrying the final markdown. */
   onDone?: (markdown: string, meta: { realtimeOwned: boolean; baseContent: string }) => void;
   realtime?: boolean;
+  editingPresentation?: "overlay" | "inline";
   placeholder?: string;
   /** Defaults to true when `contentId` is provided. */
   enableUpload?: boolean;
@@ -62,6 +63,7 @@ export function ExpandableEditor({
   enableUpload = !!contentId,
   readonly = false,
   realtime = false,
+  editingPresentation = "overlay",
   label = "Description",
   onFileUploaded,
   fullPreview = false,
@@ -139,9 +141,11 @@ export function ExpandableEditor({
   );
   const [editorHandle, setEditorHandle] = useState<EditorHandle | null>(null);
 
+  const inline = editingPresentation === "inline";
   const readView = readonly && expandReadonly;
-  // The edit overlay belongs to an open session; a session still draining after Done does not count.
+  // A session still draining after Done does not count as editing.
   const editing = sessionOpen && !closing;
+  const inlineEditing = inline && isExpanded && editing;
 
   const handleOpen = useCallback(() => {
     if (readonly) {
@@ -162,7 +166,7 @@ export function ExpandableEditor({
     setEditorKey((k) => k + 1);
     setIsExpanded(true);
 
-    // Defer editor mount so the overlay can animate in first.
+    // Let the editor shell paint before mounting the rich editor.
     openTimerRef.current = setTimeout(() => {
       setEditorReady(true);
     }, 50);
@@ -279,6 +283,110 @@ export function ExpandableEditor({
     editWithoutLive ? "Live updates unavailable. Done saves changes." : null,
   ].filter((notice): notice is string => notice !== null);
 
+  const editorContent = (
+    <EditorHandleContext.Provider value={editorHandle}>
+      <div
+        data-testid={inline ? "expandable-editor-inline" : undefined}
+        className={cn(
+          "relative flex min-w-0 flex-col rounded-xl",
+          inline
+            ? "h-[clamp(20rem,60dvh,40rem)] border border-border"
+            : cn(dialogShellClass, "w-full max-w-5xl mx-4 h-[85vh]"),
+        )}
+      >
+        <div className="shrink-0 rounded-t-xl overflow-hidden">
+          <EditorFormattingToolbar
+            contentType={contentType}
+            contentId={contentId}
+            enableUpload={enableUpload}
+            onFileUploaded={onFileUploaded}
+            trailing={
+              <>
+                {/* Phones show these under the bar, so the chip and Done keep their row. */}
+                {notices.map((notice) => (
+                  <span
+                    key={notice}
+                    className="hidden text-xs text-muted-foreground sm:inline"
+                    role="status"
+                  >
+                    {notice}
+                  </span>
+                ))}
+                <RealtimeSessionStatus
+                  status={status}
+                  awareness={binding?.awareness ?? null}
+                  docName={docName}
+                  readOnly={readonly}
+                  whenSynced={binding?.whenSynced}
+                />
+                <Button
+                  type="button"
+                  size={inline ? "xs" : "md"}
+                  className={inline ? "touch:min-h-11 touch:min-w-11" : undefined}
+                  onClick={handleClose}
+                >
+                  <Check size={inline ? 12 : 14} weight="bold" />
+                  Done
+                </Button>
+              </>
+            }
+          />
+          {notices.length > 0 && (
+            <p
+              className="border-b border-border/50 px-3 py-1.5 text-xs text-muted-foreground sm:hidden"
+              role="status"
+            >
+              {notices.join(" ")}
+            </p>
+          )}
+        </div>
+
+        {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
+        <div className="flex-1 min-h-0 relative">
+          {editorReady && (!realtimeActive || (binding && realtimeOwned)) ? (
+            <>
+              <div
+                className={cn("h-full", realtimeActive && !seeded && "invisible absolute inset-0")}
+              >
+                <CrepeEditor
+                  key={`${editorKey}:${sessionId ?? "local"}`}
+                  contentType={contentType}
+                  contentId={contentId}
+                  value={draftInitial}
+                  realtime={realtimeActive ? (binding ?? undefined) : undefined}
+                  readonly={
+                    readonly ||
+                    status === "permission_lost" ||
+                    status === "access_lost" ||
+                    status === "update_rejected" ||
+                    status === "token_revoked"
+                  }
+                  onChange={handleEditorChange}
+                  onEditorReady={handleEditorReady}
+                  onRealtimeSeeded={handleRealtimeSeeded}
+                  placeholder={placeholder}
+                  enableUpload={enableUpload}
+                  onFileUploaded={onFileUploaded}
+                  floatingToolbar={false}
+                  className="pt-6"
+                />
+              </div>
+              {realtimeActive && !seeded && waitingBody}
+            </>
+          ) : realtimeActive ? (
+            waitingBody
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Pinned bar above covers selection formatting; the floating one stays reachable via context menu. */}
+      <FloatingFormattingToolbar showOnSelection={false} />
+    </EditorHandleContext.Provider>
+  );
+
   return (
     <>
       {showHeader && (
@@ -288,7 +396,7 @@ export function ExpandableEditor({
           </h3>
           <div className="flex items-center gap-3">
             {afterDoneChip}
-            {!readonly && hasContent && (
+            {!readonly && hasContent && !inlineEditing && (
               <button
                 type="button"
                 onClick={handleOpen}
@@ -313,7 +421,9 @@ export function ExpandableEditor({
         </div>
       )}
       {/* Collapsed preview - clickable area with rendered content */}
-      {fullPreview ? (
+      {inlineEditing ? (
+        editorContent
+      ) : fullPreview ? (
         <div className="relative group">
           {hasContent ? (
             <div
@@ -453,8 +563,8 @@ export function ExpandableEditor({
           document.body,
         )}
 
-      {/* Expanded overlay */}
       {isExpanded &&
+        !inline &&
         editing &&
         createPortal(
           <div className="fixed inset-0 z-[200] flex items-center justify-center">
@@ -462,102 +572,7 @@ export function ExpandableEditor({
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
             {/* Editor panel */}
-            <EditorHandleContext.Provider value={editorHandle}>
-              <div
-                className={cn(
-                  dialogShellClass,
-                  "relative w-full max-w-5xl mx-4 rounded-xl flex flex-col h-[85vh]",
-                )}
-              >
-                <div className="shrink-0 rounded-t-xl overflow-hidden">
-                  <EditorFormattingToolbar
-                    contentType={contentType}
-                    contentId={contentId}
-                    enableUpload={enableUpload}
-                    onFileUploaded={onFileUploaded}
-                    trailing={
-                      <>
-                        {/* Phones show these under the bar, so the chip and Done keep their row. */}
-                        {notices.map((notice) => (
-                          <span
-                            key={notice}
-                            className="hidden text-xs text-muted-foreground sm:inline"
-                            role="status"
-                          >
-                            {notice}
-                          </span>
-                        ))}
-                        <RealtimeSessionStatus
-                          status={status}
-                          awareness={binding?.awareness ?? null}
-                          docName={docName}
-                          readOnly={readonly}
-                          whenSynced={binding?.whenSynced}
-                        />
-                        <Button type="button" size="md" onClick={handleClose}>
-                          <Check size={14} weight="bold" />
-                          Done
-                        </Button>
-                      </>
-                    }
-                  />
-                  {notices.length > 0 && (
-                    <p
-                      className="border-b border-border/50 px-3 py-1.5 text-xs text-muted-foreground sm:hidden"
-                      role="status"
-                    >
-                      {notices.join(" ")}
-                    </p>
-                  )}
-                </div>
-
-                {/* Editor body - let CrepeEditor's own wrapper handle scrolling */}
-                <div className="flex-1 min-h-0 relative">
-                  {editorReady && (!realtimeActive || (binding && realtimeOwned)) ? (
-                    <>
-                      <div
-                        className={cn(
-                          "h-full",
-                          realtimeActive && !seeded && "invisible absolute inset-0",
-                        )}
-                      >
-                        <CrepeEditor
-                          key={`${editorKey}:${sessionId ?? "local"}`}
-                          contentType={contentType}
-                          contentId={contentId}
-                          value={draftInitial}
-                          realtime={realtimeActive ? (binding ?? undefined) : undefined}
-                          readonly={
-                            readonly ||
-                            status === "permission_lost" ||
-                            status === "access_lost" ||
-                            status === "update_rejected" ||
-                            status === "token_revoked"
-                          }
-                          onChange={handleEditorChange}
-                          onEditorReady={handleEditorReady}
-                          onRealtimeSeeded={handleRealtimeSeeded}
-                          placeholder={placeholder}
-                          enableUpload={enableUpload}
-                          onFileUploaded={onFileUploaded}
-                          floatingToolbar={false}
-                          className="pt-6"
-                        />
-                      </div>
-                      {realtimeActive && !seeded && waitingBody}
-                    </>
-                  ) : realtimeActive ? (
-                    waitingBody
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Pinned bar above covers selection formatting; the floating one stays reachable via context menu. */}
-              <FloatingFormattingToolbar showOnSelection={false} />
-            </EditorHandleContext.Provider>
+            {editorContent}
           </div>,
           document.body,
         )}

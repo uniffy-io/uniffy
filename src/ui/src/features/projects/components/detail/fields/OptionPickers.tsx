@@ -65,9 +65,18 @@ interface StatusPickerProps {
   options: SelectOption[];
   onSelect: (optionId: string) => void;
   disabled?: boolean;
+  triggerClassName?: string;
+  appearance?: "badge" | "plain";
 }
 
-export function StatusPicker({ currentOption, options, onSelect, disabled }: StatusPickerProps) {
+export function StatusPicker({
+  currentOption,
+  options,
+  onSelect,
+  disabled,
+  triggerClassName,
+  appearance = "badge",
+}: StatusPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const paint = statusPaint(options, currentOption.id);
 
@@ -77,14 +86,24 @@ export function StatusPicker({ currentOption, options, onSelect, disabled }: Sta
         type="button"
         onClick={() => !disabled && setIsOpen((v) => !v)}
         disabled={disabled}
-        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
-        style={{
-          backgroundColor: paint.translucent,
-          border: `1px solid ${paint.translucent}`,
-        }}
+        className={cn(
+          "inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60",
+          appearance === "plain" && "border-0 bg-transparent text-foreground hover:opacity-100",
+          triggerClassName,
+        )}
+        style={
+          appearance === "badge"
+            ? {
+                backgroundColor: paint.translucent,
+                border: `1px solid ${paint.translucent}`,
+              }
+            : undefined
+        }
       >
         <div className="w-2 h-2 rounded-full" style={{ background: paint.gradient }} />
-        <span style={{ color: paint.solid }}>{currentOption.label}</span>
+        <span style={appearance === "badge" ? { color: paint.solid } : undefined}>
+          {currentOption.label}
+        </span>
       </button>
       {isOpen && (
         <OptionDropdown
@@ -104,6 +123,8 @@ interface PriorityPickerProps {
   options: SelectOption[];
   onSelect: (optionId: string) => void;
   disabled?: boolean;
+  triggerClassName?: string;
+  appearance?: "badge" | "plain";
 }
 
 export function PriorityPicker({
@@ -111,6 +132,8 @@ export function PriorityPicker({
   options,
   onSelect,
   disabled,
+  triggerClassName,
+  appearance = "badge",
 }: PriorityPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -120,13 +143,27 @@ export function PriorityPicker({
         type="button"
         onClick={() => !disabled && setIsOpen((v) => !v)}
         disabled={disabled}
-        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
-        style={{
-          backgroundColor: `${currentOption.color}15`,
-          borderColor: `${currentOption.color}30`,
-          color: currentOption.color,
-        }}
+        className={cn(
+          "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60",
+          appearance === "plain" && "border-0 bg-transparent text-foreground hover:opacity-100",
+          triggerClassName,
+        )}
+        style={
+          appearance === "badge"
+            ? {
+                backgroundColor: `${currentOption.color}15`,
+                borderColor: `${currentOption.color}30`,
+                color: currentOption.color,
+              }
+            : undefined
+        }
       >
+        {appearance === "plain" && (
+          <span
+            className="size-2 shrink-0 rounded-full"
+            style={{ backgroundColor: currentOption.color }}
+          />
+        )}
         {currentOption.label}
       </button>
       {isOpen && (

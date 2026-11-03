@@ -1,7 +1,4 @@
-"""Default settings merged with user profile overrides at runtime.
-
-New keys added here become available to existing users without a migration.
-"""
+"""Defaults apply to existing user profiles without a migration."""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -85,6 +82,12 @@ DEFAULT_KEYBOARD_SHORTCUTS: dict[str, str] = {
 }
 
 
+class TaskOpenView(StrEnum):
+    PANEL = "panel"
+    MODAL = "modal"
+    PAGE = "page"
+
+
 class TaskPinnableField(StrEnum):
     """Task system fields a user can pin under the task title."""
 
@@ -122,6 +125,7 @@ class AppearanceDefaults:
     timezone: str | None = None  # IANA zone; None = automatic (browser/device)
     week_start: str = "monday"  # one of: "monday", "saturday", "sunday"
     task_pinned_fields: tuple[TaskPinnableField, ...] = DEFAULT_TASK_PINNED_FIELDS
+    task_open_view: TaskOpenView = TaskOpenView.PANEL
 
 
 WORKDAY_NAMES: tuple[str, ...] = (
@@ -261,6 +265,7 @@ def get_appearance_defaults_dict() -> dict[str, Any]:
         "timezone": APPEARANCE_DEFAULTS.timezone,
         "week_start": APPEARANCE_DEFAULTS.week_start,
         "task_pinned_fields": [field.value for field in APPEARANCE_DEFAULTS.task_pinned_fields],
+        "task_open_view": APPEARANCE_DEFAULTS.task_open_view.value,
     }
 
 

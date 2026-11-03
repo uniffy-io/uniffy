@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { ClockCountdown } from "@phosphor-icons/react";
 import {
   Bar,
@@ -31,6 +31,7 @@ import { effectiveDayKey, formatDateWithWeekday } from "@/shared/utils/dateForma
 import { formatMinutes } from "@/shared/utils/durationFormatting";
 import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
 import { selectTasksForProject } from "@/features/projects/store/projectsSlice";
+import { saveProjectTimeReport } from "@/features/projects/store/projectsUiSlice";
 import {
   selectProjectReport,
   selectReportLoading,
@@ -51,10 +52,14 @@ import {
   dayTick,
   hoursTick,
   presetRange,
+  readTimeReportState,
+  timeReportSearchParams,
   rangeIsValid,
   shareOf,
   type ReportPreset,
+  type TimeReportState,
 } from "@/features/projects/utils/timeReport";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { normalizeWeekStart } from "@/features/projects/utils/timeWeek";
 
 const PRESETS: ReportPreset[] = ["week", "month", "quarter"];
@@ -76,13 +81,31 @@ const pill = (label: string) => (
 /** Logged time in one project over a date range, grouped by person, task or day. */
 export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
   const dispatch = useAppDispatch();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const policy = useAppSelector(selectTimePolicy);
   const { weekStart: preferredWeekStart } = useAppearanceSettings();
   const weekStart = normalizeWeekStart(policy?.weekStart ?? preferredWeekStart);
   const today = effectiveDayKey(new Date());
-  const [preset, setPreset] = useState<ReportPreset | null>("month");
-  const [range, setRange] = useState(() => presetRange("month", today, weekStart));
-  const [groupBy, setGroupBy] = useState<AggregateGroupBy>("user");
+  const savedReport = useAppSelector((store) => store.projectsUi.timeReportStates[projectId]);
+  const state = useMemo(
+    () => readTimeReportState(searchParams, today, weekStart, savedReport),
+    [searchParams, today, weekStart, savedReport],
+  );
+  useEffect(() => {
+    dispatch(saveProjectTimeReport({ projectId, report: state }));
+    const params = timeReportSearchParams(searchParams, state);
+    if (params.toString() !== searchParams.toString()) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [dispatch, projectId, state, searchParams, setSearchParams]);
+  const { preset, groupBy } = state;
+  const range = { from: state.from, to: state.to };
+  const setReportState = (patch: Partial<TimeReportState>) => {
+    setSearchParams(timeReportSearchParams(searchParams, { ...state, ...patch }), {
+      replace: true,
+    });
+  };
   const query = useMemo(
     () => ({ projectId, from: range.from, to: range.to, groupBy }),
     [projectId, range.from, range.to, groupBy],
@@ -105,6 +128,7 @@ export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
   }, [tasks]);
 
   const rows = report?.rows ?? [];
+  const taskOrder = groupBy === "task" ? rows.map((row) => row.key) : undefined;
   const total = report?.totalMinutes ?? 0;
   const entries = rows.reduce((sum, row) => sum + row.entries, 0);
   const busiest = rows.reduce<AggregateRow | null>(
@@ -115,12 +139,10 @@ export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
     groupBy === "task" ? rows.reduce((sum, row) => sum + (estimates[row.key] ?? 0), 0) : null;
 
   const choosePreset = (next: ReportPreset) => {
-    setPreset(next);
-    setRange(presetRange(next, today, weekStart));
+    setReportState({ preset: next, ...presetRange(next, today, weekStart) });
   };
   const chooseDate = (edge: "from" | "to", value: string) => {
-    setPreset(null);
-    setRange((previous) => ({ ...previous, [edge]: value }));
+    setReportState({ preset: null, [edge]: value });
   };
 
   return (
@@ -164,7 +186,7 @@ export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
               ariaLabel="Group by"
               className="h-7"
               value={groupBy}
-              onChange={setGroupBy}
+              onChange={(nextGroup) => setReportState({ groupBy: nextGroup })}
               options={GROUPS.map((value) => ({ value, content: pill(GROUP_LABEL[value]) }))}
             />
           </>,
@@ -246,7 +268,11 @@ export function TimeReport({ projectId, renderHeader }: TimeReportProps) {
                           )}
                           {groupBy === "task" && (
                             <Link
-                              to={`/projects/${projectId}/tasks/${row.key}`}
+                              to={taskLinkPath(row.key)}
+                              state={{
+                                from: location.pathname + location.search,
+                                order: taskOrder,
+                              }}
                               className="text-foreground hover:underline"
                             >
                               {row.label || "Task"}

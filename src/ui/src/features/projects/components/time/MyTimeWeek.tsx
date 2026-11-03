@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   CaretLeft,
   CaretRight,
@@ -82,15 +82,7 @@ import {
 } from "@/features/projects/components/time/LogTimeModal";
 import { PeriodStatus } from "@/features/projects/components/time/PeriodBanner";
 import { TaskRail, type RailTask } from "@/features/projects/components/time/TaskRail";
-import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
-import { setCurrentProject } from "@/features/projects/store/projectsSlice";
-import {
-  closeDetailPanel,
-  openDetailPanel,
-  selectIsDetailPanelOpen,
-  selectSelectedTaskId,
-  selectTask,
-} from "@/features/projects/store/projectsUiSlice";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { TimeCalendar, type EntryPatch } from "@/features/projects/components/time/TimeCalendar";
 import { TimeList } from "@/features/projects/components/time/TimeList";
 import { useTaskLabels } from "@/features/projects/components/time/useTaskLabels";
@@ -225,6 +217,7 @@ interface MyTimeWeekProps {
 export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isMobileOrTablet } = useBreakpoint();
   const policy = useAppSelector(selectTimePolicy);
   const { workdays } = useSchedulingSettings();
@@ -299,22 +292,10 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   );
   const rowTaskIds = useMemo(() => rows.map((row) => row.taskId), [rows]);
   const labels = useTaskLabels(rowTaskIds);
-  const selectedTaskId = useAppSelector(selectSelectedTaskId);
-  const detailOpen = useAppSelector(selectIsDetailPanelOpen);
-  // Only a task opened from this page shows here, never one left open on a project page.
-  const [railTaskId, setRailTaskId] = useState<string | null>(null);
-  const openTaskId = detailOpen && selectedTaskId === railTaskId ? railTaskId : null;
-  // The same full task view a project opens, as a dialog over the week.
   const openTask = (task: RailTask) => {
-    setRailTaskId(task.taskId);
-    dispatch(setCurrentProject(task.projectId));
-    dispatch(selectTask(task.taskId));
-    dispatch(openDetailPanel());
-  };
-  const closeTask = () => {
-    setRailTaskId(null);
-    dispatch(closeDetailPanel());
-    dispatch(selectTask(null));
+    navigate(taskLinkPath(task.taskId), {
+      state: { from: `${location.pathname}${location.search}` },
+    });
   };
   const rule = useMemo(
     () => ({
@@ -704,8 +685,6 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
           </div>
         )}
       </div>
-
-      {openTaskId && <TaskDetailModal taskId={openTaskId} onClose={closeTask} />}
 
       {editor && (
         <LogTimeModal

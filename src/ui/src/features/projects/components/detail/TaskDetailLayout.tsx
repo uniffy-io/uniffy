@@ -231,6 +231,7 @@ export function TaskDetailLayout({
           contentId={task.id}
           value={task.description}
           realtime
+          editingPresentation="inline"
           onDone={onDescriptionDone}
           placeholder="Click to add a description... (type @ to mention)"
           label="Description"
@@ -260,7 +261,10 @@ export function TaskDetailLayout({
 
   if (!railed) {
     return (
-      <ScrollArea className="h-full" data-testid="task-detail-scroll">
+      <ScrollArea
+        className={cn("h-full", mode === "page" && "bg-surface")}
+        data-testid="task-detail-scroll"
+      >
         <div className={cn("p-4", mode === "page" && "mx-auto max-w-3xl md:p-6")}>{main}</div>
       </ScrollArea>
     );
@@ -277,7 +281,7 @@ export function TaskDetailLayout({
       >
         <Panel id="task-detail-main" minSize={360}>
           <ScrollArea
-            className={cn("h-full p-4", mode === "page" && "md:p-6")}
+            className={cn("h-full p-4", mode === "page" && "bg-surface md:p-6")}
             data-testid="task-detail-scroll"
           >
             {main}

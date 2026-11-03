@@ -1,5 +1,14 @@
 export type WorklogSource = "manual" | "timer" | "import" | "agent";
 
+export type ReportPreset = "week" | "month" | "quarter";
+
+export interface TimeReportState {
+  preset: ReportPreset | null;
+  from: string;
+  to: string;
+  groupBy: AggregateGroupBy;
+}
+
 export interface Worklog {
   id: string;
   taskId: string;

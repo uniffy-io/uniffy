@@ -22,7 +22,7 @@ import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
 import { MultiSelectField } from "@/features/projects/utils/multiSelectUtils";
-import { taskPagePath } from "@/features/projects/utils/taskPath";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { TagPicker } from "@/features/tags";
 
@@ -166,7 +166,7 @@ export function CreateTaskModal() {
 
       handleClose();
       if (openAfter && result.task.id) {
-        navigate(taskPagePath(result.task.id), {
+        navigate(taskLinkPath(result.task.id), {
           state: { from: `${location.pathname}${location.search}` },
         });
       }

@@ -22,8 +22,6 @@ import { ProjectsListSkeleton } from "@/features/projects/components/layout/Proj
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { bucketForContent } from "@/shared/utils/contentRoles";
 import { roleCanManage } from "@/shared/utils/contentRoles";
-import { TagChip } from "@/features/tags";
-import { useTagsByIds } from "@/features/tags/store/selectors";
 import type { Project } from "@/features/projects/types";
 
 export function ProjectsSidebar() {
@@ -69,7 +67,6 @@ export function ProjectsSidebar() {
   return (
     <>
       <div className="flex flex-col h-full">
-        {/* Header: scope filter + create button */}
         <div className="flex items-center px-3 pt-3 pb-2 gap-0.5">
           <ProjectScopeFilter />
 
@@ -98,7 +95,6 @@ export function ProjectsSidebar() {
           )}
         </div>
 
-        {/* Project List */}
         <ScrollArea className="flex-1">
           <div className="px-2 pt-1 pb-2 space-y-0.5">
             {projectsLoading && projects.length === 0 ? (
@@ -138,7 +134,6 @@ export function ProjectsSidebar() {
           </div>
         </ScrollArea>
 
-        {/* My time and portfolio links */}
         <div className="px-3 py-2 border-t border-border">
           <button
             type="button"
@@ -172,9 +167,6 @@ interface ProjectListItemProps {
 }
 
 function ProjectListItem({ project, isActive, onClick, onEdit, progress }: ProjectListItemProps) {
-  const tags = useTagsByIds(project.tagIds ?? []);
-  const shownTags = tags.slice(0, 2);
-  const tagOverflow = tags.length - shownTags.length;
   return (
     <div
       className={cn(
@@ -214,27 +206,6 @@ function ProjectListItem({ project, isActive, onClick, onEdit, progress }: Proje
         )}
       </div>
 
-      {/* Tags row (read-only) */}
-      {shownTags.length > 0 && (
-        <div className="pl-7 pr-2 flex flex-wrap items-center gap-1">
-          {shownTags.map((tag) => (
-            <TagChip key={tag.id} tag={tag} nonInteractive className="px-1.5 py-0 text-[10px]" />
-          ))}
-          {tagOverflow > 0 && (
-            <span
-              className="text-[10px] text-muted-foreground"
-              title={tags
-                .slice(2)
-                .map((t) => t.name)
-                .join(", ")}
-            >
-              +{tagOverflow}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Progress bar */}
       <div className="pl-7 pr-2 opacity-50 text-[10px] flex items-center gap-2">
         <Progress value={progress} className="h-1" />
         <span className="w-6 text-right">{progress}%</span>
