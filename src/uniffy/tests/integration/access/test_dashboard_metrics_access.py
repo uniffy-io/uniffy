@@ -31,6 +31,7 @@ from uniffy.domains.projects.metrics.scope import (
 )
 from uniffy.domains.settings.dashboard.definition import Definition, Widget, load_catalog
 from uniffy.domains.settings.dashboard.operations import DashboardOperations
+from uniffy.domains.settings.operations import SettingsOperations
 from uniffy.infrastructure.database import open_session
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
@@ -203,6 +204,16 @@ async def test_status_bug_trend_and_sprints_respect_access(access, board) -> Non
     assert set(by_project) == {board.open, board.shared}
     open_counts = by_project[board.open]
     assert (open_counts.todo, open_counts.review, open_counts.completed) == (2, 1, 1)
+    assert (open_counts.top_level_total, open_counts.top_level_completed) == (4, 1)
+    assert open_counts.overdue == 1
+    mine = await _metric(
+        access, access.member_id, "status_by_project", MetricScope(people=PeopleScope.ME), 10
+    )
+    # Health under Me scores only the viewer's own tasks: one open task in Open, one overdue
+    # task in Private.
+    by_mine = {row.project_id: row for row in mine}
+    assert (by_mine[board.open].top_level_total, by_mine[board.open].overdue) == (1, 0)
+    assert (by_mine[board.private].top_level_total, by_mine[board.private].overdue) == (1, 1)
     bugs = await _metric(access, access.admin_id, "bug_trend", MetricScope(), 7)
     assert sum(day.opened for day in bugs) == 2
     assert sum(day.closed for day in bugs) == 1
@@ -213,6 +224,39 @@ async def test_status_bug_trend_and_sprints_respect_access(access, board) -> Non
         access, access.admin_id, "overdue", MetricScope(sprint=SprintScope.ACTIVE), 10
     )
     assert active.total == 0
+
+
+async def test_sprints_under_me_skip_sprints_without_the_viewers_work(
+    session, access, board
+) -> None:
+    session.add(
+        Sprint(
+            project_id=board.shared,
+            organization_id=access.org_id,
+            name="Sprint 0",
+            status=SprintStatus.ACTIVE,
+            end_date=datetime.now(UTC).date().isoformat(),
+        )
+    )
+    await session.commit()
+    everyone = await _metric(access, access.member_id, "sprints", MetricScope(), 1)
+    assert [s.name for s in everyone] == ["Sprint 0"]
+    mine = await _metric(
+        access, access.member_id, "sprints", MetricScope(people=PeopleScope.ME), 1
+    )
+    assert [(s.sprint_id, s.total) for s in mine] == [(board.sprint, 1)]
+
+
+async def test_project_refs_name_only_readable_projects(access, board) -> None:
+    async with open_session() as db:
+        resolved = await resolve_scope(db, access.admin_id, access.org_id, MetricScope())
+        refs = await TaskMetricsReader(db, resolved).project_refs(
+            {board.open, board.shared, board.private}
+        )
+    assert {ref.project_id: ref.name for ref in refs} == {
+        board.open: "Open",
+        board.shared: "Shared",
+    }
 
 
 async def test_a_non_member_counts_nothing(access, board) -> None:
@@ -250,3 +294,26 @@ async def test_layout_saves_per_viewer_with_revision_checks(access, board) -> No
         assert (await ops.get(access.admin_id, access.org_id)).definition is None
         with pytest.raises(MembershipRequiredError):
             await ops.get(access.outsider_id, access.org_id)
+
+
+async def test_a_save_from_a_stale_read_is_refused(access, board) -> None:
+    layout = Definition(widgets=(Widget("overdue-tasks"),))
+    other = Definition(widgets=(Widget("my-tasks"),))
+    async with open_session() as db:
+        await DashboardOperations(db).save(
+            access.peer_id, access.org_id, other, 0, keep_previous=False
+        )
+    async with open_session() as stale, open_session() as fresh:
+        stale_ops = DashboardOperations(stale)
+        # Holding the profile keeps this session's copy alive across the other save, the window
+        # between the unlocked read and the row lock.
+        held = await SettingsOperations(stale).get_default_profile(access.peer_id)
+        assert held is not None
+        await DashboardOperations(fresh).save(
+            access.peer_id, access.org_id, layout, 1, keep_previous=False
+        )
+        with pytest.raises(ConflictError):
+            await stale_ops.save(access.peer_id, access.org_id, other, 1, keep_previous=False)
+    async with open_session() as db:
+        stored = await DashboardOperations(db).get(access.peer_id, access.org_id)
+    assert [w.widget_id for w in stored.definition.widgets] == ["overdue-tasks"]

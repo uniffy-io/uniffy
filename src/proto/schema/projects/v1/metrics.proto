@@ -89,6 +89,13 @@ message ProjectStatusRow {
   int32 in_progress = 3;
   int32 review = 4;
   int32 completed = 5;
+  // Health inputs under the same filters, counted like the project rollup: progress over
+  // top-level tasks, overdue work and time over the whole tree.
+  int32 top_level_total = 6;
+  int32 top_level_completed = 7;
+  int32 overdue = 8;
+  int64 estimated_minutes = 9;
+  int64 time_spent_minutes = 10;
 }
 
 message BugTrendPoint {
@@ -115,6 +122,13 @@ message SprintProgress {
   repeated BurndownPoint burndown = 8;
 }
 
+// A project a row above points at; every one is readable by the caller.
+message MetricProject {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
 message GetTaskMetricsResponse {
   // The headline count: overdue, blocked or in-review tasks, or open tasks for workload.
   int32 total = 1;
@@ -124,4 +138,6 @@ message GetTaskMetricsResponse {
   repeated ProjectStatusRow status_by_project = 4;
   repeated BugTrendPoint bug_trend = 5;
   repeated SprintProgress sprints = 6;
+  // Names for the projects the rows reference, so a client needs no project list of its own.
+  repeated MetricProject projects = 7;
 }

@@ -563,14 +563,21 @@ func (x *WorkloadRow) GetOverdue() int32 {
 }
 
 type ProjectStatusRow struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Todo          int32                  `protobuf:"varint,2,opt,name=todo,proto3" json:"todo,omitempty"`
-	InProgress    int32                  `protobuf:"varint,3,opt,name=in_progress,json=inProgress,proto3" json:"in_progress,omitempty"`
-	Review        int32                  `protobuf:"varint,4,opt,name=review,proto3" json:"review,omitempty"`
-	Completed     int32                  `protobuf:"varint,5,opt,name=completed,proto3" json:"completed,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId  string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Todo       int32                  `protobuf:"varint,2,opt,name=todo,proto3" json:"todo,omitempty"`
+	InProgress int32                  `protobuf:"varint,3,opt,name=in_progress,json=inProgress,proto3" json:"in_progress,omitempty"`
+	Review     int32                  `protobuf:"varint,4,opt,name=review,proto3" json:"review,omitempty"`
+	Completed  int32                  `protobuf:"varint,5,opt,name=completed,proto3" json:"completed,omitempty"`
+	// Health inputs under the same filters, counted like the project rollup: progress over
+	// top-level tasks, overdue work and time over the whole tree.
+	TopLevelTotal     int32 `protobuf:"varint,6,opt,name=top_level_total,json=topLevelTotal,proto3" json:"top_level_total,omitempty"`
+	TopLevelCompleted int32 `protobuf:"varint,7,opt,name=top_level_completed,json=topLevelCompleted,proto3" json:"top_level_completed,omitempty"`
+	Overdue           int32 `protobuf:"varint,8,opt,name=overdue,proto3" json:"overdue,omitempty"`
+	EstimatedMinutes  int64 `protobuf:"varint,9,opt,name=estimated_minutes,json=estimatedMinutes,proto3" json:"estimated_minutes,omitempty"`
+	TimeSpentMinutes  int64 `protobuf:"varint,10,opt,name=time_spent_minutes,json=timeSpentMinutes,proto3" json:"time_spent_minutes,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ProjectStatusRow) Reset() {
@@ -634,6 +641,41 @@ func (x *ProjectStatusRow) GetReview() int32 {
 func (x *ProjectStatusRow) GetCompleted() int32 {
 	if x != nil {
 		return x.Completed
+	}
+	return 0
+}
+
+func (x *ProjectStatusRow) GetTopLevelTotal() int32 {
+	if x != nil {
+		return x.TopLevelTotal
+	}
+	return 0
+}
+
+func (x *ProjectStatusRow) GetTopLevelCompleted() int32 {
+	if x != nil {
+		return x.TopLevelCompleted
+	}
+	return 0
+}
+
+func (x *ProjectStatusRow) GetOverdue() int32 {
+	if x != nil {
+		return x.Overdue
+	}
+	return 0
+}
+
+func (x *ProjectStatusRow) GetEstimatedMinutes() int64 {
+	if x != nil {
+		return x.EstimatedMinutes
+	}
+	return 0
+}
+
+func (x *ProjectStatusRow) GetTimeSpentMinutes() int64 {
+	if x != nil {
+		return x.TimeSpentMinutes
 	}
 	return 0
 }
@@ -852,6 +894,67 @@ func (x *SprintProgress) GetBurndown() []*BurndownPoint {
 	return nil
 }
 
+// A project a row above points at; every one is readable by the caller.
+type MetricProject struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Slug          string                 `protobuf:"bytes,3,opt,name=slug,proto3" json:"slug,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MetricProject) Reset() {
+	*x = MetricProject{}
+	mi := &file_projects_v1_metrics_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MetricProject) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MetricProject) ProtoMessage() {}
+
+func (x *MetricProject) ProtoReflect() protoreflect.Message {
+	mi := &file_projects_v1_metrics_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MetricProject.ProtoReflect.Descriptor instead.
+func (*MetricProject) Descriptor() ([]byte, []int) {
+	return file_projects_v1_metrics_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *MetricProject) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *MetricProject) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *MetricProject) GetSlug() string {
+	if x != nil {
+		return x.Slug
+	}
+	return ""
+}
+
 type GetTaskMetricsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The headline count: overdue, blocked or in-review tasks, or open tasks for workload.
@@ -862,13 +965,15 @@ type GetTaskMetricsResponse struct {
 	StatusByProject []*ProjectStatusRow `protobuf:"bytes,4,rep,name=status_by_project,json=statusByProject,proto3" json:"status_by_project,omitempty"`
 	BugTrend        []*BugTrendPoint    `protobuf:"bytes,5,rep,name=bug_trend,json=bugTrend,proto3" json:"bug_trend,omitempty"`
 	Sprints         []*SprintProgress   `protobuf:"bytes,6,rep,name=sprints,proto3" json:"sprints,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Names for the projects the rows reference, so a client needs no project list of its own.
+	Projects      []*MetricProject `protobuf:"bytes,7,rep,name=projects,proto3" json:"projects,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetTaskMetricsResponse) Reset() {
 	*x = GetTaskMetricsResponse{}
-	mi := &file_projects_v1_metrics_proto_msgTypes[8]
+	mi := &file_projects_v1_metrics_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -880,7 +985,7 @@ func (x *GetTaskMetricsResponse) String() string {
 func (*GetTaskMetricsResponse) ProtoMessage() {}
 
 func (x *GetTaskMetricsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_projects_v1_metrics_proto_msgTypes[8]
+	mi := &file_projects_v1_metrics_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -893,7 +998,7 @@ func (x *GetTaskMetricsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTaskMetricsResponse.ProtoReflect.Descriptor instead.
 func (*GetTaskMetricsResponse) Descriptor() ([]byte, []int) {
-	return file_projects_v1_metrics_proto_rawDescGZIP(), []int{8}
+	return file_projects_v1_metrics_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetTaskMetricsResponse) GetTotal() int32 {
@@ -938,6 +1043,13 @@ func (x *GetTaskMetricsResponse) GetSprints() []*SprintProgress {
 	return nil
 }
 
+func (x *GetTaskMetricsResponse) GetProjects() []*MetricProject {
+	if x != nil {
+		return x.Projects
+	}
+	return nil
+}
+
 var File_projects_v1_metrics_proto protoreflect.FileDescriptor
 
 const file_projects_v1_metrics_proto_rawDesc = "" +
@@ -969,7 +1081,7 @@ const file_projects_v1_metrics_proto_rawDesc = "" +
 	"\vWorkloadRow\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x12\n" +
 	"\x04open\x18\x02 \x01(\x05R\x04open\x12\x18\n" +
-	"\aoverdue\x18\x03 \x01(\x05R\aoverdue\"\x9c\x01\n" +
+	"\aoverdue\x18\x03 \x01(\x05R\aoverdue\"\xe9\x02\n" +
 	"\x10ProjectStatusRow\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
@@ -977,7 +1089,13 @@ const file_projects_v1_metrics_proto_rawDesc = "" +
 	"\vin_progress\x18\x03 \x01(\x05R\n" +
 	"inProgress\x12\x16\n" +
 	"\x06review\x18\x04 \x01(\x05R\x06review\x12\x1c\n" +
-	"\tcompleted\x18\x05 \x01(\x05R\tcompleted\"S\n" +
+	"\tcompleted\x18\x05 \x01(\x05R\tcompleted\x12&\n" +
+	"\x0ftop_level_total\x18\x06 \x01(\x05R\rtopLevelTotal\x12.\n" +
+	"\x13top_level_completed\x18\a \x01(\x05R\x11topLevelCompleted\x12\x18\n" +
+	"\aoverdue\x18\b \x01(\x05R\aoverdue\x12+\n" +
+	"\x11estimated_minutes\x18\t \x01(\x03R\x10estimatedMinutes\x12,\n" +
+	"\x12time_spent_minutes\x18\n" +
+	" \x01(\x03R\x10timeSpentMinutes\"S\n" +
 	"\rBugTrendPoint\x12\x12\n" +
 	"\x04date\x18\x01 \x01(\tR\x04date\x12\x16\n" +
 	"\x06opened\x18\x02 \x01(\x05R\x06opened\x12\x16\n" +
@@ -995,14 +1113,19 @@ const file_projects_v1_metrics_proto_rawDesc = "" +
 	"\bend_date\x18\x05 \x01(\tR\aendDate\x12\x14\n" +
 	"\x05total\x18\x06 \x01(\x05R\x05total\x12\x1c\n" +
 	"\tcompleted\x18\a \x01(\x05R\tcompleted\x126\n" +
-	"\bburndown\x18\b \x03(\v2\x1a.projects.v1.BurndownPointR\bburndown\"\xd2\x02\n" +
+	"\bburndown\x18\b \x03(\v2\x1a.projects.v1.BurndownPointR\bburndown\"G\n" +
+	"\rMetricProject\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04slug\x18\x03 \x01(\tR\x04slug\"\x8a\x03\n" +
 	"\x16GetTaskMetricsResponse\x12\x14\n" +
 	"\x05total\x18\x01 \x01(\x05R\x05total\x121\n" +
 	"\x05items\x18\x02 \x03(\v2\x1b.projects.v1.TaskMetricItemR\x05items\x124\n" +
 	"\bworkload\x18\x03 \x03(\v2\x18.projects.v1.WorkloadRowR\bworkload\x12I\n" +
 	"\x11status_by_project\x18\x04 \x03(\v2\x1d.projects.v1.ProjectStatusRowR\x0fstatusByProject\x127\n" +
 	"\tbug_trend\x18\x05 \x03(\v2\x1a.projects.v1.BugTrendPointR\bbugTrend\x125\n" +
-	"\asprints\x18\x06 \x03(\v2\x1b.projects.v1.SprintProgressR\asprints*\xf2\x01\n" +
+	"\asprints\x18\x06 \x03(\v2\x1b.projects.v1.SprintProgressR\asprints\x126\n" +
+	"\bprojects\x18\a \x03(\v2\x1a.projects.v1.MetricProjectR\bprojects*\xf2\x01\n" +
 	"\n" +
 	"TaskMetric\x12\x1b\n" +
 	"\x17TASK_METRIC_UNSPECIFIED\x10\x00\x12\x1f\n" +
@@ -1041,7 +1164,7 @@ func file_projects_v1_metrics_proto_rawDescGZIP() []byte {
 }
 
 var file_projects_v1_metrics_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_projects_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_projects_v1_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_projects_v1_metrics_proto_goTypes = []any{
 	(TaskMetric)(0),                // 0: projects.v1.TaskMetric
 	(MetricProjectScope)(0),        // 1: projects.v1.MetricProjectScope
@@ -1055,7 +1178,8 @@ var file_projects_v1_metrics_proto_goTypes = []any{
 	(*BugTrendPoint)(nil),          // 9: projects.v1.BugTrendPoint
 	(*BurndownPoint)(nil),          // 10: projects.v1.BurndownPoint
 	(*SprintProgress)(nil),         // 11: projects.v1.SprintProgress
-	(*GetTaskMetricsResponse)(nil), // 12: projects.v1.GetTaskMetricsResponse
+	(*MetricProject)(nil),          // 12: projects.v1.MetricProject
+	(*GetTaskMetricsResponse)(nil), // 13: projects.v1.GetTaskMetricsResponse
 }
 var file_projects_v1_metrics_proto_depIdxs = []int32{
 	1,  // 0: projects.v1.TaskMetricsScope.projects:type_name -> projects.v1.MetricProjectScope
@@ -1069,11 +1193,12 @@ var file_projects_v1_metrics_proto_depIdxs = []int32{
 	8,  // 8: projects.v1.GetTaskMetricsResponse.status_by_project:type_name -> projects.v1.ProjectStatusRow
 	9,  // 9: projects.v1.GetTaskMetricsResponse.bug_trend:type_name -> projects.v1.BugTrendPoint
 	11, // 10: projects.v1.GetTaskMetricsResponse.sprints:type_name -> projects.v1.SprintProgress
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	12, // 11: projects.v1.GetTaskMetricsResponse.projects:type_name -> projects.v1.MetricProject
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_projects_v1_metrics_proto_init() }
@@ -1087,7 +1212,7 @@ func file_projects_v1_metrics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_projects_v1_metrics_proto_rawDesc), len(file_projects_v1_metrics_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   9,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

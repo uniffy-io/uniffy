@@ -18,6 +18,7 @@ from uniffy.core.models.projects.field_definition import (
     SystemProjectFieldId,
     TaskStatusSemantic,
 )
+from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.sprint import Sprint, SprintStatus
 from uniffy.core.models.projects.task import Task, TaskType
 from uniffy.domains.projects.metrics.scope import ResolvedScope
@@ -60,6 +61,27 @@ class ProjectStatusCounts:
     in_progress: int
     review: int
     completed: int
+    top_level_total: int
+    top_level_completed: int
+    overdue: int
+    estimated_minutes: int
+    time_spent_minutes: int
+
+
+@dataclass
+class _HealthSums:
+    top_level_total: int = 0
+    top_level_completed: int = 0
+    overdue: int = 0
+    estimated_minutes: int = 0
+    time_spent_minutes: int = 0
+
+
+@dataclass(frozen=True)
+class ProjectRef:
+    project_id: UUID
+    name: str
+    slug: str
 
 
 @dataclass(frozen=True)
@@ -180,6 +202,16 @@ class TaskMetricsReader:
             limit,
         )
 
+    async def project_refs(self, project_ids: set[UUID]) -> list[ProjectRef]:
+        """Names for projects a result references, limited to the projects the scope can read."""
+        readable = list(project_ids & set(self.scope.project_ids))
+        if not readable:
+            return []
+        result = await self.session.execute(
+            select(Project.id, Project.name, Project.slug).where(Project.id.in_(readable))
+        )
+        return [ProjectRef(pid, name, slug) for pid, name, slug in result.all()]
+
     async def _semantics(self, project_ids: list[UUID]) -> dict[UUID, dict[str, TaskStatusSemantic]]:
         """Per project, status option id -> semantic; a project with a broken config maps nothing."""
         if not project_ids:
@@ -214,15 +246,24 @@ class TaskMetricsReader:
 
     async def status_by_project(self, limit: int) -> list[ProjectStatusCounts]:
         done = Task.completed_at.is_not(None)
+        top_level = Task.parent_id.is_(None)
         result = await self.session.execute(
-            self._tasks(Task.project_id, Task.status, done.label("done"), func.count()).group_by(
-                Task.project_id, Task.status, done
-            )
+            self._tasks(
+                Task.project_id,
+                Task.status,
+                done.label("done"),
+                func.count(),
+                func.count(case((top_level, 1))),
+                func.count(case((self._overdue(), 1))),
+                func.coalesce(func.sum(Task.estimated_minutes), 0),
+                func.coalesce(func.sum(Task.time_spent_minutes), 0),
+            ).group_by(Task.project_id, Task.status, done)
         )
         rows = result.all()
         semantics = await self._semantics(sorted({row[0] for row in rows}))
         buckets: dict[UUID, dict[TaskStatusSemantic, int]] = defaultdict(lambda: defaultdict(int))
-        for project_id, status, is_done, count in rows:
+        health: dict[UUID, _HealthSums] = defaultdict(_HealthSums)
+        for project_id, status, is_done, count, top, overdue, estimated, spent in rows:
             if is_done:
                 semantic = TaskStatusSemantic.COMPLETED
             else:
@@ -231,6 +272,13 @@ class TaskMetricsReader:
                 if semantic is TaskStatusSemantic.COMPLETED:
                     semantic = TaskStatusSemantic.IN_PROGRESS
             buckets[project_id][semantic] += count
+            sums = health[project_id]
+            sums.top_level_total += top
+            if is_done:
+                sums.top_level_completed += top
+            sums.overdue += overdue
+            sums.estimated_minutes += int(estimated)
+            sums.time_spent_minutes += int(spent)
         counts = [
             ProjectStatusCounts(
                 project_id=project_id,
@@ -238,6 +286,11 @@ class TaskMetricsReader:
                 in_progress=bucket[TaskStatusSemantic.IN_PROGRESS],
                 review=bucket[TaskStatusSemantic.REVIEW],
                 completed=bucket[TaskStatusSemantic.COMPLETED],
+                top_level_total=health[project_id].top_level_total,
+                top_level_completed=health[project_id].top_level_completed,
+                overdue=health[project_id].overdue,
+                estimated_minutes=health[project_id].estimated_minutes,
+                time_spent_minutes=health[project_id].time_spent_minutes,
             )
             for project_id, bucket in buckets.items()
         ]
@@ -309,13 +362,18 @@ class TaskMetricsReader:
     async def sprints(self, limit: int) -> list[SprintSummary]:
         if not self.scope.project_ids:
             return []
+        conditions = [
+            Sprint.organization_id == self.scope.organization_id,
+            Sprint.project_id.in_(self.scope.project_ids),
+            Sprint.status == SprintStatus.ACTIVE,
+        ]
+        if self.scope.people is not None:
+            # Narrowed to some people, a sprint counts only when it holds their work, and that
+            # choice runs before the limit so empty sprints cannot crowd out the relevant one.
+            conditions.append(self._tasks(literal(1)).where(Task.sprint_id == Sprint.id).exists())
         result = await self.session.execute(
             select(Sprint)
-            .where(
-                Sprint.organization_id == self.scope.organization_id,
-                Sprint.project_id.in_(self.scope.project_ids),
-                Sprint.status == SprintStatus.ACTIVE,
-            )
+            .where(*conditions)
             .order_by(Sprint.end_date.asc().nulls_last(), Sprint.name)
             .limit(limit)
         )

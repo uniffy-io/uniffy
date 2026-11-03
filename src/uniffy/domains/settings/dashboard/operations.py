@@ -58,7 +58,12 @@ class DashboardOperations:
         profile = await SettingsOperations(self.session).get_or_create_default_profile(user_id)
         locked = (
             await self.session.execute(
-                select(SettingsProfile).where(SettingsProfile.id == profile.id).with_for_update()
+                select(SettingsProfile)
+                .where(SettingsProfile.id == profile.id)
+                .with_for_update()
+                # The profile is already in the identity map from the unlocked read above; without
+                # a refresh the revision check would compare against that stale copy.
+                .execution_options(populate_existing=True)
             )
         ).scalar_one_or_none()
         if locked is None:

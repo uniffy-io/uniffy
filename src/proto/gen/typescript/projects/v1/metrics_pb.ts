@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file projects/v1/metrics.proto.
  */
 export const file_projects_v1_metrics: GenFile = /*@__PURE__*/
-  fileDesc("Chlwcm9qZWN0cy92MS9tZXRyaWNzLnByb3RvEgtwcm9qZWN0cy52MSK6AQoQVGFza01ldHJpY3NTY29wZRIxCghwcm9qZWN0cxgBIAEoDjIfLnByb2plY3RzLnYxLk1ldHJpY1Byb2plY3RTY29wZRITCgtwcm9qZWN0X2lkcxgCIAMoCRIuCgZwZW9wbGUYAyABKA4yHi5wcm9qZWN0cy52MS5NZXRyaWNQZW9wbGVTY29wZRIuCgZzcHJpbnQYBCABKA4yHi5wcm9qZWN0cy52MS5NZXRyaWNTcHJpbnRTY29wZSK3AQoVR2V0VGFza01ldHJpY3NSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRInCgZtZXRyaWMYAiABKA4yFy5wcm9qZWN0cy52MS5UYXNrTWV0cmljEiwKBXNjb3BlGAMgASgLMh0ucHJvamVjdHMudjEuVGFza01ldHJpY3NTY29wZRINCgVsaW1pdBgEIAEoBRIMCgRkYXlzGAUgASgFEhEKCXRpbWVfem9uZRgGIAEoCSKeAQoOVGFza01ldHJpY0l0ZW0SDwoHdGFza19pZBgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJEg4KBm51bWJlchgDIAEoBRINCgV0aXRsZRgEIAEoCRIQCghkdWVfZGF0ZRgFIAEoCRIUCgxhc3NpZ25lZV9pZHMYBiADKAkSDgoGc3RhdHVzGAcgASgJEhAKCHByaW9yaXR5GAggASgJIj0KC1dvcmtsb2FkUm93Eg8KB3VzZXJfaWQYASABKAkSDAoEb3BlbhgCIAEoBRIPCgdvdmVyZHVlGAMgASgFImwKEFByb2plY3RTdGF0dXNSb3cSEgoKcHJvamVjdF9pZBgBIAEoCRIMCgR0b2RvGAIgASgFEhMKC2luX3Byb2dyZXNzGAMgASgFEg4KBnJldmlldxgEIAEoBRIRCgljb21wbGV0ZWQYBSABKAUiPQoNQnVnVHJlbmRQb2ludBIMCgRkYXRlGAEgASgJEg4KBm9wZW5lZBgCIAEoBRIOCgZjbG9zZWQYAyABKAUiMAoNQnVybmRvd25Qb2ludBIMCgRkYXRlGAEgASgJEhEKCXJlbWFpbmluZxgCIAEoBSK7AQoOU3ByaW50UHJvZ3Jlc3MSEQoJc3ByaW50X2lkGAEgASgJEhIKCnByb2plY3RfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRISCgpzdGFydF9kYXRlGAQgASgJEhAKCGVuZF9kYXRlGAUgASgJEg0KBXRvdGFsGAYgASgFEhEKCWNvbXBsZXRlZBgHIAEoBRIsCghidXJuZG93bhgIIAMoCzIaLnByb2plY3RzLnYxLkJ1cm5kb3duUG9pbnQilgIKFkdldFRhc2tNZXRyaWNzUmVzcG9uc2USDQoFdG90YWwYASABKAUSKgoFaXRlbXMYAiADKAsyGy5wcm9qZWN0cy52MS5UYXNrTWV0cmljSXRlbRIqCgh3b3JrbG9hZBgDIAMoCzIYLnByb2plY3RzLnYxLldvcmtsb2FkUm93EjgKEXN0YXR1c19ieV9wcm9qZWN0GAQgAygLMh0ucHJvamVjdHMudjEuUHJvamVjdFN0YXR1c1JvdxItCglidWdfdHJlbmQYBSADKAsyGi5wcm9qZWN0cy52MS5CdWdUcmVuZFBvaW50EiwKB3NwcmludHMYBiADKAsyGy5wcm9qZWN0cy52MS5TcHJpbnRQcm9ncmVzcyryAQoKVGFza01ldHJpYxIbChdUQVNLX01FVFJJQ19VTlNQRUNJRklFRBAAEh8KG1RBU0tfTUVUUklDX1NQUklOVF9QUk9HUkVTUxABEhcKE1RBU0tfTUVUUklDX09WRVJEVUUQAhIXChNUQVNLX01FVFJJQ19CTE9DS0VEEAMSGAoUVEFTS19NRVRSSUNfV09SS0xPQUQQBBIhCh1UQVNLX01FVFJJQ19TVEFUVVNfQllfUFJPSkVDVBAFEhkKFVRBU0tfTUVUUklDX0JVR19UUkVORBAGEhwKGFRBU0tfTUVUUklDX1JFVklFV19RVUVVRRAHKqEBChJNZXRyaWNQcm9qZWN0U2NvcGUSJAogTUVUUklDX1BST0pFQ1RfU0NPUEVfVU5TUEVDSUZJRUQQABIcChhNRVRSSUNfUFJPSkVDVF9TQ09QRV9BTEwQARIkCiBNRVRSSUNfUFJPSkVDVF9TQ09QRV9NWV9QUk9KRUNUUxACEiEKHU1FVFJJQ19QUk9KRUNUX1NDT1BFX1NFTEVDVEVEEAMqmAEKEU1ldHJpY1Blb3BsZVNjb3BlEiMKH01FVFJJQ19QRU9QTEVfU0NPUEVfVU5TUEVDSUZJRUQQABIgChxNRVRSSUNfUEVPUExFX1NDT1BFX0VWRVJZT05FEAESGgoWTUVUUklDX1BFT1BMRV9TQ09QRV9NRRACEiAKHE1FVFJJQ19QRU9QTEVfU0NPUEVfTVlfVEVBTVMQAyp1ChFNZXRyaWNTcHJpbnRTY29wZRIjCh9NRVRSSUNfU1BSSU5UX1NDT1BFX1VOU1BFQ0lGSUVEEAASGwoXTUVUUklDX1NQUklOVF9TQ09QRV9BTlkQARIeChpNRVRSSUNfU1BSSU5UX1NDT1BFX0FDVElWRRACQj1aO2dpdGh1Yi5jb20vdW5pZmZ5LWlvL3VuaWZmeS1wcm90by1nby9wcm9qZWN0cy92MTtwcm9qZWN0c3YxYgZwcm90bzM");
+  fileDesc("Chlwcm9qZWN0cy92MS9tZXRyaWNzLnByb3RvEgtwcm9qZWN0cy52MSK6AQoQVGFza01ldHJpY3NTY29wZRIxCghwcm9qZWN0cxgBIAEoDjIfLnByb2plY3RzLnYxLk1ldHJpY1Byb2plY3RTY29wZRITCgtwcm9qZWN0X2lkcxgCIAMoCRIuCgZwZW9wbGUYAyABKA4yHi5wcm9qZWN0cy52MS5NZXRyaWNQZW9wbGVTY29wZRIuCgZzcHJpbnQYBCABKA4yHi5wcm9qZWN0cy52MS5NZXRyaWNTcHJpbnRTY29wZSK3AQoVR2V0VGFza01ldHJpY3NSZXF1ZXN0EhcKD29yZ2FuaXphdGlvbl9pZBgBIAEoCRInCgZtZXRyaWMYAiABKA4yFy5wcm9qZWN0cy52MS5UYXNrTWV0cmljEiwKBXNjb3BlGAMgASgLMh0ucHJvamVjdHMudjEuVGFza01ldHJpY3NTY29wZRINCgVsaW1pdBgEIAEoBRIMCgRkYXlzGAUgASgFEhEKCXRpbWVfem9uZRgGIAEoCSKeAQoOVGFza01ldHJpY0l0ZW0SDwoHdGFza19pZBgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJEg4KBm51bWJlchgDIAEoBRINCgV0aXRsZRgEIAEoCRIQCghkdWVfZGF0ZRgFIAEoCRIUCgxhc3NpZ25lZV9pZHMYBiADKAkSDgoGc3RhdHVzGAcgASgJEhAKCHByaW9yaXR5GAggASgJIj0KC1dvcmtsb2FkUm93Eg8KB3VzZXJfaWQYASABKAkSDAoEb3BlbhgCIAEoBRIPCgdvdmVyZHVlGAMgASgFIuoBChBQcm9qZWN0U3RhdHVzUm93EhIKCnByb2plY3RfaWQYASABKAkSDAoEdG9kbxgCIAEoBRITCgtpbl9wcm9ncmVzcxgDIAEoBRIOCgZyZXZpZXcYBCABKAUSEQoJY29tcGxldGVkGAUgASgFEhcKD3RvcF9sZXZlbF90b3RhbBgGIAEoBRIbChN0b3BfbGV2ZWxfY29tcGxldGVkGAcgASgFEg8KB292ZXJkdWUYCCABKAUSGQoRZXN0aW1hdGVkX21pbnV0ZXMYCSABKAMSGgoSdGltZV9zcGVudF9taW51dGVzGAogASgDIj0KDUJ1Z1RyZW5kUG9pbnQSDAoEZGF0ZRgBIAEoCRIOCgZvcGVuZWQYAiABKAUSDgoGY2xvc2VkGAMgASgFIjAKDUJ1cm5kb3duUG9pbnQSDAoEZGF0ZRgBIAEoCRIRCglyZW1haW5pbmcYAiABKAUiuwEKDlNwcmludFByb2dyZXNzEhEKCXNwcmludF9pZBgBIAEoCRISCgpwcm9qZWN0X2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEgoKc3RhcnRfZGF0ZRgEIAEoCRIQCghlbmRfZGF0ZRgFIAEoCRINCgV0b3RhbBgGIAEoBRIRCgljb21wbGV0ZWQYByABKAUSLAoIYnVybmRvd24YCCADKAsyGi5wcm9qZWN0cy52MS5CdXJuZG93blBvaW50IjcKDU1ldHJpY1Byb2plY3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIMCgRzbHVnGAMgASgJIsQCChZHZXRUYXNrTWV0cmljc1Jlc3BvbnNlEg0KBXRvdGFsGAEgASgFEioKBWl0ZW1zGAIgAygLMhsucHJvamVjdHMudjEuVGFza01ldHJpY0l0ZW0SKgoId29ya2xvYWQYAyADKAsyGC5wcm9qZWN0cy52MS5Xb3JrbG9hZFJvdxI4ChFzdGF0dXNfYnlfcHJvamVjdBgEIAMoCzIdLnByb2plY3RzLnYxLlByb2plY3RTdGF0dXNSb3cSLQoJYnVnX3RyZW5kGAUgAygLMhoucHJvamVjdHMudjEuQnVnVHJlbmRQb2ludBIsCgdzcHJpbnRzGAYgAygLMhsucHJvamVjdHMudjEuU3ByaW50UHJvZ3Jlc3MSLAoIcHJvamVjdHMYByADKAsyGi5wcm9qZWN0cy52MS5NZXRyaWNQcm9qZWN0KvIBCgpUYXNrTWV0cmljEhsKF1RBU0tfTUVUUklDX1VOU1BFQ0lGSUVEEAASHwobVEFTS19NRVRSSUNfU1BSSU5UX1BST0dSRVNTEAESFwoTVEFTS19NRVRSSUNfT1ZFUkRVRRACEhcKE1RBU0tfTUVUUklDX0JMT0NLRUQQAxIYChRUQVNLX01FVFJJQ19XT1JLTE9BRBAEEiEKHVRBU0tfTUVUUklDX1NUQVRVU19CWV9QUk9KRUNUEAUSGQoVVEFTS19NRVRSSUNfQlVHX1RSRU5EEAYSHAoYVEFTS19NRVRSSUNfUkVWSUVXX1FVRVVFEAcqoQEKEk1ldHJpY1Byb2plY3RTY29wZRIkCiBNRVRSSUNfUFJPSkVDVF9TQ09QRV9VTlNQRUNJRklFRBAAEhwKGE1FVFJJQ19QUk9KRUNUX1NDT1BFX0FMTBABEiQKIE1FVFJJQ19QUk9KRUNUX1NDT1BFX01ZX1BST0pFQ1RTEAISIQodTUVUUklDX1BST0pFQ1RfU0NPUEVfU0VMRUNURUQQAyqYAQoRTWV0cmljUGVvcGxlU2NvcGUSIwofTUVUUklDX1BFT1BMRV9TQ09QRV9VTlNQRUNJRklFRBAAEiAKHE1FVFJJQ19QRU9QTEVfU0NPUEVfRVZFUllPTkUQARIaChZNRVRSSUNfUEVPUExFX1NDT1BFX01FEAISIAocTUVUUklDX1BFT1BMRV9TQ09QRV9NWV9URUFNUxADKnUKEU1ldHJpY1NwcmludFNjb3BlEiMKH01FVFJJQ19TUFJJTlRfU0NPUEVfVU5TUEVDSUZJRUQQABIbChdNRVRSSUNfU1BSSU5UX1NDT1BFX0FOWRABEh4KGk1FVFJJQ19TUFJJTlRfU0NPUEVfQUNUSVZFEAJCPVo7Z2l0aHViLmNvbS91bmlmZnktaW8vdW5pZmZ5LXByb3RvLWdvL3Byb2plY3RzL3YxO3Byb2plY3RzdjFiBnByb3RvMw");
 
 /**
  * Unspecified values mean all readable projects, everyone and any sprint.
@@ -203,6 +203,34 @@ export type ProjectStatusRow = Message<"projects.v1.ProjectStatusRow"> & {
    * @generated from field: int32 completed = 5;
    */
   completed: number;
+
+  /**
+   * Health inputs under the same filters, counted like the project rollup: progress over
+   * top-level tasks, overdue work and time over the whole tree.
+   *
+   * @generated from field: int32 top_level_total = 6;
+   */
+  topLevelTotal: number;
+
+  /**
+   * @generated from field: int32 top_level_completed = 7;
+   */
+  topLevelCompleted: number;
+
+  /**
+   * @generated from field: int32 overdue = 8;
+   */
+  overdue: number;
+
+  /**
+   * @generated from field: int64 estimated_minutes = 9;
+   */
+  estimatedMinutes: bigint;
+
+  /**
+   * @generated from field: int64 time_spent_minutes = 10;
+   */
+  timeSpentMinutes: bigint;
 };
 
 /**
@@ -318,6 +346,35 @@ export const SprintProgressSchema: GenMessage<SprintProgress> = /*@__PURE__*/
   messageDesc(file_projects_v1_metrics, 7);
 
 /**
+ * A project a row above points at; every one is readable by the caller.
+ *
+ * @generated from message projects.v1.MetricProject
+ */
+export type MetricProject = Message<"projects.v1.MetricProject"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string slug = 3;
+   */
+  slug: string;
+};
+
+/**
+ * Describes the message projects.v1.MetricProject.
+ * Use `create(MetricProjectSchema)` to create a new message.
+ */
+export const MetricProjectSchema: GenMessage<MetricProject> = /*@__PURE__*/
+  messageDesc(file_projects_v1_metrics, 8);
+
+/**
  * @generated from message projects.v1.GetTaskMetricsResponse
  */
 export type GetTaskMetricsResponse = Message<"projects.v1.GetTaskMetricsResponse"> & {
@@ -354,6 +411,13 @@ export type GetTaskMetricsResponse = Message<"projects.v1.GetTaskMetricsResponse
    * @generated from field: repeated projects.v1.SprintProgress sprints = 6;
    */
   sprints: SprintProgress[];
+
+  /**
+   * Names for the projects the rows reference, so a client needs no project list of its own.
+   *
+   * @generated from field: repeated projects.v1.MetricProject projects = 7;
+   */
+  projects: MetricProject[];
 };
 
 /**
@@ -361,7 +425,7 @@ export type GetTaskMetricsResponse = Message<"projects.v1.GetTaskMetricsResponse
  * Use `create(GetTaskMetricsResponseSchema)` to create a new message.
  */
 export const GetTaskMetricsResponseSchema: GenMessage<GetTaskMetricsResponse> = /*@__PURE__*/
-  messageDesc(file_projects_v1_metrics, 8);
+  messageDesc(file_projects_v1_metrics, 9);
 
 /**
  * @generated from enum projects.v1.TaskMetric

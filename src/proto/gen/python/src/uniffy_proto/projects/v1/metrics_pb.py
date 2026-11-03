@@ -239,7 +239,7 @@ class WorkloadRow(Message[_WorkloadRowFields]):
         open: int
         overdue: int
 
-_ProjectStatusRowFields: TypeAlias = Literal["project_id", "todo", "in_progress", "review", "completed"]
+_ProjectStatusRowFields: TypeAlias = Literal["project_id", "todo", "in_progress", "review", "completed", "top_level_total", "top_level_completed", "overdue", "estimated_minutes", "time_spent_minutes"]
 
 class ProjectStatusRow(Message[_ProjectStatusRowFields]):
     """
@@ -268,9 +268,32 @@ class ProjectStatusRow(Message[_ProjectStatusRowFields]):
             ```proto
             int32 completed = 5;
             ```
+        top_level_total:
+            Health inputs under the same filters, counted like the project rollup: progress over
+            top-level tasks, overdue work and time over the whole tree.
+
+            ```proto
+            int32 top_level_total = 6;
+            ```
+        top_level_completed:
+            ```proto
+            int32 top_level_completed = 7;
+            ```
+        overdue:
+            ```proto
+            int32 overdue = 8;
+            ```
+        estimated_minutes:
+            ```proto
+            int64 estimated_minutes = 9;
+            ```
+        time_spent_minutes:
+            ```proto
+            int64 time_spent_minutes = 10;
+            ```
     """
 
-    __slots__ = ("project_id", "todo", "in_progress", "review", "completed")
+    __slots__ = ("project_id", "todo", "in_progress", "review", "completed", "top_level_total", "top_level_completed", "overdue", "estimated_minutes", "time_spent_minutes")
 
     if TYPE_CHECKING:
 
@@ -282,6 +305,11 @@ class ProjectStatusRow(Message[_ProjectStatusRowFields]):
             in_progress: int = 0,
             review: int = 0,
             completed: int = 0,
+            top_level_total: int = 0,
+            top_level_completed: int = 0,
+            overdue: int = 0,
+            estimated_minutes: int = 0,
+            time_spent_minutes: int = 0,
         ) -> None:
             pass
 
@@ -290,6 +318,11 @@ class ProjectStatusRow(Message[_ProjectStatusRowFields]):
         in_progress: int
         review: int
         completed: int
+        top_level_total: int
+        top_level_completed: int
+        overdue: int
+        estimated_minutes: int
+        time_spent_minutes: int
 
 _BugTrendPointFields: TypeAlias = Literal["date", "opened", "closed"]
 
@@ -439,7 +472,49 @@ class SprintProgress(Message[_SprintProgressFields]):
         completed: int
         burndown: list[BurndownPoint]
 
-_GetTaskMetricsResponseFields: TypeAlias = Literal["total", "items", "workload", "status_by_project", "bug_trend", "sprints"]
+_MetricProjectFields: TypeAlias = Literal["id", "name", "slug"]
+
+class MetricProject(Message[_MetricProjectFields]):
+    """
+    A project a row above points at; every one is readable by the caller.
+
+    ```proto
+    message projects.v1.MetricProject
+    ```
+
+    Attributes:
+        id:
+            ```proto
+            string id = 1;
+            ```
+        name:
+            ```proto
+            string name = 2;
+            ```
+        slug:
+            ```proto
+            string slug = 3;
+            ```
+    """
+
+    __slots__ = ("id", "name", "slug")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            id: str = "",
+            name: str = "",
+            slug: str = "",
+        ) -> None:
+            pass
+
+        id: str
+        name: str
+        slug: str
+
+_GetTaskMetricsResponseFields: TypeAlias = Literal["total", "items", "workload", "status_by_project", "bug_trend", "sprints", "projects"]
 
 class GetTaskMetricsResponse(Message[_GetTaskMetricsResponseFields]):
     """
@@ -476,9 +551,15 @@ class GetTaskMetricsResponse(Message[_GetTaskMetricsResponseFields]):
             ```proto
             repeated projects.v1.SprintProgress sprints = 6;
             ```
+        projects:
+            Names for the projects the rows reference, so a client needs no project list of its own.
+
+            ```proto
+            repeated projects.v1.MetricProject projects = 7;
+            ```
     """
 
-    __slots__ = ("total", "items", "workload", "status_by_project", "bug_trend", "sprints")
+    __slots__ = ("total", "items", "workload", "status_by_project", "bug_trend", "sprints", "projects")
 
     if TYPE_CHECKING:
 
@@ -491,6 +572,7 @@ class GetTaskMetricsResponse(Message[_GetTaskMetricsResponseFields]):
             status_by_project: list[ProjectStatusRow] | None = None,
             bug_trend: list[BugTrendPoint] | None = None,
             sprints: list[SprintProgress] | None = None,
+            projects: list[MetricProject] | None = None,
         ) -> None:
             pass
 
@@ -500,6 +582,7 @@ class GetTaskMetricsResponse(Message[_GetTaskMetricsResponseFields]):
         status_by_project: list[ProjectStatusRow]
         bug_trend: list[BugTrendPoint]
         sprints: list[SprintProgress]
+        projects: list[MetricProject]
 
 class TaskMetric(Enum):
     """
@@ -652,7 +735,7 @@ class MetricSprintScope(Enum):
 
 
 _DESC = file_desc(
-    b'\n\x19projects/v1/metrics.proto\x12\x0bprojects.v1"\xe0\x01\n\x10TaskMetricsScope\x12;\n\x08projects\x18\x01 \x01(\x0e2\x1f.projects.v1.MetricProjectScopeR\x08projects\x12\x1f\n\x0bproject_ids\x18\x02 \x03(\tR\nprojectIds\x126\n\x06people\x18\x03 \x01(\x0e2\x1e.projects.v1.MetricPeopleScopeR\x06people\x126\n\x06sprint\x18\x04 \x01(\x0e2\x1e.projects.v1.MetricSprintScopeR\x06sprint"\xed\x01\n\x15GetTaskMetricsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n\x06metric\x18\x02 \x01(\x0e2\x17.projects.v1.TaskMetricR\x06metric\x123\n\x05scope\x18\x03 \x01(\x0b2\x1d.projects.v1.TaskMetricsScopeR\x05scope\x12\x14\n\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x12\n\x04days\x18\x05 \x01(\x05R\x04days\x12\x1b\n\ttime_zone\x18\x06 \x01(\tR\x08timeZone"\xe8\x01\n\x0eTaskMetricItem\x12\x17\n\x07task_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x02 \x01(\tR\tprojectId\x12\x16\n\x06number\x18\x03 \x01(\x05R\x06number\x12\x14\n\x05title\x18\x04 \x01(\tR\x05title\x12\x19\n\x08due_date\x18\x05 \x01(\tR\x07dueDate\x12!\n\x0cassignee_ids\x18\x06 \x03(\tR\x0bassigneeIds\x12\x16\n\x06status\x18\x07 \x01(\tR\x06status\x12\x1a\n\x08priority\x18\x08 \x01(\tR\x08priority"T\n\x0bWorkloadRow\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\x12\n\x04open\x18\x02 \x01(\x05R\x04open\x12\x18\n\x07overdue\x18\x03 \x01(\x05R\x07overdue"\x9c\x01\n\x10ProjectStatusRow\x12\x1d\n\nproject_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n\x04todo\x18\x02 \x01(\x05R\x04todo\x12\x1f\n\x0bin_progress\x18\x03 \x01(\x05R\ninProgress\x12\x16\n\x06review\x18\x04 \x01(\x05R\x06review\x12\x1c\n\tcompleted\x18\x05 \x01(\x05R\tcompleted"S\n\rBugTrendPoint\x12\x12\n\x04date\x18\x01 \x01(\tR\x04date\x12\x16\n\x06opened\x18\x02 \x01(\x05R\x06opened\x12\x16\n\x06closed\x18\x03 \x01(\x05R\x06closed"A\n\rBurndownPoint\x12\x12\n\x04date\x18\x01 \x01(\tR\x04date\x12\x1c\n\tremaining\x18\x02 \x01(\x05R\tremaining"\x86\x02\n\x0eSprintProgress\x12\x1b\n\tsprint_id\x18\x01 \x01(\tR\x08sprintId\x12\x1d\n\nproject_id\x18\x02 \x01(\tR\tprojectId\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n\nstart_date\x18\x04 \x01(\tR\tstartDate\x12\x19\n\x08end_date\x18\x05 \x01(\tR\x07endDate\x12\x14\n\x05total\x18\x06 \x01(\x05R\x05total\x12\x1c\n\tcompleted\x18\x07 \x01(\x05R\tcompleted\x126\n\x08burndown\x18\x08 \x03(\x0b2\x1a.projects.v1.BurndownPointR\x08burndown"\xd2\x02\n\x16GetTaskMetricsResponse\x12\x14\n\x05total\x18\x01 \x01(\x05R\x05total\x121\n\x05items\x18\x02 \x03(\x0b2\x1b.projects.v1.TaskMetricItemR\x05items\x124\n\x08workload\x18\x03 \x03(\x0b2\x18.projects.v1.WorkloadRowR\x08workload\x12I\n\x11status_by_project\x18\x04 \x03(\x0b2\x1d.projects.v1.ProjectStatusRowR\x0fstatusByProject\x127\n\tbug_trend\x18\x05 \x03(\x0b2\x1a.projects.v1.BugTrendPointR\x08bugTrend\x125\n\x07sprints\x18\x06 \x03(\x0b2\x1b.projects.v1.SprintProgressR\x07sprints*\xf2\x01\n\nTaskMetric\x12\x1b\n\x17TASK_METRIC_UNSPECIFIED\x10\x00\x12\x1f\n\x1bTASK_METRIC_SPRINT_PROGRESS\x10\x01\x12\x17\n\x13TASK_METRIC_OVERDUE\x10\x02\x12\x17\n\x13TASK_METRIC_BLOCKED\x10\x03\x12\x18\n\x14TASK_METRIC_WORKLOAD\x10\x04\x12!\n\x1dTASK_METRIC_STATUS_BY_PROJECT\x10\x05\x12\x19\n\x15TASK_METRIC_BUG_TREND\x10\x06\x12\x1c\n\x18TASK_METRIC_REVIEW_QUEUE\x10\x07*\xa1\x01\n\x12MetricProjectScope\x12$\n METRIC_PROJECT_SCOPE_UNSPECIFIED\x10\x00\x12\x1c\n\x18METRIC_PROJECT_SCOPE_ALL\x10\x01\x12$\n METRIC_PROJECT_SCOPE_MY_PROJECTS\x10\x02\x12!\n\x1dMETRIC_PROJECT_SCOPE_SELECTED\x10\x03*\x98\x01\n\x11MetricPeopleScope\x12#\n\x1fMETRIC_PEOPLE_SCOPE_UNSPECIFIED\x10\x00\x12 \n\x1cMETRIC_PEOPLE_SCOPE_EVERYONE\x10\x01\x12\x1a\n\x16METRIC_PEOPLE_SCOPE_ME\x10\x02\x12 \n\x1cMETRIC_PEOPLE_SCOPE_MY_TEAMS\x10\x03*u\n\x11MetricSprintScope\x12#\n\x1fMETRIC_SPRINT_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17METRIC_SPRINT_SCOPE_ANY\x10\x01\x12\x1e\n\x1aMETRIC_SPRINT_SCOPE_ACTIVE\x10\x02B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3',
+    b'\n\x19projects/v1/metrics.proto\x12\x0bprojects.v1"\xe0\x01\n\x10TaskMetricsScope\x12;\n\x08projects\x18\x01 \x01(\x0e2\x1f.projects.v1.MetricProjectScopeR\x08projects\x12\x1f\n\x0bproject_ids\x18\x02 \x03(\tR\nprojectIds\x126\n\x06people\x18\x03 \x01(\x0e2\x1e.projects.v1.MetricPeopleScopeR\x06people\x126\n\x06sprint\x18\x04 \x01(\x0e2\x1e.projects.v1.MetricSprintScopeR\x06sprint"\xed\x01\n\x15GetTaskMetricsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12/\n\x06metric\x18\x02 \x01(\x0e2\x17.projects.v1.TaskMetricR\x06metric\x123\n\x05scope\x18\x03 \x01(\x0b2\x1d.projects.v1.TaskMetricsScopeR\x05scope\x12\x14\n\x05limit\x18\x04 \x01(\x05R\x05limit\x12\x12\n\x04days\x18\x05 \x01(\x05R\x04days\x12\x1b\n\ttime_zone\x18\x06 \x01(\tR\x08timeZone"\xe8\x01\n\x0eTaskMetricItem\x12\x17\n\x07task_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n\nproject_id\x18\x02 \x01(\tR\tprojectId\x12\x16\n\x06number\x18\x03 \x01(\x05R\x06number\x12\x14\n\x05title\x18\x04 \x01(\tR\x05title\x12\x19\n\x08due_date\x18\x05 \x01(\tR\x07dueDate\x12!\n\x0cassignee_ids\x18\x06 \x03(\tR\x0bassigneeIds\x12\x16\n\x06status\x18\x07 \x01(\tR\x06status\x12\x1a\n\x08priority\x18\x08 \x01(\tR\x08priority"T\n\x0bWorkloadRow\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12\x12\n\x04open\x18\x02 \x01(\x05R\x04open\x12\x18\n\x07overdue\x18\x03 \x01(\x05R\x07overdue"\xe9\x02\n\x10ProjectStatusRow\x12\x1d\n\nproject_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n\x04todo\x18\x02 \x01(\x05R\x04todo\x12\x1f\n\x0bin_progress\x18\x03 \x01(\x05R\ninProgress\x12\x16\n\x06review\x18\x04 \x01(\x05R\x06review\x12\x1c\n\tcompleted\x18\x05 \x01(\x05R\tcompleted\x12&\n\x0ftop_level_total\x18\x06 \x01(\x05R\rtopLevelTotal\x12.\n\x13top_level_completed\x18\x07 \x01(\x05R\x11topLevelCompleted\x12\x18\n\x07overdue\x18\x08 \x01(\x05R\x07overdue\x12+\n\x11estimated_minutes\x18\t \x01(\x03R\x10estimatedMinutes\x12,\n\x12time_spent_minutes\x18\n \x01(\x03R\x10timeSpentMinutes"S\n\rBugTrendPoint\x12\x12\n\x04date\x18\x01 \x01(\tR\x04date\x12\x16\n\x06opened\x18\x02 \x01(\x05R\x06opened\x12\x16\n\x06closed\x18\x03 \x01(\x05R\x06closed"A\n\rBurndownPoint\x12\x12\n\x04date\x18\x01 \x01(\tR\x04date\x12\x1c\n\tremaining\x18\x02 \x01(\x05R\tremaining"\x86\x02\n\x0eSprintProgress\x12\x1b\n\tsprint_id\x18\x01 \x01(\tR\x08sprintId\x12\x1d\n\nproject_id\x18\x02 \x01(\tR\tprojectId\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1d\n\nstart_date\x18\x04 \x01(\tR\tstartDate\x12\x19\n\x08end_date\x18\x05 \x01(\tR\x07endDate\x12\x14\n\x05total\x18\x06 \x01(\x05R\x05total\x12\x1c\n\tcompleted\x18\x07 \x01(\x05R\tcompleted\x126\n\x08burndown\x18\x08 \x03(\x0b2\x1a.projects.v1.BurndownPointR\x08burndown"G\n\rMetricProject\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n\x04slug\x18\x03 \x01(\tR\x04slug"\x8a\x03\n\x16GetTaskMetricsResponse\x12\x14\n\x05total\x18\x01 \x01(\x05R\x05total\x121\n\x05items\x18\x02 \x03(\x0b2\x1b.projects.v1.TaskMetricItemR\x05items\x124\n\x08workload\x18\x03 \x03(\x0b2\x18.projects.v1.WorkloadRowR\x08workload\x12I\n\x11status_by_project\x18\x04 \x03(\x0b2\x1d.projects.v1.ProjectStatusRowR\x0fstatusByProject\x127\n\tbug_trend\x18\x05 \x03(\x0b2\x1a.projects.v1.BugTrendPointR\x08bugTrend\x125\n\x07sprints\x18\x06 \x03(\x0b2\x1b.projects.v1.SprintProgressR\x07sprints\x126\n\x08projects\x18\x07 \x03(\x0b2\x1a.projects.v1.MetricProjectR\x08projects*\xf2\x01\n\nTaskMetric\x12\x1b\n\x17TASK_METRIC_UNSPECIFIED\x10\x00\x12\x1f\n\x1bTASK_METRIC_SPRINT_PROGRESS\x10\x01\x12\x17\n\x13TASK_METRIC_OVERDUE\x10\x02\x12\x17\n\x13TASK_METRIC_BLOCKED\x10\x03\x12\x18\n\x14TASK_METRIC_WORKLOAD\x10\x04\x12!\n\x1dTASK_METRIC_STATUS_BY_PROJECT\x10\x05\x12\x19\n\x15TASK_METRIC_BUG_TREND\x10\x06\x12\x1c\n\x18TASK_METRIC_REVIEW_QUEUE\x10\x07*\xa1\x01\n\x12MetricProjectScope\x12$\n METRIC_PROJECT_SCOPE_UNSPECIFIED\x10\x00\x12\x1c\n\x18METRIC_PROJECT_SCOPE_ALL\x10\x01\x12$\n METRIC_PROJECT_SCOPE_MY_PROJECTS\x10\x02\x12!\n\x1dMETRIC_PROJECT_SCOPE_SELECTED\x10\x03*\x98\x01\n\x11MetricPeopleScope\x12#\n\x1fMETRIC_PEOPLE_SCOPE_UNSPECIFIED\x10\x00\x12 \n\x1cMETRIC_PEOPLE_SCOPE_EVERYONE\x10\x01\x12\x1a\n\x16METRIC_PEOPLE_SCOPE_ME\x10\x02\x12 \n\x1cMETRIC_PEOPLE_SCOPE_MY_TEAMS\x10\x03*u\n\x11MetricSprintScope\x12#\n\x1fMETRIC_SPRINT_SCOPE_UNSPECIFIED\x10\x00\x12\x1b\n\x17METRIC_SPRINT_SCOPE_ANY\x10\x01\x12\x1e\n\x1aMETRIC_SPRINT_SCOPE_ACTIVE\x10\x02B=Z;github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1b\x06proto3',
     [],
     {
         "TaskMetricsScope": TaskMetricsScope,
@@ -663,6 +746,7 @@ _DESC = file_desc(
         "BugTrendPoint": BugTrendPoint,
         "BurndownPoint": BurndownPoint,
         "SprintProgress": SprintProgress,
+        "MetricProject": MetricProject,
         "GetTaskMetricsResponse": GetTaskMetricsResponse,
         "TaskMetric": TaskMetric,
         "MetricProjectScope": MetricProjectScope,

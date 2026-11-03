@@ -11,6 +11,7 @@ from uniffy_proto.projects.v1.metrics_pb import (
     GetTaskMetricsRequest,
     GetTaskMetricsResponse,
     MetricPeopleScope,
+    MetricProject,
     MetricProjectScope,
     MetricSprintScope,
     ProjectStatusRow,
@@ -125,6 +126,11 @@ async def _metric(
                     in_progress=row.in_progress,
                     review=row.review,
                     completed=row.completed,
+                    top_level_total=row.top_level_total,
+                    top_level_completed=row.top_level_completed,
+                    overdue=row.overdue,
+                    estimated_minutes=row.estimated_minutes,
+                    time_spent_minutes=row.time_spent_minutes,
                 )
                 for row in rows
             ],
@@ -179,9 +185,18 @@ class MetricsHandlers:
                 resolved = await resolve_scope(
                     session, user_id, organization_id, scope, request.time_zone
                 )
-                return await _metric(
-                    TaskMetricsReader(session, resolved), request.metric, limit, days
-                )
+                reader = TaskMetricsReader(session, resolved)
+                response = await _metric(reader, request.metric, limit, days)
+                referenced = {
+                    UUID(row.project_id)
+                    for rows in (response.items, response.status_by_project, response.sprints)
+                    for row in rows
+                }
+                for ref in await reader.project_refs(referenced):
+                    response.projects.append(
+                        MetricProject(id=str(ref.project_id), name=ref.name, slug=ref.slug)
+                    )
+                return response
         except ConnectError:
             raise
         except Exception as exc:
