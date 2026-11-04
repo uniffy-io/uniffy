@@ -3,7 +3,7 @@
 # The API is reached at /api on the same origin, so the build takes no API
 # URL; the edge in front routes /api, /livekit, and /healthz elsewhere.
 
-ARG NODE_IMAGE=node:24.21.0-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553
+ARG NODE_IMAGE=node:24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
 ARG NGINX_IMAGE=nginxinc/nginx-unprivileged:1.29.8-alpine-slim@sha256:59678856b05324b7f6371f26eb1520be7fcd8bdc8ab380fc4913db8503e5a842
 
 # The bundle is platform independent: a multi-arch build compiles it once on

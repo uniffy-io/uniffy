@@ -112,6 +112,7 @@ export function signedInOrganization(): string {
 
 /** Browser globals the realtime client needs, backed by in-memory storage. */
 export function installBrowser(): void {
+  vi.stubGlobal("navigator", {});
   vi.stubGlobal("WebSocket", FakeWebSocket);
   vi.stubGlobal(
     "window",
