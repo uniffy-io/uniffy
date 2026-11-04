@@ -684,9 +684,8 @@ def native_media_licenses() -> str:
         if name not in sources:
             raise click.ClickException(f"Missing pinned {name} source in src/uniffy/Dockerfile")
         url, checksum = sources[name]
-        version = re.fullmatch(
-            rf"(?:{name}-|release-)(.+)\.tar\.(?:xz|bz2|gz)", url.rsplit("/", 1)[-1]
-        )
+        prefix = r"ffmpeg-|n" if name == "ffmpeg" else rf"{name}-|release-"
+        version = re.fullmatch(rf"(?:{prefix})(.+)\.tar\.(?:xz|bz2|gz)", url.rsplit("/", 1)[-1])
         if version is None:
             raise click.ClickException(f"Cannot parse {name} source version from {url}")
         rows.append(f"| {name} | [{version[1]}]({url}) | {license_name} | `{checksum}` |")
@@ -991,9 +990,7 @@ def realtime_checkpoint_now(stack):
 
     Exits non-zero when a buffered stream could not be read; its edits stay in Valkey.
     """
-    workspace_cmd(
-        "backend", stack, ["run", "python", "-m", "uniffy", "--realtime-checkpoint-now"]
-    )
+    workspace_cmd("backend", stack, ["run", "python", "-m", "uniffy", "--realtime-checkpoint-now"])
 
 
 @cli.group("cli")

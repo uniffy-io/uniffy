@@ -11,6 +11,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 
@@ -27,43 +28,47 @@ async def test_generation_upgrade_preserves_drafts_and_downgrade_settles_open_at
             await session.commit()
     finally:
         await engine.dispose()
-    _execute(
+    await _execute(
         "INSERT INTO agents_skill_drafts "
         "(id, organization_id, owner_id, kind, name, display_name, content) "
         f"VALUES ('{draft_id}', '{org_id}', '{user_id}', 'create', 'report', 'Report', 'BODY')"
     )
-    before = _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts")
-    _migrate_to("098")
-    assert _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts") == before
-    assert _query("SELECT generation_attempt, invocation_id FROM agents_skill_drafts") == [(0, None)]
-    assert _query(
-        "SELECT character_maximum_length FROM information_schema.columns "
-        "WHERE table_name = 'agents_skill_drafts' AND column_name = 'status'"
+    before = await _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts")
+    await _migrate_to("098")
+    assert (
+        await _query("SELECT id, name, content, status, is_deleted FROM agents_skill_drafts")
+    ) == before
+    assert (await _query("SELECT generation_attempt, invocation_id FROM agents_skill_drafts")) == [
+        (0, None)
+    ]
+    assert (
+        await _query(
+            "SELECT character_maximum_length FROM information_schema.columns "
+            "WHERE table_name = 'agents_skill_drafts' AND column_name = 'status'"
+        )
     ) == [(32,)]
     for status in ("generating", "generation_failed"):
-        _execute(
+        await _execute(
             "INSERT INTO agents_skill_drafts "
             "(id, organization_id, owner_id, kind, status, generation_attempt) "
             f"VALUES ('{generate_id()}', '{org_id}', '{user_id}', 'create', '{status}', 1)"
         )
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "097")
+    await _run_alembic(config, command.downgrade, "097")
     assert (
-        _query(
+        await _query(
             "SELECT id, name, content, status, is_deleted FROM agents_skill_drafts "
             f"WHERE id = '{draft_id}'"
         )
-        == before
-    )
-    assert _query(
-        f"SELECT status, is_deleted FROM agents_skill_drafts WHERE id <> '{draft_id}'"
+    ) == before
+    assert (
+        await _query(f"SELECT status, is_deleted FROM agents_skill_drafts WHERE id <> '{draft_id}'")
     ) == [("discarded", True), ("discarded", True)]
     assert (
-        _query(
+        await _query(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'agents_skill_drafts' "
             "AND column_name = 'generation_attempt'"
         )
-        == []
-    )
+    ) == []

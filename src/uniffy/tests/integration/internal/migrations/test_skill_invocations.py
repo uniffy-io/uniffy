@@ -1,13 +1,13 @@
 import pytest
-from psycopg2 import errorcodes, errors
+from asyncpg import CheckViolationError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
+from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.skill import AgentSkill, AgentSkillSource, AgentSkillStatus
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
-from uniffy.core.errors import ValidationError
 from uniffy.domains.agents.skills import resolution
 from uniffy.domains.agents.skills.operations import SkillOperations
 from uniffy.domains.agents.skills.resolution import SkillInvocationError, SkillSurface
@@ -20,9 +20,6 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _provision_to,
     _query,
 )
-
-# psycopg2 builds its exception classes at runtime; look the class up by SQLSTATE.
-CheckViolation = errors.lookup(errorcodes.CHECK_VIOLATION)
 
 
 async def test_skill_cutover_preserves_content_history_and_assignments(scratch_database):
@@ -87,31 +84,35 @@ async def test_skill_cutover_preserves_content_history_and_assignments(scratch_d
 
     tables = ("agents_skills", "agents_skill_versions", "agents_skill_drafts")
     before = {
-        table: _query(f"SELECT id, content, requires_context FROM {table}") for table in tables
+        table: (await _query(f"SELECT id, content, requires_context FROM {table}"))
+        for table in tables
     }
-    assignments = _query("SELECT id, enabled_skills FROM agents_agents")
-    _migrate_to("098")
+    assignments = await _query("SELECT id, enabled_skills FROM agents_agents")
+    await _migrate_to("098")
     for table in tables:
-        assert _query(f"SELECT id, content, supported_surfaces FROM {table}") == before[table]
-        with pytest.raises(CheckViolation):
-            _execute(f"UPDATE {table} SET supported_surfaces = '[\"unknown\"]'::jsonb")
-    assert _query("SELECT id, enabled_skills FROM agents_agents") == assignments
-    assert _query("SELECT enabled_rules FROM agents_agents") == [([],)]
-    assert _query("SELECT namespace, key, value FROM org_settings ORDER BY namespace, key") == [
+        assert (await _query(f"SELECT id, content, supported_surfaces FROM {table}")) == before[
+            table
+        ]
+        with pytest.raises(CheckViolationError):
+            await _execute(f"UPDATE {table} SET supported_surfaces = '[\"unknown\"]'::jsonb")
+    assert (await _query("SELECT id, enabled_skills FROM agents_agents")) == assignments
+    assert (await _query("SELECT enabled_rules FROM agents_agents")) == [([],)]
+    assert (
+        await _query("SELECT namespace, key, value FROM org_settings ORDER BY namespace, key")
+    ) == [
         ("agents", "runtime", {"keep": True}),
         ("other", "enabled_rules", ["keep"]),
         ("other", "skill_evolution_enabled", True),
     ]
-    assert _query("SELECT count(*) FROM agents_rules") == [(0,)]
-    assert _query("SELECT count(*) FROM agents_rule_versions") == [(0,)]
+    assert (await _query("SELECT count(*) FROM agents_rules")) == [(0,)]
+    assert (await _query("SELECT count(*) FROM agents_rule_versions")) == [(0,)]
     assert (
-        _query(
+        await _query(
             "SELECT column_name FROM information_schema.columns WHERE table_name IN "
             "('agents_skills', 'agents_skill_versions', 'agents_skill_drafts') AND column_name IN "
             "('always_active', 'when_to_use', 'suggested_always_active', 'requires_context')"
         )
-        == []
-    )
+    ) == []
 
 
 async def test_exact_skill_snapshot_respects_assignment_tenant_and_pin(

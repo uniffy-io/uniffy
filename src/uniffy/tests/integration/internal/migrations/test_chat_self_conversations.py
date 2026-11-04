@@ -1,4 +1,4 @@
-import psycopg2
+import asyncpg
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -8,32 +8,30 @@ from uniffy.core.models.chat.channel import ChannelType
 from uniffy.core.models.login.user import User
 from uniffy.infrastructure.database.session import (
     ALEMBIC_INI_PATH,
-    _build_sync_db_url,
     get_database_url,
 )
 from uniffy.tests.integration.internal.migrations.test_migration_run import (
+    _execute,
     _insert_chat_channel,
     _insert_organization,
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 
-def _insert_self_dm(org_id, owner_id, slug: str, *, deleted: bool = False) -> None:
-    conn = psycopg2.connect(_build_sync_db_url())
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO chat_channels (id, organization_id, owner_id, name, slug, "
-                "description, channel_type, is_archived, is_default, is_deleted, icon, "
-                "is_agent_dm, is_self_dm, created_at, updated_at) VALUES (gen_random_uuid(), "
-                "%s, %s, 'Me', %s, '', 'DIRECT', false, false, %s, '', false, true, now(), now())",
-                (str(org_id), str(owner_id), slug, deleted),
-            )
-        conn.commit()
-    finally:
-        conn.close()
+async def _insert_self_dm(org_id, owner_id, slug: str, *, deleted: bool = False) -> None:
+    await _execute(
+        "INSERT INTO chat_channels (id, organization_id, owner_id, name, slug, "
+        "description, channel_type, is_archived, is_default, is_deleted, icon, "
+        "is_agent_dm, is_self_dm, created_at, updated_at) VALUES (gen_random_uuid(), "
+        "$1, $2, 'Me', $3, '', 'DIRECT', false, false, $4, '', false, true, now(), now())",
+        org_id,
+        owner_id,
+        slug,
+        deleted,
+    )
 
 
 async def test_self_conversation_flag_defaults_existing_rows_and_enforces_one_live_row(
@@ -58,26 +56,25 @@ async def test_self_conversation_flag_defaults_existing_rows_and_enforces_one_li
     finally:
         await engine.dispose()
 
-    _migrate_to("114")
-    assert _query("SELECT name, is_self_dm FROM chat_channels") == [("Existing", False)]
+    await _migrate_to("114")
+    assert (await _query("SELECT name, is_self_dm FROM chat_channels")) == [("Existing", False)]
 
-    _insert_self_dm(org_id, owner.id, "me-live")
-    with pytest.raises(psycopg2.errors.UniqueViolation):
-        _insert_self_dm(org_id, owner.id, "me-second")
+    await _insert_self_dm(org_id, owner.id, "me-live")
+    with pytest.raises(asyncpg.UniqueViolationError):
+        await _insert_self_dm(org_id, owner.id, "me-second")
     # A soft-deleted self conversation frees the slot for a fresh one.
-    _insert_self_dm(org_id, owner.id, "me-retired", deleted=True)
-    assert _query("SELECT count(*) FROM chat_channels WHERE is_self_dm") == [(2,)]
+    await _insert_self_dm(org_id, owner.id, "me-retired", deleted=True)
+    assert (await _query("SELECT count(*) FROM chat_channels WHERE is_self_dm")) == [(2,)]
 
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "113")
+    await _run_alembic(config, command.downgrade, "113")
     assert (
-        _query(
+        await _query(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'chat_channels' AND column_name = 'is_self_dm'"
         )
-        == []
-    )
+    ) == []
     assert (
-        _query("SELECT indexname FROM pg_indexes WHERE indexname = 'uq_chat_channels_self_dm'") == []
-    )
+        await _query("SELECT indexname FROM pg_indexes WHERE indexname = 'uq_chat_channels_self_dm'")
+    ) == []

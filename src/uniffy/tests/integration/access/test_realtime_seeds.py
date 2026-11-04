@@ -110,6 +110,25 @@ async def test_seed_checks_source_and_live_updates_cannot_bypass_the_lease(docum
     assert text_of((await document.live.checkpointed()).updates) == "base mobile edit"
 
 
+async def test_seed_with_deletions_commits_and_replays_once(document):
+    held = await lease(document, "left:1")
+    proposal = decode_snapshot(document.seed)
+    proposal.apply_update(fragment_proposal(document.seed))
+    metadata = proposal.get("markdown_mirror", type=pycrdt.Map)
+    metadata["active"] = False
+    del metadata["active"]
+    update = proposal.get_update()
+
+    accepted = await propose(document, update, held)
+    assert accepted.revision > document.seed.revision
+    replay = await propose(document, update, held)
+    assert replay.revision == accepted.revision
+    assert text_of(replay.updates) == "base"
+    assert str(decode_snapshot(replay).get("prosemirror", type=pycrdt.XmlFragment)) == (
+        "<paragraph>base</paragraph>"
+    )
+
+
 @pytest.mark.parametrize("expired", [True, False])
 async def test_seed_checks_lease_expiry_and_identity_before_any_peer_seed(document, expired):
     held = await lease(document, "left:1")

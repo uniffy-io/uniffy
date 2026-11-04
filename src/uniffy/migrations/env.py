@@ -1,11 +1,13 @@
 """Alembic environment configuration for migrations."""
 
+import asyncio
 import os
 import sys
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import Connection, pool
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 # Add src to python path
@@ -13,9 +15,8 @@ sys.path.append(os.path.join(os.getcwd(), "src"))
 
 # Import all models so they're registered with SQLModel.metadata
 from uniffy.core.models import *  # noqa: F403
+from uniffy.infrastructure.database.session import get_database_url
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
 # Interpret the config file for Python logging.
@@ -24,21 +25,7 @@ config = context.config
 if config.attributes.get("configure_logger", True) and config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
 target_metadata = SQLModel.metadata
-
-
-def get_url() -> str:
-    """Get database URL from environment variables."""
-    db_host = os.getenv("POSTGRES_HOST", "localhost")
-    db_port = os.getenv("POSTGRES_PORT", "5432")
-    db_user = os.getenv("POSTGRES_USER", "uniffy")
-    db_password = os.getenv("POSTGRES_PASSWORD", "uniffy")
-    db_name = os.getenv("POSTGRES_DB", "uniffy")
-
-    # Use synchronous driver for migrations
-    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 
 def process_revision_directives(context, revision, directives):
@@ -62,18 +49,8 @@ def process_revision_directives(context, revision, directives):
 
 
 def run_migrations_offline() -> None:
-    """
-    Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-    """
-    url = get_url()
+    """Emit migration SQL without connecting to PostgreSQL."""
+    url = get_database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -86,30 +63,38 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode using synchronous connection."""
-    configuration = config.get_section(config.config_ini_section, {})
-    configuration["sqlalchemy.url"] = get_url()
+def apply_migrations(connection: Connection) -> None:
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        process_revision_directives=process_revision_directives,
+        transaction_per_migration=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
 
-    connectable = engine_from_config(
-        configuration,
-        prefix="sqlalchemy.",
+
+async def run_async_migrations() -> None:
+    engine = create_async_engine(
+        get_database_url(),
         poolclass=pool.NullPool,
         # Migrations emit date literals against timestamptz columns; pin the
         # session zone so they resolve identically on any server default.
-        connect_args={"options": "-c TimeZone=UTC"},
+        connect_args={"server_settings": {"TimeZone": "UTC"}},
     )
+    try:
+        async with engine.connect() as connection:
+            await connection.run_sync(apply_migrations)
+    finally:
+        await engine.dispose()
 
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            process_revision_directives=process_revision_directives,
-            transaction_per_migration=True,
-        )
 
-        with context.begin_transaction():
-            context.run_migrations()
+def run_migrations_online() -> None:
+    connection = config.attributes.get("connection")
+    if connection is None:
+        asyncio.run(run_async_migrations())
+    else:
+        apply_migrations(connection)
 
 
 if context.is_offline_mode():

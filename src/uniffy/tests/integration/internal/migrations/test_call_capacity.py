@@ -14,6 +14,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 
@@ -68,19 +69,18 @@ async def test_capacity_upgrade_preserves_calls_and_snapshots_policy(scratch_dat
     finally:
         await engine.dispose()
 
-    _migrate_to("113")
-    assert dict(_query("SELECT id::text, max_participants FROM calls_calls")) == expected
+    await _migrate_to("113")
+    assert dict((await _query("SELECT id::text, max_participants FROM calls_calls"))) == expected
 
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "112")
-    assert _query("SELECT count(*) FROM calls_calls") == [(3,)]
+    await _run_alembic(config, command.downgrade, "112")
+    assert (await _query("SELECT count(*) FROM calls_calls")) == [(3,)]
     assert (
-        _query(
+        await _query(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_name = 'calls_calls' AND column_name = 'max_participants'"
         )
-        == []
-    )
-    _migrate_to("113")
-    assert dict(_query("SELECT id::text, max_participants FROM calls_calls")) == expected
+    ) == []
+    await _migrate_to("113")
+    assert dict((await _query("SELECT id::text, max_participants FROM calls_calls"))) == expected

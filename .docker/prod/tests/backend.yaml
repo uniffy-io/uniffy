@@ -85,7 +85,7 @@ commandTests:
     command: python
     args:
       - "-c"
-      - "import pypdfium2, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, psycopg2, cryptography, argon2"
+      - "import pypdfium2, PIL, libvalkey, asyncpg, granian, pycrdt, orjson, cryptography, argon2"
     exitCode: 0
   - name: app factory imports
     command: python

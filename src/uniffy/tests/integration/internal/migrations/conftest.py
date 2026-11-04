@@ -1,48 +1,49 @@
 """Isolated empty databases exercise the migration chain from scratch."""
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
 
-import psycopg2
+import asyncpg
 import pytest
+import pytest_asyncio
 
 from uniffy.core.types import generate_id
-from uniffy.infrastructure.database.session import _build_sync_db_url, get_database_url
+from uniffy.infrastructure.database.session import get_database_url
 
 
-def _maintenance_connection():
-    """Connect to the configured database purely to issue CREATE/DROP DATABASE."""
-    conn = psycopg2.connect(_build_sync_db_url())
-    conn.autocommit = True
-    return conn
+async def _maintenance_connection() -> asyncpg.Connection:
+    return await asyncpg.connect(
+        get_database_url().replace("postgresql+asyncpg://", "postgresql://", 1)
+    )
 
 
-@pytest.fixture(scope="session")
-def database_reachable() -> None:
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def database_reachable() -> None:
     try:
-        _maintenance_connection().close()
-    except psycopg2.Error as exc:
-        pytest.skip(f"no database at {get_database_url()}: {exc}")
+        conn = await _maintenance_connection()
+        await conn.close()
+    except asyncpg.PostgresError, OSError:
+        pytest.skip("PostgreSQL is unavailable")
 
 
 @pytest.fixture
-def scratch_database(database_reachable, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+async def scratch_database(
+    database_reachable, monkeypatch: pytest.MonkeyPatch
+) -> AsyncIterator[str]:
     """Use the application's database configuration for each isolated migration run."""
     name = f"uniffy_migtest_{generate_id().hex}"
-    conn = _maintenance_connection()
+    conn = await _maintenance_connection()
     try:
-        with conn.cursor() as cur:
-            cur.execute(f'CREATE DATABASE "{name}"')
+        await conn.execute(f'CREATE DATABASE "{name}"')
     finally:
-        conn.close()
+        await conn.close()
 
     monkeypatch.setenv("POSTGRES_DB", name)
     try:
         yield name
     finally:
         monkeypatch.undo()
-        conn = _maintenance_connection()
+        conn = await _maintenance_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+            await conn.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
         finally:
-            conn.close()
+            await conn.close()

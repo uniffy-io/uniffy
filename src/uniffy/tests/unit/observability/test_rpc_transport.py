@@ -1,4 +1,6 @@
+import asyncio
 import gzip
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,7 +11,7 @@ from connectrpc.server import DEFAULT_READ_MAX_BYTES
 from fastapi.testclient import TestClient
 from protobuf import Message
 from uniffy_proto.agents.v1.agents_pb import UploadAgentAvatarRequest, UploadAgentAvatarResponse
-from uniffy_proto.auth.v1.auth_pb import LoginRequest
+from uniffy_proto.auth.v1.auth_pb import LoginRequest, LoginResponse
 from uniffy_proto.cal.v1.calendar_pb import (
     ApplyCalendarImportRequest,
     ApplyCalendarImportResponse,
@@ -17,6 +19,10 @@ from uniffy_proto.cal.v1.calendar_pb import (
     PreviewCalendarImportResponse,
 )
 from uniffy_proto.files.v1.files_pb import UploadChunkRequest, UploadChunkResponse
+from uniffy_proto.notifications.v1.notifications_pb import (
+    StreamNotificationsRequest,
+    StreamNotificationsResponse,
+)
 from uniffy_proto.presence.v1.presence_pb import (
     GetBulkPresenceRequest,
     GetBulkPresenceResponse,
@@ -27,6 +33,7 @@ from uniffy_proto.users.v1.users_pb import UploadAvatarRequest, UploadAvatarResp
 from uniffy.core.auth.principal import current_principal
 from uniffy.core.auth.tokens import create_access_token
 from uniffy.core.avatars import MAX_AVATAR_BYTES
+from uniffy.core.json_codec import loads
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.realtime.ydoc_manager import YDocManager
 from uniffy.core.search import SearchIndexer, WorkspaceSearch
@@ -34,8 +41,10 @@ from uniffy.core.search.engine import SearchEngine
 from uniffy.core.storage import ObjectStorage
 from uniffy.core.types import generate_id
 from uniffy.domains.agents.agents.service import AgentsServiceImpl
+from uniffy.domains.auth.handlers import AuthHandlers
 from uniffy.domains.files.service import FilesServiceImpl
 from uniffy.domains.files.uploads import SMALL_CHUNK_SIZE, XLARGE_CHUNK_SIZE
+from uniffy.domains.notifications.handlers import NotificationsHandlers
 from uniffy.domains.presence.operations import PresenceOperations
 from uniffy.domains.scheduling.calendar.ical.parse import MAX_IMPORT_BYTES
 from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
@@ -79,6 +88,83 @@ def test_private_rpc_authenticates_before_decoding(monkeypatch: pytest.MonkeyPat
     assert response.status_code == 401
     assert response.json()["code"] == Code.UNAUTHENTICATED.name.lower()
     assert body.decode() not in response.text
+
+
+def test_rpc_deadline_cancels_handler_and_preserves_error_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cancelled = False
+
+    async def login(self: AuthHandlers, request: LoginRequest, ctx: RequestContext) -> LoginResponse:
+        nonlocal cancelled
+        try:
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            cancelled = True
+            raise
+        return LoginResponse()
+
+    monkeypatch.setattr(AuthHandlers, "login", login)
+    response = _rpc_client(monkeypatch).post(
+        "/auth.v1.AuthService/Login",
+        json={"email": "test@example.com", "password": "test"},
+        headers={"connect-timeout-ms": "20"},
+    )
+
+    assert response.status_code == 504
+    assert response.json()["code"] == Code.DEADLINE_EXCEEDED.name.lower()
+    assert cancelled
+
+
+def test_rpc_rejects_malformed_deadline_before_handler(monkeypatch: pytest.MonkeyPatch) -> None:
+    login = AsyncMock(return_value=LoginResponse())
+    monkeypatch.setattr(AuthHandlers, "login", login)
+    response = _rpc_client(monkeypatch).post(
+        "/auth.v1.AuthService/Login",
+        json={"email": "test@example.com", "password": "test"},
+        headers={"connect-timeout-ms": "invalid"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["code"] == Code.INVALID_ARGUMENT.name.lower()
+    login.assert_not_called()
+
+
+def test_stream_deadline_preserves_sent_message_and_closes_handler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    closed = False
+    heartbeat = StreamNotificationsResponse(
+        event_type=StreamNotificationsResponse.EventType.HEARTBEAT,
+    )
+
+    async def stream(
+        self: NotificationsHandlers, request: StreamNotificationsRequest, ctx: RequestContext
+    ) -> AsyncIterator[StreamNotificationsResponse]:
+        nonlocal closed
+        try:
+            yield heartbeat
+            await asyncio.sleep(1)
+        finally:
+            closed = True
+
+    monkeypatch.setattr(NotificationsHandlers, "stream_notifications", stream)
+    request = StreamNotificationsRequest(organization_id=str(generate_id())).to_binary()
+    response = _rpc_client(monkeypatch).post(
+        "/notifications.v1.NotificationsService/StreamNotifications",
+        content=b"\x00" + len(request).to_bytes(4, "big") + request,
+        headers={"content-type": "application/connect+proto", "connect-timeout-ms": "20"},
+    )
+
+    assert response.status_code == 200
+    expected = heartbeat.to_binary()
+    first_frame = b"\x00" + len(expected).to_bytes(4, "big") + expected
+    assert response.content.startswith(first_frame)
+    trailer = response.content[len(first_frame) :]
+    assert trailer[0] == 2
+    assert int.from_bytes(trailer[1:5], "big") == len(trailer[5:])
+    assert loads(trailer[5:])["error"]["code"] == Code.DEADLINE_EXCEEDED.name.lower()
+    assert closed
 
 
 @pytest.mark.parametrize("codec_name", ["proto", "json"])

@@ -1,17 +1,17 @@
 """PostgreSQL engine, migration, and session lifecycle."""
 
+import asyncio
 import os
-import time
-from collections.abc import AsyncIterator, Iterator
-from contextlib import asynccontextmanager, contextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
-import psycopg2
 from alembic import command
 from alembic.config import Config
 from loguru import logger
+from sqlalchemy import Connection
 from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import AsyncAdaptedQueuePool
+from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool
 from sqlalchemy.sql import text
 
 from uniffy.core.json_codec import dumps_str, loads
@@ -27,52 +27,35 @@ ALEMBIC_INI_PATH = os.path.join(
 )
 
 
-def _build_sync_db_url() -> str:
-    """Build the synchronous psycopg2 URL for tooling that cannot use asyncpg."""
-    db_host = os.getenv("POSTGRES_HOST", "localhost")
-    db_port = os.getenv("POSTGRES_PORT", "5432")
-    db_user = os.getenv("POSTGRES_USER", "uniffy")
-    db_password = os.getenv("POSTGRES_PASSWORD", "uniffy")
-    db_name = os.getenv("POSTGRES_DB", "uniffy")
-    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-
-
-@contextmanager
-def startup_advisory_lock(lock_id: int, name: str) -> Iterator[None]:
-    """Serialise an idempotent startup step across workers.
-
-    Uses pg_try_advisory_lock + sleep-poll rather than blocking pg_advisory_lock
-    because the latter holds an open transaction, which deadlocks against
-    migrations that use CREATE INDEX CONCURRENTLY. The body must be idempotent:
-    if a worker crashes, Postgres reclaims the lock and a follower takes over.
-    """
-    conn = psycopg2.connect(_build_sync_db_url())
+@asynccontextmanager
+async def startup_advisory_lock(lock_id: int, name: str) -> AsyncGenerator[None]:
+    """Hold a dedicated session lock without blocking the event loop or concurrent DDL."""
+    engine = create_async_engine(
+        get_database_url(), poolclass=NullPool, isolation_level="AUTOCOMMIT"
+    )
     try:
-        conn.autocommit = True
-        with conn.cursor() as cur:
+        async with engine.connect() as connection:
             attempt = 0
             while True:
-                cur.execute(
-                    "SELECT pg_try_advisory_lock(%s)",
-                    (lock_id,),
+                acquired = await connection.scalar(
+                    text("SELECT pg_try_advisory_lock(:lock_id)"), {"lock_id": lock_id}
                 )
-                if cur.fetchone()[0]:
+                if acquired:
                     break
                 attempt += 1
                 if attempt == 1:
                     logger.info(
                         f"Another worker is running {name}, waiting for the lock",
                     )
-                time.sleep(1)
+                await asyncio.sleep(1)
             try:
                 yield
             finally:
-                cur.execute(
-                    "SELECT pg_advisory_unlock(%s)",
-                    (lock_id,),
+                await connection.execute(
+                    text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": lock_id}
                 )
     finally:
-        conn.close()
+        await engine.dispose()
 
 
 _engine: AsyncEngine | None = None
@@ -80,7 +63,6 @@ _async_session_maker: async_sessionmaker[AsyncSession] | None = None
 
 
 def get_database_url() -> str:
-    """Return the async PostgreSQL URL from POSTGRES_* env vars."""
     db_host = os.getenv("POSTGRES_HOST", "localhost")
     db_port = os.getenv("POSTGRES_PORT", "5432")
     db_user = os.getenv("POSTGRES_USER", "uniffy")
@@ -91,7 +73,6 @@ def get_database_url() -> str:
 
 
 async def create_extensions(engine: AsyncEngine) -> None:
-    """Create the PostgreSQL extensions Uniffy depends on."""
     logger.info("Creating PostgreSQL extensions...")
 
     async with engine.begin() as conn:
@@ -102,8 +83,7 @@ async def create_extensions(engine: AsyncEngine) -> None:
         logger.info("Extension uuid-ossp enabled")
 
 
-def run_migrations() -> None:
-    """Upgrade the database to head via Alembic (sync; asyncpg is not supported)."""
+async def run_migrations() -> None:
     logger.info("Running database migrations...")
 
     if not os.path.exists(ALEMBIC_INI_PATH):
@@ -114,21 +94,29 @@ def run_migrations() -> None:
     # Skip fileConfig so loguru stays in charge.
     alembic_cfg.attributes["configure_logger"] = False
 
-    alembic_cfg.set_main_option("sqlalchemy.url", _build_sync_db_url())
-
-    with startup_advisory_lock(MIGRATION_LOCK_ID, "migrations"):
+    def upgrade(connection: Connection) -> None:
+        alembic_cfg.attributes["connection"] = connection
         command.upgrade(alembic_cfg, "head")
+
+    engine = create_async_engine(
+        get_database_url(),
+        poolclass=NullPool,
+        connect_args={"server_settings": {"TimeZone": "UTC"}},
+    )
+    try:
+        async with (
+            startup_advisory_lock(MIGRATION_LOCK_ID, "migrations"),
+            engine.connect() as connection,
+        ):
+            await connection.run_sync(upgrade)
+    finally:
+        await engine.dispose()
 
     logger.info("Migrations completed successfully")
 
 
 async def init_db(*, skip_migrations: bool = False, application_name: str = "uniffy") -> None:
-    """Initialise the engine, create extensions, and optionally run migrations.
-
-    Workers pass ``skip_migrations=True`` so only the backend process upgrades
-    the schema; advisory locks would already make this safe, but skipping
-    avoids the alembic import cost on worker boot.
-    """
+    """Initialize database resources; workers skip migrations owned by backend startup."""
     global _engine, _async_session_maker
 
     logger.info("Initializing database...")
@@ -182,7 +170,7 @@ async def init_db(*, skip_migrations: bool = False, application_name: str = "uni
     await create_extensions(_engine)
 
     if not skip_migrations:
-        run_migrations()
+        await run_migrations()
 
     _async_session_maker = async_sessionmaker(
         _engine,
@@ -194,7 +182,7 @@ async def init_db(*, skip_migrations: bool = False, application_name: str = "uni
 
 
 @asynccontextmanager
-async def open_session() -> AsyncIterator[AsyncSession]:
+async def open_session() -> AsyncGenerator[AsyncSession]:
     """Yield an `AsyncSession` and guarantee deterministic checkin on exit."""
     if _async_session_maker is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")
@@ -209,7 +197,6 @@ async def open_session() -> AsyncIterator[AsyncSession]:
 
 
 async def close_db() -> None:
-    """Close the database engine and cleanup resources."""
     global _engine, _async_session_maker
 
     if _engine:

@@ -10,15 +10,7 @@ from uniffy.core.types import generate_id
 
 
 class UserSession(SQLModel, table=True):
-    """One login session for a user; revocable independently of other sessions.
-
-    ``refresh_token_hash`` is the SHA256 hex digest of the most-recently-issued
-    refresh token for this session. ``previous_refresh_token_hash`` carries the
-    immediately-prior digest for a short grace window so concurrent cross-tab
-    refreshes do not trip the reuse-detection alarm. A refresh whose digest
-    matches neither column is treated as a stolen-token replay: every session
-    for the user is revoked and ``token_version`` is bumped.
-    """
+    """Independently revocable login session with a prior token hash for concurrent refreshes."""
 
     __tablename__ = "login_user_sessions"
     __table_args__ = (
@@ -28,13 +20,11 @@ class UserSession(SQLModel, table=True):
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     user_id: UUID = Field(
-        sa_column_kwargs={"type_": None},
         foreign_key="login_users.id",
         nullable=False,
     )
     organization_id: UUID | None = Field(
         default=None,
-        sa_column_kwargs={"type_": None},
         foreign_key="login_organizations.id",
         nullable=True,
     )

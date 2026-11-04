@@ -36,11 +36,11 @@ async def test_existing_calendars_are_queued_after_upgrade(scratch_database: str
             await session.commit()
     finally:
         await engine.dispose()
-    _migrate_to("112")
-    queued = _query(
+    await _migrate_to("112")
+    queued = await _query(
         "SELECT calendar_id, cardinality(pending_event_ids) FROM calendar_search_acl_refresh_queue"
     )
     assert len(queued) == 1
     assert str(queued[0][0]) == str(calendar_id)
     assert queued[0][1] == 0
-    assert _query("SELECT access_mode FROM calendar_calendars") == [("OWNER_ONLY",)]
+    assert (await _query("SELECT access_mode FROM calendar_calendars")) == [("OWNER_ONLY",)]

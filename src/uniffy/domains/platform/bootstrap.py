@@ -25,7 +25,7 @@ async def bootstrap_deployment(
     """Serialize empty-deployment bootstrap across workers with an advisory lock."""
     from uniffy.infrastructure.database.session import startup_advisory_lock
 
-    with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
+    async with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
         await _bootstrap_deployment_locked(search_indexer)
 
 

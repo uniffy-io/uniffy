@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from connectrpc.method import IdempotencyLevel, MethodInfo
+from connectrpc.method import IdempotencyLevel, MethodInfo, StreamType
 from connectrpc.request import Headers, RequestContext
 
 from uniffy.core.auth.principal import current_principal
@@ -51,6 +51,7 @@ def _ctx(qualified: str, *, bearer: str | None = None) -> RequestContext:
             input=object,
             output=object,
             idempotency_level=IdempotencyLevel.UNKNOWN,
+            stream_type=StreamType.UNARY,
         ),
         http_method="POST",
         request_headers=headers,

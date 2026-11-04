@@ -2,7 +2,7 @@
 
 import asyncio
 import secrets
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import aclosing, asynccontextmanager
 from dataclasses import dataclass, field
 
@@ -58,7 +58,7 @@ class MediaSourceServer:
         self._objects.clear()
 
     @asynccontextmanager
-    async def open(self, key: str, limit: int) -> AsyncIterator[MediaSource]:
+    async def open(self, key: str, limit: int) -> AsyncGenerator[MediaSource]:
         if self._runner is None:
             raise RuntimeError("Media source server is not running")
         async with asyncio.timeout(30):

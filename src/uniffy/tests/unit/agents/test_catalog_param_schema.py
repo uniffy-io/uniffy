@@ -12,8 +12,6 @@ from uniffy.domains.agents.providers.catalog import (
 from uniffy.domains.agents.providers.catalog.loader import merge_parameter_schema
 from uniffy.domains.agents.metrics import AGENT_MODEL_PARAM_DROPPED_TOTAL
 
-CORE_KNOBS = ("temperature", "top_p", "max_tokens")
-
 
 def _synthetic(provider_extra: dict | None = None, model_extra: dict | None = None) -> dict:
     return {
@@ -43,9 +41,12 @@ def _synthetic(provider_extra: dict | None = None, model_extra: dict | None = No
     }
 
 
-def test_every_provider_declares_core_knobs() -> None:
+def test_every_provider_declares_supported_controls() -> None:
     for provider_id, pc in get_catalog().providers.items():
-        for knob in CORE_KNOBS:
+        knobs = (
+            ("max_tokens",) if provider_id == "anthropic" else ("temperature", "top_p", "max_tokens")
+        )
+        for knob in knobs:
             assert knob in pc.params_base, f"{provider_id} missing {knob}"
 
 

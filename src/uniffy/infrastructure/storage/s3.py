@@ -2,7 +2,7 @@
 
 import os
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
@@ -79,7 +79,7 @@ class S3Storage:
         logger.info("S3 storage closed")
 
     @asynccontextmanager
-    async def _get_client(self) -> AsyncIterator[S3ClientType]:
+    async def _get_client(self) -> AsyncGenerator[S3ClientType]:
         async with self._session.client(
             "s3",
             endpoint_url=self.config.endpoint_url,

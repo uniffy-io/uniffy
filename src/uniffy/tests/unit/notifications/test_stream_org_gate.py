@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from connectrpc.method import IdempotencyLevel, MethodInfo
+from connectrpc.method import IdempotencyLevel, MethodInfo, StreamType
 from connectrpc.request import Headers, RequestContext
 from uniffy_proto.notifications.v1.notifications_pb import (
     ContentChangedPayload,
@@ -57,6 +57,7 @@ def _ctx(token: str) -> RequestContext:
             input=StreamNotificationsRequest,
             output=StreamNotificationsResponse,
             idempotency_level=IdempotencyLevel.UNKNOWN,
+            stream_type=StreamType.SERVER_STREAM,
         ),
         http_method="POST",
         request_headers=headers,

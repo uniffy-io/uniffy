@@ -2,7 +2,7 @@
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 
 import valkey.asyncio as aioredis
@@ -145,7 +145,7 @@ async def hold_queued_claim(buffer: UpdateBuffer, member: str, claim: str) -> bo
 
 
 @contextlib.asynccontextmanager
-async def _renewing(buffer: UpdateBuffer, scope: BufferScope, claim: str) -> AsyncIterator[None]:
+async def _renewing(buffer: UpdateBuffer, scope: BufferScope, claim: str) -> AsyncGenerator[None]:
     async def renew() -> None:
         while True:
             await asyncio.sleep(_CLAIM_RENEW_SECONDS)

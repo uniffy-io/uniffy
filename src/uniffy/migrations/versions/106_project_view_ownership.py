@@ -205,7 +205,7 @@ def upgrade() -> None:
             WHERE view.project_id = project.id AND view.id = :id
         )
         """
-    )
+    ).bindparams(sa.bindparam("id", type_=sa.String()))
     for view_id in SEED_VIEWS:
         name, view_type, definition = SEED_VIEWS[view_id]
         bind.execute(

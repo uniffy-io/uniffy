@@ -29,7 +29,7 @@ _METADATA_KEYS = frozenset({
 
 
 async def sync_bundled_skills() -> None:
-    with startup_advisory_lock(BUNDLED_LOCK_ID, "bundled skills sync"):
+    async with startup_advisory_lock(BUNDLED_LOCK_ID, "bundled skills sync"):
         async with open_session() as session:
             changed = await sync_skill_documents(session)
             await session.commit()

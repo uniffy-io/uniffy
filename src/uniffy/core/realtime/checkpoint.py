@@ -7,7 +7,7 @@ worker can never commit over newer state or trim beyond what PostgreSQL covers.
 import asyncio
 import contextlib
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncGenerator, Awaitable, Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -182,7 +182,7 @@ def buffer_client() -> aioredis.Redis:
 
 
 @contextlib.asynccontextmanager
-async def buffer_errors() -> AsyncIterator[None]:
+async def buffer_errors() -> AsyncGenerator[None]:
     """Turn Valkey failures into retryable ``BufferUnavailable``, adopting a restarted instance."""
     try:
         yield
