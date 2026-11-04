@@ -16,23 +16,41 @@ const OPTIONS: Array<{ label: string; level: number | null; size: string }> = [
 
 type ToolbarTriggerProps = Parameters<ComponentProps<typeof ToolbarPopover>["trigger"]>[0];
 
-function headingTrigger({ label, disabled }: { label: string; disabled: boolean }) {
+function headingTrigger({
+  label,
+  disabled,
+  labelClassName,
+}: {
+  label: string;
+  disabled: boolean;
+  labelClassName?: string;
+}) {
   return ({ open, onClick, ref }: ToolbarTriggerProps) => (
-    <ToolbarButton ref={ref} onClick={onClick} active={open} disabled={disabled} className="px-2">
+    <ToolbarButton
+      ref={ref}
+      onClick={onClick}
+      active={open}
+      disabled={disabled}
+      label={`Text style: ${label}`}
+      className="px-2"
+    >
       <TextT size={14} weight="bold" />
-      <span className="text-xs">{label}</span>
+      <span className={cn("text-xs", labelClassName)}>{label}</span>
       <CaretDown size={10} weight="bold" />
     </ToolbarButton>
   );
 }
 
-export function HeadingDropdown() {
+/** `labelClassName` lets a host fold the style name away when its bar runs narrow. */
+export function HeadingDropdown({ labelClassName }: { labelClassName?: string } = {}) {
   const handle = useEditorHandle();
   const { headingLevel } = useActiveMarks();
   const current = OPTIONS.find((o) => o.level === headingLevel) ?? OPTIONS[0];
 
   return (
-    <ToolbarPopover trigger={headingTrigger({ label: current.label, disabled: !handle })}>
+    <ToolbarPopover
+      trigger={headingTrigger({ label: current.label, disabled: !handle, labelClassName })}
+    >
       {(close) => (
         <div className="flex flex-col">
           {OPTIONS.map((option) => (

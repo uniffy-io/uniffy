@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { CaretDown } from "@phosphor-icons/react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { TaskRecurrenceSelector } from "@/features/projects/components/detail/TaskRecurrenceSelector";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
 import { MultiSelectField } from "@/features/projects/utils/multiSelectUtils";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { parseMultiSelectValue } from "@/features/projects/utils/multiSelectParsers";
 import { TagPicker } from "@/features/tags";
 
@@ -70,6 +72,10 @@ export function CreateTaskModal() {
     priorityOptions[0]?.id ??
     "";
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const openAfterCreateRef = useRef(false);
+
   const handleClose = useCallback(() => {
     setTitle("");
     setDescription("");
@@ -107,6 +113,9 @@ export function CreateTaskModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Set by "Create and open" just before the form submits.
+    const openAfter = openAfterCreateRef.current;
+    openAfterCreateRef.current = false;
     if (!title.trim() || !project) return;
 
     const submittableFieldValues: Record<string, FieldValue> = {};
@@ -156,6 +165,11 @@ export function CreateTaskModal() {
       }
 
       handleClose();
+      if (openAfter && result.task.id) {
+        navigate(taskLinkPath(result.task.id), {
+          state: { from: `${location.pathname}${location.search}` },
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -398,6 +412,19 @@ export function CreateTaskModal() {
         <ModalFooter>
           <Button type="button" variant="ghost" onClick={handleClose} disabled={isSubmitting}>
             Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!title.trim() || isSubmitting}
+            onClick={(event) => {
+              // Not a submit button: Enter in a field must keep meaning "Create task".
+              openAfterCreateRef.current = true;
+              event.currentTarget.form?.requestSubmit();
+            }}
+            data-testid="create-task-and-open"
+          >
+            Create and open
           </Button>
           <Button type="submit" disabled={!title.trim() || isSubmitting}>
             {isSubmitting ? "Creating..." : "Create task"}

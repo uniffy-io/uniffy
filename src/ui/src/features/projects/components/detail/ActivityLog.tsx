@@ -51,17 +51,15 @@ import { formatDateFull, formatDateTimeFull } from "@/shared/utils/dateFormattin
 
 interface ActivityLogProps {
   taskId: string;
-  /**
-   * When set, render at most this many of the most recent entries and reveal
-   * the rest behind a "Show N earlier" toggle. Used in dense surfaces like
-   * the task detail modal's metadata column to keep the log scannable.
-   */
+  /** Show this many of the newest entries; the rest wait behind "Show N earlier". */
   maxInitialItems?: number;
+  /** Chosen in the Activity section's header, which owns the heading and the filter. */
+  filter: ActivityFilter;
 }
 
-type Filter = ActivityCategory | "all";
+export type ActivityFilter = ActivityCategory | "all";
 
-const FILTER_OPTIONS = (Object.keys(ACTIVITY_CATEGORY_LABELS) as Filter[]).map((value) => ({
+const FILTER_OPTIONS = (Object.keys(ACTIVITY_CATEGORY_LABELS) as ActivityFilter[]).map((value) => ({
   value,
   label: ACTIVITY_CATEGORY_LABELS[value],
 }));
@@ -73,7 +71,27 @@ interface Lookups {
   people: Record<string, Subject>;
 }
 
-export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
+/** The activity kind picker, for a section header that hosts an embedded log. */
+export function ActivityFilterSelect({
+  value,
+  onChange,
+}: {
+  value: ActivityFilter;
+  onChange: (value: ActivityFilter) => void;
+}) {
+  return (
+    <Select<ActivityFilter>
+      value={value}
+      onChange={onChange}
+      options={FILTER_OPTIONS}
+      size="sm"
+      menuMinWidth={190}
+      ariaLabel="Filter activity"
+    />
+  );
+}
+
+export function ActivityLog({ taskId, maxInitialItems, filter }: ActivityLogProps) {
   const dispatch = useAppDispatch();
   const activities = useAppSelector(selectActivitiesForTask(taskId));
   const tasks = useAppSelector(selectTasksMap);
@@ -81,7 +99,6 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
   const project = useAppSelector(selectProjectById(projectId ?? ""));
   const sprints = useAppSelector((state) => state.sprints.sprints);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
 
   useEffect(() => {
     dispatch(fetchActivities(taskId));
@@ -132,21 +149,7 @@ export function ActivityLog({ taskId, maxInitialItems }: ActivityLogProps) {
   );
 
   return (
-    <div className="space-y-4 pt-4 border-t border-border">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Activity
-        </h3>
-        <Select<Filter>
-          value={filter}
-          onChange={setFilter}
-          options={FILTER_OPTIONS}
-          size="sm"
-          menuMinWidth={190}
-          ariaLabel="Filter activity"
-        />
-      </div>
-
+    <div className="space-y-4">
       <div className="space-y-3 pl-2" data-testid="task-activity-list">
         {visible.length === 0 ? (
           <div className="text-sm text-muted-foreground italic">

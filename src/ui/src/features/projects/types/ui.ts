@@ -1,4 +1,5 @@
 import type { ViewDefinition } from "@/features/projects/types/views";
+import type { TimeReportState } from "@/features/projects/types/time";
 
 export type ProjectScope = "all" | "personal" | "organization";
 
@@ -31,6 +32,7 @@ export interface HistoryEntry {
 export interface ProjectsUiState {
   /** Last opened view per project id. */
   activeViewIds: Record<string, string>;
+  timeReportStates: Record<string, TimeReportState>;
   /** Personal tab order per project, independent of shared view definitions. */
   viewTabOrder: Record<string, string[]>;
   /** Drafts are scoped by project because view ids repeat across projects. */
@@ -45,7 +47,6 @@ export interface ProjectsUiState {
   isDetailPanelOpen: boolean;
   isSidebarOpen: boolean;
   sidebarWidth: number;
-  detailViewMode: "sidebar" | "modal";
 
   isCreateProjectModalOpen: boolean;
   isCreateTaskModalOpen: boolean;
@@ -59,12 +60,16 @@ export interface ProjectsUiState {
   /** Transient: a search never belongs to a view and never makes one dirty. */
   searchQuery: string;
 
+  /** Transient: the visible task order of the open view, which the full task page walks. */
+  taskNavigationOrder: string[];
+
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
 }
 
 export const initialProjectsUiState: ProjectsUiState = {
   activeViewIds: {},
+  timeReportStates: {},
   viewTabOrder: {},
   viewDrafts: {},
   viewSaveRequests: {},
@@ -76,7 +81,6 @@ export const initialProjectsUiState: ProjectsUiState = {
   isDetailPanelOpen: false,
   isSidebarOpen: true,
   sidebarWidth: 280,
-  detailViewMode: "sidebar",
 
   isCreateProjectModalOpen: false,
   isCreateTaskModalOpen: false,
@@ -88,6 +92,8 @@ export const initialProjectsUiState: ProjectsUiState = {
   projectScope: "all",
 
   searchQuery: "",
+
+  taskNavigationOrder: [],
 
   undoStack: [],
   redoStack: [],

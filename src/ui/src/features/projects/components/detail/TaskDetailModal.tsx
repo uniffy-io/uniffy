@@ -1,12 +1,16 @@
 import { Modal } from "@/components/ui/modal";
 import { TaskDetailPanel } from "@/features/projects/components/detail/TaskDetailPanel";
+import type { TaskOpenView } from "@/features/projects/utils/taskPath";
+import type { TaskDetail } from "@/features/projects/hooks/useTaskDetail";
 
 interface TaskDetailModalProps {
   taskId: string;
+  detail: TaskDetail;
   onClose: () => void;
+  view?: TaskOpenView;
 }
 
-export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
+export function TaskDetailModal({ taskId, detail, onClose, view = "modal" }: TaskDetailModalProps) {
   return (
     <Modal
       onClose={onClose}
@@ -14,7 +18,13 @@ export function TaskDetailModal({ taskId, onClose }: TaskDetailModalProps) {
       className="flex flex-col h-[90dvh]"
       ariaLabel="Task details"
     >
-      <TaskDetailPanel taskId={taskId} variant="modal" />
+      <TaskDetailPanel
+        taskId={taskId}
+        detail={detail}
+        variant="modal"
+        view={view}
+        onClose={onClose}
+      />
     </Modal>
   );
 }

@@ -43,7 +43,13 @@ export function WrongOrganizationNotice({
           Switching moves this tab to {organization.name}. Your other tabs stay where they are.
         </p>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
-          <Button variant="ghost" size="md" onClick={onDismiss} disabled={isSwitching}>
+          <Button
+            variant="ghost"
+            size="md"
+            className="shrink-0 whitespace-nowrap"
+            onClick={onDismiss}
+            disabled={isSwitching}
+          >
             Stay here
           </Button>
           <Button

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   CaretLeft,
   CaretRight,
@@ -82,15 +82,7 @@ import {
 } from "@/features/projects/components/time/LogTimeModal";
 import { PeriodStatus } from "@/features/projects/components/time/PeriodBanner";
 import { TaskRail, type RailTask } from "@/features/projects/components/time/TaskRail";
-import { TaskDetailModal } from "@/features/projects/components/detail/TaskDetailModal";
-import { setCurrentProject } from "@/features/projects/store/projectsSlice";
-import {
-  closeDetailPanel,
-  openDetailPanel,
-  selectIsDetailPanelOpen,
-  selectSelectedTaskId,
-  selectTask,
-} from "@/features/projects/store/projectsUiSlice";
+import { taskLinkPath } from "@/features/projects/utils/taskPath";
 import { TimeCalendar, type EntryPatch } from "@/features/projects/components/time/TimeCalendar";
 import { TimeList } from "@/features/projects/components/time/TimeList";
 import { useTaskLabels } from "@/features/projects/components/time/useTaskLabels";
@@ -216,22 +208,22 @@ function lockHint(sheet: Timesheet | undefined): string | undefined {
 }
 
 interface MyTimeWeekProps {
-  /** Day whose week opens first; today otherwise. */
-  initialDay?: string;
+  day: string;
+  onDayChange: (day: string) => void;
   headerExtra?: ReactNode;
 }
 
 /** The person's week, one row per task and one editable cell per day. */
-export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
+export function MyTimeWeek({ day: anchor, onDayChange, headerExtra }: MyTimeWeekProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isMobileOrTablet } = useBreakpoint();
   const policy = useAppSelector(selectTimePolicy);
   const { workdays } = useSchedulingSettings();
   const { weekStart: preferredWeekStart } = useAppearanceSettings();
   const weekStart = normalizeWeekStart(policy?.weekStart ?? preferredWeekStart);
   const today = effectiveDayKey(new Date());
-  const [anchor, setAnchor] = useState(initialDay ?? today);
   const days = useMemo(() => weekDays(weekStartOf(anchor, weekStart)), [anchor, weekStart]);
   const rangeKey = weekRangeKey(days[0], days[6]);
   const selectWorklogs = useMemo(() => selectWeekWorklogs(rangeKey), [rangeKey]);
@@ -299,22 +291,10 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   );
   const rowTaskIds = useMemo(() => rows.map((row) => row.taskId), [rows]);
   const labels = useTaskLabels(rowTaskIds);
-  const selectedTaskId = useAppSelector(selectSelectedTaskId);
-  const detailOpen = useAppSelector(selectIsDetailPanelOpen);
-  // Only a task opened from this page shows here, never one left open on a project page.
-  const [railTaskId, setRailTaskId] = useState<string | null>(null);
-  const openTaskId = detailOpen && selectedTaskId === railTaskId ? railTaskId : null;
-  // The same full task view a project opens, as a dialog over the week.
   const openTask = (task: RailTask) => {
-    setRailTaskId(task.taskId);
-    dispatch(setCurrentProject(task.projectId));
-    dispatch(selectTask(task.taskId));
-    dispatch(openDetailPanel());
-  };
-  const closeTask = () => {
-    setRailTaskId(null);
-    dispatch(closeDetailPanel());
-    dispatch(selectTask(null));
+    navigate(taskLinkPath(task.taskId), {
+      state: { from: `${location.pathname}${location.search}` },
+    });
   };
   const rule = useMemo(
     () => ({
@@ -419,7 +399,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant="ghost"
               size="xs"
-              onClick={() => setAnchor(addDays(days[0], -7))}
+              onClick={() => onDayChange(addDays(days[0], -7))}
               aria-label="Previous week"
               data-testid="week-previous"
             >
@@ -429,7 +409,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant={isCurrentWeek ? "secondary" : "ghost"}
               size="xs"
-              onClick={() => setAnchor(today)}
+              onClick={() => onDayChange(today)}
               data-testid="week-today"
             >
               Today
@@ -438,7 +418,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant="ghost"
               size="xs"
-              onClick={() => setAnchor(addDays(days[0], 7))}
+              onClick={() => onDayChange(addDays(days[0], 7))}
               aria-label="Next week"
               data-testid="week-next"
             >
@@ -704,8 +684,6 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
           </div>
         )}
       </div>
-
-      {openTaskId && <TaskDetailModal taskId={openTaskId} onClose={closeTask} />}
 
       {editor && (
         <LogTimeModal

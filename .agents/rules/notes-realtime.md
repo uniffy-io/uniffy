@@ -841,7 +841,9 @@ Image size uses `<!--uniffy:image-ratio=...-->`; numeric alt from existing docum
 size without deleting alt text. Front matter is captured before image transforms discard positions.
 Only deliberate rich typing converts `#name` to a tag; imported source needs the canonical tag marker.
 Serialization removes trailing empty editor paragraphs and its single document terminator. A cleared
-document serializes empty, while explicit HTML breaks and code literals remain. Done flushes before
+document serializes empty, while explicit HTML breaks and code literals remain. Any other empty
+paragraph serializes as two extra newlines between top-level blocks, and parsing reads each such
+pair back as an empty paragraph, so a rendered preview matches the editor. Done flushes before
 teardown. Dispose observers synchronously, mute cancelled bindings and clear queued Milkdown callbacks
 before context destruction.
 

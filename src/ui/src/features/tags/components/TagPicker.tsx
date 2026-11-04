@@ -33,6 +33,8 @@ interface TagPickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  triggerClassName?: string;
+  chipClassName?: string;
   inlineSourcedTagIds?: ReadonlyArray<string>;
   autoFocus?: boolean;
 }
@@ -45,6 +47,8 @@ export function TagPicker({
   placeholder = "Add tag...",
   disabled = false,
   className,
+  triggerClassName,
+  chipClassName,
   inlineSourcedTagIds,
   autoFocus = false,
 }: TagPickerProps) {
@@ -219,6 +223,7 @@ export function TagPicker({
           <TagChip
             key={tag.id}
             tag={tag}
+            className={chipClassName}
             onRemove={isDisabled ? undefined : () => remove(tag.id)}
             removeDisabled={inlineOnlySet.has(tag.id)}
           />
@@ -235,7 +240,10 @@ export function TagPicker({
             onBlur={onBlur}
             placeholder={placeholder}
             maxLength={32}
-            className="focus-ring w-28 rounded-full bg-transparent px-2.5 py-0.5 text-xs text-foreground ring-1 ring-primary/40 placeholder:text-muted-foreground"
+            className={cn(
+              "focus-ring w-28 rounded-full bg-transparent px-2.5 py-0.5 text-xs text-foreground ring-1 ring-primary/40 placeholder:text-muted-foreground",
+              triggerClassName,
+            )}
           />
         )}
 
@@ -243,7 +251,10 @@ export function TagPicker({
           <button
             type="button"
             onClick={startEditing}
-            className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className={cn(
+              "rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+              triggerClassName,
+            )}
             title="Add tag"
             aria-label="Add tag"
           >

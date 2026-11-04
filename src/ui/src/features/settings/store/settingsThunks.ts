@@ -1,6 +1,8 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import { settingsApi } from "@/features/settings/api/settingsApi";
+import { DEFAULT_TASK_PINNED_FIELDS } from "@/features/projects/utils/pinnedFields";
+import { DEFAULT_TASK_OPEN_VIEW, parseTaskOpenView } from "@/features/projects/utils/taskPath";
 import type {
   EffectiveSettings,
   AppearanceSettings,
@@ -23,8 +25,21 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
     markdownShowLineNumbers: appearance.markdownShowLineNumbers,
     timezone: appearance.timezone || undefined,
     weekStart: appearance.weekStart || undefined,
+    taskOpenView: parseTaskOpenView(appearance.taskOpenView) ?? DEFAULT_TASK_OPEN_VIEW,
+    taskPinnedFields: appearance.taskPinnedFields
+      ? [...appearance.taskPinnedFields.fieldIds]
+      : [...DEFAULT_TASK_PINNED_FIELDS],
   };
 };
+
+/** The request shape: pinned fields travel in a wrapper so an empty list means "pin nothing". */
+const appearanceToInit = ({
+  taskPinnedFields,
+  ...rest
+}: Partial<SerializedEffectiveSettings["appearance"]>) => ({
+  ...rest,
+  ...(taskPinnedFields ? { taskPinnedFields: { fieldIds: taskPinnedFields } } : {}),
+});
 
 const DEFAULT_WORKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 
@@ -89,6 +104,8 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     markdownShowLineNumbers: true,
     timezone: undefined,
     weekStart: "monday",
+    taskPinnedFields: [...DEFAULT_TASK_PINNED_FIELDS],
+    taskOpenView: DEFAULT_TASK_OPEN_VIEW,
   },
   keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
     bindings: {},
@@ -155,7 +172,7 @@ export const updateSettings = createAsyncThunk<
   try {
     const response = await settingsApi.updateProfile({
       profileId,
-      appearance: updates.appearance,
+      appearance: updates.appearance ? appearanceToInit(updates.appearance) : undefined,
       keyboardShortcuts: updates.keyboardShortcuts
         ? {
             bindings: updates.keyboardShortcuts.bindings,

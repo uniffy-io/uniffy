@@ -7,6 +7,8 @@ import {
   updateEffectiveSettingsLocal,
 } from "@/features/settings/store/settingsSlice";
 import type { SettingsUpdates } from "@/features/settings/store/settingsThunks";
+import { normalizePinnedFields } from "@/features/projects/utils/pinnedFields";
+import { DEFAULT_TASK_OPEN_VIEW } from "@/features/projects/utils/taskPath";
 
 export function useSettings() {
   const dispatch = useAppDispatch();
@@ -69,6 +71,8 @@ export function useAppearanceSettings() {
     markdownShowLineNumbers: effectiveSettings?.appearance.markdownShowLineNumbers ?? true,
     timezone: effectiveSettings?.appearance.timezone ?? "",
     weekStart: effectiveSettings?.appearance.weekStart ?? "monday",
+    taskPinnedFields: normalizePinnedFields(effectiveSettings?.appearance.taskPinnedFields),
+    taskOpenView: effectiveSettings?.appearance.taskOpenView ?? DEFAULT_TASK_OPEN_VIEW,
   };
 }
 

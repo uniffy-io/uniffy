@@ -190,6 +190,34 @@ export const frontmatterNode = $node("frontmatter", () => ({
   },
 }));
 
+/**
+ * An empty paragraph serializes as nothing between two block separators, so each one leaves two
+ * extra newlines that CommonMark would collapse. Reading them back keeps a rendered preview line
+ * for line with the editor that wrote it. Blank lines inside lists and quotes keep their meaning.
+ */
+function restoreEmptyParagraphs(tree: Parent, source: string, frontmatterEnd?: number): void {
+  const children: Parent["children"] = [];
+  // Without front matter the first block has no separator before it.
+  let previousEnd = frontmatterEnd ?? 0;
+  let separated = frontmatterEnd !== undefined;
+  for (const node of tree.children) {
+    const start = node.position?.start.offset;
+    const end = node.position?.end.offset;
+    if (start !== undefined && end !== undefined) {
+      const gap = source.slice(previousEnd, start);
+      if (/^\s*$/.test(gap)) {
+        const extraNewlines = (gap.match(/\n/g)?.length ?? 0) - (separated ? 2 : 0);
+        for (let count = Math.floor(extraNewlines / 2); count > 0; count -= 1)
+          children.push({ type: "paragraph", children: [] } as Parent);
+      }
+      previousEnd = end;
+      separated = true;
+    }
+    children.push(node);
+  }
+  tree.children = children;
+}
+
 export const preserveMarkdown = $remark(
   "preserveMarkdown",
   () =>
@@ -213,6 +241,8 @@ export const preserveMarkdown = $remark(
             value: frontmatter.replace(/\r?\n$/, ""),
           } as UnistNode);
         }
+        // Runs before the break rewrite below, which replaces nodes without their positions.
+        restoreEmptyParagraphs(tree, source, frontmatter?.replace(/\r?\n$/, "").length);
         visit(tree, (node: UnistNode, index: number | undefined, parent: Parent | undefined) => {
           if (!parent || index === undefined) return;
           const value = (node as { value?: string }).value;

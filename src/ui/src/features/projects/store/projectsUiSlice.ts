@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import type { HistoryEntry, ProjectScope } from "@/features/projects/types/ui";
 import type { ViewDefinition } from "@/features/projects/types/views";
+import type { TimeReportState } from "@/features/projects/types/time";
 import { initialProjectsUiState } from "@/features/projects/types/ui";
 import { deleteTasks } from "@/features/projects/store/projectsThunks";
 import { definitionsEqual } from "@/features/projects/utils/viewDraft";
@@ -16,6 +17,28 @@ export const projectsUiSlice = createSlice({
   name: "projectsUi",
   initialState: initialProjectsUiState,
   reducers: {
+    saveProjectTimeReport: (
+      state,
+      action: PayloadAction<{ projectId: string; report: TimeReportState }>,
+    ) => {
+      const { projectId, report } = action.payload;
+      const previous = state.timeReportStates[projectId];
+      if (
+        previous?.preset === report.preset &&
+        previous.from === report.from &&
+        previous.to === report.to &&
+        previous.groupBy === report.groupBy
+      )
+        return;
+      state.timeReportStates[projectId] = report;
+    },
+    setTaskNavigationOrder: (state, action: PayloadAction<string[]>) => {
+      const next = action.payload;
+      const current = state.taskNavigationOrder;
+      if (current.length === next.length && current.every((id, index) => id === next[index]))
+        return;
+      state.taskNavigationOrder = next;
+    },
     // Checkbox selection is a per-view gesture: not every view can show it, so it never carries across.
     openView: (state, action: PayloadAction<ViewKey>) => {
       const { projectId, viewId } = action.payload;
@@ -110,10 +133,6 @@ export const projectsUiSlice = createSlice({
       state.isDetailPanelOpen = false;
     },
 
-    setDetailViewMode: (state, action: PayloadAction<"sidebar" | "modal">) => {
-      state.detailViewMode = action.payload;
-    },
-
     toggleSidebar: (state) => {
       state.isSidebarOpen = !state.isSidebarOpen;
     },
@@ -180,6 +199,7 @@ export const projectsUiSlice = createSlice({
     // Drafts and the last opened views describe one person's work; the next account starts clean.
     builder.addCase(AUTH_ACTION_TYPES.LOGOUT, (state) => {
       state.activeViewIds = {};
+      state.timeReportStates = {};
       state.viewTabOrder = {};
       state.viewDrafts = {};
       state.viewSaveRequests = {};
@@ -198,6 +218,8 @@ export const projectsUiSlice = createSlice({
 });
 
 export const {
+  saveProjectTimeReport,
+  setTaskNavigationOrder,
   openView,
   setViewTabOrder,
   putViewDraft,
@@ -212,7 +234,6 @@ export const {
   clearSelection,
   openDetailPanel,
   closeDetailPanel,
-  setDetailViewMode,
   toggleSidebar,
   setSidebarWidth,
   openCreateProjectModal,
@@ -231,7 +252,6 @@ export const {
 export const selectSelectedTaskId = (state: RootState) => state.projectsUi.selectedTaskId;
 export const selectSelectedTaskIds = (state: RootState) => state.projectsUi.selectedTaskIds;
 export const selectIsDetailPanelOpen = (state: RootState) => state.projectsUi.isDetailPanelOpen;
-export const selectDetailViewMode = (state: RootState) => state.projectsUi.detailViewMode;
 export const selectIsSidebarOpen = (state: RootState) => state.projectsUi.isSidebarOpen;
 export const selectProjectScope = (state: RootState) => state.projectsUi.projectScope;
 export const selectSearchQuery = (state: RootState) => state.projectsUi.searchQuery;
@@ -249,3 +269,4 @@ export const selectCanUndo = (state: RootState) => state.projectsUi.undoStack.le
 export const selectCanRedo = (state: RootState) => state.projectsUi.redoStack.length > 0;
 
 export const projectsUiReducer = projectsUiSlice.reducer;
+export const selectTaskNavigationOrder = (state: RootState) => state.projectsUi.taskNavigationOrder;

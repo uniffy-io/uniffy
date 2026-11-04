@@ -10,7 +10,6 @@ import {
   ClockCountdown,
   Plus,
   SidebarSimple,
-  FrameCorners,
   Gear,
   DownloadSimple,
   TreeView,
@@ -33,7 +32,6 @@ import {
   PaneIconButton,
 } from "@/components/ui/pane-header";
 import { popoverShellClass } from "@/components/ui/popover";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, type SelectOption as SelectMenuOption } from "@/components/ui/select";
 import {
   setSearchQuery,
@@ -43,8 +41,6 @@ import {
   openCreateTaskModal,
   toggleSidebar,
   selectIsSidebarOpen,
-  setDetailViewMode,
-  selectDetailViewMode,
 } from "@/features/projects/store/projectsUiSlice";
 import { deleteTasks, bulkUpdateTasksThunk } from "@/features/projects/store/projectsThunks";
 import { ProjectIcon } from "@/features/projects/utils/projectIcons";
@@ -119,7 +115,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
   const searchQuery = useAppSelector(selectSearchQuery);
   const selectedTaskIds = useAppSelector(selectSelectedTaskIds);
   const isSidebarOpen = useAppSelector(selectIsSidebarOpen);
-  const detailViewMode = useAppSelector(selectDetailViewMode);
   const { canEdit, canManage } = useProjectPermission();
   const activeGates = activeView
     ? viewGates(activeView, {
@@ -324,17 +319,6 @@ export function ProjectHeader({ project }: ProjectHeaderProps) {
               {!isMobile && "New Task"}
             </Button>
           )}
-
-          <SegmentedControl
-            className="hidden md:flex"
-            ariaLabel="Task detail view"
-            value={detailViewMode}
-            onChange={(mode) => dispatch(setDetailViewMode(mode))}
-            options={[
-              { value: "sidebar", content: <SidebarSimple size={14} />, title: "Sidebar panel" },
-              { value: "modal", content: <FrameCorners size={14} />, title: "Modal view" },
-            ]}
-          />
 
           <PaneIconButton onClick={() => setIsExportOpen(true)} title="Export tasks">
             <DownloadSimple size={16} />

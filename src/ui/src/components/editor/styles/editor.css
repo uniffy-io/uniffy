@@ -109,9 +109,16 @@
   background: transparent !important;
 }
 
-/* Cursor decorations must not change the first content block's spacing. */
+/*
+ * Cursor decorations must not change the first content block's spacing. The
+ * virtual cursor widget sits first: it starts as a bare `.ProseMirror-widget`
+ * and takes its own class only once it measures a caret, and Chrome misses the
+ * `:nth-child(of S)` restyle on that rename. The sibling form covers both
+ * names, so a leading heading never drops by its top margin when editing opens.
+ */
 .crepe-editor .milkdown > :first-child,
 .crepe-editor .ProseMirror > :nth-child(1 of :not(.prosemirror-virtual-cursor)),
+.crepe-editor .ProseMirror > :is(.ProseMirror-widget, .prosemirror-virtual-cursor):first-child + *,
 .crepe-editor-wrapper .milkdown > :first-child {
   margin-top: 0 !important;
   padding-top: 0 !important;
@@ -149,13 +156,30 @@
 }
 
 /*
- * Skill and rule editors sit in a card that grows with the document, so the
- * wrapper never scrolls on its own. Letting it overflow keeps Crepe's slash
- * menu and toolbar, which mount inside the editor root, from being clipped at
- * the card edge; the page scroller is the only boundary they flip against.
+ * Editors that grow with the document (skill and rule cards, inline task
+ * descriptions) never scroll on their own. Letting the wrapper overflow keeps
+ * Crepe's slash menu and toolbar, which mount inside the editor root, from
+ * being clipped at the host edge; the page scroller is the only boundary they
+ * flip against.
  */
-.crepe-editor-wrapper.instruction-editor {
+.crepe-editor-wrapper.crepe-editor-grows {
   overflow: visible !important;
+}
+
+/*
+ * The inline description editor fills its editing surface, so a click in the
+ * blank space under the text still lands in ProseMirror.
+ */
+.expandable-editor-live > .crepe-editor-wrapper,
+.expandable-editor-live > .crepe-editor-wrapper > .crepe-editor,
+.expandable-editor-live > .crepe-editor-wrapper > .crepe-editor > .milkdown {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.expandable-editor-live > .crepe-editor-wrapper > .crepe-editor > .milkdown > .ProseMirror {
+  flex: 1 1 auto;
 }
 
 /* Ensure milkdown container takes full width */

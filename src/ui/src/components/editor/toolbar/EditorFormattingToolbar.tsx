@@ -39,6 +39,7 @@ import { createVideoUploadHandler } from "@/components/editor/utils/videoUploade
 import { createAudioUploadHandler } from "@/components/editor/utils/audioUploader";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import type { EditorView } from "@milkdown/prose/view";
+import { cn } from "@/shared/utils/cn";
 
 interface EditorFormattingToolbarProps {
   contentType: ContentType;
@@ -49,6 +50,8 @@ interface EditorFormattingToolbarProps {
   onFileUploaded?: (fileId: string) => void;
   /** Host actions pinned to the right edge of the bar, e.g. a Done button in an overlay. */
   trailing?: ReactNode;
+  /** Extra bar classes, e.g. dropping its bottom rule when the bar floats on its own. */
+  className?: string;
 }
 
 export function EditorFormattingToolbar({
@@ -57,6 +60,7 @@ export function EditorFormattingToolbar({
   enableUpload = true,
   onFileUploaded,
   trailing,
+  className,
 }: EditorFormattingToolbarProps) {
   const handle = useEditorHandle();
   const active = useActiveMarks();
@@ -123,9 +127,19 @@ export function EditorFormattingToolbar({
     [handle],
   );
 
+  // Tool tiers follow the bar's own width, not the viewport, so a narrow column (side panel,
+  // modal, notes beside an open sidebar) folds tools away instead of wrapping onto a second row.
+  // Inside the padding the full set needs about 730px, without the insert group about 615px,
+  // without lists about 445px, without strike/code/link about 340px, without the style name
+  // about 270px, and without undo/redo about 200px.
   return (
-    <div className="flex flex-wrap items-center gap-1 px-3 py-1 bg-muted/40 border-b border-border/50">
-      <HeadingDropdown />
+    <div
+      className={cn(
+        "@container flex flex-wrap items-center gap-1 px-3 py-1 bg-muted/40 border-b border-border/50",
+        className,
+      )}
+    >
+      <HeadingDropdown labelClassName="hidden @min-[23rem]:inline" />
       <ToolbarSeparator />
 
       <ToolbarGroup>
@@ -153,7 +167,7 @@ export function EditorFormattingToolbar({
         >
           <TextUnderline size={14} weight="bold" />
         </ToolbarButton>
-        <span className="hidden sm:contents">
+        <span className="hidden @min-[30rem]:contents">
           <ToolbarButton
             active={active.strike}
             disabled={!ready}
@@ -184,7 +198,7 @@ export function EditorFormattingToolbar({
         </span>
       </ToolbarGroup>
 
-      <span className="hidden md:contents">
+      <span className="hidden @min-[40rem]:contents">
         <ToolbarSeparator />
 
         <ToolbarGroup>
@@ -216,7 +230,9 @@ export function EditorFormattingToolbar({
         </ToolbarGroup>
 
         <ToolbarSeparator />
+      </span>
 
+      <span className="hidden @min-[48rem]:contents">
         <ToolbarGroup>
           <ToolbarButton disabled={!ready} onClick={onHighlightClick} label="Highlight">
             <Highlighter size={14} weight="bold" />
@@ -256,7 +272,7 @@ export function EditorFormattingToolbar({
         <ToolbarSeparator />
       </span>
 
-      <span className="md:hidden">
+      <span className="@min-[48rem]:hidden">
         <InsertExtrasMenu
           imageUpload={uploads?.image}
           videoUpload={uploads?.video}
@@ -264,22 +280,25 @@ export function EditorFormattingToolbar({
         />
       </span>
 
-      <ToolbarGroup>
-        <ToolbarButton
-          disabled={!ready}
-          onClick={() => handle && toolbarCommands.undo(handle)}
-          label={undoShortcut ? `Undo (${undoShortcut})` : "Undo"}
-        >
-          <ArrowCounterClockwise size={14} weight="bold" />
-        </ToolbarButton>
-        <ToolbarButton
-          disabled={!ready}
-          onClick={() => handle && toolbarCommands.redo(handle)}
-          label={redoShortcut ? `Redo (${redoShortcut})` : "Redo"}
-        >
-          <ArrowClockwise size={14} weight="bold" />
-        </ToolbarButton>
-      </ToolbarGroup>
+      {/* The narrowest bars leave undo and redo to their keyboard shortcuts. */}
+      <span className="hidden @min-[17.5rem]:contents">
+        <ToolbarGroup>
+          <ToolbarButton
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.undo(handle)}
+            label={undoShortcut ? `Undo (${undoShortcut})` : "Undo"}
+          >
+            <ArrowCounterClockwise size={14} weight="bold" />
+          </ToolbarButton>
+          <ToolbarButton
+            disabled={!ready}
+            onClick={() => handle && toolbarCommands.redo(handle)}
+            label={redoShortcut ? `Redo (${redoShortcut})` : "Redo"}
+          >
+            <ArrowClockwise size={14} weight="bold" />
+          </ToolbarButton>
+        </ToolbarGroup>
+      </span>
 
       {trailing && <div className="ml-auto flex items-center gap-2 pl-2">{trailing}</div>}
 

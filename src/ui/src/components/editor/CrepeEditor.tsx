@@ -125,6 +125,8 @@ interface CrepeEditorProps {
   minHeight?: string;
   maxHeight?: string;
   compact?: boolean;
+  /** "doc" shows the placeholder only in an empty document, "block" in any empty block holding the caret. Defaults to "block" when compact. */
+  placeholderMode?: "doc" | "block";
   /** Called per uploaded file id so callers can defer attachment when `contentId` is empty. */
   onFileUploaded?: (fileId: string) => void;
   autoEmbedMedia?: boolean;
@@ -232,7 +234,7 @@ function createCrepeConfig(
   root: HTMLElement,
   content: string,
   readonly: boolean,
-  compact: boolean,
+  placeholderMode: "doc" | "block",
   placeholderText: string,
   imageUploadHandler?: (file: File) => Promise<string>,
   videoUploadHandler?: (file: File) => Promise<string>,
@@ -264,7 +266,7 @@ function createCrepeConfig(
     featureConfigs: {
       [Crepe.Feature.Placeholder]: {
         text: placeholderText,
-        mode: compact ? ("block" as const) : ("doc" as const),
+        mode: placeholderMode,
       },
       [Crepe.Feature.CodeMirror]: {
         theme: oneDark,
@@ -477,6 +479,7 @@ export function CrepeEditor({
   minHeight,
   maxHeight,
   compact = false,
+  placeholderMode = compact ? "block" : "doc",
   onFileUploaded,
   autoEmbedMedia = false,
   onEditorReady,
@@ -753,7 +756,7 @@ export function CrepeEditor({
         container,
         content,
         readonly,
-        compact,
+        placeholderMode,
         placeholder,
         imageUploadHandler,
         videoUploadHandler,

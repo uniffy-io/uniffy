@@ -25,7 +25,6 @@ import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { DIRECTORY_MEMBERS_PAGE_SIZE, fetchMembers } from "@/features/admin";
 import {
   selectIsDetailPanelOpen,
-  selectDetailViewMode,
   selectIsSidebarOpen,
   selectSelectedTaskId,
   toggleSidebar,
@@ -35,6 +34,8 @@ import {
 import { selectCurrentProject, selectProjects } from "@/features/projects/store/projectsSlice";
 import { selectActiveDefinition, selectActiveView } from "@/features/projects/store/viewSelectors";
 import { ProjectsEmptyState } from "@/features/projects/components/ProjectsEmptyState";
+import type { TaskOpenView } from "@/features/projects/utils/taskPath";
+import type { TaskDetail } from "@/features/projects/hooks/useTaskDetail";
 import {
   CollapsibleSidebarRail,
   type SidebarSection,
@@ -46,7 +47,13 @@ const PROJECTS_SECTIONS: SidebarSection[] = [
   { id: "organization", icon: Buildings, label: "Organization" },
 ];
 
-export function ProjectsLayout() {
+export function ProjectsLayout({
+  taskView,
+  taskDetail,
+}: {
+  taskView: TaskOpenView;
+  taskDetail: TaskDetail;
+}) {
   const dispatch = useAppDispatch();
   const { isMobile, isMobileOrTablet } = useBreakpoint();
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
@@ -81,10 +88,8 @@ export function ProjectsLayout() {
     }
   }, [dispatch, membersFetched, membersLoading]);
 
-  // Load saved panel layout
   const [defaultLayout] = useState(() => loadPanelLayout("projects"));
 
-  // Save layout changes
   const handleLayoutChange = useCallback((layout: Record<string, number>) => {
     savePanelLayout("projects", layout);
   }, []);
@@ -93,15 +98,15 @@ export function ProjectsLayout() {
     dispatch(toggleSidebar());
   }, [dispatch]);
 
-  // Responsive panel mode
   const sidebarAsDrawer = isMobile;
-  const detailViewMode = useAppSelector(selectDetailViewMode);
-  // Use modal for mobile/tablet always, or when user prefers modal on desktop
-  const useModalForDetail = isMobileOrTablet || detailViewMode === "modal";
+  const useModalForDetail = isMobileOrTablet || taskView === "modal";
 
-  // Determine if we should show each panel
   const showSidebar = !isZenMode && isSidebarOpen;
-  const showDetailPanel = !isZenMode && isDetailPanelOpen && selectedTaskId;
+  const showDetailPanel =
+    taskView !== "page" &&
+    isDetailPanelOpen &&
+    selectedTaskId &&
+    taskDetail.task?.id === selectedTaskId;
   const showCollapsedRail = !isZenMode && !isSidebarOpen && !sidebarAsDrawer;
 
   const handleCloseDetailPanel = () => {
@@ -118,7 +123,6 @@ export function ProjectsLayout() {
           isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
         )}
       >
-        {/* Collapsed sidebar rail */}
         {showCollapsedRail && (
           <div className="absolute inset-y-0 left-0 z-30 w-12">
             <CollapsibleSidebarRail onExpand={handleExpandSidebar} sections={PROJECTS_SECTIONS}>
@@ -133,7 +137,6 @@ export function ProjectsLayout() {
           defaultLayout={defaultLayout}
           onLayoutChange={handleLayoutChange}
         >
-          {/* Left Sidebar - inline on tablet/desktop */}
           {showSidebar && !sidebarAsDrawer && (
             <>
               <Panel
@@ -150,7 +153,6 @@ export function ProjectsLayout() {
             </>
           )}
 
-          {/* Main Content */}
           <Panel
             id="projects-main"
             minSize={isMobileOrTablet ? 100 : 400}
@@ -180,7 +182,6 @@ export function ProjectsLayout() {
             )}
           </Panel>
 
-          {/* Right Detail Panel - inline sidebar on desktop only when sidebar mode */}
           {showDetailPanel && !useModalForDetail && (
             <>
               <PaneSeparator />
@@ -192,14 +193,13 @@ export function ProjectsLayout() {
                 maxSize={LAYOUT.DETAIL_PANEL_MAX_WIDTH}
                 className="bg-background"
               >
-                <TaskDetailPanel taskId={selectedTaskId} />
+                <TaskDetailPanel taskId={selectedTaskId} detail={taskDetail} view={taskView} />
               </Panel>
             </>
           )}
         </Group>
       </div>
 
-      {/* Mobile sidebar drawer */}
       {sidebarAsDrawer && (
         <Drawer
           open={showSidebar}
@@ -212,12 +212,15 @@ export function ProjectsLayout() {
         </Drawer>
       )}
 
-      {/* Detail modal (modal mode on desktop, or always on mobile/tablet) */}
       {showDetailPanel && useModalForDetail && selectedTaskId && (
-        <TaskDetailModal taskId={selectedTaskId} onClose={handleCloseDetailPanel} />
+        <TaskDetailModal
+          taskId={selectedTaskId}
+          detail={taskDetail}
+          onClose={handleCloseDetailPanel}
+          view={taskView}
+        />
       )}
 
-      {/* Modals */}
       {isCreateTaskModalOpen && canEditProject && <CreateTaskModal />}
       {isCreateProjectModalOpen && <CreateProjectModal />}
     </>
@@ -232,7 +235,6 @@ function NoProjectSelected() {
 
   return (
     <div className="flex-1 flex flex-col bg-background">
-      {/* Mobile sidebar toggle when no project selected */}
       {isMobile && !isSidebarOpen && (
         <div className="px-3 py-2">
           <button

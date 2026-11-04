@@ -9,7 +9,7 @@ import {
   selectCurrentProject,
   optimisticUpdateTask,
 } from "@/features/projects/store/projectsSlice";
-import { selectTask } from "@/features/projects/store/projectsUiSlice";
+import { useOpenTask } from "@/features/projects/hooks/useOpenTask";
 import { createTask, updateTask } from "@/features/projects/store/projectsThunks";
 import { useTaskPermission } from "@/features/projects/hooks/useProjectPermissions";
 import type { Task } from "@/features/projects/types/project";
@@ -22,6 +22,7 @@ interface SubtasksListProps {
   parentCompleted?: boolean;
 }
 
+/** The subtask tree inside the task's Subtasks section, which owns the heading and count. */
 export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
   const dispatch = useAppDispatch();
   const project = useAppSelector(selectCurrentProject);
@@ -91,26 +92,11 @@ export function SubtasksList({ taskId, parentCompleted }: SubtasksListProps) {
     setNewTitle("");
   }, []);
 
-  const completedCount = parentCompleted
-    ? subtasks.length
-    : subtasks.filter((t) => t.completedAt).length;
-
   // Determine if root-level inline add is active
   const isRootAdding = addingForParentId === taskId;
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Subtasks
-        </h3>
-        {subtasks.length > 0 && (
-          <span className="text-xs text-muted-foreground">
-            {completedCount}/{subtasks.length}
-          </span>
-        )}
-      </div>
-
       <div className="space-y-0.5">
         {subtasks.map((subtask) => (
           <SubtaskItem
@@ -192,7 +178,7 @@ function SubtaskItem({
   inputRef,
   canEdit,
 }: SubtaskItemProps) {
-  const dispatch = useAppDispatch();
+  const openTask = useOpenTask();
   const [isExpanded, setIsExpanded] = useState(false);
   const subtasks = useAppSelector(selectSubtasksByParentId(task.id));
   const hasChildren = task.subtaskTotal > 0;
@@ -235,7 +221,7 @@ function SubtaskItem({
 
         <button
           type="button"
-          onClick={() => dispatch(selectTask(task.id))}
+          onClick={() => openTask(task.id)}
           className={cn(
             "text-sm flex-1 truncate text-left hover:underline hover:text-foreground transition-colors",
             isCompleted ? "text-muted-foreground line-through" : "text-foreground",
