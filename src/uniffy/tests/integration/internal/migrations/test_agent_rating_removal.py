@@ -32,6 +32,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 
@@ -166,31 +167,31 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 "chat_reactions": "*",
             }
             before = {
-                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                table: (await _query(f"SELECT {columns} FROM {table} ORDER BY 1"))
                 for table, columns in projections.items()
             }
-            assert _query("SELECT count(*) FROM agents_message_feedback") == [(2,)]
-            _migrate_to("098")
-            assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
+            assert (await _query("SELECT count(*) FROM agents_message_feedback")) == [(2,)]
+            await _migrate_to("098")
+            assert (await _query("SELECT to_regclass('agents_message_feedback')")) == [(None,)]
             assert {
-                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                table: (await _query(f"SELECT {columns} FROM {table} ORDER BY 1"))
                 for table, columns in projections.items()
             } == before
-            assert _query("SELECT count(*) FROM agents_skill_invocations") == [(0,)]
+            assert (await _query("SELECT count(*) FROM agents_skill_invocations")) == [(0,)]
 
             config = Config(str(ALEMBIC_INI_PATH))
             config.attributes["configure_logger"] = False
-            command.downgrade(config, "097")
-            assert _query("SELECT count(*) FROM agents_message_feedback") == [(0,)]
+            await _run_alembic(config, command.downgrade, "097")
+            assert (await _query("SELECT count(*) FROM agents_message_feedback")) == [(0,)]
             assert {
-                table: _query(f"SELECT {columns} FROM {table} ORDER BY 1")
+                table: (await _query(f"SELECT {columns} FROM {table} ORDER BY 1"))
                 for table, columns in projections.items()
             } == before
-            _migrate_to("098")
-            assert _query("SELECT to_regclass('agents_message_feedback')") == [(None,)]
+            await _migrate_to("098")
+            assert (await _query("SELECT to_regclass('agents_message_feedback')")) == [(None,)]
 
             # The history readers are head code, so they read a head schema.
-            _migrate_to("head")
+            await _migrate_to("head")
 
             @asynccontextmanager
             async def open_history():

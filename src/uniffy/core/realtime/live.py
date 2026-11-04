@@ -57,6 +57,7 @@ from uniffy.core.realtime.metrics import (
     REALTIME_BUFFER_EPOCH_RESETS_TOTAL,
     REALTIME_CHECKPOINT_TRIM_DEBT_TOTAL,
 )
+from uniffy.core.realtime.multiplex import read_var_uint
 from uniffy.core.realtime.preflight import PreflightVerdict, ensure_buffer_ready, preflight_result
 from uniffy.core.realtime.resident import merge_change
 from uniffy.core.realtime.seeding import has_fragment_content, seed_allowed
@@ -397,11 +398,7 @@ async def accept_seed(
     seed_base: str,
     enqueue: Enqueue = enqueue_core,
 ) -> RealtimeYjsSnapshot:
-    """Commit a fragment seed together with the buffered tail it was validated against.
-
-    On return PostgreSQL holds the seed and every edit accepted before it, so a committed
-    acknowledgment may follow. Replaying a committed seed changes nothing.
-    """
+    """Commit a complete fragment seed together with the buffered tail it was validated against."""
     async with open_session() as db:
         await lock_document(db, key, organization_id)
         role = await get_realtime_adapter(key[0]).authorize(db, actor_id, organization_id, key[1])
@@ -415,6 +412,10 @@ async def accept_seed(
         after.apply_update(update)
         if after.get(DOC_META_FIELD, type=pycrdt.Map).get(DOC_GENERATION_KEY, "") != generation:
             raise GenerationConflict
+        # A seed must resolve every struct; the diff may still repeat known deletions.
+        unresolved, _ = read_var_uint(pycrdt.get_update(update, after.get_state()))
+        if unresolved:
+            raise SeedConflict
         if merge_change(before.get_update(), update) is None:
             await db.commit()
             return live.row

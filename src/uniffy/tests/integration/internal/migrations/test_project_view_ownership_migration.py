@@ -15,6 +15,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 _LEGACY_VIEWS = {
@@ -35,10 +36,10 @@ _LEGACY_VIEWS = {
 }
 
 
-def _downgrade_to(revision: str) -> None:
+async def _downgrade_to(revision: str) -> None:
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, revision)
+    await _run_alembic(config, command.downgrade, revision)
 
 
 async def _seed_legacy_projects() -> tuple[str, str, str]:
@@ -92,8 +93,8 @@ async def _seed_legacy_projects() -> tuple[str, str, str]:
         await engine.dispose()
 
 
-def _views(project_id: str):
-    return _query(
+async def _views(project_id: str):
+    return await _query(
         "SELECT id, organization_id::text, owner_id::text, visibility::text, sort_order, "
         "definition FROM projects_views "
         f"WHERE project_id = '{project_id}' ORDER BY sort_order, id"
@@ -104,9 +105,9 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
     await _provision_to(scratch_database, "105")
     with_views, without_views, owner_id = await _seed_legacy_projects()
 
-    _migrate_to("106")
+    await _migrate_to("106")
 
-    rows = _views(with_views)
+    rows = await _views(with_views)
     assert [row[0] for row in rows] == [
         "view_table",
         "view_board",
@@ -130,7 +131,7 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
     org_ids = {row[1] for row in rows}
     assert len(org_ids) == 1 and None not in org_ids
 
-    assert [row[0] for row in _views(without_views)] == [
+    assert [row[0] for row in (await _views(without_views))] == [
         "view_table",
         "view_board",
         "view_roadmap",
@@ -138,13 +139,15 @@ async def test_views_gain_ownership_and_definitions(scratch_database: str) -> No
         "view_graph",
         "view_resources",
     ]
-    defaults = dict(_query("SELECT id::text, default_view_id FROM projects_projects"))
+    defaults = dict((await _query("SELECT id::text, default_view_id FROM projects_projects")))
     assert defaults == {with_views: "view_table", without_views: "view_table"}
 
     columns = {
         row[0]
-        for row in _query(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = 'projects_views'"
+        for row in (
+            await _query(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'projects_views'"
+            )
         )
     }
     assert "config" not in columns
@@ -193,10 +196,10 @@ async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: st
     finally:
         await engine.dispose()
 
-    _migrate_to("106")
+    await _migrate_to("106")
 
     definitions = dict(
-        _query("SELECT id, definition FROM projects_views WHERE id LIKE 'malformed_%'")
+        (await _query("SELECT id, definition FROM projects_views WHERE id LIKE 'malformed_%'"))
     )
     assert len(definitions) == len(configs)
     for index in range(len(configs) - 1):
@@ -207,7 +210,7 @@ async def test_malformed_config_fields_do_not_block_upgrade(scratch_database: st
         "column_widths": [{"field": {"field_id": "field_title"}, "width": 180}],
         "sort": [{"field": {"field_id": "field_title"}, "direction": "SORT_DIRECTION_DESC"}],
     }
-    assert _query("SELECT version_num FROM alembic_version") == [("106",)]
+    assert (await _query("SELECT version_num FROM alembic_version")) == [("106",)]
 
 
 async def test_definition_pages_preserve_identical_view_ids_across_projects(
@@ -233,9 +236,11 @@ async def test_definition_pages_preserve_identical_view_ids_across_projects(
     finally:
         await engine.dispose()
 
-    _migrate_to("106")
+    await _migrate_to("106")
 
-    rows = _query("SELECT id, definition, sort_order FROM projects_views WHERE id LIKE 'paged_%'")
+    rows = await _query(
+        "SELECT id, definition, sort_order FROM projects_views WHERE id LIKE 'paged_%'"
+    )
     assert len(rows) == 1002
     assert len({row[0] for row in rows}) == 501
     assert all(
@@ -247,11 +252,11 @@ async def test_definition_pages_preserve_identical_view_ids_across_projects(
 async def test_downgrade_restores_the_legacy_shape(scratch_database: str) -> None:
     await _provision_to(scratch_database, "105")
     with_views, _, _ = await _seed_legacy_projects()
-    _migrate_to("106")
+    await _migrate_to("106")
 
-    _downgrade_to("105")
+    await _downgrade_to("105")
 
-    rows = _query(
+    rows = await _query(
         "SELECT id, type, is_default, config FROM projects_views "
         f"WHERE project_id = '{with_views}' ORDER BY id"
     )
@@ -261,4 +266,4 @@ async def test_downgrade_restores_the_legacy_shape(scratch_database: str) -> Non
         ("view_roadmap", False, {"type": "roadmap"}),
         ("view_table", True, {"type": "table"}),
     ]
-    assert _query("SELECT 1 FROM pg_type WHERE typname = 'projectviewvisibility'") == []
+    assert (await _query("SELECT 1 FROM pg_type WHERE typname = 'projectviewvisibility'")) == []

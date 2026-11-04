@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from uniffy.core.data_files import DATA_DIR, load_documents
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.rule import AgentRule, RuleSource, RuleStatus
 from uniffy.core.models.agents.rule_version import AgentRuleVersion
-from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.login.user import User
 from uniffy.core.models.settings.org_setting import OrgSetting
 from uniffy.core.types import generate_id
@@ -21,6 +21,7 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _insert_organization,
     _provision_to,
     _query,
+    _run_alembic,
 )
 
 
@@ -95,7 +96,7 @@ async def _uncached(key, loader, **kwargs):
 
 async def test_rule_migration_and_bundled_snapshot_lifecycle(scratch_database, monkeypatch):
     await _provision_to(scratch_database, "098")
-    assert _query("SELECT count(*) FROM agents_rules") == [(0,)]
+    assert (await _query("SELECT count(*) FROM agents_rules")) == [(0,)]
     engine = create_async_engine(get_database_url())
     docs = load_documents(DATA_DIR / "rules")
     try:
@@ -129,10 +130,10 @@ async def test_rule_migration_and_bundled_snapshot_lifecycle(scratch_database, m
 
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "097")
-    assert _query("SELECT to_regclass('agents_rules')") == [(None,)]
-    command.upgrade(config, "098")
-    assert _query("SELECT count(*) FROM agents_rules") == [(0,)]
+    await _run_alembic(config, command.downgrade, "097")
+    assert (await _query("SELECT to_regclass('agents_rules')")) == [(None,)]
+    await _run_alembic(config, command.upgrade, "098")
+    assert (await _query("SELECT count(*) FROM agents_rules")) == [(0,)]
 
 
 async def test_rule_resolution_isolates_tenants_and_uses_pinned_body(scratch_database, monkeypatch):

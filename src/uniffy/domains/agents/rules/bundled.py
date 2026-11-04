@@ -19,7 +19,7 @@ BUNDLED_RULE_LOCK_ID = 0x756E_6966_6679_5231
 
 
 async def sync_bundled_rules() -> None:
-    with startup_advisory_lock(BUNDLED_RULE_LOCK_ID, "bundled rules sync"):
+    async with startup_advisory_lock(BUNDLED_RULE_LOCK_ID, "bundled rules sync"):
         async with open_session() as session:
             changed = await sync_rule_documents(session)
             await session.commit()

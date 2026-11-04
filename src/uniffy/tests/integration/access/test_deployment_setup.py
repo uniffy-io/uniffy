@@ -1,7 +1,6 @@
 """First-run setup on the live PostgreSQL: it waits for the bootstrap lock and stays closed."""
 
 import asyncio
-import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from unittest.mock import MagicMock, patch
@@ -23,7 +22,7 @@ from uniffy.infrastructure.database.session import startup_advisory_lock
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 _LOCK_WAIT_SECONDS = 0.5
-_THREAD_TIMEOUT_SECONDS = 10.0
+_LOCK_TIMEOUT_SECONDS = 10.0
 
 
 @pytest_asyncio.fixture(loop_scope="session")
@@ -82,22 +81,8 @@ async def test_setup_refuses_once_a_user_exists_and_writes_nothing(
 
 @asynccontextmanager
 async def _bootstrap_lock_held() -> AsyncIterator[None]:
-    held = threading.Event()
-    release = threading.Event()
-
-    def hold_bootstrap_lock() -> None:
-        with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
-            held.set()
-            release.wait(_THREAD_TIMEOUT_SECONDS)
-
-    holder = threading.Thread(target=hold_bootstrap_lock, daemon=True)
-    holder.start()
-    try:
-        assert await asyncio.to_thread(held.wait, _THREAD_TIMEOUT_SECONDS)
+    async with startup_advisory_lock(BOOTSTRAP_LOCK_ID, "deployment bootstrap"):
         yield
-    finally:
-        release.set()
-        await asyncio.to_thread(holder.join, _THREAD_TIMEOUT_SECONDS)
 
 
 async def test_a_completed_setup_refuses_without_waiting_for_the_bootstrap_lock(
@@ -128,5 +113,5 @@ async def test_setup_waits_while_bootstrap_holds_its_lock(existing_user: User) -
             assert not attempt.done()
 
         with pytest.raises(SetupAlreadyCompletedError):
-            await asyncio.wait_for(attempt, _THREAD_TIMEOUT_SECONDS)
+            await asyncio.wait_for(attempt, _LOCK_TIMEOUT_SECONDS)
     assert checks == 2

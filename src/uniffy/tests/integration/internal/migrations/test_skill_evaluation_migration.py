@@ -1,7 +1,7 @@
 import pytest
 from alembic import command
 from alembic.config import Config
-from psycopg2 import errorcodes, errors
+from asyncpg import CheckViolationError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -14,10 +14,8 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _migrate_to,
     _provision_to,
     _query,
+    _run_alembic,
 )
-
-# psycopg2 builds its exception classes at runtime; look the class up by SQLSTATE.
-CheckViolation = errors.lookup(errorcodes.CHECK_VIOLATION)
 
 
 async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(scratch_database):
@@ -53,27 +51,28 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
             await session.commit()
     finally:
         await engine.dispose()
-    skill_before = _query("SELECT id, name, content, active_version_id FROM agents_skills")
-    versions_before = _query(
+    skill_before = await _query("SELECT id, name, content, active_version_id FROM agents_skills")
+    versions_before = await _query(
         "SELECT id, skill_id, content, version_number FROM agents_skill_versions"
     )
-    _migrate_to("098")
-    assert _query("SELECT id, name, content, active_version_id FROM agents_skills") == skill_before
+    await _migrate_to("098")
     assert (
-        _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
-        == versions_before
-    )
-    assert _query("SELECT count(*) FROM agents_skill_evaluation_cases") == [(0,)]
-    assert _query("SELECT count(*) FROM agents_skill_evaluation_runs") == [(0,)]
+        await _query("SELECT id, name, content, active_version_id FROM agents_skills")
+    ) == skill_before
+    assert (
+        await _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
+    ) == versions_before
+    assert (await _query("SELECT count(*) FROM agents_skill_evaluation_cases")) == [(0,)]
+    assert (await _query("SELECT count(*) FROM agents_skill_evaluation_runs")) == [(0,)]
     for targets in ["NULL, NULL", f"'{generate_id()}', '{generate_id()}'"]:
-        with pytest.raises(CheckViolation):
-            _execute(
+        with pytest.raises(CheckViolationError):
+            await _execute(
                 "INSERT INTO agents_skill_evaluation_cases "
                 "(id, organization_id, owner_id, skill_id, draft_id, fields, created_at, updated_at) "
                 f"VALUES ('{generate_id()}', '{organization_id}', '{owner_id}', {targets}, '{{}}', now(), now())"
             )
-        with pytest.raises(CheckViolation):
-            _execute(
+        with pytest.raises(CheckViolationError):
+            await _execute(
                 "INSERT INTO agents_skill_evaluation_runs "
                 "(id, organization_id, owner_id, request_id, request_digest, case_id, agent_id, "
                 "skill_id, skill_version_id, draft_id, version_number, target_digest, snapshot, created_at, deadline_at) "
@@ -82,8 +81,10 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
             )
     indexes = {
         row[0]
-        for row in _query(
-            "SELECT indexname FROM pg_indexes WHERE tablename = 'agents_skill_evaluation_runs'"
+        for row in (
+            await _query(
+                "SELECT indexname FROM pg_indexes WHERE tablename = 'agents_skill_evaluation_runs'"
+            )
         )
     }
     assert {
@@ -94,11 +95,12 @@ async def test_evaluation_schema_preserves_skills_and_requires_scoped_targets(sc
     } <= indexes
     config = Config(str(ALEMBIC_INI_PATH))
     config.attributes["configure_logger"] = False
-    command.downgrade(config, "097")
-    assert _query("SELECT id, name, content, active_version_id FROM agents_skills") == skill_before
+    await _run_alembic(config, command.downgrade, "097")
     assert (
-        _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
-        == versions_before
-    )
-    _migrate_to("098")
-    assert _query("SELECT count(*) FROM agents_skill_evaluation_runs") == [(0,)]
+        await _query("SELECT id, name, content, active_version_id FROM agents_skills")
+    ) == skill_before
+    assert (
+        await _query("SELECT id, skill_id, content, version_number FROM agents_skill_versions")
+    ) == versions_before
+    await _migrate_to("098")
+    assert (await _query("SELECT count(*) FROM agents_skill_evaluation_runs")) == [(0,)]
