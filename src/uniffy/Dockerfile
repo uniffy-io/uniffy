@@ -11,7 +11,7 @@ FROM ${PYTHON_IMAGE} AS ffmpeg
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential nasm pkg-config meson ninja-build xz-utils bzip2 autoconf automake libtool zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
-ADD --checksum=sha256:cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635 https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz /sources/ffmpeg.tar
+ADD --checksum=sha256:195d54bebe1a27f84d77f4b989d193466f305b355da92292766a69f16880b18a https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n9.0.1.tar.gz /sources/ffmpeg.tar
 ADD --checksum=sha256:f05c59f2e83d494c36307025dca2d3afc6b4d185f3a3453d06cc4fecd7094057 https://code.videolan.org/videolan/x264/-/archive/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.bz2 /sources/x264.tar
 ADD --checksum=sha256:e099f53253f6c247580c554d53a13f1040638f2066edc3c740e4c2f15174ce22 https://code.videolan.org/videolan/dav1d/-/archive/1.5.3/dav1d-1.5.3.tar.bz2 /sources/dav1d.tar
 ADD --checksum=sha256:a9a0226bf85e0d83c41a8ebe4e3e690e1348682f6a2a7838f1b8cbff1b799bcf https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.5.tar.gz /sources/zimg.tar
