@@ -125,7 +125,7 @@ class AppearanceDefaults:
     timezone: str | None = None  # IANA zone; None = automatic (browser/device)
     week_start: str = "monday"  # one of: "monday", "saturday", "sunday"
     task_pinned_fields: tuple[TaskPinnableField, ...] = DEFAULT_TASK_PINNED_FIELDS
-    task_open_view: TaskOpenView = TaskOpenView.PANEL
+    task_open_view: TaskOpenView = TaskOpenView.MODAL
 
 
 WORKDAY_NAMES: tuple[str, ...] = (

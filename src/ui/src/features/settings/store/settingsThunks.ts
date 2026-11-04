@@ -2,7 +2,7 @@ import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "@/app/store";
 import { settingsApi } from "@/features/settings/api/settingsApi";
 import { DEFAULT_TASK_PINNED_FIELDS } from "@/features/projects/utils/pinnedFields";
-import { parseTaskOpenView } from "@/features/projects/utils/taskPath";
+import { DEFAULT_TASK_OPEN_VIEW, parseTaskOpenView } from "@/features/projects/utils/taskPath";
 import type {
   EffectiveSettings,
   AppearanceSettings,
@@ -25,7 +25,7 @@ const appearanceToPlain = (appearance?: AppearanceSettings) => {
     markdownShowLineNumbers: appearance.markdownShowLineNumbers,
     timezone: appearance.timezone || undefined,
     weekStart: appearance.weekStart || undefined,
-    taskOpenView: parseTaskOpenView(appearance.taskOpenView) ?? "panel",
+    taskOpenView: parseTaskOpenView(appearance.taskOpenView) ?? DEFAULT_TASK_OPEN_VIEW,
     taskPinnedFields: appearance.taskPinnedFields
       ? [...appearance.taskPinnedFields.fieldIds]
       : [...DEFAULT_TASK_PINNED_FIELDS],
@@ -105,7 +105,7 @@ const effectiveSettingsToPlain = (settings: EffectiveSettings) => ({
     timezone: undefined,
     weekStart: "monday",
     taskPinnedFields: [...DEFAULT_TASK_PINNED_FIELDS],
-    taskOpenView: "panel" as const,
+    taskOpenView: DEFAULT_TASK_OPEN_VIEW,
   },
   keyboardShortcuts: keyboardShortcutsToPlain(settings.keyboardShortcuts) ?? {
     bindings: {},

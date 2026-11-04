@@ -7,8 +7,8 @@ from uniffy.domains.settings.defaults import get_effective_appearance
 from uniffy.domains.settings.operations import _validate_appearance
 
 
-def test_absent_preference_opens_side_panel() -> None:
-    assert get_effective_appearance(None)["task_open_view"] == "panel"
+def test_absent_preference_opens_modal() -> None:
+    assert get_effective_appearance(None)["task_open_view"] == "modal"
 
 
 @pytest.mark.parametrize("view", ["panel", "modal", "page"])

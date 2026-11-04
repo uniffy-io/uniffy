@@ -1,5 +1,7 @@
 export type TaskOpenView = "panel" | "modal" | "page";
 
+export const DEFAULT_TASK_OPEN_VIEW: TaskOpenView = "modal";
+
 export const TASK_OPEN_VIEWS: { value: TaskOpenView; label: string }[] = [
   { value: "panel", label: "Side panel" },
   { value: "modal", label: "Modal" },

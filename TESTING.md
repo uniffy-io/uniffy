@@ -2927,6 +2927,8 @@ Use two browsers, one per person.
       Expand. Expand opens a View only window with no toolbar; closing it sends no update. Keep
       it open while the editor changes the description: the text updates after the save (about
       ten seconds) without reopening.
+- [ ] As a user who never picked a task view (or a first sign-in), tasks open in the Modal and
+      Personal settings > Appearance shows Modal selected.
 - [ ] Personal settings > Appearance > Open tasks in: choose Side panel, Modal and Full page.
       Each choice survives reload and applies in another browser signed in as you.
 - [ ] Plain click a task title: it opens using your preference. Ctrl, Cmd or middle click opens
