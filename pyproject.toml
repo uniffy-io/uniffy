@@ -58,11 +58,11 @@ dependencies = [
   # Prometheus metrics
   "prometheus-client>=0.26.0",
   # LLM provider SDKs
-  "anthropic>=0.117.0",
-  "openai>=3.14.1",
+  "anthropic>=2.5.0",
+  "openai>=3.45.0",
   # Cron expression parsing
   "croniter>=6.2.4",
-  "google-genai>=2.23.0",
+  "google-genai>=2.34.0",
   "connectrpc>=0.13.0",
   "pyqwest>=0.13.0",
   # Realtime collaboration (CRDT)

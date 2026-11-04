@@ -193,16 +193,6 @@ class AnthropicProvider(LLMProvider):
                 # budget_tokens must stay below max_tokens; keep the
                 # answer budget intact by extending the ceiling instead.
                 kwargs["max_tokens"] += _THINKING_BUDGET_TOKENS
-        else:
-            # The API rejects non-default sampling alongside thinking,
-            # so temperature/top_p ride only on thinking-off requests.
-            if params.get("temperature") is not None:
-                kwargs["temperature"] = params["temperature"]
-            if params.get("top_p") is not None:
-                kwargs["top_p"] = params["top_p"]
-        top_k = (params.get("provider_options") or {}).get("top_k")
-        if top_k is not None and thinking is None:
-            kwargs["top_k"] = top_k
 
         if system:
             kwargs["system"] = [

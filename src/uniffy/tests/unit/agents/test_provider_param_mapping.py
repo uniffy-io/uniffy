@@ -40,15 +40,15 @@ def test_anthropic_thinking_budget_extends_ceiling() -> None:
     assert kwargs["max_tokens"] == 2048 + 4096
 
 
-def test_anthropic_off_maps_sampling() -> None:
+def test_anthropic_ignores_saved_sampling_parameters() -> None:
     kwargs = _anthropic_kwargs(
         "claude-sonnet-4-6",
         {"temperature": 0.3, "top_p": 0.9, "provider_options": {"top_k": 40}},
     )
     assert "thinking" not in kwargs
-    assert kwargs["temperature"] == 0.3
-    assert kwargs["top_p"] == 0.9
-    assert kwargs["top_k"] == 40
+    assert "temperature" not in kwargs
+    assert "top_p" not in kwargs
+    assert "top_k" not in kwargs
 
 
 def test_anthropic_thinking_drops_sampling() -> None:

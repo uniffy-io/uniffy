@@ -34,7 +34,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | alembic                | 1.20.1      | MIT                                           | https://alembic.sqlalchemy.org                                                     |
 | annotated-doc          | 0.0.4       | MIT                                           | https://github.com/fastapi/annotated-doc                                           |
 | annotated-types        | 0.7.0       | MIT License                                   | https://github.com/annotated-types/annotated-types                                 |
-| anthropic              | 0.117.0     | MIT License                                   | https://github.com/anthropics/anthropic-sdk-python                                 |
+| anthropic              | 2.5.0       | Apache Software License                       | https://github.com/anthropics/anthropic-sdk-python                                 |
 | anyio                  | 4.14.2      | MIT                                           | https://anyio.readthedocs.io/en/stable/versionhistory.html                         |
 | argon2-cffi            | 25.1.0      | MIT                                           | https://github.com/hynek/argon2-cffi/blob/main/CHANGELOG.md                        |
 | argon2-cffi-bindings   | 25.1.0      | MIT                                           | https://github.com/hynek/argon2-cffi-bindings/blob/main/CHANGELOG.md               |
@@ -62,7 +62,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | fastapi                | 0.162.0     | MIT                                           | https://github.com/fastapi/fastapi                                                 |
 | frozenlist             | 1.8.0       | Apache-2.0                                    | https://github.com/aio-libs/frozenlist                                             |
 | google-auth            | 2.58.0      | Apache Software License                       | https://github.com/googleapis/google-cloud-python/tree/main/packages/google-auth   |
-| google-genai           | 2.23.0      | Apache-2.0                                    | https://github.com/googleapis/python-genai                                         |
+| google-genai           | 2.34.0      | Apache-2.0                                    | https://github.com/googleapis/python-genai                                         |
 | granian                | 2.8.7       | BSD License                                   | https://github.com/emmett-framework/granian                                        |
 | greenlet               | 3.3.2       | MIT AND PSF-2.0                               | https://greenlet.readthedocs.io                                                    |
 | grimp                  | 3.17        | BSD License                                   | https://grimp.readthedocs.io/                                                      |
@@ -90,7 +90,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | meilisearch-python-sdk | 8.1.5       | MIT License                                   | https://github.com/sanders41/meilisearch-python-sdk                                |
 | multidict              | 6.7.1       | Apache License 2.0                            | https://github.com/aio-libs/multidict                                              |
 | mutagen                | 1.48.1      | GPL-2.0-or-later                              | https://mutagen.readthedocs.io                                                     |
-| openai                 | 3.14.1      | Apache-2.0                                    | https://github.com/openai/openai-python                                            |
+| openai                 | 3.45.0      | Apache-2.0                                    | https://github.com/openai/openai-python                                            |
 | openpyxl               | 3.1.5       | MIT License                                   | https://openpyxl.readthedocs.io                                                    |
 | opentelemetry-api      | 1.45.2      | Apache-2.0                                    | https://github.com/open-telemetry/opentelemetry-python/tree/main/opentelemetry-api |
 | orjson                 | 3.13.0      | MPL-2.0 AND (Apache-2.0 OR MIT)               | https://github.com/ijl/orjson                                                      |
