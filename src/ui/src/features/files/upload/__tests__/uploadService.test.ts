@@ -109,6 +109,7 @@ function never(): Promise<void> {
 let uninstallWebLocks: () => void = () => undefined;
 
 beforeEach(() => {
+  vi.stubGlobal("navigator", {});
   uninstallWebLocks = installWebLocks();
   mocks.encryptionReady = true;
   let counter = 0;
@@ -163,6 +164,7 @@ function storedRecord(overrides: Partial<UploadRecord> = {}): UploadRecord {
 afterEach(() => {
   vi.useRealTimers();
   uninstallWebLocks();
+  vi.unstubAllGlobals();
 });
 
 describe("uploadService concurrency", () => {

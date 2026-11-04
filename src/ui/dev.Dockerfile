@@ -5,7 +5,7 @@
 # node_modules trees are kept in anonymous volumes (per-container, isolated
 # from the host's arch-specific binaries).
 # Each service sets PNPM_FILTER in compose to limit install to its workspace.
-FROM node:24.0-slim
+FROM node:24.22.2-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
 
 RUN npm install -g pnpm@11.20.0
 
