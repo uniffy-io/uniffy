@@ -1,5 +1,5 @@
-import { useCallback, useEffect } from "react";
-import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, CaretDown, CaretUp } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { PageLoader } from "@/components/feedback/PageLoader";
@@ -20,45 +20,33 @@ import {
   TaskUnavailable,
 } from "@/features/projects/components/detail/TaskUnavailable";
 import { TimerButton } from "@/features/projects/components/time/TimerButton";
-import { OpenTaskContext } from "@/features/projects/hooks/useOpenTask";
-import { useTaskDetail } from "@/features/projects/hooks/useTaskDetail";
+import type { TaskDetail } from "@/features/projects/hooks/useTaskDetail";
 import { setCurrentProject } from "@/features/projects/store/projectsSlice";
 import { fetchProject, fetchProjectTasks } from "@/features/projects/store/projectsThunks";
 import { fetchSprints } from "@/features/projects/store/sprintsThunks";
 import { neighbours, readTaskPageState } from "@/features/projects/utils/taskNavigation";
 import {
-  parseTaskOpenView,
+  type TaskOpenView,
   taskLinkPath,
   taskProjectPath,
   taskUrn,
 } from "@/features/projects/utils/taskPath";
-import { ProjectsWorkspace } from "@/features/projects/pages/ProjectsPage";
 import { TaskViewMenu } from "@/features/projects/components/detail/TaskViewMenu";
-import { useAppearanceSettings } from "@/features/settings/hooks/useSettings";
-import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
 
-interface TaskPageProps {
-  fullPage?: boolean;
+interface TaskPageContentProps {
+  taskId: string;
+  detail: TaskDetail;
+  view: TaskOpenView;
+  projectView: string | null;
 }
 
-export function TaskPage({ fullPage = false }: TaskPageProps) {
-  const { taskId = "", projectId: routedProjectId } = useParams<{
-    taskId: string;
-    projectId?: string;
-  }>();
+export function TaskPageContent({ taskId, detail, view, projectView }: TaskPageContentProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
-  const { taskOpenView } = useAppearanceSettings();
-  const settingsInitialized = useAppSelector((state) => state.settings.initialized);
-  const params = new URLSearchParams(location.search);
-  const explicitView = parseTaskOpenView(params.get("view"));
-  const view = fullPage ? "page" : (explicitView ?? taskOpenView);
-  const projectView = routedProjectId ? params.get("view") : params.get("projectView");
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const isZenMode = useAppSelector((state) => state.zenMode.isActive);
-  const detail = useTaskDetail(taskId);
   const { task, project, loadFailed } = detail;
   const projectId = task?.projectId;
 
@@ -67,27 +55,22 @@ export function TaskPage({ fullPage = false }: TaskPageProps) {
     loadFailed,
   );
 
-  // Hosted outside the project page, so the project, its tasks and sprints load here.
+  // Full-page tasks load project metadata without mounting the workspace.
   useEffect(() => {
-    if (!projectId || view !== "page") return;
+    if (!projectId || loadFailed || view !== "page") return;
     dispatch(setCurrentProject(projectId));
     void dispatch(fetchProject(projectId));
     void dispatch(fetchSprints(projectId));
     const tasksLoad = dispatch(fetchProjectTasks(projectId));
     return () => tasksLoad.abort();
-  }, [dispatch, projectId, organizationId, view]);
+  }, [dispatch, projectId, organizationId, view, loadFailed]);
 
   const { order, from } = readTaskPageState(location.state);
   const { prev, next } = neighbours(order, taskId);
   const ticketId = task ? (project ? `${project.slug}-${task.number}` : `#${task.number}`) : "";
-  useDocumentTitle(task ? `${ticketId} ${task.title}` : "Task");
 
   const goToTask = (id: string) =>
     navigate(taskLinkPath(id, view, projectView), { state: { order, from }, replace: true });
-  const openTask = useCallback(
-    (id: string) => navigate(taskLinkPath(id, view, projectView), { state: { from } }),
-    [navigate, from, view, projectView],
-  );
   const goBack = () => {
     if (from) navigate(from);
     else if (projectId) navigate(taskProjectPath(projectId, projectView));
@@ -98,13 +81,6 @@ export function TaskPage({ fullPage = false }: TaskPageProps) {
     "flex flex-col bg-background transition-[height] duration-300",
     isZenMode ? "h-dvh delay-150" : "h-[calc(100dvh-3rem)] delay-0",
   );
-
-  if (!explicitView && !fullPage && !settingsInitialized) {
-    return <PageLoader />;
-  }
-  if (!explicitView || fullPage || routedProjectId) {
-    return <Navigate to={taskLinkPath(taskId, view, projectView)} state={location.state} replace />;
-  }
 
   let body;
   if (loadFailed && otherOrganization) {
@@ -123,12 +99,6 @@ export function TaskPage({ fullPage = false }: TaskPageProps) {
     body = <TaskLoadError onRetry={detail.retry} />;
   } else if (!task) {
     body = <PageLoader />;
-  } else if (view !== "page") {
-    return (
-      <OpenTaskContext.Provider value={openTask}>
-        <ProjectsWorkspace taskRoute={{ projectId: task.projectId, taskId, view }} />
-      </OpenTaskContext.Provider>
-    );
   } else {
     body = (
       <>
@@ -181,19 +151,17 @@ export function TaskPage({ fullPage = false }: TaskPageProps) {
           </PaneHeaderBar>
         </PaneHeader>
         <div className="min-h-0 flex-1" data-testid="task-page-body">
-          <OpenTaskContext.Provider value={openTask}>
-            <TaskDetailLayout
-              task={task}
-              project={project}
-              allProjectTasks={detail.allProjectTasks}
-              sprints={detail.sprints}
-              blocksTaskIds={detail.blocksTaskIds}
-              subtaskTimeSpent={detail.subtaskTimeSpent}
-              canEdit={detail.canEdit}
-              mode="page"
-              onDescriptionDone={detail.onDescriptionDone}
-            />
-          </OpenTaskContext.Provider>
+          <TaskDetailLayout
+            task={task}
+            project={project}
+            allProjectTasks={detail.allProjectTasks}
+            sprints={detail.sprints}
+            blocksTaskIds={detail.blocksTaskIds}
+            subtaskTimeSpent={detail.subtaskTimeSpent}
+            canEdit={detail.canEdit}
+            mode="page"
+            onDescriptionDone={detail.onDescriptionDone}
+          />
         </div>
       </>
     );

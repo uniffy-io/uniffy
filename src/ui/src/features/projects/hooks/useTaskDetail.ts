@@ -22,6 +22,8 @@ export interface TaskAncestor {
   number: number;
 }
 
+export type TaskDetail = ReturnType<typeof useTaskDetail>;
+
 /** Everything a task detail host shows, loaded and kept fresh for one task id. */
 export function useTaskDetail(taskId: string) {
   const dispatch = useAppDispatch();
@@ -34,6 +36,7 @@ export function useTaskDetail(taskId: string) {
 
   const load = useCallback(
     (isLive: () => boolean = () => true) => {
+      if (!taskId) return;
       void dispatch(fetchTask(taskId))
         .unwrap()
         .then((loaded) => {
@@ -54,7 +57,7 @@ export function useTaskDetail(taskId: string) {
       live = false;
     };
   }, [load, organizationId, attempt]);
-  useContentRefresh(ContentType.TASK, taskId, () => load());
+  useContentRefresh(ContentType.TASK, taskId || null, () => load());
 
   // The task's own project, so a host works wherever it is mounted, not only inside a project page.
   const projectId = task?.projectId;

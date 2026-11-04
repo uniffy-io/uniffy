@@ -4,6 +4,10 @@ import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useShortcutHandlers } from "@/features/settings";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { PageLoader } from "@/components/feedback/PageLoader";
+import { TaskPageContent } from "@/features/projects/components/detail/TaskPageContent";
+import { OpenTaskContext } from "@/features/projects/hooks/useOpenTask";
+import { useTaskDetail, type TaskDetail } from "@/features/projects/hooks/useTaskDetail";
 import { ProjectsLayout } from "@/features/projects/components/layout/ProjectsLayout";
 import { setCurrentProject, selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import {
@@ -30,6 +34,7 @@ import { useContentAccessRefetch } from "@/features/notifications/hooks/useConte
 import {
   taskLinkPath,
   taskProjectPath,
+  parseTaskOpenView,
   type TaskOpenView,
 } from "@/features/projects/utils/taskPath";
 import {
@@ -46,15 +51,86 @@ import { buildUrn, UrnType } from "@/shared/utils/urn";
 
 interface ProjectsWorkspaceProps {
   taskRoute?: { projectId: string; taskId: string; view: TaskOpenView };
+  taskDetail: TaskDetail;
 }
 
-export function ProjectsPage() {
+export function ProjectsPage({ fullPage = false }: { fullPage?: boolean }) {
+  const { taskId = "", projectId: routedProjectId } = useParams();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { taskOpenView } = useAppearanceSettings();
+  const settingsInitialized = useAppSelector((state) => state.settings.initialized);
   const currentProject = useAppSelector(selectCurrentProject);
-  useDocumentTitle(currentProject?.name || "Projects");
-  return <ProjectsWorkspace />;
+  const detail = useTaskDetail(taskId);
+  const { task, project } = detail;
+  const params = new URLSearchParams(location.search);
+  const explicitView = parseTaskOpenView(params.get("view"));
+  const view = fullPage ? "page" : (explicitView ?? taskOpenView);
+  const projectView = params.get(routedProjectId ? "view" : "projectView");
+  const canonicalPath = taskLinkPath(taskId, view, projectView);
+  const canonicalize = taskId && (!explicitView || fullPage || routedProjectId);
+
+  useEffect(() => {
+    if (canonicalize && (explicitView || fullPage || settingsInitialized)) {
+      navigate(canonicalPath, { state: location.state, replace: true });
+    }
+  }, [
+    canonicalize,
+    canonicalPath,
+    explicitView,
+    fullPage,
+    settingsInitialized,
+    navigate,
+    location.state,
+  ]);
+
+  const { from } = readTaskPageState(location.state);
+  const openTask = useCallback(
+    (id: string) => {
+      if (taskId) navigate(taskLinkPath(id, view, projectView), { state: { from } });
+      else dispatch(selectTask(id));
+    },
+    [taskId, navigate, view, projectView, from, dispatch],
+  );
+
+  useContentAccessRefetch(ContentType.PROJECT, (changes) => {
+    const accessChanges = changes.filter(
+      (change) => change.action !== "views_changed" && change.action !== "child_added",
+    );
+    if (accessChanges.length === 0) return;
+    if (taskId && (!task || accessChanges.some((change) => change.contentId === task.projectId))) {
+      detail.retry();
+    }
+    void dispatch(fetchProjects());
+  });
+
+  const ticketId = task ? (project ? `${project.slug}-${task.number}` : `#${task.number}`) : "";
+  useDocumentTitle(
+    taskId
+      ? task && !detail.loadFailed
+        ? `${ticketId} ${task.title}`
+        : "Task"
+      : currentProject?.name || "Projects",
+  );
+
+  if (taskId && !explicitView && !fullPage && !settingsInitialized) return <PageLoader />;
+
+  return (
+    <OpenTaskContext.Provider value={openTask}>
+      {taskId && (view === "page" || !task || detail.loadFailed) ? (
+        <TaskPageContent taskId={taskId} detail={detail} view={view} projectView={projectView} />
+      ) : (
+        <ProjectsWorkspace
+          taskRoute={taskId && task ? { projectId: task.projectId, taskId, view } : undefined}
+          taskDetail={detail}
+        />
+      )}
+    </OpenTaskContext.Provider>
+  );
 }
 
-export function ProjectsWorkspace({ taskRoute }: ProjectsWorkspaceProps) {
+function ProjectsWorkspace({ taskRoute, taskDetail }: ProjectsWorkspaceProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -191,13 +267,6 @@ export function ProjectsWorkspace({ taskRoute }: ProjectsWorkspaceProps) {
         ) {
           loadProjectTasks(currentProjectId);
         }
-        if (
-          changes.some(
-            (change) => change.action !== "views_changed" && change.action !== "child_added",
-          )
-        ) {
-          dispatch(fetchProjects());
-        }
       },
       [dispatch, currentProjectId, loadProjectTasks],
     ),
@@ -274,7 +343,7 @@ export function ProjectsWorkspace({ taskRoute }: ProjectsWorkspaceProps) {
           className={cn("bg-background", isZenMode ? "h-dvh" : "h-[calc(100dvh-3rem)]")}
         />
       ) : (
-        <ProjectsLayout taskView={taskRoute?.view ?? taskOpenView} />
+        <ProjectsLayout taskView={taskRoute?.view ?? taskOpenView} taskDetail={taskDetail} />
       )}
     </>
   );

@@ -9,7 +9,7 @@ import {
   TaskUnavailable,
 } from "@/features/projects/components/detail/TaskUnavailable";
 import { TimerButton } from "@/features/projects/components/time/TimerButton";
-import { useTaskDetail } from "@/features/projects/hooks/useTaskDetail";
+import type { TaskDetail } from "@/features/projects/hooks/useTaskDetail";
 import { useOpenTask } from "@/features/projects/hooks/useOpenTask";
 import { closeDetailPanel, selectTask } from "@/features/projects/store/projectsUiSlice";
 import type { TaskOpenView } from "@/features/projects/utils/taskPath";
@@ -19,6 +19,7 @@ import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 
 interface TaskDetailPanelProps {
   taskId: string;
+  detail: TaskDetail;
   variant?: "sidebar" | "modal";
   view?: TaskOpenView;
   onClose?: () => void;
@@ -26,6 +27,7 @@ interface TaskDetailPanelProps {
 
 export function TaskDetailPanel({
   taskId,
+  detail,
   variant = "sidebar",
   view = "panel",
   onClose,
@@ -46,7 +48,7 @@ export function TaskDetailPanel({
     loadFailed,
     loadError,
     retry,
-  } = useTaskDetail(taskId);
+  } = detail;
 
   const handleClose = () => {
     if (onClose) {

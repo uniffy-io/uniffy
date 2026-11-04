@@ -69,8 +69,12 @@ export function MyTimePage() {
           <ApprovalsInbox initialDay={searchParams.get("period") || today} headerExtra={tabs} />
         ) : (
           <MyTimeWeek
-            key={searchParams.get("day") || "today"}
-            initialDay={searchParams.get("day") || undefined}
+            day={searchParams.get("day") || today}
+            onDayChange={(day) => {
+              const params = new URLSearchParams(searchParams);
+              params.set("day", day);
+              setSearchParams(params, { replace: true });
+            }}
             headerExtra={tabs}
           />
         )}

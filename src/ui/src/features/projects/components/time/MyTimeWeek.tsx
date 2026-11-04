@@ -208,13 +208,13 @@ function lockHint(sheet: Timesheet | undefined): string | undefined {
 }
 
 interface MyTimeWeekProps {
-  /** Day whose week opens first; today otherwise. */
-  initialDay?: string;
+  day: string;
+  onDayChange: (day: string) => void;
   headerExtra?: ReactNode;
 }
 
 /** The person's week, one row per task and one editable cell per day. */
-export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
+export function MyTimeWeek({ day: anchor, onDayChange, headerExtra }: MyTimeWeekProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const location = useLocation();
@@ -224,7 +224,6 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
   const { weekStart: preferredWeekStart } = useAppearanceSettings();
   const weekStart = normalizeWeekStart(policy?.weekStart ?? preferredWeekStart);
   const today = effectiveDayKey(new Date());
-  const [anchor, setAnchor] = useState(initialDay ?? today);
   const days = useMemo(() => weekDays(weekStartOf(anchor, weekStart)), [anchor, weekStart]);
   const rangeKey = weekRangeKey(days[0], days[6]);
   const selectWorklogs = useMemo(() => selectWeekWorklogs(rangeKey), [rangeKey]);
@@ -400,7 +399,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant="ghost"
               size="xs"
-              onClick={() => setAnchor(addDays(days[0], -7))}
+              onClick={() => onDayChange(addDays(days[0], -7))}
               aria-label="Previous week"
               data-testid="week-previous"
             >
@@ -410,7 +409,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant={isCurrentWeek ? "secondary" : "ghost"}
               size="xs"
-              onClick={() => setAnchor(today)}
+              onClick={() => onDayChange(today)}
               data-testid="week-today"
             >
               Today
@@ -419,7 +418,7 @@ export function MyTimeWeek({ initialDay, headerExtra }: MyTimeWeekProps) {
               type="button"
               variant="ghost"
               size="xs"
-              onClick={() => setAnchor(addDays(days[0], 7))}
+              onClick={() => onDayChange(addDays(days[0], 7))}
               aria-label="Next week"
               data-testid="week-next"
             >
