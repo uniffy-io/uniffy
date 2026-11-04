@@ -90,7 +90,7 @@ async def test_a_role_refusal_carries_no_reason() -> None:
     error = await _unary(refuse)
 
     assert error.code is Code.PERMISSION_DENIED
-    assert error.details == ()
+    assert not error.details
 
 
 async def test_a_handler_that_hides_the_refusal_behind_not_found_keeps_its_answer() -> None:
@@ -103,7 +103,7 @@ async def test_a_handler_that_hides_the_refusal_behind_not_found_keeps_its_answe
     error = await _unary(refuse)
 
     assert error.code is Code.NOT_FOUND
-    assert error.details == ()
+    assert not error.details
 
 
 async def test_a_suppressed_cause_keeps_the_handler_answer() -> None:
@@ -115,7 +115,7 @@ async def test_a_suppressed_cause_keeps_the_handler_answer() -> None:
 
     error = await _unary(refuse)
 
-    assert error.details == ()
+    assert not error.details
 
 
 async def test_a_server_stream_answers_with_the_reason() -> None:

@@ -5,7 +5,7 @@ document and applies an update to it only once the buffer accepted it.
 """
 
 import contextlib
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncGenerator, Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -89,7 +89,7 @@ _REFUSALS = {
 
 
 @contextlib.asynccontextmanager
-async def _unverified() -> AsyncIterator[None]:
+async def _unverified() -> AsyncGenerator[None]:
     try:
         yield
     except AdmissionUnknown as exc:

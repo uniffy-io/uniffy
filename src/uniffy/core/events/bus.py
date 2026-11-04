@@ -1,6 +1,6 @@
 """Notification events support transactional staging or best-effort queue delivery."""
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import UTC, datetime, timedelta
@@ -25,7 +25,7 @@ _staging_session: ContextVar[AsyncSession | None] = ContextVar("notification_sta
 
 
 @contextmanager
-def stage_notification_events(session: AsyncSession) -> Iterator[None]:
+def stage_notification_events(session: AsyncSession) -> Generator[None]:
     """Preserve original recipient deltas in the content owner's transaction."""
     token = _staging_session.set(session)
     try:

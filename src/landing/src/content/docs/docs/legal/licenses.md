@@ -50,7 +50,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | charset-normalizer     | 3.4.4       | MIT                                           | https://github.com/jawah/charset_normalizer/blob/master/CHANGELOG.md               |
 | click                  | 8.5.0       | BSD-3-Clause                                  | https://github.com/pallets/click/                                                  |
 | colorama               | 0.4.6       | BSD License                                   | https://github.com/tartley/colorama                                                |
-| connectrpc             | 0.12.1      | Apache-2.0                                    | https://github.com/connectrpc/connect-py                                           |
+| connectrpc             | 0.13.0      | Apache-2.0                                    | https://github.com/connectrpc/connect-py                                           |
 | croniter               | 6.2.4       | MIT                                           | https://github.com/pallets-eco/croniter                                            |
 | cryptography           | 50.0.2      | Apache-2.0 OR BSD-3-Clause                    | https://github.com/pyca/cryptography                                               |
 | distro                 | 1.9.0       | Apache Software License                       | https://github.com/python-distro/distro                                            |
@@ -99,10 +99,11 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | pluggy                 | 1.6.0       | MIT License                                   | UNKNOWN                                                                            |
 | prometheus_client      | 0.26.0      | Apache-2.0 AND BSD-2-Clause                   | https://github.com/prometheus/client_python                                        |
 | propcache              | 0.4.1       | Apache Software License                       | https://github.com/aio-libs/propcache                                              |
-| protobuf-py            | 0.5.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
-| protobuf-py-ext        | 0.5.0       | UNKNOWN                                       | https://github.com/bufbuild/protobuf-py                                            |
-| protoc-gen-connectrpc  | 0.12.1      | Apache-2.0                                    | https://github.com/connectrpc/connect-py                                           |
-| protoc-gen-py          | 0.5.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
+| protobuf-py            | 0.7.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
+| protobuf-py-ext        | 0.7.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
+| protobuf-py-pure       | 0.7.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
+| protoc-gen-connectrpc  | 0.13.0      | Apache-2.0                                    | https://github.com/connectrpc/connect-py                                           |
+| protoc-gen-py          | 0.7.0       | Apache-2.0                                    | https://github.com/bufbuild/protobuf-py                                            |
 | py-cpuinfo2            | 10.1.1      | MIT                                           | https://github.com/akx/py-cpuinfo2                                                 |
 | py-vapid               | 1.9.4       | MPL-2.0                                       | https://github.com/mozilla-services/vapid                                          |
 | pyasn1                 | 0.6.5       | BSD-2-Clause                                  | https://github.com/pyasn1/pyasn1                                                   |
@@ -115,9 +116,9 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | pydantic_core          | 2.50.2      | MIT                                           | https://github.com/pydantic                                                        |
 | pypdfium2              | 5.14.0      | BSD-3-Clause, Apache-2.0, dependency licenses | https://github.com/pypdfium2-team/pypdfium2                                        |
 | pyqwest                | 0.13.0      | MIT License                                   | https://github.com/curioswitch/pyqwest                                             |
-| pytest                 | 9.1.1       | MIT                                           | https://docs.pytest.org/en/latest/                                                 |
-| pytest-asyncio         | 1.4.0       | Apache-2.0                                    | https://github.com/pytest-dev/pytest-asyncio                                       |
-| pytest-benchmark       | 5.3.0       | BSD-2-Clause                                  | https://pytest-benchmark.readthedocs.io/en/latest/changelog.html                   |
+| pytest                 | 9.2.0       | MIT                                           | https://docs.pytest.org/en/latest/                                                 |
+| pytest-asyncio         | 1.4.1.post1 | Apache-2.0                                    | https://github.com/pytest-dev/pytest-asyncio                                       |
+| pytest-benchmark       | 5.3.1       | BSD-2-Clause                                  | https://pytest-benchmark.readthedocs.io/en/latest/changelog.html                   |
 | pytest-xdist           | 3.8.0       | MIT                                           | https://github.com/pytest-dev/pytest-xdist                                         |
 | python-dateutil        | 2.9.0.post0 | Apache Software License; BSD License          | https://github.com/dateutil/dateutil                                               |
 | python-docx            | 1.2.0       | MIT License                                   | https://github.com/python-openxml/python-docx                                      |
@@ -125,10 +126,10 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | python-multipart       | 0.0.33      | Apache-2.0                                    | https://github.com/Kludex/python-multipart                                         |
 | python-pptx            | 1.0.2       | MIT License                                   | https://github.com/scanny/python-pptx                                              |
 | pywebpush              | 2.5.0       | MPL-2.0                                       | https://github.com/web-push-libs/pywebpush                                         |
-| reportlab              | 5.0.1       | BSD License                                   | https://www.reportlab.com/                                                         |
+| reportlab              | 5.1.0       | BSD License                                   | https://www.reportlab.com/                                                         |
 | requests               | 2.32.5      | Apache Software License                       | https://requests.readthedocs.io                                                    |
 | rich                   | 15.0.0      | MIT License                                   | https://github.com/Textualize/rich                                                 |
-| ruff                   | 0.16.3      | MIT                                           | https://docs.astral.sh/ruff                                                        |
+| ruff                   | 0.17.3      | MIT                                           | https://docs.astral.sh/ruff                                                        |
 | s3transfer             | 0.14.0      | Apache Software License                       | https://github.com/boto/s3transfer                                                 |
 | segno                  | 1.6.6       | BSD License                                   | https://github.com/heuer/segno/                                                    |
 | six                    | 1.17.0      | MIT License                                   | https://github.com/benjaminp/six                                                   |
@@ -138,7 +139,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | starlette              | 1.10.0      | BSD-3-Clause                                  | https://github.com/Kludex/starlette                                                |
 | tenacity               | 9.1.4       | Apache Software License                       | https://github.com/jd/tenacity                                                     |
 | truststore             | 0.10.4      | MIT                                           | https://github.com/sethmlarson/truststore                                          |
-| ty                     | 0.0.72      | MIT License                                   | https://github.com/astral-sh/ty/                                                   |
+| ty                     | 0.0.97      | MIT License                                   | https://github.com/astral-sh/ty/                                                   |
 | types-aiobotocore      | 3.10.0      | MIT                                           | https://github.com/youtype/mypy_boto3_builder                                      |
 | types-aiobotocore-s3   | 3.10.0      | MIT                                           | https://github.com/youtype/mypy_boto3_builder                                      |
 | types-awscrt           | 0.31.2      | MIT License                                   | https://github.com/youtype/types-awscrt                                            |
@@ -148,7 +149,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | uniffy-proto           | 0.0.0       | UNKNOWN                                       | UNKNOWN                                                                            |
 | urllib3                | 2.8.0       | MIT                                           | https://github.com/urllib3/urllib3/blob/main/CHANGES.rst                           |
 | valkey                 | 6.2.0       | MIT License                                   | https://github.com/valkey-io/valkey-py                                             |
-| watchfiles             | 1.2.0       | MIT License                                   | https://github.com/samuelcolvin/watchfiles                                         |
+| watchfiles             | 1.3.0       | MIT License                                   | https://github.com/samuelcolvin/watchfiles                                         |
 | websockets             | 16.0        | BSD-3-Clause                                  | https://github.com/python-websockets/websockets                                    |
 | wrapt                  | 1.17.3      | BSD License                                   | https://github.com/GrahamDumpleton/wrapt                                           |
 | xlsxwriter             | 3.2.9       | BSD License                                   | https://github.com/jmcnamara/XlsxWriter                                            |
@@ -1687,7 +1688,7 @@ Versions, source links, and SHA-256 hashes below come from [src/uniffy/Dockerfil
 
 | Component | Version and source | License | SHA-256 |
 |-----------|--------------------|---------|---------|
-| ffmpeg | [9.0.1](https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz) | GPL-2.0-or-later | `cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635` |
+| ffmpeg | [9.0.1](https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n9.0.1.tar.gz) | GPL-2.0-or-later | `195d54bebe1a27f84d77f4b989d193466f305b355da92292766a69f16880b18a` |
 | x264 | [0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee](https://code.videolan.org/videolan/x264/-/archive/0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee/x264-0480cb05fa188d37ae87e8f4fd8f1aea3711f7ee.tar.bz2) | GPL-2.0-or-later | `f05c59f2e83d494c36307025dca2d3afc6b4d185f3a3453d06cc4fecd7094057` |
 | dav1d | [1.5.3](https://code.videolan.org/videolan/dav1d/-/archive/1.5.3/dav1d-1.5.3.tar.bz2) | BSD-2-Clause | `e099f53253f6c247580c554d53a13f1040638f2066edc3c740e4c2f15174ce22` |
 | zimg | [3.0.5](https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.5.tar.gz) | WTFPL | `a9a0226bf85e0d83c41a8ebe4e3e690e1348682f6a2a7838f1b8cbff1b799bcf` |

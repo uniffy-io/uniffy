@@ -7,7 +7,7 @@ import base64
 import binascii
 import os
 import struct
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncGenerator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -216,7 +216,7 @@ class OrgDataCipher:
         return await get_org_data_key_lru().get(organization_id, version)
 
     @asynccontextmanager
-    async def _one_load(self, organization_id: UUID, version: int | None) -> AsyncIterator[None]:
+    async def _one_load(self, organization_id: UUID, version: int | None) -> AsyncGenerator[None]:
         """Concurrent misses for one key wait for a single load.
 
         Callers hold a document lock and a database connection while a load opens another

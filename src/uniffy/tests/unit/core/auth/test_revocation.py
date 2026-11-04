@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from connectrpc.code import Code
 from connectrpc.errors import ConnectError
-from connectrpc.method import IdempotencyLevel, MethodInfo
+from connectrpc.method import IdempotencyLevel, MethodInfo, StreamType
 from connectrpc.request import Headers, RequestContext
 from fastapi import HTTPException
 from starlette.requests import Request
@@ -48,6 +48,7 @@ def rpc_context(token: str) -> RequestContext:
             input=object,
             output=object,
             idempotency_level=IdempotencyLevel.UNKNOWN,
+            stream_type=StreamType.UNARY,
         ),
         http_method="POST",
         request_headers=headers,

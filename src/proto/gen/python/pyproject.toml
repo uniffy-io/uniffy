@@ -8,6 +8,6 @@ version = "0.0.0"
 description = "Generated protobuf and ConnectRPC code for Uniffy"
 requires-python = ">=3.14"
 dependencies = [
-  "protobuf-py==0.5.0",
-  "connectrpc>=0.12.1",
+  "protobuf-py==0.7.0",
+  "connectrpc>=0.13.0",
 ]

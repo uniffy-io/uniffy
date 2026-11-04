@@ -2,7 +2,7 @@
 
 import asyncio
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from alembic import command
@@ -28,7 +28,7 @@ ALEMBIC_INI_PATH = os.path.join(
 
 
 @asynccontextmanager
-async def startup_advisory_lock(lock_id: int, name: str) -> AsyncIterator[None]:
+async def startup_advisory_lock(lock_id: int, name: str) -> AsyncGenerator[None]:
     """Hold a dedicated session lock without blocking the event loop or concurrent DDL."""
     engine = create_async_engine(
         get_database_url(), poolclass=NullPool, isolation_level="AUTOCOMMIT"
@@ -182,7 +182,7 @@ async def init_db(*, skip_migrations: bool = False, application_name: str = "uni
 
 
 @asynccontextmanager
-async def open_session() -> AsyncIterator[AsyncSession]:
+async def open_session() -> AsyncGenerator[AsyncSession]:
     """Yield an `AsyncSession` and guarantee deterministic checkin on exit."""
     if _async_session_maker is None:
         raise RuntimeError("Database not initialized. Call init_db() first.")

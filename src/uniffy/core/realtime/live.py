@@ -5,7 +5,7 @@ writes into the caller's transaction, never commit, and return the cleanup that 
 """
 
 import contextlib
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
@@ -143,7 +143,7 @@ class _Staged:
 
 
 @contextlib.asynccontextmanager
-async def _verified() -> AsyncIterator[None]:
+async def _verified() -> AsyncGenerator[None]:
     try:
         yield
     except (BufferUnavailable, AdmissionUnknown, RecoveryRequired) as exc:

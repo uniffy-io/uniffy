@@ -1,6 +1,6 @@
 """The agent whose tool call is running, so writes can credit it next to the person it acts for."""
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from uuid import UUID
@@ -13,7 +13,7 @@ def current_acting_agent() -> UUID | None:
 
 
 @contextmanager
-def acting_agent(agent_id: UUID | None) -> Iterator[None]:
+def acting_agent(agent_id: UUID | None) -> Generator[None]:
     token = _acting_agent.set(agent_id)
     try:
         yield

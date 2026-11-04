@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -75,7 +75,7 @@ class LiveKitAdminClient:
         )
 
     @contextmanager
-    def stop_after_unavailable(self) -> Iterator[MediaAvailability]:
+    def stop_after_unavailable(self) -> Generator[MediaAvailability]:
         """One maintenance pass stops media I/O without blocking other tasks."""
         availability = MediaAvailability()
         token = self._availability.set(availability)

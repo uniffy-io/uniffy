@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import dataclasses
 from collections import defaultdict
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from enum import StrEnum
 from uuid import UUID
 
@@ -567,7 +567,7 @@ class UpdateBuffer:
         return sealed, digest
 
     @contextlib.asynccontextmanager
-    async def _key_call(self, scope: BufferScope) -> AsyncIterator[None]:
+    async def _key_call(self, scope: BufferScope) -> AsyncGenerator[None]:
         try:
             yield
         except SealedDataError:
@@ -588,7 +588,7 @@ class UpdateBuffer:
         return client
 
     @contextlib.asynccontextmanager
-    async def _valkey_call(self) -> AsyncIterator[None]:
+    async def _valkey_call(self) -> AsyncGenerator[None]:
         try:
             yield
         except ValkeyIdentityChanged:

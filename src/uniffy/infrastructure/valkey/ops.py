@@ -2,7 +2,7 @@
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 import valkey.asyncio as aioredis
 from loguru import logger
@@ -68,7 +68,7 @@ def get_ops_client() -> aioredis.Redis | None:
 
 
 @contextlib.asynccontextmanager
-async def ops_call(namespace: str, op: str) -> AsyncIterator[None]:
+async def ops_call(namespace: str, op: str) -> AsyncGenerator[None]:
     """150ms wall-clock deadline guard around a Valkey ops call.
 
     On ``TimeoutError`` the metric is bumped and the exception is re-raised so

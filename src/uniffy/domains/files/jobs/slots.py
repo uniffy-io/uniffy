@@ -4,7 +4,7 @@ import asyncio
 import os
 import shutil
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from uniffy.domains.files.jobs.settings import MediaSettings
@@ -37,7 +37,7 @@ class MediaSlots:
         self._admission = asyncio.Lock()
 
     @asynccontextmanager
-    async def acquire(self) -> AsyncIterator[bool]:
+    async def acquire(self) -> AsyncGenerator[bool]:
         if self._active >= self._capacity:
             yield False
             return
