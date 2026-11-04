@@ -108,6 +108,13 @@ describe("editor Markdown fidelity", () => {
     "Fix the #hotfix today",
     "Fix the [[[tag|hotfix]]] today",
     "---\ntitle: test\n---\n\n![body alt](/image.png)",
+    "A\n\n\n\nB",
+    "A\n\n\n\n\n\nB",
+    "\n\nA",
+    "# Heading\n\n\n\nA",
+    "- one\n- two\n\n\n\nB",
+    "```\ncode\n```\n\n\n\nB",
+    "---\ntitle: test\n---\n\n\n\nBody",
   ])("preserves %j across repeated parse and serialize", (input) => {
     const output = serialize(parse(input));
     expect(output).toBe(input);
@@ -119,6 +126,18 @@ describe("editor Markdown fidelity", () => {
     expect(doc.firstChild?.childCount).toBe(4);
     expect(doc.firstChild?.child(1).type.name).toBe("hardbreak");
     expect(parse(serialize(doc)).toJSON()).toEqual(doc.toJSON());
+  });
+
+  it("reads empty paragraphs back, so a preview matches the editor that wrote them", () => {
+    const written = parse("A\n\nB");
+    const empty = written.type.schema.nodes.paragraph.create();
+    const doc = written.type.create(null, [written.child(0), empty, empty, written.child(1)]);
+    expect(parse(serialize(doc)).toJSON()).toEqual(doc.toJSON());
+  });
+
+  it("leaves one stray blank line and blank lines inside lists alone", () => {
+    expect(parse("A\n\n\nB").childCount).toBe(2);
+    expect(parse("- one\n\n\n\n- two").childCount).toBe(1);
   });
 
   it("preserves standalone HTML breaks", () => {

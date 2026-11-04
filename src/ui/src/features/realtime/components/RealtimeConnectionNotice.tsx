@@ -7,10 +7,13 @@ export function RealtimeConnectionNotice({
   waiting,
   status,
   onEditWithoutLive,
+  quiet = false,
 }: {
   waiting: boolean;
   status: RealtimeStatus;
   onEditWithoutLive?: () => void;
+  /** Holds the connecting copy until the wait runs long, for hosts whose own chip already says Connecting. */
+  quiet?: boolean;
 }) {
   const [delayed, setDelayed] = useState(false);
   useEffect(() => {
@@ -38,6 +41,7 @@ export function RealtimeConnectionNotice({
       </p>
     );
   }
+  if (quiet && !delayed) return null;
   return (
     <div
       role="status"

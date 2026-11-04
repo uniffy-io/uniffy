@@ -240,6 +240,7 @@ export function TaskDetailLayout({
           showHeader
           readonly={!canEdit}
           expandReadonly
+          tone={mode === "sidebar" ? "background" : "surface"}
         />
       </div>
 
@@ -281,10 +282,11 @@ export function TaskDetailLayout({
       >
         <Panel id="task-detail-main" minSize={360}>
           <ScrollArea
-            className={cn("h-full p-4", mode === "page" && "bg-surface md:p-6")}
+            className={cn("h-full", mode === "page" && "bg-surface")}
             data-testid="task-detail-scroll"
           >
-            {main}
+            {/* Padding sits inside the scroller so the description toolbar pins to its edge. */}
+            <div className={cn("p-4", mode === "page" && "md:p-6")}>{main}</div>
           </ScrollArea>
         </Panel>
         <PaneSeparator />

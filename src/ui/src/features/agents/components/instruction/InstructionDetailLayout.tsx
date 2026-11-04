@@ -242,10 +242,10 @@ export function DetailEditorCard({
 }
 
 /**
- * Wrapper classes for a compact editor in a detail card. `instruction-editor`
+ * Wrapper classes for a compact editor in a detail card. `crepe-editor-grows`
  * lifts the wrapper's overflow clip (see editor.css) so Crepe's slash menu and
  * toolbar can extend past the card; the bottom band keeps the last line, and a
  * menu opened on it, clear of the card edge.
  */
-export const detailEditorClass = "instruction-editor px-2 pt-3 pb-16";
+export const detailEditorClass = "crepe-editor-grows px-2 pt-3 pb-16";
 export const DETAIL_EDITOR_MIN_HEIGHT = "480px";
