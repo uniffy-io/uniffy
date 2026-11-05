@@ -35,6 +35,8 @@ const (
 	PeopleService_UpdateIdentitySource_FullMethodName = "/people.v1.PeopleService/UpdateIdentitySource"
 	PeopleService_DeleteIdentitySource_FullMethodName = "/people.v1.PeopleService/DeleteIdentitySource"
 	PeopleService_TriggerDirectorySync_FullMethodName = "/people.v1.PeopleService/TriggerDirectorySync"
+	PeopleService_ListCollaborators_FullMethodName    = "/people.v1.PeopleService/ListCollaborators"
+	PeopleService_RecordPeoplePicks_FullMethodName    = "/people.v1.PeopleService/RecordPeoplePicks"
 )
 
 // PeopleServiceClient is the client API for PeopleService service.
@@ -57,6 +59,10 @@ type PeopleServiceClient interface {
 	UpdateIdentitySource(ctx context.Context, in *UpdateIdentitySourceRequest, opts ...grpc.CallOption) (*UpdateIdentitySourceResponse, error)
 	DeleteIdentitySource(ctx context.Context, in *DeleteIdentitySourceRequest, opts ...grpc.CallOption) (*DeleteIdentitySourceResponse, error)
 	TriggerDirectorySync(ctx context.Context, in *TriggerDirectorySyncRequest, opts ...grpc.CallOption) (*TriggerDirectorySyncResponse, error)
+	// People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+	// pickers keep working when the directory page is off; never returns another member's ranking.
+	ListCollaborators(ctx context.Context, in *ListCollaboratorsRequest, opts ...grpc.CallOption) (*ListCollaboratorsResponse, error)
+	RecordPeoplePicks(ctx context.Context, in *RecordPeoplePicksRequest, opts ...grpc.CallOption) (*RecordPeoplePicksResponse, error)
 }
 
 type peopleServiceClient struct {
@@ -227,6 +233,26 @@ func (c *peopleServiceClient) TriggerDirectorySync(ctx context.Context, in *Trig
 	return out, nil
 }
 
+func (c *peopleServiceClient) ListCollaborators(ctx context.Context, in *ListCollaboratorsRequest, opts ...grpc.CallOption) (*ListCollaboratorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCollaboratorsResponse)
+	err := c.cc.Invoke(ctx, PeopleService_ListCollaborators_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *peopleServiceClient) RecordPeoplePicks(ctx context.Context, in *RecordPeoplePicksRequest, opts ...grpc.CallOption) (*RecordPeoplePicksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordPeoplePicksResponse)
+	err := c.cc.Invoke(ctx, PeopleService_RecordPeoplePicks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PeopleServiceServer is the server API for PeopleService service.
 // All implementations must embed UnimplementedPeopleServiceServer
 // for forward compatibility.
@@ -247,6 +273,10 @@ type PeopleServiceServer interface {
 	UpdateIdentitySource(context.Context, *UpdateIdentitySourceRequest) (*UpdateIdentitySourceResponse, error)
 	DeleteIdentitySource(context.Context, *DeleteIdentitySourceRequest) (*DeleteIdentitySourceResponse, error)
 	TriggerDirectorySync(context.Context, *TriggerDirectorySyncRequest) (*TriggerDirectorySyncResponse, error)
+	// People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+	// pickers keep working when the directory page is off; never returns another member's ranking.
+	ListCollaborators(context.Context, *ListCollaboratorsRequest) (*ListCollaboratorsResponse, error)
+	RecordPeoplePicks(context.Context, *RecordPeoplePicksRequest) (*RecordPeoplePicksResponse, error)
 	mustEmbedUnimplementedPeopleServiceServer()
 }
 
@@ -304,6 +334,12 @@ func (UnimplementedPeopleServiceServer) DeleteIdentitySource(context.Context, *D
 }
 func (UnimplementedPeopleServiceServer) TriggerDirectorySync(context.Context, *TriggerDirectorySyncRequest) (*TriggerDirectorySyncResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TriggerDirectorySync not implemented")
+}
+func (UnimplementedPeopleServiceServer) ListCollaborators(context.Context, *ListCollaboratorsRequest) (*ListCollaboratorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCollaborators not implemented")
+}
+func (UnimplementedPeopleServiceServer) RecordPeoplePicks(context.Context, *RecordPeoplePicksRequest) (*RecordPeoplePicksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RecordPeoplePicks not implemented")
 }
 func (UnimplementedPeopleServiceServer) mustEmbedUnimplementedPeopleServiceServer() {}
 func (UnimplementedPeopleServiceServer) testEmbeddedByValue()                       {}
@@ -614,6 +650,42 @@ func _PeopleService_TriggerDirectorySync_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PeopleService_ListCollaborators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCollaboratorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeopleServiceServer).ListCollaborators(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PeopleService_ListCollaborators_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeopleServiceServer).ListCollaborators(ctx, req.(*ListCollaboratorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _PeopleService_RecordPeoplePicks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordPeoplePicksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeopleServiceServer).RecordPeoplePicks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PeopleService_RecordPeoplePicks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeopleServiceServer).RecordPeoplePicks(ctx, req.(*RecordPeoplePicksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PeopleService_ServiceDesc is the grpc.ServiceDesc for PeopleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -684,6 +756,14 @@ var PeopleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TriggerDirectorySync",
 			Handler:    _PeopleService_TriggerDirectorySync_Handler,
+		},
+		{
+			MethodName: "ListCollaborators",
+			Handler:    _PeopleService_ListCollaborators_Handler,
+		},
+		{
+			MethodName: "RecordPeoplePicks",
+			Handler:    _PeopleService_RecordPeoplePicks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

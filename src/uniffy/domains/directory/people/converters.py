@@ -12,11 +12,13 @@ from uniffy_proto.people.v1 import people_pb as pb
 
 from uniffy.core.avatars import get_avatar_url
 from uniffy.core.converters import datetime_to_timestamp, org_role_to_proto
+from uniffy.core.converters.common_proto import member_info_to_proto
 from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.login.organization_member import OrganizationMember, OrganizationRole
 from uniffy.core.models.login.user import User
 from uniffy.core.models.people.identity import IdentitySource, IdentitySourceKind
 from uniffy.core.models.people.profile import PeopleProfile
+from uniffy.domains.directory.collaborators.reader import CollaboratorRow, CollaboratorTier
 from uniffy.domains.directory.people.access import ViewerRelation
 from uniffy.domains.directory.people.policy import ResolvedProfilePolicy
 
@@ -27,6 +29,12 @@ _SOURCE_KIND_TO_PROTO = {
     IdentitySourceKind.OIDC: pb.IdentitySourceKind.OIDC,
 }
 SOURCE_KIND_FROM_PROTO = {proto: kind for kind, proto in _SOURCE_KIND_TO_PROTO.items()}
+
+_TIER_TO_PROTO = {
+    CollaboratorTier.COLLABORATOR: pb.CollaboratorTier.COLLABORATOR,
+    CollaboratorTier.TEAMMATE: pb.CollaboratorTier.TEAMMATE,
+    CollaboratorTier.MEMBER: pb.CollaboratorTier.MEMBER,
+}
 
 # An unset optional field is LEFT UNSET, never set to "" - the client tells
 # "not set" from "empty" via proto3 presence.
@@ -198,3 +206,9 @@ def profile_to_proto(
     )
     person.managed_fields.extend(payload["managed_fields"])
     return person
+
+
+def collaborator_to_proto(row: CollaboratorRow) -> pb.Collaborator:
+    return pb.Collaborator(
+        member=member_info_to_proto(row.user, row.membership), tier=_TIER_TO_PROTO[row.tier]
+    )

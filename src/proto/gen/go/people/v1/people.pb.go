@@ -78,6 +78,59 @@ func (IdentitySourceKind) EnumDescriptor() ([]byte, []int) {
 	return file_people_v1_people_proto_rawDescGZIP(), []int{0}
 }
 
+// Why a person is listed; the score behind it never leaves the server.
+type CollaboratorTier int32
+
+const (
+	CollaboratorTier_COLLABORATOR_TIER_UNSPECIFIED  CollaboratorTier = 0
+	CollaboratorTier_COLLABORATOR_TIER_COLLABORATOR CollaboratorTier = 1 // recent interaction with the caller
+	CollaboratorTier_COLLABORATOR_TIER_TEAMMATE     CollaboratorTier = 2 // shares a team with the caller
+	CollaboratorTier_COLLABORATOR_TIER_MEMBER       CollaboratorTier = 3 // any other active member
+)
+
+// Enum value maps for CollaboratorTier.
+var (
+	CollaboratorTier_name = map[int32]string{
+		0: "COLLABORATOR_TIER_UNSPECIFIED",
+		1: "COLLABORATOR_TIER_COLLABORATOR",
+		2: "COLLABORATOR_TIER_TEAMMATE",
+		3: "COLLABORATOR_TIER_MEMBER",
+	}
+	CollaboratorTier_value = map[string]int32{
+		"COLLABORATOR_TIER_UNSPECIFIED":  0,
+		"COLLABORATOR_TIER_COLLABORATOR": 1,
+		"COLLABORATOR_TIER_TEAMMATE":     2,
+		"COLLABORATOR_TIER_MEMBER":       3,
+	}
+)
+
+func (x CollaboratorTier) Enum() *CollaboratorTier {
+	p := new(CollaboratorTier)
+	*p = x
+	return p
+}
+
+func (x CollaboratorTier) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CollaboratorTier) Descriptor() protoreflect.EnumDescriptor {
+	return file_people_v1_people_proto_enumTypes[1].Descriptor()
+}
+
+func (CollaboratorTier) Type() protoreflect.EnumType {
+	return &file_people_v1_people_proto_enumTypes[1]
+}
+
+func (x CollaboratorTier) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CollaboratorTier.Descriptor instead.
+func (CollaboratorTier) EnumDescriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{1}
+}
+
 type ProfileLink struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
@@ -2574,6 +2627,258 @@ func (x *TriggerDirectorySyncResponse) GetEnqueued() bool {
 	return false
 }
 
+type ListCollaboratorsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	Query          *string                `protobuf:"bytes,2,opt,name=query,proto3,oneof" json:"query,omitempty"`                                     // empty lists suggestions; otherwise matches name, username or email
+	Limit          *int32                 `protobuf:"varint,3,opt,name=limit,proto3,oneof" json:"limit,omitempty"`                                    // default 20, max 50
+	ExcludeUserIds []string               `protobuf:"bytes,4,rep,name=exclude_user_ids,json=excludeUserIds,proto3" json:"exclude_user_ids,omitempty"` // max 100
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListCollaboratorsRequest) Reset() {
+	*x = ListCollaboratorsRequest{}
+	mi := &file_people_v1_people_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCollaboratorsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCollaboratorsRequest) ProtoMessage() {}
+
+func (x *ListCollaboratorsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_people_v1_people_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCollaboratorsRequest.ProtoReflect.Descriptor instead.
+func (*ListCollaboratorsRequest) Descriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ListCollaboratorsRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *ListCollaboratorsRequest) GetQuery() string {
+	if x != nil && x.Query != nil {
+		return *x.Query
+	}
+	return ""
+}
+
+func (x *ListCollaboratorsRequest) GetLimit() int32 {
+	if x != nil && x.Limit != nil {
+		return *x.Limit
+	}
+	return 0
+}
+
+func (x *ListCollaboratorsRequest) GetExcludeUserIds() []string {
+	if x != nil {
+		return x.ExcludeUserIds
+	}
+	return nil
+}
+
+type Collaborator struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Member        *v1.MemberInfo         `protobuf:"bytes,1,opt,name=member,proto3" json:"member,omitempty"`
+	Tier          CollaboratorTier       `protobuf:"varint,2,opt,name=tier,proto3,enum=people.v1.CollaboratorTier" json:"tier,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Collaborator) Reset() {
+	*x = Collaborator{}
+	mi := &file_people_v1_people_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Collaborator) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Collaborator) ProtoMessage() {}
+
+func (x *Collaborator) ProtoReflect() protoreflect.Message {
+	mi := &file_people_v1_people_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Collaborator.ProtoReflect.Descriptor instead.
+func (*Collaborator) Descriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *Collaborator) GetMember() *v1.MemberInfo {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+func (x *Collaborator) GetTier() CollaboratorTier {
+	if x != nil {
+		return x.Tier
+	}
+	return CollaboratorTier_COLLABORATOR_TIER_UNSPECIFIED
+}
+
+type ListCollaboratorsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Collaborators []*Collaborator        `protobuf:"bytes,1,rep,name=collaborators,proto3" json:"collaborators,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCollaboratorsResponse) Reset() {
+	*x = ListCollaboratorsResponse{}
+	mi := &file_people_v1_people_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCollaboratorsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCollaboratorsResponse) ProtoMessage() {}
+
+func (x *ListCollaboratorsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_people_v1_people_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCollaboratorsResponse.ProtoReflect.Descriptor instead.
+func (*ListCollaboratorsResponse) Descriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ListCollaboratorsResponse) GetCollaborators() []*Collaborator {
+	if x != nil {
+		return x.Collaborators
+	}
+	return nil
+}
+
+type RecordPeoplePicksRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	OrganizationId string                 `protobuf:"bytes,1,opt,name=organization_id,json=organizationId,proto3" json:"organization_id,omitempty"`
+	UserIds        []string               `protobuf:"bytes,2,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"` // max 20; ids outside the organization are ignored
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *RecordPeoplePicksRequest) Reset() {
+	*x = RecordPeoplePicksRequest{}
+	mi := &file_people_v1_people_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPeoplePicksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPeoplePicksRequest) ProtoMessage() {}
+
+func (x *RecordPeoplePicksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_people_v1_people_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPeoplePicksRequest.ProtoReflect.Descriptor instead.
+func (*RecordPeoplePicksRequest) Descriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *RecordPeoplePicksRequest) GetOrganizationId() string {
+	if x != nil {
+		return x.OrganizationId
+	}
+	return ""
+}
+
+func (x *RecordPeoplePicksRequest) GetUserIds() []string {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+type RecordPeoplePicksResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordPeoplePicksResponse) Reset() {
+	*x = RecordPeoplePicksResponse{}
+	mi := &file_people_v1_people_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPeoplePicksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPeoplePicksResponse) ProtoMessage() {}
+
+func (x *RecordPeoplePicksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_people_v1_people_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPeoplePicksResponse.ProtoReflect.Descriptor instead.
+func (*RecordPeoplePicksResponse) Descriptor() ([]byte, []int) {
+	return file_people_v1_people_proto_rawDescGZIP(), []int{44}
+}
+
 var File_people_v1_people_proto protoreflect.FileDescriptor
 
 const file_people_v1_people_proto_rawDesc = "" +
@@ -2836,13 +3141,34 @@ const file_people_v1_people_proto_rawDesc = "" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n" +
 	"\tsource_id\x18\x02 \x01(\tR\bsourceId\":\n" +
 	"\x1cTriggerDirectorySyncResponse\x12\x1a\n" +
-	"\benqueued\x18\x01 \x01(\bR\benqueued*\xb7\x01\n" +
+	"\benqueued\x18\x01 \x01(\bR\benqueued\"\xb7\x01\n" +
+	"\x18ListCollaboratorsRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
+	"\x05query\x18\x02 \x01(\tH\x00R\x05query\x88\x01\x01\x12\x19\n" +
+	"\x05limit\x18\x03 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12(\n" +
+	"\x10exclude_user_ids\x18\x04 \x03(\tR\x0eexcludeUserIdsB\b\n" +
+	"\x06_queryB\b\n" +
+	"\x06_limit\"n\n" +
+	"\fCollaborator\x12-\n" +
+	"\x06member\x18\x01 \x01(\v2\x15.common.v1.MemberInfoR\x06member\x12/\n" +
+	"\x04tier\x18\x02 \x01(\x0e2\x1b.people.v1.CollaboratorTierR\x04tier\"Z\n" +
+	"\x19ListCollaboratorsResponse\x12=\n" +
+	"\rcollaborators\x18\x01 \x03(\v2\x17.people.v1.CollaboratorR\rcollaborators\"^\n" +
+	"\x18RecordPeoplePicksRequest\x12'\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n" +
+	"\buser_ids\x18\x02 \x03(\tR\auserIds\"\x1b\n" +
+	"\x19RecordPeoplePicksResponse*\xb7\x01\n" +
 	"\x12IdentitySourceKind\x12$\n" +
 	" IDENTITY_SOURCE_KIND_UNSPECIFIED\x10\x00\x12\x1e\n" +
 	"\x1aIDENTITY_SOURCE_KIND_LOCAL\x10\x01\x12\x1d\n" +
 	"\x19IDENTITY_SOURCE_KIND_SCIM\x10\x02\x12\x1d\n" +
 	"\x19IDENTITY_SOURCE_KIND_LDAP\x10\x03\x12\x1d\n" +
-	"\x19IDENTITY_SOURCE_KIND_OIDC\x10\x042\x9d\v\n" +
+	"\x19IDENTITY_SOURCE_KIND_OIDC\x10\x04*\x97\x01\n" +
+	"\x10CollaboratorTier\x12!\n" +
+	"\x1dCOLLABORATOR_TIER_UNSPECIFIED\x10\x00\x12\"\n" +
+	"\x1eCOLLABORATOR_TIER_COLLABORATOR\x10\x01\x12\x1e\n" +
+	"\x1aCOLLABORATOR_TIER_TEAMMATE\x10\x02\x12\x1c\n" +
+	"\x18COLLABORATOR_TIER_MEMBER\x10\x032\xdd\f\n" +
 	"\rPeopleService\x12I\n" +
 	"\n" +
 	"ListPeople\x12\x1c.people.v1.ListPeopleRequest\x1a\x1d.people.v1.ListPeopleResponse\x12F\n" +
@@ -2862,7 +3188,9 @@ const file_people_v1_people_proto_rawDesc = "" +
 	"\x14CreateIdentitySource\x12&.people.v1.CreateIdentitySourceRequest\x1a'.people.v1.CreateIdentitySourceResponse\x12g\n" +
 	"\x14UpdateIdentitySource\x12&.people.v1.UpdateIdentitySourceRequest\x1a'.people.v1.UpdateIdentitySourceResponse\x12g\n" +
 	"\x14DeleteIdentitySource\x12&.people.v1.DeleteIdentitySourceRequest\x1a'.people.v1.DeleteIdentitySourceResponse\x12g\n" +
-	"\x14TriggerDirectorySync\x12&.people.v1.TriggerDirectorySyncRequest\x1a'.people.v1.TriggerDirectorySyncResponseB9Z7github.com/uniffy-io/uniffy-proto-go/people/v1;peoplev1b\x06proto3"
+	"\x14TriggerDirectorySync\x12&.people.v1.TriggerDirectorySyncRequest\x1a'.people.v1.TriggerDirectorySyncResponse\x12^\n" +
+	"\x11ListCollaborators\x12#.people.v1.ListCollaboratorsRequest\x1a$.people.v1.ListCollaboratorsResponse\x12^\n" +
+	"\x11RecordPeoplePicks\x12#.people.v1.RecordPeoplePicksRequest\x1a$.people.v1.RecordPeoplePicksResponseB9Z7github.com/uniffy-io/uniffy-proto-go/people/v1;peoplev1b\x06proto3"
 
 var (
 	file_people_v1_people_proto_rawDescOnce sync.Once
@@ -2876,123 +3204,137 @@ func file_people_v1_people_proto_rawDescGZIP() []byte {
 	return file_people_v1_people_proto_rawDescData
 }
 
-var file_people_v1_people_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_people_v1_people_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
+var file_people_v1_people_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_people_v1_people_proto_msgTypes = make([]protoimpl.MessageInfo, 45)
 var file_people_v1_people_proto_goTypes = []any{
 	(IdentitySourceKind)(0),              // 0: people.v1.IdentitySourceKind
-	(*ProfileLink)(nil),                  // 1: people.v1.ProfileLink
-	(*ProfileLinks)(nil),                 // 2: people.v1.ProfileLinks
-	(*TeamRef)(nil),                      // 3: people.v1.TeamRef
-	(*PersonProfile)(nil),                // 4: people.v1.PersonProfile
-	(*ListPeopleRequest)(nil),            // 5: people.v1.ListPeopleRequest
-	(*ListPeopleResponse)(nil),           // 6: people.v1.ListPeopleResponse
-	(*GetPersonRequest)(nil),             // 7: people.v1.GetPersonRequest
-	(*GetPersonResponse)(nil),            // 8: people.v1.GetPersonResponse
-	(*UpdateMyProfileRequest)(nil),       // 9: people.v1.UpdateMyProfileRequest
-	(*UpdateMyProfileResponse)(nil),      // 10: people.v1.UpdateMyProfileResponse
-	(*UpdatePersonProfileRequest)(nil),   // 11: people.v1.UpdatePersonProfileRequest
-	(*UpdatePersonProfileResponse)(nil),  // 12: people.v1.UpdatePersonProfileResponse
-	(*GetOrgChartRequest)(nil),           // 13: people.v1.GetOrgChartRequest
-	(*OrgChartNode)(nil),                 // 14: people.v1.OrgChartNode
-	(*TeamNode)(nil),                     // 15: people.v1.TeamNode
-	(*GetOrgChartResponse)(nil),          // 16: people.v1.GetOrgChartResponse
-	(*SetManagerRequest)(nil),            // 17: people.v1.SetManagerRequest
-	(*SetManagerResponse)(nil),           // 18: people.v1.SetManagerResponse
-	(*ListTeamsRequest)(nil),             // 19: people.v1.ListTeamsRequest
-	(*ListTeamsResponse)(nil),            // 20: people.v1.ListTeamsResponse
-	(*GetTeamRequest)(nil),               // 21: people.v1.GetTeamRequest
-	(*GetTeamResponse)(nil),              // 22: people.v1.GetTeamResponse
-	(*UpdateTeamRequest)(nil),            // 23: people.v1.UpdateTeamRequest
-	(*UpdateTeamResponse)(nil),           // 24: people.v1.UpdateTeamResponse
-	(*ProfilePolicy)(nil),                // 25: people.v1.ProfilePolicy
-	(*GetProfilePolicyRequest)(nil),      // 26: people.v1.GetProfilePolicyRequest
-	(*GetProfilePolicyResponse)(nil),     // 27: people.v1.GetProfilePolicyResponse
-	(*UpdateProfilePolicyRequest)(nil),   // 28: people.v1.UpdateProfilePolicyRequest
-	(*UpdateProfilePolicyResponse)(nil),  // 29: people.v1.UpdateProfilePolicyResponse
-	(*IdentitySource)(nil),               // 30: people.v1.IdentitySource
-	(*ListIdentitySourcesRequest)(nil),   // 31: people.v1.ListIdentitySourcesRequest
-	(*ListIdentitySourcesResponse)(nil),  // 32: people.v1.ListIdentitySourcesResponse
-	(*CreateIdentitySourceRequest)(nil),  // 33: people.v1.CreateIdentitySourceRequest
-	(*CreateIdentitySourceResponse)(nil), // 34: people.v1.CreateIdentitySourceResponse
-	(*UpdateIdentitySourceRequest)(nil),  // 35: people.v1.UpdateIdentitySourceRequest
-	(*UpdateIdentitySourceResponse)(nil), // 36: people.v1.UpdateIdentitySourceResponse
-	(*DeleteIdentitySourceRequest)(nil),  // 37: people.v1.DeleteIdentitySourceRequest
-	(*DeleteIdentitySourceResponse)(nil), // 38: people.v1.DeleteIdentitySourceResponse
-	(*TriggerDirectorySyncRequest)(nil),  // 39: people.v1.TriggerDirectorySyncRequest
-	(*TriggerDirectorySyncResponse)(nil), // 40: people.v1.TriggerDirectorySyncResponse
-	(v1.OrganizationRole)(0),             // 41: common.v1.OrganizationRole
-	(*timestamppb.Timestamp)(nil),        // 42: google.protobuf.Timestamp
-	(*v1.PaginationRequest)(nil),         // 43: common.v1.PaginationRequest
-	(*v1.PaginationResponse)(nil),        // 44: common.v1.PaginationResponse
+	(CollaboratorTier)(0),                // 1: people.v1.CollaboratorTier
+	(*ProfileLink)(nil),                  // 2: people.v1.ProfileLink
+	(*ProfileLinks)(nil),                 // 3: people.v1.ProfileLinks
+	(*TeamRef)(nil),                      // 4: people.v1.TeamRef
+	(*PersonProfile)(nil),                // 5: people.v1.PersonProfile
+	(*ListPeopleRequest)(nil),            // 6: people.v1.ListPeopleRequest
+	(*ListPeopleResponse)(nil),           // 7: people.v1.ListPeopleResponse
+	(*GetPersonRequest)(nil),             // 8: people.v1.GetPersonRequest
+	(*GetPersonResponse)(nil),            // 9: people.v1.GetPersonResponse
+	(*UpdateMyProfileRequest)(nil),       // 10: people.v1.UpdateMyProfileRequest
+	(*UpdateMyProfileResponse)(nil),      // 11: people.v1.UpdateMyProfileResponse
+	(*UpdatePersonProfileRequest)(nil),   // 12: people.v1.UpdatePersonProfileRequest
+	(*UpdatePersonProfileResponse)(nil),  // 13: people.v1.UpdatePersonProfileResponse
+	(*GetOrgChartRequest)(nil),           // 14: people.v1.GetOrgChartRequest
+	(*OrgChartNode)(nil),                 // 15: people.v1.OrgChartNode
+	(*TeamNode)(nil),                     // 16: people.v1.TeamNode
+	(*GetOrgChartResponse)(nil),          // 17: people.v1.GetOrgChartResponse
+	(*SetManagerRequest)(nil),            // 18: people.v1.SetManagerRequest
+	(*SetManagerResponse)(nil),           // 19: people.v1.SetManagerResponse
+	(*ListTeamsRequest)(nil),             // 20: people.v1.ListTeamsRequest
+	(*ListTeamsResponse)(nil),            // 21: people.v1.ListTeamsResponse
+	(*GetTeamRequest)(nil),               // 22: people.v1.GetTeamRequest
+	(*GetTeamResponse)(nil),              // 23: people.v1.GetTeamResponse
+	(*UpdateTeamRequest)(nil),            // 24: people.v1.UpdateTeamRequest
+	(*UpdateTeamResponse)(nil),           // 25: people.v1.UpdateTeamResponse
+	(*ProfilePolicy)(nil),                // 26: people.v1.ProfilePolicy
+	(*GetProfilePolicyRequest)(nil),      // 27: people.v1.GetProfilePolicyRequest
+	(*GetProfilePolicyResponse)(nil),     // 28: people.v1.GetProfilePolicyResponse
+	(*UpdateProfilePolicyRequest)(nil),   // 29: people.v1.UpdateProfilePolicyRequest
+	(*UpdateProfilePolicyResponse)(nil),  // 30: people.v1.UpdateProfilePolicyResponse
+	(*IdentitySource)(nil),               // 31: people.v1.IdentitySource
+	(*ListIdentitySourcesRequest)(nil),   // 32: people.v1.ListIdentitySourcesRequest
+	(*ListIdentitySourcesResponse)(nil),  // 33: people.v1.ListIdentitySourcesResponse
+	(*CreateIdentitySourceRequest)(nil),  // 34: people.v1.CreateIdentitySourceRequest
+	(*CreateIdentitySourceResponse)(nil), // 35: people.v1.CreateIdentitySourceResponse
+	(*UpdateIdentitySourceRequest)(nil),  // 36: people.v1.UpdateIdentitySourceRequest
+	(*UpdateIdentitySourceResponse)(nil), // 37: people.v1.UpdateIdentitySourceResponse
+	(*DeleteIdentitySourceRequest)(nil),  // 38: people.v1.DeleteIdentitySourceRequest
+	(*DeleteIdentitySourceResponse)(nil), // 39: people.v1.DeleteIdentitySourceResponse
+	(*TriggerDirectorySyncRequest)(nil),  // 40: people.v1.TriggerDirectorySyncRequest
+	(*TriggerDirectorySyncResponse)(nil), // 41: people.v1.TriggerDirectorySyncResponse
+	(*ListCollaboratorsRequest)(nil),     // 42: people.v1.ListCollaboratorsRequest
+	(*Collaborator)(nil),                 // 43: people.v1.Collaborator
+	(*ListCollaboratorsResponse)(nil),    // 44: people.v1.ListCollaboratorsResponse
+	(*RecordPeoplePicksRequest)(nil),     // 45: people.v1.RecordPeoplePicksRequest
+	(*RecordPeoplePicksResponse)(nil),    // 46: people.v1.RecordPeoplePicksResponse
+	(v1.OrganizationRole)(0),             // 47: common.v1.OrganizationRole
+	(*timestamppb.Timestamp)(nil),        // 48: google.protobuf.Timestamp
+	(*v1.PaginationRequest)(nil),         // 49: common.v1.PaginationRequest
+	(*v1.PaginationResponse)(nil),        // 50: common.v1.PaginationResponse
+	(*v1.MemberInfo)(nil),                // 51: common.v1.MemberInfo
 }
 var file_people_v1_people_proto_depIdxs = []int32{
-	1,  // 0: people.v1.ProfileLinks.links:type_name -> people.v1.ProfileLink
-	41, // 1: people.v1.PersonProfile.org_role:type_name -> common.v1.OrganizationRole
-	42, // 2: people.v1.PersonProfile.start_date:type_name -> google.protobuf.Timestamp
-	1,  // 3: people.v1.PersonProfile.links:type_name -> people.v1.ProfileLink
-	3,  // 4: people.v1.PersonProfile.teams:type_name -> people.v1.TeamRef
-	43, // 5: people.v1.ListPeopleRequest.pagination:type_name -> common.v1.PaginationRequest
-	4,  // 6: people.v1.ListPeopleResponse.people:type_name -> people.v1.PersonProfile
-	44, // 7: people.v1.ListPeopleResponse.pagination:type_name -> common.v1.PaginationResponse
-	4,  // 8: people.v1.GetPersonResponse.person:type_name -> people.v1.PersonProfile
-	2,  // 9: people.v1.UpdateMyProfileRequest.links:type_name -> people.v1.ProfileLinks
-	4,  // 10: people.v1.UpdateMyProfileResponse.person:type_name -> people.v1.PersonProfile
-	42, // 11: people.v1.UpdatePersonProfileRequest.start_date:type_name -> google.protobuf.Timestamp
-	4,  // 12: people.v1.UpdatePersonProfileResponse.person:type_name -> people.v1.PersonProfile
-	3,  // 13: people.v1.OrgChartNode.teams:type_name -> people.v1.TeamRef
-	14, // 14: people.v1.GetOrgChartResponse.nodes:type_name -> people.v1.OrgChartNode
-	15, // 15: people.v1.GetOrgChartResponse.teams:type_name -> people.v1.TeamNode
-	4,  // 16: people.v1.SetManagerResponse.person:type_name -> people.v1.PersonProfile
-	15, // 17: people.v1.ListTeamsResponse.teams:type_name -> people.v1.TeamNode
-	15, // 18: people.v1.GetTeamResponse.team:type_name -> people.v1.TeamNode
-	15, // 19: people.v1.UpdateTeamResponse.team:type_name -> people.v1.TeamNode
-	25, // 20: people.v1.GetProfilePolicyResponse.policy:type_name -> people.v1.ProfilePolicy
-	25, // 21: people.v1.UpdateProfilePolicyRequest.policy:type_name -> people.v1.ProfilePolicy
-	25, // 22: people.v1.UpdateProfilePolicyResponse.policy:type_name -> people.v1.ProfilePolicy
+	2,  // 0: people.v1.ProfileLinks.links:type_name -> people.v1.ProfileLink
+	47, // 1: people.v1.PersonProfile.org_role:type_name -> common.v1.OrganizationRole
+	48, // 2: people.v1.PersonProfile.start_date:type_name -> google.protobuf.Timestamp
+	2,  // 3: people.v1.PersonProfile.links:type_name -> people.v1.ProfileLink
+	4,  // 4: people.v1.PersonProfile.teams:type_name -> people.v1.TeamRef
+	49, // 5: people.v1.ListPeopleRequest.pagination:type_name -> common.v1.PaginationRequest
+	5,  // 6: people.v1.ListPeopleResponse.people:type_name -> people.v1.PersonProfile
+	50, // 7: people.v1.ListPeopleResponse.pagination:type_name -> common.v1.PaginationResponse
+	5,  // 8: people.v1.GetPersonResponse.person:type_name -> people.v1.PersonProfile
+	3,  // 9: people.v1.UpdateMyProfileRequest.links:type_name -> people.v1.ProfileLinks
+	5,  // 10: people.v1.UpdateMyProfileResponse.person:type_name -> people.v1.PersonProfile
+	48, // 11: people.v1.UpdatePersonProfileRequest.start_date:type_name -> google.protobuf.Timestamp
+	5,  // 12: people.v1.UpdatePersonProfileResponse.person:type_name -> people.v1.PersonProfile
+	4,  // 13: people.v1.OrgChartNode.teams:type_name -> people.v1.TeamRef
+	15, // 14: people.v1.GetOrgChartResponse.nodes:type_name -> people.v1.OrgChartNode
+	16, // 15: people.v1.GetOrgChartResponse.teams:type_name -> people.v1.TeamNode
+	5,  // 16: people.v1.SetManagerResponse.person:type_name -> people.v1.PersonProfile
+	16, // 17: people.v1.ListTeamsResponse.teams:type_name -> people.v1.TeamNode
+	16, // 18: people.v1.GetTeamResponse.team:type_name -> people.v1.TeamNode
+	16, // 19: people.v1.UpdateTeamResponse.team:type_name -> people.v1.TeamNode
+	26, // 20: people.v1.GetProfilePolicyResponse.policy:type_name -> people.v1.ProfilePolicy
+	26, // 21: people.v1.UpdateProfilePolicyRequest.policy:type_name -> people.v1.ProfilePolicy
+	26, // 22: people.v1.UpdateProfilePolicyResponse.policy:type_name -> people.v1.ProfilePolicy
 	0,  // 23: people.v1.IdentitySource.kind:type_name -> people.v1.IdentitySourceKind
-	42, // 24: people.v1.IdentitySource.last_sync_at:type_name -> google.protobuf.Timestamp
-	42, // 25: people.v1.IdentitySource.created_at:type_name -> google.protobuf.Timestamp
-	30, // 26: people.v1.ListIdentitySourcesResponse.sources:type_name -> people.v1.IdentitySource
+	48, // 24: people.v1.IdentitySource.last_sync_at:type_name -> google.protobuf.Timestamp
+	48, // 25: people.v1.IdentitySource.created_at:type_name -> google.protobuf.Timestamp
+	31, // 26: people.v1.ListIdentitySourcesResponse.sources:type_name -> people.v1.IdentitySource
 	0,  // 27: people.v1.CreateIdentitySourceRequest.kind:type_name -> people.v1.IdentitySourceKind
-	30, // 28: people.v1.CreateIdentitySourceResponse.source:type_name -> people.v1.IdentitySource
-	30, // 29: people.v1.UpdateIdentitySourceResponse.source:type_name -> people.v1.IdentitySource
-	5,  // 30: people.v1.PeopleService.ListPeople:input_type -> people.v1.ListPeopleRequest
-	7,  // 31: people.v1.PeopleService.GetPerson:input_type -> people.v1.GetPersonRequest
-	9,  // 32: people.v1.PeopleService.UpdateMyProfile:input_type -> people.v1.UpdateMyProfileRequest
-	11, // 33: people.v1.PeopleService.UpdatePersonProfile:input_type -> people.v1.UpdatePersonProfileRequest
-	13, // 34: people.v1.PeopleService.GetOrgChart:input_type -> people.v1.GetOrgChartRequest
-	17, // 35: people.v1.PeopleService.SetManager:input_type -> people.v1.SetManagerRequest
-	19, // 36: people.v1.PeopleService.ListTeams:input_type -> people.v1.ListTeamsRequest
-	21, // 37: people.v1.PeopleService.GetTeam:input_type -> people.v1.GetTeamRequest
-	23, // 38: people.v1.PeopleService.UpdateTeam:input_type -> people.v1.UpdateTeamRequest
-	26, // 39: people.v1.PeopleService.GetProfilePolicy:input_type -> people.v1.GetProfilePolicyRequest
-	28, // 40: people.v1.PeopleService.UpdateProfilePolicy:input_type -> people.v1.UpdateProfilePolicyRequest
-	31, // 41: people.v1.PeopleService.ListIdentitySources:input_type -> people.v1.ListIdentitySourcesRequest
-	33, // 42: people.v1.PeopleService.CreateIdentitySource:input_type -> people.v1.CreateIdentitySourceRequest
-	35, // 43: people.v1.PeopleService.UpdateIdentitySource:input_type -> people.v1.UpdateIdentitySourceRequest
-	37, // 44: people.v1.PeopleService.DeleteIdentitySource:input_type -> people.v1.DeleteIdentitySourceRequest
-	39, // 45: people.v1.PeopleService.TriggerDirectorySync:input_type -> people.v1.TriggerDirectorySyncRequest
-	6,  // 46: people.v1.PeopleService.ListPeople:output_type -> people.v1.ListPeopleResponse
-	8,  // 47: people.v1.PeopleService.GetPerson:output_type -> people.v1.GetPersonResponse
-	10, // 48: people.v1.PeopleService.UpdateMyProfile:output_type -> people.v1.UpdateMyProfileResponse
-	12, // 49: people.v1.PeopleService.UpdatePersonProfile:output_type -> people.v1.UpdatePersonProfileResponse
-	16, // 50: people.v1.PeopleService.GetOrgChart:output_type -> people.v1.GetOrgChartResponse
-	18, // 51: people.v1.PeopleService.SetManager:output_type -> people.v1.SetManagerResponse
-	20, // 52: people.v1.PeopleService.ListTeams:output_type -> people.v1.ListTeamsResponse
-	22, // 53: people.v1.PeopleService.GetTeam:output_type -> people.v1.GetTeamResponse
-	24, // 54: people.v1.PeopleService.UpdateTeam:output_type -> people.v1.UpdateTeamResponse
-	27, // 55: people.v1.PeopleService.GetProfilePolicy:output_type -> people.v1.GetProfilePolicyResponse
-	29, // 56: people.v1.PeopleService.UpdateProfilePolicy:output_type -> people.v1.UpdateProfilePolicyResponse
-	32, // 57: people.v1.PeopleService.ListIdentitySources:output_type -> people.v1.ListIdentitySourcesResponse
-	34, // 58: people.v1.PeopleService.CreateIdentitySource:output_type -> people.v1.CreateIdentitySourceResponse
-	36, // 59: people.v1.PeopleService.UpdateIdentitySource:output_type -> people.v1.UpdateIdentitySourceResponse
-	38, // 60: people.v1.PeopleService.DeleteIdentitySource:output_type -> people.v1.DeleteIdentitySourceResponse
-	40, // 61: people.v1.PeopleService.TriggerDirectorySync:output_type -> people.v1.TriggerDirectorySyncResponse
-	46, // [46:62] is the sub-list for method output_type
-	30, // [30:46] is the sub-list for method input_type
-	30, // [30:30] is the sub-list for extension type_name
-	30, // [30:30] is the sub-list for extension extendee
-	0,  // [0:30] is the sub-list for field type_name
+	31, // 28: people.v1.CreateIdentitySourceResponse.source:type_name -> people.v1.IdentitySource
+	31, // 29: people.v1.UpdateIdentitySourceResponse.source:type_name -> people.v1.IdentitySource
+	51, // 30: people.v1.Collaborator.member:type_name -> common.v1.MemberInfo
+	1,  // 31: people.v1.Collaborator.tier:type_name -> people.v1.CollaboratorTier
+	43, // 32: people.v1.ListCollaboratorsResponse.collaborators:type_name -> people.v1.Collaborator
+	6,  // 33: people.v1.PeopleService.ListPeople:input_type -> people.v1.ListPeopleRequest
+	8,  // 34: people.v1.PeopleService.GetPerson:input_type -> people.v1.GetPersonRequest
+	10, // 35: people.v1.PeopleService.UpdateMyProfile:input_type -> people.v1.UpdateMyProfileRequest
+	12, // 36: people.v1.PeopleService.UpdatePersonProfile:input_type -> people.v1.UpdatePersonProfileRequest
+	14, // 37: people.v1.PeopleService.GetOrgChart:input_type -> people.v1.GetOrgChartRequest
+	18, // 38: people.v1.PeopleService.SetManager:input_type -> people.v1.SetManagerRequest
+	20, // 39: people.v1.PeopleService.ListTeams:input_type -> people.v1.ListTeamsRequest
+	22, // 40: people.v1.PeopleService.GetTeam:input_type -> people.v1.GetTeamRequest
+	24, // 41: people.v1.PeopleService.UpdateTeam:input_type -> people.v1.UpdateTeamRequest
+	27, // 42: people.v1.PeopleService.GetProfilePolicy:input_type -> people.v1.GetProfilePolicyRequest
+	29, // 43: people.v1.PeopleService.UpdateProfilePolicy:input_type -> people.v1.UpdateProfilePolicyRequest
+	32, // 44: people.v1.PeopleService.ListIdentitySources:input_type -> people.v1.ListIdentitySourcesRequest
+	34, // 45: people.v1.PeopleService.CreateIdentitySource:input_type -> people.v1.CreateIdentitySourceRequest
+	36, // 46: people.v1.PeopleService.UpdateIdentitySource:input_type -> people.v1.UpdateIdentitySourceRequest
+	38, // 47: people.v1.PeopleService.DeleteIdentitySource:input_type -> people.v1.DeleteIdentitySourceRequest
+	40, // 48: people.v1.PeopleService.TriggerDirectorySync:input_type -> people.v1.TriggerDirectorySyncRequest
+	42, // 49: people.v1.PeopleService.ListCollaborators:input_type -> people.v1.ListCollaboratorsRequest
+	45, // 50: people.v1.PeopleService.RecordPeoplePicks:input_type -> people.v1.RecordPeoplePicksRequest
+	7,  // 51: people.v1.PeopleService.ListPeople:output_type -> people.v1.ListPeopleResponse
+	9,  // 52: people.v1.PeopleService.GetPerson:output_type -> people.v1.GetPersonResponse
+	11, // 53: people.v1.PeopleService.UpdateMyProfile:output_type -> people.v1.UpdateMyProfileResponse
+	13, // 54: people.v1.PeopleService.UpdatePersonProfile:output_type -> people.v1.UpdatePersonProfileResponse
+	17, // 55: people.v1.PeopleService.GetOrgChart:output_type -> people.v1.GetOrgChartResponse
+	19, // 56: people.v1.PeopleService.SetManager:output_type -> people.v1.SetManagerResponse
+	21, // 57: people.v1.PeopleService.ListTeams:output_type -> people.v1.ListTeamsResponse
+	23, // 58: people.v1.PeopleService.GetTeam:output_type -> people.v1.GetTeamResponse
+	25, // 59: people.v1.PeopleService.UpdateTeam:output_type -> people.v1.UpdateTeamResponse
+	28, // 60: people.v1.PeopleService.GetProfilePolicy:output_type -> people.v1.GetProfilePolicyResponse
+	30, // 61: people.v1.PeopleService.UpdateProfilePolicy:output_type -> people.v1.UpdateProfilePolicyResponse
+	33, // 62: people.v1.PeopleService.ListIdentitySources:output_type -> people.v1.ListIdentitySourcesResponse
+	35, // 63: people.v1.PeopleService.CreateIdentitySource:output_type -> people.v1.CreateIdentitySourceResponse
+	37, // 64: people.v1.PeopleService.UpdateIdentitySource:output_type -> people.v1.UpdateIdentitySourceResponse
+	39, // 65: people.v1.PeopleService.DeleteIdentitySource:output_type -> people.v1.DeleteIdentitySourceResponse
+	41, // 66: people.v1.PeopleService.TriggerDirectorySync:output_type -> people.v1.TriggerDirectorySyncResponse
+	44, // 67: people.v1.PeopleService.ListCollaborators:output_type -> people.v1.ListCollaboratorsResponse
+	46, // 68: people.v1.PeopleService.RecordPeoplePicks:output_type -> people.v1.RecordPeoplePicksResponse
+	51, // [51:69] is the sub-list for method output_type
+	33, // [33:51] is the sub-list for method input_type
+	33, // [33:33] is the sub-list for extension type_name
+	33, // [33:33] is the sub-list for extension extendee
+	0,  // [0:33] is the sub-list for field type_name
 }
 
 func init() { file_people_v1_people_proto_init() }
@@ -3013,13 +3355,14 @@ func file_people_v1_people_proto_init() {
 	file_people_v1_people_proto_msgTypes[29].OneofWrappers = []any{}
 	file_people_v1_people_proto_msgTypes[32].OneofWrappers = []any{}
 	file_people_v1_people_proto_msgTypes[34].OneofWrappers = []any{}
+	file_people_v1_people_proto_msgTypes[40].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_people_v1_people_proto_rawDesc), len(file_people_v1_people_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   40,
+			NumEnums:      2,
+			NumMessages:   45,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
