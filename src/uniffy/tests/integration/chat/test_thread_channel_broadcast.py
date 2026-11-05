@@ -147,7 +147,7 @@ async def test_edit_updates_both_rows_and_only_indexes_copy(broadcast_env, edit_
     writes = env.indexer.index.await_args_list
     assert {call.kwargs["urn"] for call in writes} == {f"urn:uniffy:content:CHAT_MESSAGE:{copy.id}"}
     assert writes[-1].kwargs["title"] == REVISED
-    env.indexer.remove.assert_any_await(f"urn:uniffy:content:CHAT_MESSAGE:{reply.id}")
+    env.indexer.remove.assert_any_await(f"urn:uniffy:content:CHAT_MESSAGE:{reply.id}", env.org)
     assert {call.args[2]["message_id"] for call in env.publish.await_args_list} == {
         str(reply.id),
         str(copy.id),

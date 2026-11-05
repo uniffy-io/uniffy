@@ -30,9 +30,16 @@ from uniffy.core.realtime.jobs import (
 from uniffy.domains.agents.bridge.jobs.contracts import (
     CHAT_INTEGRATION_JOB_REFS,
     CHAT_INTEGRATION_SCHEDULED_JOB_REFS,
+    DELIVER_CHAT_TRIGGER,
+    RECOVER_CHAT_TRIGGERS_SCHEDULE,
     RESPOND_TO_CHAT_MESSAGE,
 )
 from uniffy.domains.agents.bridge.jobs.jobs import respond_to_chat_message
+from uniffy.domains.agents.bridge.jobs.triggers import (
+    CHAT_TRIGGER_TIMEOUT_SECONDS,
+    deliver_chat_trigger,
+    recover_chat_triggers,
+)
 from uniffy.domains.agents.cron.jobs.contracts import (
     CRON_JOB_REFS,
     CRON_SCHEDULED_JOB_REFS,
@@ -113,11 +120,14 @@ from uniffy.domains.chat.jobs.contracts import (
     AUTO_UNMUTE_CHANNELS_SCHEDULE,
     CHAT_JOB_REFS,
     CHAT_SCHEDULED_JOB_REFS,
+    DELIVER_CHAT_MESSAGE,
     FLUSH_CHAT_READ_CURSORS_SCHEDULE,
     FLUSH_CHAT_SEARCH_ACL_REFRESHES_SCHEDULE,
     POST_SEND_CHAT_MESSAGE,
+    RECOVER_CHAT_DELIVERIES_SCHEDULE,
     REFRESH_CHAT_SEARCH_ACL,
 )
+from uniffy.domains.chat.jobs.delivery import deliver_chat_message, recover_chat_deliveries
 from uniffy.domains.chat.jobs.jobs import (
     auto_unmute_channels,
     flush_chat_search_acl_refreshes,
@@ -353,6 +363,7 @@ CORE_JOB_REGISTRATIONS = (
     ),
     _bind(REFRESH_CHAT_SEARCH_ACL, refresh_chat_search_acl),
     _bind(POST_SEND_CHAT_MESSAGE, post_send_chat_message),
+    _bind(DELIVER_CHAT_MESSAGE, deliver_chat_message),
     _bind(REFRESH_PROJECT_SEARCH_ACL, refresh_project_search_acl),
     _bind(REFRESH_CALENDAR_SEARCH_ACL, refresh_calendar_search_acl),
 )
@@ -371,6 +382,9 @@ EGRESS_JOB_REGISTRATIONS = (
         max_tries=1,
     ),
     _bind(RESPOND_TO_CHAT_MESSAGE, respond_to_chat_message),
+    _bind(
+        DELIVER_CHAT_TRIGGER, deliver_chat_trigger, timeout=CHAT_TRIGGER_TIMEOUT_SECONDS, max_tries=1
+    ),
     _bind(
         COMPACT_SESSION,
         compact_session,
@@ -406,6 +420,16 @@ CORE_SCHEDULED_REGISTRATIONS = (
         timeout=MAINTENANCE_JOB_TIMEOUT_SECONDS,
     ),
     _bind_schedule(RECONCILE_INLINE_ATTACHMENTS_SCHEDULE, reconcile_pending_inline_attachments),
+    _bind_schedule(
+        RECOVER_CHAT_DELIVERIES_SCHEDULE,
+        recover_chat_deliveries,
+        second=(0, 10, 20, 30, 40, 50),
+    ),
+    _bind_schedule(
+        RECOVER_CHAT_TRIGGERS_SCHEDULE,
+        recover_chat_triggers,
+        second=(5, 15, 25, 35, 45, 55),
+    ),
     _bind_schedule(
         RECOVER_NOTIFICATION_EVENTS_SCHEDULE,
         recover_notification_events,

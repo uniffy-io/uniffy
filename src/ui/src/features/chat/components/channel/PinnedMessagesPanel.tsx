@@ -1,3 +1,4 @@
+import { RecoveryQueue } from "@/features/chat/utils/recoveryQueue";
 import { useRef, useEffect, useState } from "react";
 import { useOverlayEscape } from "@/shared/hooks/useOverlayEscape";
 import { createPortal } from "react-dom";
@@ -29,6 +30,10 @@ export function PinnedMessagesPanel({
 }: PinnedMessagesPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
+  const pinsRevision = useAppSelector(
+    (state) => state.chatMessages.pinsRevisionByChannel[channelId],
+  );
+  const recoveryRevision = useAppSelector((state) => state.chatMessages.recoveryRevision);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const agentsById = useAppSelector((state) => state.agents.agents);
   const [pinnedMessages, setPinnedMessages] = useState<ChatMessage[]>([]);
@@ -40,21 +45,19 @@ export function PinnedMessagesPanel({
     let cancelled = false;
     // eslint-disable-next-line react/react-compiler -- loading state tied to async fetch lifecycle
     setIsLoading(true);
-    dispatch(fetchPinnedMessages(channelId))
-      .unwrap()
-      .then((messages) => {
-        if (!cancelled) setPinnedMessages(messages);
-      })
-      .catch(() => {
-        if (!cancelled) setPinnedMessages([]);
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+    const queue = new RecoveryQueue(() => !cancelled, 1);
+    queue.request("pins", async () => {
+      const messages = await dispatch(fetchPinnedMessages(channelId)).unwrap();
+      return () => {
+        setPinnedMessages(messages);
+        setIsLoading(false);
+      };
+    });
     return () => {
       cancelled = true;
+      queue.stop();
     };
-  }, [channelId, organizationId, dispatch]);
+  }, [channelId, organizationId, dispatch, recoveryRevision, pinsRevision]);
 
   const [position, setPosition] = useState({ top: 100, left: 100 });
 

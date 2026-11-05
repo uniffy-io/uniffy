@@ -126,6 +126,7 @@ function forwardContextToPlain(proto: ProtoForwardContext): ForwardContext {
 export function messageToPlain(proto: ProtoChatMessage): ChatMessage {
   return {
     id: proto.id,
+    clientMessageId: proto.clientMessageId,
     channelId: proto.channelId,
     senderId: proto.senderId,
     senderType: SENDER_TYPE_MAP[proto.senderType] ?? "USER",

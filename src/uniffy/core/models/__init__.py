@@ -1,6 +1,7 @@
 """Database models package."""
 
 from uniffy.core.models.agents.agent import Agent
+from uniffy.core.models.agents.chat_trigger import AgentChatTrigger
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.provider_key import ProviderKey
 from uniffy.core.models.agents.rule import AgentRule
@@ -48,6 +49,7 @@ from uniffy.core.models.chat import (
     ChatThreadStats,
     SenderType,
 )
+from uniffy.core.models.chat.delivery import ChatDelivery
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.crypto.deployment_encryption_key import DeploymentEncryptionKey
@@ -125,6 +127,8 @@ from uniffy.core.models.shared import (
 from uniffy.core.models.tags import Tag, TagAssignment
 
 __all__ = [
+    "AgentChatTrigger",
+    "ChatDelivery",
     # Attachments
     "Attachment",
     # Audit

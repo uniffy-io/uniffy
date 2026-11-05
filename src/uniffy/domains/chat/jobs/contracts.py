@@ -12,6 +12,24 @@ REFRESH_CHAT_SEARCH_ACL = JobRef(
         trigger="15-second recovery schedule",
     ),
 )
+DELIVER_CHAT_MESSAGE = JobRef(
+    name="deliver_chat_message",
+    queue=QueueName.CORE,
+    workload=JobWorkload.DELIVERY,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="chat_deliveries pending effect rows", trigger="10-second recovery schedule"
+    ),
+)
+RECOVER_CHAT_DELIVERIES_SCHEDULE = JobRef(
+    name="cron:recover_chat_deliveries",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="chat_deliveries pending effect rows", trigger="10-second recovery schedule"
+    ),
+)
 POST_SEND_CHAT_MESSAGE = JobRef(
     name="post_send_chat_message",
     queue=QueueName.CORE,
@@ -45,8 +63,9 @@ FLUSH_CHAT_READ_CURSORS_SCHEDULE = JobRef(
     reliability=JobReliability.BEST_EFFORT,
 )
 
-CHAT_JOB_REFS = (POST_SEND_CHAT_MESSAGE, REFRESH_CHAT_SEARCH_ACL)
+CHAT_JOB_REFS = (DELIVER_CHAT_MESSAGE, POST_SEND_CHAT_MESSAGE, REFRESH_CHAT_SEARCH_ACL)
 CHAT_SCHEDULED_JOB_REFS = (
+    RECOVER_CHAT_DELIVERIES_SCHEDULE,
     AUTO_UNMUTE_CHANNELS_SCHEDULE,
     FLUSH_CHAT_READ_CURSORS_SCHEDULE,
     FLUSH_CHAT_SEARCH_ACL_REFRESHES_SCHEDULE,

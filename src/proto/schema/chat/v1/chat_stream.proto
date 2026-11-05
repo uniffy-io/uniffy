@@ -299,11 +299,18 @@ enum UserChatEventType {
   USER_CHAT_EVENT_TYPE_CHANNEL_EVENT = 5;
   // A draft was saved or deleted on one of the user's devices.
   USER_CHAT_EVENT_TYPE_DRAFT_CHANGED = 6;
+  // Subscription is established. Clients reconcile snapshots before trusting cached state.
+  // Subscription is attached. Clients can start authoritative snapshot recovery.
+  USER_CHAT_EVENT_TYPE_READY = 7;
 }
 
 message StreamUserChatEventsResponse {
   UserChatEventType event_type = 1;
   google.protobuf.Timestamp timestamp = 2;
+  // Changes when the underlying subscription is replaced, including broker reconnects.
+  string stream_id = 3;
+  // Contiguous within stream_id. A gap requires snapshot recovery.
+  uint64 sequence = 4;
 
   oneof payload {
     UnreadCountPayload unread_count = 10;

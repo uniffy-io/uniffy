@@ -1,6 +1,7 @@
 """Search policy and adapter filter-expression security guards."""
 
 from collections.abc import Iterator
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -23,7 +24,7 @@ from uniffy.core.search.policy import (
 )
 from uniffy.core.search.workspace import WorkspaceSearch
 from uniffy.core.types import generate_id
-from uniffy.infrastructure.search.meili import escape_filter_value, render_filter
+from uniffy.infrastructure.search.meili import MeiliSearchEngine, escape_filter_value, render_filter
 
 
 def _walk(expression: SearchFilter) -> Iterator[SearchFilter]:
@@ -202,3 +203,18 @@ class TestBatchLookupFailures:
         assert result.documents == {urns[0]: {"urn": urns[0]}}
         assert result.failed_urns == frozenset({urns[50]})
         assert result.complete is False
+
+
+@pytest.mark.parametrize("status", ["succeeded", "failed"])
+async def test_confirmed_index_write_checks_search_task(status):
+    engine = MeiliSearchEngine()
+    client = MagicMock()
+    client.index.return_value.add_documents = AsyncMock(return_value=SimpleNamespace(task_uid=1))
+    client.wait_for_task = AsyncMock(return_value=SimpleNamespace(status=status))
+    engine._client = client
+    if status == "failed":
+        with pytest.raises(SearchEngineError, match="Search engine task did not succeed"):
+            await engine.put_documents([{"id": "test"}], wait=True)
+    else:
+        await engine.put_documents([{"id": "test"}], wait=True)
+    client.wait_for_task.assert_awaited_once_with(1, timeout_in_ms=5000)

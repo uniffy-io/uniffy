@@ -55,6 +55,14 @@ class ChatMessage(SQLModel, table=True):
 
     __tablename__ = "chat_messages"
     __table_args__ = (
+        Index(
+            "uq_chat_messages_client_send",
+            "channel_id",
+            "sender_id",
+            "client_message_id",
+            unique=True,
+            postgresql_where="client_message_id IS NOT NULL",
+        ),
         Index("ix_chat_messages_channel_timeline", "channel_id", "created_at", "id"),
         Index(
             "ix_chat_messages_broadcast_reply",
@@ -114,6 +122,8 @@ class ChatMessage(SQLModel, table=True):
             nullable=False,
         ),
     )
+    client_message_id: UUID | None = Field(default=None, nullable=True)
+    request_fingerprint: str | None = Field(default=None, max_length=64, nullable=True)
     content: str = Field(default="", nullable=False)
     root_id: UUID | None = Field(default=None, index=True)
     reply_to_id: UUID | None = Field(default=None, index=True)

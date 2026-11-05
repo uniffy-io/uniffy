@@ -170,15 +170,15 @@ class TestBroadcastFanout:
         ops = _ops([_rows_result(list(pref_rows))])
         ops._index_message = AsyncMock()
         ops._update_resources = AsyncMock()
-        ops._publish_unread_notifications = AsyncMock()
-        ops._emit_send_notifications = AsyncMock()
+        ops.prepared_events = []
+        ops._prepare_send_notifications = AsyncMock(return_value=[])
         if online is not None:
             ops._online_member_ids = AsyncMock(return_value=set(online))
         with patch(
             "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
             AsyncMock(),
         ):
-            await ops.background_post_send(
+            ops.prepared_events = await ops.prepare_delivery_notifications(
                 message, channel, message.sender_id, None, "Ada", member_ids
             )
         return ops
@@ -190,9 +190,11 @@ class TestBroadcastFanout:
 
         ops = await self._run(channel, message, [sender, a, b])
 
-        unread_mentioned = ops._publish_unread_notifications.call_args.args[3]
+        unread_mentioned = {
+            uid for uid, _, payload in ops.prepared_events if payload["mention_count"]
+        }
         assert unread_mentioned == {a, b}
-        emit_kwargs = ops._emit_send_notifications.call_args.kwargs
+        emit_kwargs = ops._prepare_send_notifications.call_args.kwargs
         assert emit_kwargs["broadcast_kind"] is BroadcastMention.CHANNEL
         assert emit_kwargs["broadcast_target_ids"] == {a, b}
 
@@ -205,9 +207,11 @@ class TestBroadcastFanout:
             channel, message, [sender, online_user, offline_user], online=[online_user]
         )
 
-        unread_mentioned = ops._publish_unread_notifications.call_args.args[3]
+        unread_mentioned = {
+            uid for uid, _, payload in ops.prepared_events if payload["mention_count"]
+        }
         assert unread_mentioned == {online_user, offline_user}
-        emit_kwargs = ops._emit_send_notifications.call_args.kwargs
+        emit_kwargs = ops._prepare_send_notifications.call_args.kwargs
         assert emit_kwargs["broadcast_kind"] is BroadcastMention.HERE
         assert emit_kwargs["broadcast_target_ids"] == {online_user}
 
@@ -234,9 +238,11 @@ class TestBroadcastFanout:
             ],
         )
 
-        unread_mentioned = ops._publish_unread_notifications.call_args.args[3]
+        unread_mentioned = {
+            uid for uid, _, payload in ops.prepared_events if payload["mention_count"]
+        }
         assert unread_mentioned == {muted, silent, normal}
-        emit_kwargs = ops._emit_send_notifications.call_args.kwargs
+        emit_kwargs = ops._prepare_send_notifications.call_args.kwargs
         assert emit_kwargs["broadcast_target_ids"] == {normal}
 
     async def test_system_message_broadcast_markup_pings_nobody(self) -> None:
@@ -247,7 +253,7 @@ class TestBroadcastFanout:
 
         ops = await self._run(channel, message, [actor, generate_id()])
 
-        emit_kwargs = ops._emit_send_notifications.call_args.kwargs
+        emit_kwargs = ops._prepare_send_notifications.call_args.kwargs
         assert emit_kwargs["broadcast_kind"] is None
         assert emit_kwargs["broadcast_target_ids"] == set()
 
@@ -271,10 +277,6 @@ class TestBroadcastNotificationEmit:
             patch(
                 "uniffy.domains.chat.messages.notifications.emit_notification",
                 AsyncMock(side_effect=_capture),
-            ),
-            patch(
-                "uniffy.domains.chat.messages.notifications.publish_user_chat_event",
-                stream_mock,
             ),
             patch(
                 "uniffy.domains.chat.messages.notifications.publish_user_chat_events",

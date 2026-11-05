@@ -4,6 +4,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import aclosing
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from connectrpc.request import RequestContext
 from loguru import logger
@@ -609,6 +610,8 @@ def _build_message_proto(payload: dict) -> ProtoChatMessage:
         is_deleted=False,
         is_forwarded=payload.get("is_forwarded", False),
     )
+    if payload.get("client_message_id"):
+        msg.client_message_id = payload["client_message_id"]
     if payload.get("root_id"):
         msg.root_id = payload["root_id"]
     if payload.get("reply_to_id"):
@@ -793,18 +796,37 @@ class ChatStreamHandlers:
         disconnect = get_disconnect_event()
 
         try:
-            async with aclosing(subscribe_channels(f"chat:user:{user_id}")) as subscriber:
+            async with aclosing(
+                subscribe_channels(f"chat:user:{user_id}", notify_subscriptions=True)
+            ) as subscriber:
                 last_send = time.monotonic()
+                stream_id = str(uuid4())
+                sequence = 0
 
                 async for payload in subscriber:
                     if disconnect and disconnect.is_set():
                         break
 
+                    if payload is not None and payload.get("_subscription_ready"):
+                        stream_id = str(uuid4())
+                        sequence = 1
+                        yield StreamUserChatEventsResponse(
+                            event_type=UserChatEventType.READY,
+                            timestamp=_now_ts(),
+                            stream_id=stream_id,
+                            sequence=sequence,
+                        )
+                        last_send = time.monotonic()
+                        continue
+
                     now = time.monotonic()
 
                     if now - last_send >= HEARTBEAT_INTERVAL:
+                        sequence += 1
                         yield StreamUserChatEventsResponse(
                             event_type=UserChatEventType.HEARTBEAT,
+                            stream_id=stream_id,
+                            sequence=sequence,
                             timestamp=_now_ts(),
                         )
                         last_send = now
@@ -820,8 +842,11 @@ class ChatStreamHandlers:
                     if event_type in _CHANNEL_EVENT_TYPES:
                         channel_event = _payload_to_channel_event(payload)
                         if channel_event:
+                            sequence += 1
                             yield StreamUserChatEventsResponse(
                                 event_type=UserChatEventType.CHANNEL_EVENT,
+                                stream_id=stream_id,
+                                sequence=sequence,
                                 timestamp=_now_ts(),
                                 payload=Oneof(field="channel_event", value=channel_event),
                             )
@@ -830,6 +855,9 @@ class ChatStreamHandlers:
 
                     user_event = _payload_to_user_event(payload)
                     if user_event:
+                        sequence += 1
+                        user_event.stream_id = stream_id
+                        user_event.sequence = sequence
                         yield user_event
                         last_send = now
 

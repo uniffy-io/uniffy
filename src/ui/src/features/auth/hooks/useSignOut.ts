@@ -1,3 +1,4 @@
+import { clearPendingSends, pendingSendOrganizations } from "@/features/chat/utils/pendingSends";
 import { useCallback } from "react";
 import { createClient } from "@connectrpc/connect";
 import { useNavigate } from "react-router-dom";
@@ -70,7 +71,10 @@ export async function clearSessionCaches(
         uploadService.purgeOrganization(organizationId, userId),
         clearCachedNotes(organizationId),
       );
-      if (userId) clearRecentItemsForOrganization(organizationId, userId);
+      if (userId) {
+        clearRecentItemsForOrganization(organizationId, userId);
+        work.push(clearPendingSends(userId, organizationId));
+      }
     } else {
       uploadService.resetForScope();
     }
@@ -78,6 +82,7 @@ export async function clearSessionCaches(
     const { userId } = boundary;
     if (userId) {
       work.push(uploadService.purgeUser(userId));
+      work.push(clearPendingSends(userId));
       clearRecentItemsForUser(userId);
       clearStoredFilesFilters(userId);
     } else {
@@ -101,6 +106,7 @@ export async function scanUnsyncedEdits(userId: string | null): Promise<boolean>
   if (!userId) return false;
   try {
     if (await discoverStoredPendingDocs(userId)) return true;
+    if ((await pendingSendOrganizations(userId)).length) return true;
   } catch {
     return true;
   }
@@ -132,7 +138,12 @@ export function usePendingOrganizations(): () => Promise<PendingOrganization[]> 
     if (!userId) return [];
     let ids: string[];
     try {
-      ids = await listPendingOrganizations(userId);
+      ids = [
+        ...new Set([
+          ...(await listPendingOrganizations(userId)),
+          ...(await pendingSendOrganizations(userId)),
+        ]),
+      ];
     } catch {
       return [];
     }

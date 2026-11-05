@@ -1192,6 +1192,7 @@ type ChatMessage struct {
 	// Set on the channel copy of a thread reply that was broadcast to the
 	// channel in one send.
 	ThreadReplyContext *ThreadReplyContext `protobuf:"bytes,27,opt,name=thread_reply_context,json=threadReplyContext,proto3,oneof" json:"thread_reply_context,omitempty"`
+	ClientMessageId    *string             `protobuf:"bytes,28,opt,name=client_message_id,json=clientMessageId,proto3,oneof" json:"client_message_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1364,6 +1365,13 @@ func (x *ChatMessage) GetThreadReplyContext() *ThreadReplyContext {
 		return x.ThreadReplyContext
 	}
 	return nil
+}
+
+func (x *ChatMessage) GetClientMessageId() string {
+	if x != nil && x.ClientMessageId != nil {
+		return *x.ClientMessageId
+	}
+	return ""
 }
 
 // Links a channel message back to the thread reply it was posted alongside.
@@ -3668,8 +3676,10 @@ type SendMessageRequest struct {
 	// Also post this thread reply to the channel as a root message, linked back
 	// to the thread. Only valid with root_id set.
 	AlsoSendToChannel bool `protobuf:"varint,8,opt,name=also_send_to_channel,json=alsoSendToChannel,proto3" json:"also_send_to_channel,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Reuse this UUID when retrying the same send.
+	ClientMessageId *string `protobuf:"bytes,9,opt,name=client_message_id,json=clientMessageId,proto3,oneof" json:"client_message_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SendMessageRequest) Reset() {
@@ -3756,6 +3766,13 @@ func (x *SendMessageRequest) GetAlsoSendToChannel() bool {
 		return x.AlsoSendToChannel
 	}
 	return false
+}
+
+func (x *SendMessageRequest) GetClientMessageId() string {
+	if x != nil && x.ClientMessageId != nil {
+		return *x.ClientMessageId
+	}
+	return ""
 }
 
 type SendMessageResponse struct {
@@ -10171,7 +10188,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vsender_name\x18\x02 \x01(\tR\n" +
 	"senderName\x12'\n" +
-	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\x8d\t\n" +
+	"\x0fcontent_preview\x18\x03 \x01(\tR\x0econtentPreview\"\xd4\t\n" +
 	"\vChatMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -10198,7 +10215,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\rreply_context\x18\x18 \x01(\v2\x15.chat.v1.ReplyContextH\x06R\freplyContext\x88\x01\x01\x12E\n" +
 	"\x0fforward_context\x18\x19 \x01(\v2\x17.chat.v1.ForwardContextH\aR\x0eforwardContext\x88\x01\x01\x12!\n" +
 	"\fis_forwarded\x18\x1a \x01(\bR\visForwarded\x12R\n" +
-	"\x14thread_reply_context\x18\x1b \x01(\v2\x1b.chat.v1.ThreadReplyContextH\bR\x12threadReplyContext\x88\x01\x01\x1a;\n" +
+	"\x14thread_reply_context\x18\x1b \x01(\v2\x1b.chat.v1.ThreadReplyContextH\bR\x12threadReplyContext\x88\x01\x01\x12/\n" +
+	"\x11client_message_id\x18\x1c \x01(\tH\tR\x0fclientMessageId\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +
@@ -10212,7 +10230,8 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\x12_sender_avatar_urlB\x10\n" +
 	"\x0e_reply_contextB\x12\n" +
 	"\x10_forward_contextB\x17\n" +
-	"\x15_thread_reply_contextJ\x04\b\r\x10\x0eR\x0ffeedback_rating\"f\n" +
+	"\x15_thread_reply_contextB\x14\n" +
+	"\x12_client_message_idJ\x04\b\r\x10\x0eR\x0ffeedback_rating\"f\n" +
 	"\x12ThreadReplyContext\x12&\n" +
 	"\x0froot_message_id\x18\x01 \x01(\tR\rrootMessageId\x12(\n" +
 	"\x10reply_message_id\x18\x02 \x01(\tR\x0ereplyMessageId\"\x88\x01\n" +
@@ -10429,7 +10448,7 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12(\n" +
 	"\x04role\x18\x04 \x01(\x0e2\x14.chat.v1.ChannelRoleR\x04role\"N\n" +
 	"\x18UpdateMemberRoleResponse\x122\n" +
-	"\x06member\x18\x01 \x01(\v2\x1a.chat.v1.ChatChannelMemberR\x06member\"\xba\x03\n" +
+	"\x06member\x18\x01 \x01(\v2\x1a.chat.v1.ChatChannelMemberR\x06member\"\x81\x04\n" +
 	"\x12SendMessageRequest\x12'\n" +
 	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1d\n" +
 	"\n" +
@@ -10439,13 +10458,15 @@ const file_chat_v1_chat_proto_rawDesc = "" +
 	"\bmetadata\x18\x05 \x03(\v2).chat.v1.SendMessageRequest.MetadataEntryR\bmetadata\x12#\n" +
 	"\vreply_to_id\x18\x06 \x01(\tH\x01R\treplyToId\x88\x01\x01\x12.\n" +
 	"\x13attachment_file_ids\x18\a \x03(\tR\x11attachmentFileIds\x12/\n" +
-	"\x14also_send_to_channel\x18\b \x01(\bR\x11alsoSendToChannel\x1a;\n" +
+	"\x14also_send_to_channel\x18\b \x01(\bR\x11alsoSendToChannel\x12/\n" +
+	"\x11client_message_id\x18\t \x01(\tH\x02R\x0fclientMessageId\x88\x01\x01\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\n" +
 	"\n" +
 	"\b_root_idB\x0e\n" +
-	"\f_reply_to_id\"E\n" +
+	"\f_reply_to_idB\x14\n" +
+	"\x12_client_message_id\"E\n" +
 	"\x13SendMessageResponse\x12.\n" +
 	"\amessage\x18\x01 \x01(\v2\x14.chat.v1.ChatMessageR\amessage\"\x9c\x02\n" +
 	"\x12GetMessagesRequest\x12'\n" +

@@ -187,6 +187,9 @@ const (
 	UserChatEventType_USER_CHAT_EVENT_TYPE_CHANNEL_EVENT UserChatEventType = 5
 	// A draft was saved or deleted on one of the user's devices.
 	UserChatEventType_USER_CHAT_EVENT_TYPE_DRAFT_CHANGED UserChatEventType = 6
+	// Subscription is established. Clients reconcile snapshots before trusting cached state.
+	// Subscription is attached. Clients can start authoritative snapshot recovery.
+	UserChatEventType_USER_CHAT_EVENT_TYPE_READY UserChatEventType = 7
 )
 
 // Enum value maps for UserChatEventType.
@@ -199,6 +202,7 @@ var (
 		4: "USER_CHAT_EVENT_TYPE_HEARTBEAT",
 		5: "USER_CHAT_EVENT_TYPE_CHANNEL_EVENT",
 		6: "USER_CHAT_EVENT_TYPE_DRAFT_CHANGED",
+		7: "USER_CHAT_EVENT_TYPE_READY",
 	}
 	UserChatEventType_value = map[string]int32{
 		"USER_CHAT_EVENT_TYPE_UNSPECIFIED":          0,
@@ -208,6 +212,7 @@ var (
 		"USER_CHAT_EVENT_TYPE_HEARTBEAT":            4,
 		"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT":        5,
 		"USER_CHAT_EVENT_TYPE_DRAFT_CHANGED":        6,
+		"USER_CHAT_EVENT_TYPE_READY":                7,
 	}
 )
 
@@ -1887,6 +1892,10 @@ type StreamUserChatEventsResponse struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	EventType UserChatEventType      `protobuf:"varint,1,opt,name=event_type,json=eventType,proto3,enum=chat.v1.UserChatEventType" json:"event_type,omitempty"`
 	Timestamp *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// Changes when the underlying subscription is replaced, including broker reconnects.
+	StreamId string `protobuf:"bytes,3,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	// Contiguous within stream_id. A gap requires snapshot recovery.
+	Sequence uint64 `protobuf:"varint,4,opt,name=sequence,proto3" json:"sequence,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
 	//	*StreamUserChatEventsResponse_UnreadCount
@@ -1941,6 +1950,20 @@ func (x *StreamUserChatEventsResponse) GetTimestamp() *timestamppb.Timestamp {
 		return x.Timestamp
 	}
 	return nil
+}
+
+func (x *StreamUserChatEventsResponse) GetStreamId() string {
+	if x != nil {
+		return x.StreamId
+	}
+	return ""
+}
+
+func (x *StreamUserChatEventsResponse) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
 }
 
 func (x *StreamUserChatEventsResponse) GetPayload() isStreamUserChatEventsResponse_Payload {
@@ -2609,11 +2632,13 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x10new_host_user_id\x18\x02 \x01(\tR\rnewHostUserId\x12/\n" +
 	"\x13publishing_revision\x18\x03 \x01(\x05R\x12publishingRevision\"F\n" +
 	"\x1bStreamUserChatEventsRequest\x12'\n" +
-	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xf9\x03\n" +
+	"\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\"\xb2\x04\n" +
 	"\x1cStreamUserChatEventsResponse\x129\n" +
 	"\n" +
 	"event_type\x18\x01 \x01(\x0e2\x1a.chat.v1.UserChatEventTypeR\teventType\x128\n" +
-	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12@\n" +
+	"\ttimestamp\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12\x1b\n" +
+	"\tstream_id\x18\x03 \x01(\tR\bstreamId\x12\x1a\n" +
+	"\bsequence\x18\x04 \x01(\x04R\bsequence\x12@\n" +
 	"\funread_count\x18\n" +
 	" \x01(\v2\x1b.chat.v1.UnreadCountPayloadH\x00R\vunreadCount\x12I\n" +
 	"\x0fthread_activity\x18\v \x01(\v2\x1e.chat.v1.ThreadActivityPayloadH\x00R\x0ethreadActivity\x12L\n" +
@@ -2702,7 +2727,7 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"\x1eCHAT_EVENT_TYPE_MEMBER_UPDATED\x10 \x12#\n" +
 	"\x1fCHAT_EVENT_TYPE_CHANNEL_CREATED\x10!\x12!\n" +
 	"\x1dCHAT_EVENT_TYPE_CALL_REACTION\x10\"\x12 \n" +
-	"\x1cCHAT_EVENT_TYPE_CALL_UPDATED\x10#*\xb1\x02\n" +
+	"\x1cCHAT_EVENT_TYPE_CALL_UPDATED\x10#*\xd1\x02\n" +
 	"\x11UserChatEventType\x12$\n" +
 	" USER_CHAT_EVENT_TYPE_UNSPECIFIED\x10\x00\x12-\n" +
 	")USER_CHAT_EVENT_TYPE_UNREAD_COUNT_CHANGED\x10\x01\x12(\n" +
@@ -2710,7 +2735,8 @@ const file_chat_v1_chat_stream_proto_rawDesc = "" +
 	"%USER_CHAT_EVENT_TYPE_MENTION_RECEIVED\x10\x03\x12\"\n" +
 	"\x1eUSER_CHAT_EVENT_TYPE_HEARTBEAT\x10\x04\x12&\n" +
 	"\"USER_CHAT_EVENT_TYPE_CHANNEL_EVENT\x10\x05\x12&\n" +
-	"\"USER_CHAT_EVENT_TYPE_DRAFT_CHANGED\x10\x062|\n" +
+	"\"USER_CHAT_EVENT_TYPE_DRAFT_CHANGED\x10\x06\x12\x1e\n" +
+	"\x1aUSER_CHAT_EVENT_TYPE_READY\x10\a2|\n" +
 	"\x11ChatStreamService\x12g\n" +
 	"\x14StreamUserChatEvents\x12$.chat.v1.StreamUserChatEventsRequest\x1a%.chat.v1.StreamUserChatEventsResponse\"\x000\x01B5Z3github.com/uniffy-io/uniffy-proto-go/chat/v1;chatv1b\x06proto3"
 

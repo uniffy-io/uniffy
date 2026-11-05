@@ -84,7 +84,10 @@ export function ChannelView({
   );
 
   const messageBookmarkUrns = useMemo(
-    () => messageIds?.map((id) => `urn:uniffy:content:CHAT_MESSAGE:${id}`) ?? [],
+    () =>
+      messageIds
+        ?.filter((id) => !id.startsWith("pending:"))
+        .map((id) => `urn:uniffy:content:CHAT_MESSAGE:${id}`) ?? [],
     [messageIds],
   );
   useBookmarkStatuses(messageBookmarkUrns);
@@ -119,7 +122,12 @@ export function ChannelView({
   );
 
   const handleSend = useCallback(
-    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+    async (
+      content: string,
+      fileIds: string[],
+      metadata?: Record<string, string>,
+      clientMessageId?: string,
+    ) => {
       if (!activeChannel || !effectiveChannelId) return false;
       const result = await dispatch(
         sendMessage({
@@ -128,6 +136,7 @@ export function ChannelView({
           replyToId: replyToMessage?.id,
           attachmentFileIds: fileIds,
           metadata,
+          clientMessageId,
         }),
       ).unwrap();
       flushOnSend();
@@ -192,7 +201,7 @@ export function ChannelView({
     if (!effectiveChannelId || !currentUserId || !channelMessages) return;
     for (let i = channelMessages.length - 1; i >= 0; i--) {
       const msg = channelMessages[i];
-      if (msg.senderId === currentUserId && !msg.isDeleted) {
+      if (msg.senderId === currentUserId && !msg.isDeleted && !msg.sendStatus) {
         dispatch(
           setEditingMessage({
             id: msg.id,

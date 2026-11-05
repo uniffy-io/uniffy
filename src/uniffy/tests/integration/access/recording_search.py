@@ -75,7 +75,7 @@ class RecordingSearchEngine:
     async def shutdown(self) -> None:
         return None
 
-    async def put_documents(self, documents: list[SearchDocument]) -> None:
+    async def put_documents(self, documents: list[SearchDocument], *, wait: bool = False) -> None:
         self._reachable()
         for document in documents:
             self.documents[document["id"]] = dict(document)

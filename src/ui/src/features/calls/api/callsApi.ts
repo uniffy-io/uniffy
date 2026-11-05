@@ -1,4 +1,4 @@
-import { createClient } from "@connectrpc/connect";
+import { createClient, type CallOptions } from "@connectrpc/connect";
 import { unaryTransport } from "@/config/api";
 import {
   CallService,
@@ -50,8 +50,10 @@ export const callsApi = {
     callsClient.refreshCallToken(req),
   getActiveCall: (req: MessageInitShape<typeof GetActiveCallRequestSchema>) =>
     callsClient.getActiveCall(req),
-  listActiveCalls: (req: MessageInitShape<typeof ListActiveCallsRequestSchema>) =>
-    callsClient.listActiveCalls(req),
+  listActiveCalls: (
+    req: MessageInitShape<typeof ListActiveCallsRequestSchema>,
+    options?: CallOptions,
+  ) => callsClient.listActiveCalls(req, options),
   declineCall: (req: MessageInitShape<typeof DeclineCallRequestSchema>) =>
     callsClient.declineCall(req),
   kickParticipant: (req: MessageInitShape<typeof KickParticipantRequestSchema>) =>

@@ -124,7 +124,7 @@ class TestFlagValidation:
             )
 
 
-async def test_broadcast_post_commit_invokes_agent_and_queues_delivery_once():
+async def test_broadcast_post_commit_wakes_delivery_once():
     sender = _sender()
     reply = _reply()
     copy = await _stage(sender, reply)
@@ -138,12 +138,11 @@ async def test_broadcast_post_commit_invokes_agent_and_queues_delivery_once():
     )
     sender._get_channel_member_ids = AsyncMock(return_value=[USER])
     sender._publish_send_event = AsyncMock()
-    sender._maybe_trigger_agents = AsyncMock()
     with (
         patch(
             "uniffy.domains.chat.messages.sending.ChatReadStateOperations", return_value=AsyncMock()
         ),
-        patch("uniffy.domains.chat.messages.sending.enqueue_job", AsyncMock()) as enqueue,
+        patch("uniffy.domains.chat.messages.sending.wake_message_delivery", AsyncMock()) as enqueue,
     ):
         await sender._post_commit_send(
             reply,
@@ -155,8 +154,7 @@ async def test_broadcast_post_commit_invokes_agent_and_queues_delivery_once():
             "",
             channel_copy=copy,
         )
-    sender._maybe_trigger_agents.assert_awaited_once_with(reply, channel)
-    enqueue.assert_awaited_once()
+    enqueue.assert_awaited_once_with(reply.id)
     assert [call.args[0].id for call in sender._publish_send_event.await_args_list] == [
         reply.id,
         copy.id,
@@ -266,15 +264,16 @@ class TestUnreadDeltaAnchor:
     """The send delta names the root row the badge is about, and only a root row."""
 
     @staticmethod
-    async def _post_send(message: ChatMessage, copy: ChatMessage | None) -> AsyncMock:
+    async def _post_send(message: ChatMessage, copy: ChatMessage | None) -> list:
         operations = ChatMessageOperations(MagicMock(), search_indexer=MagicMock())
-        operations.session.execute = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+        operations.session.execute = AsyncMock(
+            return_value=MagicMock(all=MagicMock(return_value=[]))
+        )
         operations.access = MagicMock()
         operations.access.filter_viewers = AsyncMock(return_value=[])
         operations._index_message = AsyncMock()
         operations._update_resources = AsyncMock()
-        operations._publish_unread_notifications = AsyncMock()
-        operations._emit_send_notifications = AsyncMock()
+        operations._prepare_send_notifications = AsyncMock(return_value=[])
         channel = ChatChannel(
             id=CHANNEL,
             organization_id=ORG,
@@ -287,10 +286,9 @@ class TestUnreadDeltaAnchor:
             "uniffy.domains.chat.drafts.operations.ChatDraftOperations.clear_for_send",
             AsyncMock(),
         ):
-            await operations.background_post_send(
-                message, channel, USER, message.root_id, "Ada", [USER], index_message=copy
+            return await operations.prepare_delivery_notifications(
+                message, channel, USER, message.root_id, "Ada", [USER, ORG], index_message=copy
             )
-        return operations._publish_unread_notifications
 
     async def test_a_root_message_anchors_on_itself(self) -> None:
         message = _reply()
@@ -298,7 +296,7 @@ class TestUnreadDeltaAnchor:
 
         publish = await self._post_send(message, None)
 
-        assert publish.await_args.kwargs == {"message_id": message.id}
+        assert publish[0][2]["message_id"] == str(message.id)
 
     async def test_a_broadcast_anchors_on_its_channel_copy(self) -> None:
         sender = _sender()
@@ -307,9 +305,9 @@ class TestUnreadDeltaAnchor:
 
         publish = await self._post_send(reply, copy)
 
-        assert publish.await_args.kwargs == {"message_id": copy.id}
+        assert publish[0][2]["message_id"] == str(copy.id)
 
     async def test_a_plain_thread_reply_carries_no_anchor(self) -> None:
         publish = await self._post_send(_reply(), None)
 
-        assert publish.await_args.kwargs == {"message_id": None}
+        assert publish == []

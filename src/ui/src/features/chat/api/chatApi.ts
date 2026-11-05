@@ -1,4 +1,4 @@
-import { createClient } from "@connectrpc/connect";
+import { createClient, type CallOptions } from "@connectrpc/connect";
 import { transport, unaryTransport } from "@/config/api";
 import {
   ChatService,
@@ -83,7 +83,8 @@ const chatStreamClient = createClient(ChatStreamService, transport);
 export const chatApi = {
   createChannel: (req: MessageInitShape<typeof CreateChannelRequestSchema>) =>
     chatClient.createChannel(req),
-  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>) => chatClient.getChannel(req),
+  getChannel: (req: MessageInitShape<typeof GetChannelRequestSchema>, options?: CallOptions) =>
+    chatClient.getChannel(req, options),
   updateChannel: (req: MessageInitShape<typeof UpdateChannelRequestSchema>) =>
     chatClient.updateChannel(req),
   archiveChannel: (req: MessageInitShape<typeof ArchiveChannelRequestSchema>) =>
@@ -94,8 +95,8 @@ export const chatApi = {
     chatClient.changeChannelVisibility(req),
   deleteChannel: (req: MessageInitShape<typeof DeleteChannelRequestSchema>) =>
     chatClient.deleteChannel(req),
-  listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>) =>
-    chatClient.listChannels(req),
+  listChannels: (req: MessageInitShape<typeof ListChannelsRequestSchema>, options?: CallOptions) =>
+    chatClient.listChannels(req, options),
 
   openSelfChat: (req: MessageInitShape<typeof OpenSelfChatRequestSchema>) =>
     chatClient.openSelfChat(req),
@@ -113,7 +114,8 @@ export const chatApi = {
   addMembers: (req: MessageInitShape<typeof AddMembersRequestSchema>) => chatClient.addMembers(req),
   removeMembers: (req: MessageInitShape<typeof RemoveMembersRequestSchema>) =>
     chatClient.removeMembers(req),
-  getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>) => chatClient.getMembers(req),
+  getMembers: (req: MessageInitShape<typeof GetMembersRequestSchema>, options?: CallOptions) =>
+    chatClient.getMembers(req, options),
   updateChannelMember: (req: MessageInitShape<typeof UpdateChannelMemberRequestSchema>) =>
     chatClient.updateChannelMember(req),
   updateMemberRole: (req: MessageInitShape<typeof UpdateMemberRoleRequestSchema>) =>
@@ -128,8 +130,8 @@ export const chatApi = {
     chatClient.sendMessage(req),
   forwardMessage: (req: MessageInitShape<typeof ForwardMessageRequestSchema>) =>
     chatClient.forwardMessage(req),
-  getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>) =>
-    chatClient.getMessages(req),
+  getMessages: (req: MessageInitShape<typeof GetMessagesRequestSchema>, options?: CallOptions) =>
+    chatClient.getMessages(req, options),
   getMessage: (req: MessageInitShape<typeof GetMessageRequestSchema>) => chatClient.getMessage(req),
   updateMessage: (req: MessageInitShape<typeof UpdateMessageRequestSchema>) =>
     chatClient.updateMessage(req),
@@ -144,11 +146,16 @@ export const chatApi = {
   getPinnedMessages: (req: MessageInitShape<typeof GetPinnedMessagesRequestSchema>) =>
     chatClient.getPinnedMessages(req),
 
-  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>) => chatClient.getThread(req),
-  getThreadMessages: (req: MessageInitShape<typeof GetThreadMessagesRequestSchema>) =>
-    chatClient.getThreadMessages(req),
-  getThreadsInbox: (req: MessageInitShape<typeof GetThreadsInboxRequestSchema>) =>
-    chatClient.getThreadsInbox(req),
+  getThread: (req: MessageInitShape<typeof GetThreadRequestSchema>, options?: CallOptions) =>
+    chatClient.getThread(req, options),
+  getThreadMessages: (
+    req: MessageInitShape<typeof GetThreadMessagesRequestSchema>,
+    options?: CallOptions,
+  ) => chatClient.getThreadMessages(req, options),
+  getThreadsInbox: (
+    req: MessageInitShape<typeof GetThreadsInboxRequestSchema>,
+    options?: CallOptions,
+  ) => chatClient.getThreadsInbox(req, options),
   followThread: (req: MessageInitShape<typeof FollowThreadRequestSchema>) =>
     chatClient.followThread(req),
   unfollowThread: (req: MessageInitShape<typeof UnfollowThreadRequestSchema>) =>
@@ -166,13 +173,16 @@ export const chatApi = {
     chatClient.markChannelUnread(req),
   markThreadRead: (req: MessageInitShape<typeof MarkThreadReadRequestSchema>) =>
     chatClient.markThreadRead(req),
-  getUnreadCounts: (req: MessageInitShape<typeof GetUnreadCountsRequestSchema>) =>
-    chatClient.getUnreadCounts(req),
+  getUnreadCounts: (
+    req: MessageInitShape<typeof GetUnreadCountsRequestSchema>,
+    options?: CallOptions,
+  ) => chatClient.getUnreadCounts(req, options),
 
   saveDraft: (req: MessageInitShape<typeof SaveDraftRequestSchema>) => chatClient.saveDraft(req),
   deleteDraft: (req: MessageInitShape<typeof DeleteDraftRequestSchema>) =>
     chatClient.deleteDraft(req),
-  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>) => chatClient.listDrafts(req),
+  listDrafts: (req: MessageInitShape<typeof ListDraftsRequestSchema>, options?: CallOptions) =>
+    chatClient.listDrafts(req, options),
 
   getChannelResources: (req: MessageInitShape<typeof GetChannelResourcesRequestSchema>) =>
     chatClient.getChannelResources(req),

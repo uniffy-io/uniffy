@@ -38,6 +38,8 @@ import {
 } from "@shared/mentions/broadcastMentions";
 import {
   useSendThreadReply,
+  useDiscardFailedMessage,
+  useRetryFailedMessage,
   useMarkThreadRead,
   useDeleteMessage,
 } from "@features/chat/useChatMutations";
@@ -192,14 +194,20 @@ export function ChatThreadScreen() {
   );
 
   const dispatchSend = useCallback(
-    (content: string, attachmentFileIds: string[]) => {
+    async (content: string, attachmentFileIds: string[]) => {
       if (attachments.uploading) return;
-      flushOnSend();
-      setDraft("");
-      mentionsRef.current = [];
-      attachments.clear();
-      sendReply.mutate({ content, attachmentFileIds, alsoSendToChannel });
-      setAlsoSendToChannel(false);
+      sendReply.mutate({
+        content,
+        attachmentFileIds,
+        alsoSendToChannel,
+        onPrepared: () => {
+          flushOnSend();
+          setDraft("");
+          mentionsRef.current = [];
+          attachments.clear();
+          setAlsoSendToChannel(false);
+        },
+      });
     },
     [attachments, sendReply, flushOnSend, alsoSendToChannel],
   );
@@ -240,8 +248,19 @@ export function ChatThreadScreen() {
     chatPolicy?.confirmThreshold,
   ]);
 
+  const discardFailed = useDiscardFailedMessage(channelId, rootMessageId);
+  const retryFailed = useRetryFailedMessage();
   const handleLongPress = useCallback(
     (message: SerializedMessage) => {
+      if (message.metadata.optimistic === "1") {
+        if (message.metadata.failed === "1")
+          Alert.alert("Send not confirmed", "Retry or discard this message.", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Retry", onPress: () => retryFailed.mutate(message.id) },
+            { text: "Discard", style: "destructive", onPress: () => discardFailed(message.id) },
+          ]);
+        return;
+      }
       const { display } = parseMentions(message.content);
       const isOwn = message.senderId === user?.id && message.senderType === "USER";
       Alert.alert("Message", undefined, [
@@ -263,7 +282,7 @@ export function ChatThreadScreen() {
           : []),
       ]);
     },
-    [user?.id, deleteMessage],
+    [user?.id, deleteMessage, discardFailed, retryFailed],
   );
 
   const renderItem = useCallback(

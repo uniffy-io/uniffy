@@ -10,7 +10,7 @@ from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.search import SEARCH_INDEXER_CTX_KEY
-from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE, REFRESH_CHAT_SEARCH_ACL
+from uniffy.domains.chat.jobs.contracts import REFRESH_CHAT_SEARCH_ACL
 from uniffy.domains.chat.jobs.jobs import (
     flush_chat_search_acl_refreshes,
     post_send_chat_message,
@@ -18,7 +18,7 @@ from uniffy.domains.chat.jobs.jobs import (
 from uniffy.domains.chat.messages.operations import ChatMessageOperations
 
 
-async def test_committed_message_enqueues_owner_post_send_job() -> None:
+async def test_committed_message_wakes_durable_delivery() -> None:
     message_id = uuid4()
     channel_id = uuid4()
     user_id = uuid4()
@@ -29,10 +29,9 @@ async def test_committed_message_enqueues_owner_post_send_job() -> None:
     operations = ChatMessageOperations(MagicMock(), search_indexer=MagicMock())
     operations._get_channel_member_ids = AsyncMock(return_value=member_ids)
     operations._publish_send_event = AsyncMock()
-    operations._maybe_trigger_agents = AsyncMock()
     enqueue = AsyncMock()
 
-    with patch("uniffy.domains.chat.messages.sending.enqueue_job", enqueue):
+    with patch("uniffy.domains.chat.messages.sending.wake_message_delivery", enqueue):
         await operations._post_commit_send(
             message,
             channel,
@@ -43,17 +42,7 @@ async def test_committed_message_enqueues_owner_post_send_job() -> None:
             "",
         )
 
-    enqueue.assert_awaited_once_with(
-        POST_SEND_CHAT_MESSAGE,
-        str(message_id),
-        str(channel_id),
-        str(user_id),
-        str(root_id),
-        "Ada",
-        dumps_str([str(member_id) for member_id in member_ids]),
-        # No channel copy: this reply was not broadcast to its channel.
-        None,
-    )
+    enqueue.assert_awaited_once_with(message_id)
 
 
 async def test_post_send_uses_worker_composed_dependencies() -> None:

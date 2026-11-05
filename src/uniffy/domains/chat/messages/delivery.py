@@ -13,7 +13,6 @@ from uniffy.core.content.references import (
     extract_mentioned_user_ids_from_content,
 )
 from uniffy.core.content.team_mentions import TeamExpansion, expand_team_mentions
-from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import (
     ChatChannelMember,
@@ -22,11 +21,8 @@ from uniffy.core.models.chat.channel_member import (
 from uniffy.core.models.chat.message import ChatMessage, SenderType
 from uniffy.core.models.chat.thread import ChatThreadStats
 from uniffy.core.types import SubjectType
-from uniffy.domains.agents.bridge.jobs.contracts import RESPOND_TO_CHAT_MESSAGE
-from uniffy.domains.agents.bridge.mentions import detect_agent_mentions
 from uniffy.domains.chat.cache import fetch_channel_members
 from uniffy.domains.chat.drafts.operations import ChatDraftOperations
-from uniffy.domains.chat.features import is_chat_agents_enabled
 from uniffy.domains.chat.messages.converters import (
     get_forward_metadata,
     get_thread_reply_metadata,
@@ -35,6 +31,7 @@ from uniffy.domains.chat.messages.converters import (
 from uniffy.domains.chat.streaming.events import (
     MESSAGE_CREATED,
     THREAD_UPDATED,
+    UNREAD_COUNT_CHANGED,
     build_message_payload,
     build_thread_updated_payload,
 )
@@ -47,39 +44,6 @@ logger = logger.bind(component="chat.messages.delivery")
 
 
 class MessageDelivery:
-    async def _maybe_trigger_agents(self, message: ChatMessage, channel: ChatChannel) -> None:
-        """Detect agent mentions and enqueue respond_to_chat_message ARQ jobs; non-fatal."""
-        try:
-            if not await is_chat_agents_enabled(self.session, channel.organization_id):
-                return
-
-            matches = await detect_agent_mentions(self.session, message, channel)
-            if not matches:
-                return
-
-            logger.info(
-                f"agents-in-chat: {len(matches)} match(es) for "
-                f"channel={channel.id} msg={message.id} "
-                f"agents={[(m.agent_id, m.rule) for m in matches]}"
-            )
-
-            try:
-                for m in matches:
-                    await enqueue_job(
-                        RESPOND_TO_CHAT_MESSAGE,
-                        str(channel.id),
-                        str(message.id),
-                        str(m.agent_id),
-                        m.rule,
-                    )
-            except RuntimeError:
-                logger.warning(
-                    "agents-in-chat: queue unavailable, dropping "
-                    f"{len(matches)} match(es) for message {message.id}"
-                )
-        except Exception as exc:
-            logger.exception(f"agent mention detection failed for message {message.id}: {exc}")
-
     async def background_post_send(
         self,
         message: ChatMessage,
@@ -91,6 +55,35 @@ class MessageDelivery:
         index_message: ChatMessage | None = None,
     ) -> None:
         """Index the channel-visible twin so a broadcast has one search document."""
+        await self._index_message(
+            index_message or message, channel, member_ids, sender_name=sender_name
+        )
+        await self._update_resources(channel.id, message.content, user_id)
+        events = await self.prepare_delivery_notifications(
+            message,
+            channel,
+            user_id,
+            root_id,
+            sender_name,
+            member_ids,
+            index_message,
+        )
+        await publish_user_chat_events(events)
+        if message.sender_type == SenderType.USER:
+            await ChatDraftOperations(self.session).clear_for_send(
+                user_id, channel.organization_id, channel.id, root_id
+            )
+
+    async def prepare_delivery_notifications(
+        self,
+        message: ChatMessage,
+        channel: ChatChannel,
+        user_id: UUID,
+        root_id: UUID | None,
+        sender_name: str,
+        member_ids: list[UUID],
+        index_message: ChatMessage | None = None,
+    ) -> list[tuple[UUID, str, dict]]:
         # Membership and join messages embed a mention urn for the member the
         # event is about. That urn is the copy, not a ping: nobody gets
         # "Mentioned you" or a mention badge for their own membership event.
@@ -132,50 +125,27 @@ class MessageDelivery:
                 else:
                     broadcast_notify_ids = set(broadcast_badge_ids)
 
-        await self._index_message(
-            index_message or message, channel, member_ids, sender_name=sender_name
-        )
-
-        await self._update_resources(channel.id, message.content, user_id)
-
         muted_user_ids: set[UUID] = set()
         none_notification_ids: set[UUID] = set()
-        try:
-            pref_result = await self.session.execute(
-                select(
-                    ChatChannelMember.subject_id,
-                    ChatChannelMember.is_muted,
-                    ChatChannelMember.notification_level,
-                ).where(
-                    ChatChannelMember.channel_id == channel.id,
-                    ChatChannelMember.subject_type == SubjectType.USER,
-                )
+        pref_result = await self.session.execute(
+            select(
+                ChatChannelMember.subject_id,
+                ChatChannelMember.is_muted,
+                ChatChannelMember.notification_level,
+            ).where(
+                ChatChannelMember.channel_id == channel.id,
+                ChatChannelMember.subject_type == SubjectType.USER,
             )
-            for row in pref_result.all():
-                if row[0] is None:
-                    continue
-                if row[1]:
-                    muted_user_ids.add(row[0])
-                if row[2] == ChatNotificationLevel.NONE:
-                    none_notification_ids.add(row[0])
-        except Exception:
-            logger.warning(f"Failed to fetch notification preferences for channel {channel.id}")
-
-        # Only root rows enter the channel badge; a plain thread reply has no anchor.
-        counted = index_message or message
-        await self._publish_unread_notifications(
-            channel,
-            user_id,
-            member_ids,
-            visible_mentioned | team_recipient_ids | broadcast_badge_ids,
-            message_id=counted.id if counted.root_id is None else None,
         )
-
-        # A broadcast is a mention for badge purposes, but muted and
-        # notification-level NONE members opted out of being pinged by it.
+        for row in pref_result.all():
+            if row[0] is None:
+                continue
+            if row[1]:
+                muted_user_ids.add(row[0])
+            if row[2] == ChatNotificationLevel.NONE:
+                none_notification_ids.add(row[0])
         broadcast_notify_ids -= muted_user_ids | none_notification_ids
-
-        await self._emit_send_notifications(
+        events = await self._prepare_send_notifications(
             message,
             channel,
             user_id,
@@ -187,11 +157,24 @@ class MessageDelivery:
             broadcast_kind=broadcast_kind,
             broadcast_target_ids=broadcast_notify_ids,
         )
-
-        if message.sender_type == SenderType.USER:
-            await ChatDraftOperations(self.session).clear_for_send(
-                user_id, channel.organization_id, channel.id, root_id
+        counted = index_message or message
+        if counted.root_id is None:
+            mentioned = visible_mentioned | team_recipient_ids | broadcast_badge_ids
+            events.extend(
+                (
+                    uid,
+                    UNREAD_COUNT_CHANGED,
+                    {
+                        "channel_id": str(channel.id),
+                        "message_id": str(counted.id),
+                        "unread_count": 1,
+                        "mention_count": 1 if uid in mentioned else 0,
+                    },
+                )
+                for uid in member_ids
+                if uid != user_id
             )
+        return events
 
     async def _visible_mention_targets(
         self,
@@ -250,6 +233,7 @@ class MessageDelivery:
             thread_reply_metadata = get_thread_reply_metadata(message.message_metadata)
             base_payload = build_message_payload(
                 message_id=message.id,
+                client_message_id=message.client_message_id,
                 channel_id=channel.id,
                 sender_id=user_id,
                 sender_type=message.sender_type.value,

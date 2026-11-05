@@ -21,6 +21,7 @@ from uniffy.core.models.chat.message_revision import ChatMessageRevision
 from uniffy.core.types import ContentType
 from uniffy.domains.chat.cache import (
     get_cached_pinned_message_ids,
+    invalidate_cached_channel_resources,
     invalidate_cached_pinned_messages,
     set_cached_pinned_message_ids,
 )
@@ -83,6 +84,8 @@ class MessageMutations:
         if content == msg.content:
             return msg
 
+        resource_message = peer if peer is not None and msg.root_id is None else msg
+        previous_resource_content = resource_message.content
         now = datetime.now(UTC)
         edits = [(msg, content)]
         if peer is not None and not peer.is_deleted:
@@ -109,6 +112,13 @@ class MessageMutations:
                 or None
             )
 
+        resource_types = await ChatResourceOperations(self.session).stage_replace_message_resources(
+            resource_message.id,
+            channel_id,
+            msg.sender_id,
+            previous_resource_content,
+            resource_message.content,
+        )
         await self.session.commit()
         await self.session.refresh(msg)
 
@@ -137,7 +147,8 @@ class MessageMutations:
 
         await self._index_message(msg, channel, member_ids)
 
-        await self._update_resources(channel_id, msg.content, msg.sender_id)
+        if resource_types:
+            await invalidate_cached_channel_resources(channel_id, resource_types)
 
         return msg
 
@@ -211,6 +222,19 @@ class MessageMutations:
             if counts_as_thread_reply(msg):
                 await drop_thread_reply(self.session, msg.root_id)
 
+        released = released_resource_content(msg, peer)
+        resource_types = []
+        if released is not None:
+            source_id = peer.id if peer is not None and msg.root_id is None else msg.id
+            resource_types = await ChatResourceOperations(
+                self.session
+            ).stage_replace_message_resources(
+                source_id,
+                channel_id,
+                msg.sender_id,
+                released,
+                "",
+            )
         await self.session.commit()
 
         if was_pinned:
@@ -236,13 +260,8 @@ class MessageMutations:
         if peer is not None and not peer.is_deleted:
             await self._index_message(peer, channel, member_ids)
 
-        released = released_resource_content(msg, peer)
-        if released is not None:
-            try:
-                ops = ChatResourceOperations(self.session)
-                await ops.decrement_resources_from_message(channel_id, released)
-            except Exception:
-                logger.warning(f"Resource decrement failed for message {msg.id}")
+        if resource_types:
+            await invalidate_cached_channel_resources(channel_id, resource_types)
 
     async def pin_message(
         self,

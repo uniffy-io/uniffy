@@ -1,18 +1,32 @@
+import { createChatRecovery } from "@features/chat/chatRecovery";
+import { StreamPosition } from "@features/chat/recoveryQueue";
+import {
+  pendingSends,
+  clearPendingSends,
+  pendingSendOrganizations,
+} from "@features/chat/pendingSends";
+import { deliverSend } from "@features/chat/sendDelivery";
+import { localSend, mergeSendRows } from "@features/chat/sendState";
+import {
+  onUserSignOut,
+  onUnsyncedEditsCheck,
+  onAuthBoundary,
+  onOrganizationLost,
+} from "@core/auth/sessionEvents";
 import { applyUnreadCount, type UnreadMap } from "@features/chat/unreadCounts";
 import { useEffect } from "react";
 import { AppState } from "react-native";
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import {
   ChatEventType,
+  UserChatEventType,
   type ChatEvent,
   type StreamUserChatEventsResponse,
 } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import { chatStreamApi } from "@features/chat/chatStreamApi";
-import { callsApi } from "@features/calls/callsApi";
 import { draftClientSessionId } from "@features/chat/chatApi";
 import {
   messagesKey,
-  draftsKey,
   upsertDraftInCache,
   removeDraftFromCache,
 } from "@features/chat/useChatMutations";
@@ -37,7 +51,6 @@ import {
   pushRingInvite,
   recordEndedCall,
   moderatorMuteKey,
-  syncActiveCalls,
 } from "@features/calls/useCallsState";
 import { useAuth } from "@core/providers/AuthContext";
 import { addOnlineListener } from "@core/api/connectivity";
@@ -120,12 +133,15 @@ const WATCHDOG_TICK_MS = 15000;
 // evidence to abandon the current socket instead of waiting out the watchdog.
 const KICK_STALE_MS = 35000;
 
+let storageSubscribers = 0;
+let storageUnsubs: (() => void)[] = [];
 let refCount = 0;
 let controller: AbortController | null = null;
 let attemptController: AbortController | null = null;
 let lastEventAtMs = 0;
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
 let currentOrgId: string | null = null;
+let currentUserId: string | null = null;
 let lifecycleUnsubs: (() => void)[] = [];
 let sleepWakers: (() => void)[] = [];
 
@@ -138,14 +154,32 @@ let sleepWakers: (() => void)[] = [];
  * an accelerator, never a requirement.
  */
 export function useChatStream() {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
+  useEffect(() => {
+    if (++storageSubscribers === 1)
+      storageUnsubs = [
+        onUserSignOut(clearPendingSends),
+        onUnsyncedEditsCheck(pendingSendOrganizations),
+      ];
+    return () => {
+      if (--storageSubscribers === 0) {
+        storageUnsubs.forEach((unsubscribe) => unsubscribe());
+        storageUnsubs = [];
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    if (!organizationId) return;
+    if (!organizationId || !user?.id) return;
     refCount++;
-    if (!controller || currentOrgId !== organizationId) {
-      start(organizationId, queryClient);
+    if (
+      !controller ||
+      controller.signal.aborted ||
+      currentOrgId !== organizationId ||
+      currentUserId !== user.id
+    ) {
+      start(organizationId, user.id, queryClient);
     }
     return () => {
       refCount--;
@@ -154,14 +188,15 @@ export function useChatStream() {
         stop(queryClient);
       }
     };
-  }, [organizationId, queryClient]);
+  }, [organizationId, user?.id, queryClient]);
 }
 
-function start(orgId: string, queryClient: QueryClient) {
+function start(orgId: string, userId: string, queryClient: QueryClient) {
   controller?.abort();
   const ctl = new AbortController();
   controller = ctl;
   currentOrgId = orgId;
+  currentUserId = userId;
   if (sweepTimer) clearInterval(sweepTimer);
   sweepTimer = setInterval(() => sweepTyping(queryClient), 2000);
   for (const unsub of lifecycleUnsubs) unsub();
@@ -171,8 +206,15 @@ function start(orgId: string, queryClient: QueryClient) {
   const removeOnline = addOnlineListener((online) => {
     if (online) kick();
   });
-  lifecycleUnsubs = [() => appStateSub.remove(), removeOnline];
-  void runLoop(orgId, queryClient, ctl);
+  lifecycleUnsubs = [
+    () => appStateSub.remove(),
+    removeOnline,
+    onAuthBoundary(() => ctl.abort()),
+    onOrganizationLost(() => {
+      void clearPendingSends(userId, orgId).catch(() => {});
+    }),
+  ];
+  void runLoop(orgId, userId, queryClient, ctl);
 }
 
 function stop(queryClient: QueryClient) {
@@ -200,7 +242,12 @@ function kick() {
   for (const wake of wakers) wake();
 }
 
-async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortController) {
+async function runLoop(
+  orgId: string,
+  userId: string,
+  queryClient: QueryClient,
+  ctl: AbortController,
+) {
   let backoffMs = RECONNECT_BASE_MS;
   while (!ctl.signal.aborted) {
     const attempt = new AbortController();
@@ -208,6 +255,9 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
     const onOuterAbort = () => attempt.abort();
     ctl.signal.addEventListener("abort", onOuterAbort, { once: true });
     lastEventAtMs = Date.now();
+    const position = new StreamPosition();
+    const recovery = createChatRecovery(orgId, queryClient, attempt.signal);
+    let ready = false;
     const watchdog = setInterval(() => {
       if (Date.now() - lastEventAtMs > STREAM_IDLE_LIMIT_MS) attempt.abort();
     }, WATCHDOG_TICK_MS);
@@ -216,18 +266,22 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
         { organizationId: orgId },
         { signal: attempt.signal },
       );
-      // Stream events are a latency optimization for calls, not the source of
-      // truth: resync the active-call snapshot on every (re)connect attempt.
-      // While the stream is down this doubles as the polling fallback, riding
-      // the same backoff cadence. Drafts get the same snapshot resync to pick
-      // up whatever changed while the stream was down.
-      void resyncActiveCalls(orgId, queryClient, attempt.signal);
-      void queryClient.invalidateQueries({ queryKey: draftsKey(orgId) });
-      void queryClient.resetQueries({ queryKey: ["chat", "archived-channels", orgId] });
-      void queryClient.invalidateQueries({ queryKey: ["chat", "channels", orgId] });
       for await (const event of stream) {
         if (attempt.signal.aborted) break;
         lastEventAtMs = Date.now();
+        const movement = position.observe(event.streamId, event.sequence);
+        if (movement === "duplicate") continue;
+        if (
+          !ready ||
+          movement === "new" ||
+          movement === "gap" ||
+          event.eventType === UserChatEventType.READY
+        ) {
+          ready = true;
+          recovery.recover();
+          void restoreSends(userId, orgId, queryClient, ctl.signal);
+        }
+        recovery.changed(event);
         queryClient.setQueryData(STREAM_HEALTH_KEY, true);
         backoffMs = RECONNECT_BASE_MS;
         applyUserEvent(orgId, queryClient, event);
@@ -236,6 +290,7 @@ async function runLoop(orgId: string, queryClient: QueryClient, ctl: AbortContro
       // Network drop, watchdog abort, or a platform fetch that cannot consume
       // server streams; all fall back to the polling cadence below.
     } finally {
+      recovery.stop();
       clearInterval(watchdog);
       ctl.signal.removeEventListener("abort", onOuterAbort);
       if (attemptController === attempt) attemptController = null;
@@ -253,13 +308,53 @@ function jitter(ms: number): number {
   return Math.round(ms * (0.75 + Math.random() * 0.5));
 }
 
-async function resyncActiveCalls(orgId: string, queryClient: QueryClient, signal: AbortSignal) {
+const restoring = new Set<string>();
+async function restoreSends(
+  userId: string,
+  orgId: string,
+  client: QueryClient,
+  signal: AbortSignal,
+) {
+  const scope = `${userId}:${orgId}`;
+  if (restoring.has(scope)) return;
+  restoring.add(scope);
   try {
-    const response = await callsApi.listActiveCalls({ organizationId: orgId });
-    if (signal.aborted) return;
-    syncActiveCalls(queryClient, orgId, response.calls.map(callToPlain));
+    for (const record of await pendingSends(userId, orgId)) {
+      if (signal.aborted) return;
+      const request = record.request;
+      const key = request.rootId
+        ? ["chat", "threadMessages", orgId, request.channelId, request.rootId]
+        : messagesKey(orgId, request.channelId);
+      try {
+        const response = await deliverSend(userId, orgId, request, () => {
+          if (!signal.aborted)
+            client.setQueryData<SerializedMessage[]>(key, (old) =>
+              mergeSendRows(old ?? [], [localSend(request, userId, false)]),
+            );
+        });
+        if (!signal.aborted && response.message)
+          client.setQueryData<SerializedMessage[]>(key, (old) =>
+            mergeSendRows(old ?? [], [messageToPlain(response.message!)]),
+          );
+      } catch {
+        if (!signal.aborted)
+          client.setQueryData<SerializedMessage[]>(key, (old) => {
+            if (
+              old?.some(
+                (row) =>
+                  row.clientMessageId === request.clientMessageId &&
+                  row.metadata.optimistic !== "1",
+              )
+            )
+              return old;
+            return mergeSendRows(old ?? [], [localSend(request, userId, true)]);
+          });
+      }
+    }
   } catch {
-    // Best-effort: stale indicators until the next reconnect cycle.
+    /* Encrypted storage can be locked until device unlock. Retry on reconnect. */
+  } finally {
+    restoring.delete(scope);
   }
 }
 
@@ -360,9 +455,20 @@ function applyChannelEvent(orgId: string, queryClient: QueryClient, ce: ChatEven
   switch (ce.payload.case) {
     case "message": {
       const plain = messageToPlain(ce.payload.value);
-      queryClient.setQueryData<SerializedMessage[]>(msgKey, (old) => {
+      const targetKey = plain.rootId
+        ? ["chat", "threadMessages", orgId, channelId, plain.rootId]
+        : msgKey;
+      queryClient.setQueryData<SerializedMessage[]>(targetKey, (old) => {
         if (!old) return old;
-        const withoutSelf = old.filter((m) => m.id !== plain.id);
+        const withoutSelf = old.filter(
+          (m) =>
+            m.id !== plain.id &&
+            !(
+              m.metadata.optimistic === "1" &&
+              m.senderId === plain.senderId &&
+              m.clientMessageId === plain.clientMessageId
+            ),
+        );
         if (withoutSelf.length === old.length && plain.isDeleted) return old;
         return [plain, ...withoutSelf].sort((a, b) => b.createdAtSeconds - a.createdAtSeconds);
       });

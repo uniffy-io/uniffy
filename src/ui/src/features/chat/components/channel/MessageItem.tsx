@@ -23,6 +23,7 @@ import {
 } from "@/features/agents/components/skills/SkillResponseActions";
 import { CustomStatusDisplay } from "@/features/presence/components/CustomStatusDisplay";
 import { cn } from "@/shared/utils/cn";
+import { resolvePendingSend } from "@/features/chat/store/chatThunks";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
   addReaction,
@@ -69,6 +70,7 @@ function messageRev(m: ChatMessage): string {
 }
 
 function messageItemPropsAreEqual(prev: MessageItemProps, next: MessageItemProps): boolean {
+  if (prev.message.sendStatus !== next.message.sendStatus) return false;
   if (prev.isGrouped !== next.isGrouped) return false;
   if (prev.isFirstInGroup !== next.isFirstInGroup) return false;
   if ((prev.isHighlighted ?? false) !== (next.isHighlighted ?? false)) return false;
@@ -412,33 +414,35 @@ function MessageItemInner({
       data-pinned={message.isPinned ? "true" : "false"}
       data-edited={message.editedAt ? "true" : "false"}
     >
-      <HoverActionsToolbar
-        messageId={message.id}
-        channelId={message.channelId}
-        senderId={message.senderId}
-        isPinned={message.isPinned}
-        canReplyInThread={!isInThread && !message.rootId}
-        canMarkUnread={!message.rootId}
-        content={message.content}
-        isEditAllowed={isEditAllowed}
-        onQuoteReply={handleQuoteReply}
-        onEdit={handleStartEdit}
-        onForward={handleForward}
-        renderAdditionalActions={
-          hasSkillActions
-            ? (closeMenu) => (
-                <SkillResponseMenuItems
-                  attribution={message.metadata}
-                  triggerMessageId={message.replyToId ?? undefined}
-                  onSelect={(action) => {
-                    closeMenu();
-                    setSkillAction(action);
-                  }}
-                />
-              )
-            : undefined
-        }
-      />
+      {!message.sendStatus && (
+        <HoverActionsToolbar
+          messageId={message.id}
+          channelId={message.channelId}
+          senderId={message.senderId}
+          isPinned={message.isPinned}
+          canReplyInThread={!isInThread && !message.rootId}
+          canMarkUnread={!message.rootId}
+          content={message.content}
+          isEditAllowed={isEditAllowed}
+          onQuoteReply={handleQuoteReply}
+          onEdit={handleStartEdit}
+          onForward={handleForward}
+          renderAdditionalActions={
+            hasSkillActions
+              ? (closeMenu) => (
+                  <SkillResponseMenuItems
+                    attribution={message.metadata}
+                    triggerMessageId={message.replyToId ?? undefined}
+                    onSelect={(action) => {
+                      closeMenu();
+                      setSkillAction(action);
+                    }}
+                  />
+                )
+              : undefined
+          }
+        />
+      )}
 
       <div className="flex items-start gap-3 pr-12 lg:pr-0">
         {isFirstInGroup ? (
@@ -559,6 +563,46 @@ function MessageItemInner({
             >
               <Lightning size={11} weight="fill" className="text-primary" />
               <span className="font-mono text-foreground">/{invokedSkillName}</span>
+            </span>
+          )}
+          {message.sendStatus && (
+            <span
+              role="status"
+              className="text-xs text-muted-foreground"
+              data-testid="chat-message-sending"
+            >
+              {message.sendStatus === "failed" ? (
+                <>
+                  Send not confirmed.{" "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() =>
+                      dispatch(resolvePendingSend({ clientMessageId: message.clientMessageId! }))
+                    }
+                  >
+                    Retry
+                  </button>{" "}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() =>
+                      dispatch(
+                        resolvePendingSend({
+                          clientMessageId: message.clientMessageId!,
+                          discard: true,
+                        }),
+                      )
+                    }
+                  >
+                    Discard retry
+                  </button>
+                </>
+              ) : message.content ? (
+                "Sending..."
+              ) : (
+                "Sending attachments..."
+              )}
             </span>
           )}
           <div data-testid={`chat-message-body-${message.id}`}>

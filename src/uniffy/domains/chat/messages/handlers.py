@@ -92,6 +92,13 @@ class MessageHandlers:
             except ValueError:
                 raise ConnectError(Code.INVALID_ARGUMENT, "Invalid reply_to_id")
 
+        client_message_id = None
+        if request.has_field("client_message_id"):
+            try:
+                client_message_id = UUID(request.client_message_id)
+            except ValueError:
+                raise ConnectError(Code.INVALID_ARGUMENT, "Invalid client_message_id")
+
         metadata = dict(request.metadata) if request.metadata else None
 
         attachment_file_ids: list[UUID] = []
@@ -117,6 +124,7 @@ class MessageHandlers:
                     sender_avatar=jwt_avatar,
                     attachment_file_ids=attachment_file_ids,
                     also_send_to_channel=request.also_send_to_channel,
+                    client_message_id=client_message_id,
                 )
 
                 return SendMessageResponse(

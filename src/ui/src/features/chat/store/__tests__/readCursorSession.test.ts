@@ -17,7 +17,7 @@ const api = vi.hoisted(() => ({
 vi.mock("@/features/chat/api/chatApi", () => ({ chatApi: api }));
 vi.mock("@/features/files/api/attachmentsApi", () => ({ attachmentsApi: api }));
 
-import { channelToPlain } from "@/features/chat/api/chatConverters";
+import { channelToPlain, messageToPlain } from "@/features/chat/api/chatConverters";
 import {
   addChannel,
   removeChannel,
@@ -42,6 +42,7 @@ import {
   markChannelUnread,
   fetchUnreadCounts,
   jumpToFirstUnread,
+  clearActiveChannelUnread,
 } from "@/features/chat/store/chatThunks";
 
 function deferred<T>() {
@@ -87,6 +88,36 @@ beforeEach(() => {
   api.batchListAttachments.mockResolvedValue({ groups: [] });
   api.markChannelRead.mockResolvedValue({});
   api.getChannelPendingApprovals.mockResolvedValue({ approvals: [] });
+});
+
+it("never uses a pending message as a read cursor", async () => {
+  const store = makeStore();
+  const channel = seedChannel(store);
+  store.dispatch(setActiveChannel(channel.id));
+  store.dispatch(updateUnreadCounts([{ channelId: channel.id, unreadCount: 2, mentionCount: 0 }]));
+  const confirmed = messageToPlain(
+    create(ChatMessageSchema, { id: "confirmed", channelId: channel.id }),
+  );
+  store.dispatch(
+    chatMessagesSlice.actions.setMessages({
+      channelId: channel.id,
+      messages: [
+        confirmed,
+        {
+          ...confirmed,
+          id: "pending:owner:send",
+          clientMessageId: "send",
+          sendStatus: "sending",
+        },
+      ],
+    }),
+  );
+  await clearActiveChannelUnread()(store.dispatch, store.getState as () => RootState, undefined);
+  expect(api.markChannelRead).toHaveBeenCalledWith(
+    expect.objectContaining({
+      lastReadMessageId: confirmed.id,
+    }),
+  );
 });
 
 it.each(["test/switchOrg", "test/loginAsOtherUser"])(

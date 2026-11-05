@@ -36,7 +36,7 @@ async def test_saved_agent_reply_has_preview_and_obeys_live_access(
     content = "The launch review is ready."
     search = MagicMock(spec=WorkspaceSearch)
 
-    async def index_document(item):
+    async def index_document(item, *, wait=False):
         async with open_session() as observer:
             persisted = await observer.get(ChatMessage, item.urn.rsplit(":", 1)[1])
             assert persisted is not None

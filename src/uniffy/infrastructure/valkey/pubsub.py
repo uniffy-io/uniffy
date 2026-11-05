@@ -149,7 +149,9 @@ async def publish_many(messages: list[tuple[str, bytes]]) -> None:
         logger.warning(f"Failed to publish batch to {len(messages)} channels")
 
 
-async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | None]:
+async def subscribe_channels(
+    *channels: str, notify_subscriptions: bool = False
+) -> AsyncGenerator[dict[str, Any] | None]:
     """Subscribe to multiple channels; yields payloads, or ``None`` on each poll tick."""
     PUBSUB_ACTIVE_SUBSCRIBERS.inc()
 
@@ -168,9 +170,13 @@ async def subscribe_channels(*channels: str) -> AsyncGenerator[dict[str, Any] | 
                 break
 
             message = await pubsub.get_message(
-                ignore_subscribe_messages=True,
+                ignore_subscribe_messages=False,
                 timeout=1.0,
             )
+            if message is not None and message["type"] == "subscribe":  # noqa: PLR2004
+                if notify_subscriptions:
+                    yield {"_subscription_ready": True}
+                continue
             if message is not None and message["type"] == "message":  # noqa: PLR2004
                 try:
                     data = loads(message["data"])

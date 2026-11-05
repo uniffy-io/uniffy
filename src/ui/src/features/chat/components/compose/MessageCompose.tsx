@@ -107,6 +107,7 @@ interface MessageComposeProps {
     content: string,
     fileIds: string[],
     metadata?: Record<string, string>,
+    clientMessageId?: string,
   ) => Promise<boolean>;
   onTyping?: () => void;
   replyTo?: {
@@ -406,6 +407,7 @@ export function MessageCompose({
   const [isSending, setIsSending] = useState(false);
   const sendDisabled = isSending || hasPendingUploads || (isEmpty && !pendingInvokedSkill);
   const sendingRef = useRef(false);
+  const pendingSendRef = useRef<{ fingerprint: string; id: string } | null>(null);
 
   useLayoutEffect(() => {
     if (isSending || !focusAfterSendRef.current) return;
@@ -822,7 +824,21 @@ export function MessageCompose({
       sendingRef.current = true;
       setIsSending(true);
       try {
-        if (!(await onSend(content, fileIds, metadata))) return;
+        const fingerprint = JSON.stringify([
+          organizationId,
+          channelId,
+          threadRootId,
+          replyTo?.id,
+          sendOption?.checked,
+          content,
+          fileIds,
+          metadata,
+        ]);
+        if (pendingSendRef.current?.fingerprint !== fingerprint) {
+          pendingSendRef.current = { fingerprint, id: randomUUID() };
+        }
+        if (!(await onSend(content, fileIds, metadata, pendingSendRef.current.id))) return;
+        pendingSendRef.current = null;
         if (el && editorRef.current === el && el.innerHTML === html) el.innerHTML = "";
         setPendingFiles((files) =>
           files.filter((file) => !file.fileId || !fileIds.includes(file.fileId)),
@@ -840,7 +856,17 @@ export function MessageCompose({
         setIsSending(false);
       }
     },
-    [onSend, closeSlash, updateState, hasPendingUploads],
+    [
+      onSend,
+      closeSlash,
+      updateState,
+      hasPendingUploads,
+      organizationId,
+      channelId,
+      threadRootId,
+      replyTo,
+      sendOption,
+    ],
   );
 
   const handleSend = useCallback(async () => {

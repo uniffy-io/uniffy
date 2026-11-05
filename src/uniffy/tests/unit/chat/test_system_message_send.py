@@ -23,6 +23,7 @@ def _build_ops(channel):
     session = MagicMock()
     session.add = MagicMock()
     session.flush = AsyncMock()
+    session.execute = AsyncMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
     access = MagicMock()

@@ -190,6 +190,23 @@ class ChatDraftOperations:
         )
         return list(result.scalars().all())
 
+    async def stage_clear_for_message(self, message: ChatMessage, organization_id: UUID) -> bool:
+        """Delayed delivery must not erase a draft written after this message."""
+        result = await self.session.execute(
+            delete(ChatDraft)
+            .where(
+                ChatDraft.user_id == message.sender_id,
+                ChatDraft.organization_id == organization_id,
+                ChatDraft.channel_id == message.channel_id,
+                ChatDraft.root_message_id.is_(None)
+                if message.root_id is None
+                else ChatDraft.root_message_id == message.root_id,
+                ChatDraft.updated_at <= message.created_at,
+            )
+            .returning(ChatDraft.id)
+        )
+        return result.first() is not None
+
     async def clear_for_send(
         self,
         user_id: UUID,

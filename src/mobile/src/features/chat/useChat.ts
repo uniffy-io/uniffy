@@ -1,3 +1,4 @@
+import { getAuthGeneration } from "@core/auth/sessionEvents";
 import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "expo-router";
@@ -7,10 +8,10 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAuth } from "@core/providers/AuthContext";
 import { chatApi } from "@features/chat/chatApi";
-import { filesApi } from "@features/files/filesApi";
+import { attachAttachments } from "@features/chat/messageAttachments";
+import { mergeSendRows } from "@features/chat/sendState";
 import { STREAM_HEALTH_KEY } from "@features/chat/useChatStream";
 import { draftsKey, agentFoldersKey } from "@features/chat/useChatMutations";
 import { messageWindowOptions, MESSAGE_WINDOW_SIZE } from "@features/chat/messageWindow";
@@ -79,12 +80,18 @@ export function useChannels() {
   const channelsQuery = useQuery({
     queryKey: ["chat", "channels", organizationId],
     enabled: !!organizationId,
-    queryFn: async () => {
-      const res = await chatApi.listChannels({
-        organizationId: organizationId!,
-        browsePublic: false,
-      });
-      return res.channels.map(channelToPlain);
+    queryFn: async ({ signal }) => {
+      const channels: SerializedChannel[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = await chatApi.listChannels(
+          { organizationId: organizationId!, browsePublic: false, cursor },
+          { signal },
+        );
+        channels.push(...page.channels.map(channelToPlain));
+        cursor = page.nextCursor || undefined;
+      } while (cursor);
+      return channels;
     },
   });
 
@@ -315,7 +322,14 @@ export function useMessages(channelId: string | undefined) {
   const key = ["chat", "messages", organizationId, channelId];
 
   const headHasMoreRef = useRef(false);
-  const [olderMessages, setOlderMessages] = useState<SerializedMessage[]>([]);
+  const olderKey = ["chat", "olderMessages", organizationId, channelId];
+  const olderQuery = useQuery<SerializedMessage[]>({
+    queryKey: olderKey,
+    queryFn: () => [],
+    enabled: false,
+    initialData: [],
+  });
+  const olderMessages = olderQuery.data;
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [olderExhausted, setOlderExhausted] = useState(false);
 
@@ -339,7 +353,7 @@ export function useMessages(channelId: string | undefined) {
       const local = (queryClient.getQueryData<SerializedMessage[]>(key) ?? []).filter(
         (m) => m.metadata.optimistic === "1",
       );
-      return [...local, ...messages].sort((a, b) => b.createdAtSeconds - a.createdAtSeconds);
+      return mergeSendRows(local, messages);
     },
   });
 
@@ -359,6 +373,14 @@ export function useMessages(channelId: string | undefined) {
 
   const loadOlder = useCallback(async () => {
     if (isLoadingOlder || olderExhausted || !organizationId || !channelId) return;
+    const generation = getAuthGeneration();
+    const beforeHead = queryClient.getQueryData(["chat", "messages", organizationId, channelId]);
+    const beforeOlder = queryClient.getQueryData([
+      "chat",
+      "olderMessages",
+      organizationId,
+      channelId,
+    ]);
     const current = dataRef.current;
     const oldest = [...current].reverse().find((m) => m.metadata.optimistic !== "1");
     if (!oldest) return;
@@ -376,12 +398,22 @@ export function useMessages(channelId: string | undefined) {
         .map(messageToPlain)
         .sort((a, b) => b.createdAtSeconds - a.createdAtSeconds);
       await attachAttachments(organizationId, older);
-      setOlderMessages((prev) => [...prev, ...older]);
+      if (
+        generation !== getAuthGeneration() ||
+        queryClient.getQueryData(["chat", "messages", organizationId, channelId]) !== beforeHead ||
+        queryClient.getQueryData(["chat", "olderMessages", organizationId, channelId]) !==
+          beforeOlder
+      )
+        return;
+      queryClient.setQueryData<SerializedMessage[]>(
+        ["chat", "olderMessages", organizationId, channelId],
+        (previous) => [...(previous ?? []), ...older],
+      );
       if (!res.hasMore) setOlderExhausted(true);
     } finally {
       setIsLoadingOlder(false);
     }
-  }, [isLoadingOlder, olderExhausted, organizationId, channelId]);
+  }, [isLoadingOlder, olderExhausted, organizationId, channelId, queryClient]);
 
   return {
     data,
@@ -469,36 +501,6 @@ export function useUnreadMessageWindow(
   };
 }
 
-async function attachAttachments(organizationId: string, messages: SerializedMessage[]) {
-  if (messages.length === 0) return;
-  try {
-    const batch = await filesApi.batchListAttachments({
-      organizationId,
-      contentType: ContentType.CHAT_MESSAGE,
-      contentIds: messages.map((m) => m.id),
-    });
-    const byId = new Map<string, SerializedMessage["attachments"]>();
-    for (const group of batch.groups) {
-      byId.set(
-        group.contentId,
-        group.attachments.map((a) => ({
-          id: a.id,
-          fileId: a.fileId,
-          filename: a.filename,
-          mimeType: a.mimeType,
-          sizeBytes: Number(a.sizeBytes),
-        })),
-      );
-    }
-    for (const m of messages) {
-      const attachments = byId.get(m.id);
-      if (attachments) m.attachments = attachments;
-    }
-  } catch {
-    // Messages render without attachment metadata.
-  }
-}
-
 export function useChannelMembers(channelId: string | undefined) {
   const { organizationId } = useAuth();
   return useQuery({
@@ -557,7 +559,17 @@ export function useThreadMessages(
       });
       const messages: SerializedMessage[] = res.messages.map(messageToPlain);
       await attachAttachments(organizationId!, messages);
-      return messages.sort((a, b) => b.createdAtSeconds - a.createdAtSeconds);
+      const pending =
+        queryClient
+          .getQueryData<SerializedMessage[]>([
+            "chat",
+            "threadMessages",
+            organizationId,
+            channelId,
+            rootMessageId,
+          ])
+          ?.filter((row) => row.metadata.optimistic === "1") ?? [];
+      return mergeSendRows(pending, messages);
     },
   });
 }

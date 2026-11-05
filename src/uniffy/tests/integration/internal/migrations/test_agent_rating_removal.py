@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import UUID
 
 from alembic import command
 from alembic.config import Config
@@ -34,6 +35,37 @@ from uniffy.tests.integration.internal.migrations.test_migration_run import (
     _query,
     _run_alembic,
 )
+
+
+async def _insert_chat_message(
+    session: AsyncSession,
+    *,
+    channel_id: UUID,
+    sender_id: UUID,
+    sender_type: SenderType,
+    content: str,
+    root_id: UUID | None = None,
+) -> UUID:
+    """Seed only columns present at the migration's starting revision."""
+    message_id = generate_id()
+    await session.execute(
+        text(
+            "INSERT INTO chat_messages "
+            "(id, channel_id, sender_id, sender_type, content, root_id, "
+            "is_deleted, is_pinned, created_at, updated_at) "
+            "VALUES (:id, :channel, :sender, CAST(:type AS sendertype), :content, "
+            ":root, false, false, now(), now())"
+        ),
+        {
+            "id": message_id,
+            "channel": channel_id,
+            "sender": sender_id,
+            "type": sender_type.value,
+            "content": content,
+            "root": root_id,
+        },
+    )
+    return message_id
 
 
 async def test_rating_removal_preserves_content_and_history(scratch_database, monkeypatch):
@@ -88,13 +120,14 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 user_id=user.id,
                 kind=AgentSessionKind.DIRECT,
             )
-            root = ChatMessage(
+            root_id = await _insert_chat_message(
+                session,
                 channel_id=channel_id,
                 sender_id=user.id,
                 sender_type=SenderType.USER,
                 content="Please summarize.",
             )
-            session.add_all([conversation, root])
+            session.add(conversation)
             await session.flush()
             reply = AgentMessage(
                 session_id=conversation.id,
@@ -102,11 +135,12 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 content="Session answer",
                 thinking=[{"content": "Reasoning"}],
             )
-            chat_reply = ChatMessage(
+            chat_reply_id = await _insert_chat_message(
+                session,
                 channel_id=channel_id,
                 sender_id=agent_id,
                 sender_type=SenderType.AGENT,
-                root_id=root.id,
+                root_id=root_id,
                 content="Thread answer",
             )
             run = AgentRunLog(
@@ -116,9 +150,9 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 session_id=conversation.id,
                 model="fixture",
             )
-            session.add_all([reply, chat_reply, run])
+            session.add_all([reply, run])
             await session.flush()
-            session.add(ChatReaction(message_id=chat_reply.id, user_id=user.id, emoji="ack"))
+            session.add(ChatReaction(message_id=chat_reply_id, user_id=user.id, emoji="ack"))
             await session.execute(
                 text(
                     "INSERT INTO agents_skill_drafts "
@@ -136,7 +170,7 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
             )
             for target, message_id in (
                 ("agents_message_id", reply.id),
-                ("chat_message_id", chat_reply.id),
+                ("chat_message_id", chat_reply_id),
             ):
                 await session.execute(
                     text(
@@ -222,11 +256,13 @@ async def test_rating_removal_preserves_content_and_history(scratch_database, mo
                 GetThreadMessagesRequest(
                     organization_id=str(org_id),
                     channel_id=str(channel_id),
-                    root_message_id=str(root.id),
+                    root_message_id=str(root_id),
                 ),
                 None,
             )
             assert [message.content for message in thread.messages] == ["Thread answer"]
+            chat_reply = await session.get(ChatMessage, chat_reply_id)
+            assert chat_reply is not None
             enriched = await messages.MessageHandlers._enrich_messages(
                 None,
                 session,
