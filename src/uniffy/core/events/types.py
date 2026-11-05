@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from uniffy.core.auth.acting_agent import current_acting_agent
 from uniffy.core.types import ContentType, NotificationType, generate_id
 
 
@@ -21,3 +22,5 @@ class NotificationEvent:
     content_id: UUID | None = None
     metadata: dict | None = None
     event_id: UUID = field(default_factory=generate_id)
+    # Set when an agent tool caused the event on the actor's behalf.
+    acting_agent_id: UUID | None = field(default_factory=current_acting_agent)

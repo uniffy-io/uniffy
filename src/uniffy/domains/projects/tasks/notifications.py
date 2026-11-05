@@ -114,24 +114,39 @@ class TaskNotifications:
         if not added:
             return
 
-        recipient_ids = await self.expand_assignees_to_users(
-            task.organization_id, [UUID(uid) for uid in added]
-        )
-        recipient_ids = [uid for uid in recipient_ids if uid != actor_id]
-
-        if not recipient_ids:
-            return
-
-        await emit_notification(
-            NotificationEvent(
-                notification_type=NotificationType.TASK_ASSIGNED,
-                organization_id=task.organization_id,
-                actor_id=actor_id,
-                title=f"Assigned you to: {task.title}",
-                source_urn=build_content_urn(ContentType.TASK, task.id),
-                target_user_ids=recipient_ids,
+        added_ids = [UUID(uid) for uid in added]
+        group_rows = await self.session.execute(
+            select(Group.id).where(
+                Group.id.in_(added_ids), Group.organization_id == task.organization_id
             )
         )
+        group_ids = {row[0] for row in group_rows.all()}
+        direct = await self.expand_assignees_to_users(
+            task.organization_id, [uid for uid in added_ids if uid not in group_ids]
+        )
+        via_group = await self.expand_assignees_to_users(task.organization_id, list(group_ids))
+        direct_ids = [uid for uid in direct if uid != actor_id]
+        skipped = {actor_id, *direct_ids}
+        group_recipient_ids = [uid for uid in dict.fromkeys(via_group) if uid not in skipped]
+
+        # Separate events, so people reached through a group are told apart from those picked.
+        for recipient_ids, metadata in (
+            (direct_ids, None),
+            (group_recipient_ids, {"group_ids": sorted(str(gid) for gid in group_ids)}),
+        ):
+            if not recipient_ids:
+                continue
+            await emit_notification(
+                NotificationEvent(
+                    notification_type=NotificationType.TASK_ASSIGNED,
+                    organization_id=task.organization_id,
+                    actor_id=actor_id,
+                    title=f"Assigned you to: {task.title}",
+                    source_urn=build_content_urn(ContentType.TASK, task.id),
+                    target_user_ids=recipient_ids,
+                    metadata=metadata,
+                )
+            )
 
     async def emit_mention_notifications(
         self,

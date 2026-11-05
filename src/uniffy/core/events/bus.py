@@ -61,6 +61,8 @@ def _event_to_json(event: NotificationEvent) -> str:
         data["content_id"] = str(event.content_id)
     if event.metadata is not None:
         data["metadata"] = event.metadata
+    if event.acting_agent_id is not None:
+        data["acting_agent_id"] = str(event.acting_agent_id)
 
     return dumps_str(data)
 
@@ -92,6 +94,7 @@ def event_from_json(json_str: str) -> NotificationEvent:
         content_type=content_type,
         content_id=content_id,
         metadata=data.get("metadata"),
+        acting_agent_id=UUID(data["acting_agent_id"]) if data.get("acting_agent_id") else None,
     )
 
 
