@@ -1,19 +1,36 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  type StyleProp,
+  type TextStyle,
+} from "react-native";
 import { Check } from "phosphor-react-native";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 
 /** A labelled group of chips inside a `BottomSheet`. */
 export function SheetSection({ title, children }: { title: string; children: React.ReactNode }) {
-  const T = useTheme();
-
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: T.textDim }]}>{title}</Text>
+      <SheetSectionLabel title={title} />
       <View style={styles.chipWrap}>{children}</View>
     </View>
   );
+}
+
+/** The uppercase caption over a group of sheet rows or chips. */
+export function SheetSectionLabel({
+  title,
+  style,
+}: {
+  title: string;
+  style?: StyleProp<TextStyle>;
+}) {
+  const T = useTheme();
+  return <Text style={[styles.sectionTitle, { color: T.textDim }, style]}>{title}</Text>;
 }
 
 /** Toggleable pill inside a `SheetSection`. */

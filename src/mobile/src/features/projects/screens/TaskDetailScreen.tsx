@@ -28,6 +28,7 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { ActionSheet } from "@shared/components/ActionSheet";
 import { Avatar } from "@shared/components/Avatar";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
+import { useAssigneePinnedRows } from "@features/projects/useAssigneePinnedRows";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { useDirectory } from "@shared/directory/useDirectory";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
@@ -159,6 +160,14 @@ export function TaskDetailScreen() {
         : [],
     [allTasks, taskId],
   );
+
+  const assigneePinned = useAssigneePinnedRows({
+    selectedIds: task?.assigneeIds ?? [],
+    onAssignToMe: (userId) => toggleAssignee(userId),
+    onUnassign: () => {
+      if (task && task.assigneeIds.length > 0) patch({ assigneeIds: [] });
+    },
+  });
 
   if (taskQuery.isLoading) {
     return (
@@ -760,6 +769,7 @@ export function TaskDetailScreen() {
         onToggle={toggleAssignee}
         accentColor={T.accent}
         busy={updateTask.isPending}
+        pinned={assigneePinned}
       />
 
       <TaskTypePickerSheet
