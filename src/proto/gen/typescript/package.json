@@ -7,7 +7,7 @@
     "./*": "./*"
   },
   "peerDependencies": {
-    "@bufbuild/protobuf": "^2.15.0",
-    "@connectrpc/connect": "^2.2.0"
+    "@bufbuild/protobuf": "^2.16.0",
+    "@connectrpc/connect": "^2.3.0"
   }
 }
