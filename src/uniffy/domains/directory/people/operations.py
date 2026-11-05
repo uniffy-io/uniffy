@@ -205,7 +205,9 @@ class PeopleOperations:
             base_query = base_query.where(PeopleProfile.department == department)
 
         if job_title:
-            base_query = base_query.where(PeopleProfile.job_title.ilike(f"%{job_title}%"))
+            base_query = base_query.where(
+                PeopleProfile.job_title.icontains(job_title, autoescape=True)
+            )
 
         if role_filter is not None:
             base_query = base_query.where(OrganizationMember.role == role_filter)

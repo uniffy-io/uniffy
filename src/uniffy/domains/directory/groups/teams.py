@@ -98,8 +98,10 @@ async def search_team_nodes(
         Group.kind == GroupKind.TEAM,
     )
     if search:
-        pattern = f"%{search}%"
-        base_query = base_query.where(Group.name.ilike(pattern) | Group.description.ilike(pattern))
+        base_query = base_query.where(
+            Group.name.icontains(search, autoescape=True)
+            | Group.description.icontains(search, autoescape=True)
+        )
 
     total = (
         await session.execute(select(func.count()).select_from(base_query.subquery()))
