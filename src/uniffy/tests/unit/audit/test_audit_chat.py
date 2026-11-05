@@ -24,6 +24,7 @@ def _build_session() -> MagicMock:
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
     session.delete = AsyncMock()
+    session.get = AsyncMock(return_value=None)
     return session
 
 
@@ -72,12 +73,6 @@ async def test_admin_deleting_other_users_message_emits_deleted_by_admin() -> No
             ChatMessageOperations,
             "_get_channel_member_ids",
             AsyncMock(return_value=[]),
-        ),
-        patch.object(
-            ChatMessageOperations,
-            "decrement_resources_from_message",
-            AsyncMock(return_value=None),
-            create=True,
         ),
         patch(
             "uniffy.domains.files.attachments.operations."
@@ -137,12 +132,6 @@ async def test_self_delete_does_not_audit() -> None:
             ChatMessageOperations,
             "_get_channel_member_ids",
             AsyncMock(return_value=[]),
-        ),
-        patch.object(
-            ChatMessageOperations,
-            "decrement_resources_from_message",
-            AsyncMock(return_value=None),
-            create=True,
         ),
         patch(
             "uniffy.domains.files.attachments.operations."
