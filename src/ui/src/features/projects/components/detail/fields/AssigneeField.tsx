@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
+import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
 import { cn } from "@/shared/utils/cn";
 
 interface AssigneeFieldProps {
@@ -17,6 +18,11 @@ export function AssigneeField({
 }: AssigneeFieldProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const pinnedOptions = useAssigneePinnedOptions({
+    value: assigneeIds,
+    onChange,
+    allowUnassigned: true,
+  });
 
   return (
     <>
@@ -43,6 +49,7 @@ export function AssigneeField({
           subjectTypes="all"
           value={assigneeIds}
           onChange={(ids) => onChange(ids)}
+          pinnedOptions={pinnedOptions}
           portal
           align="left"
           dropdownWidth={320}

@@ -3,6 +3,7 @@ import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { unaryTransport } from "@/config/api";
 import { PeopleService } from "@uniffy/proto/people/v1/people_pb";
 import type {
+  Collaborator,
   GetOrgChartResponse,
   GetProfilePolicyResponse,
   GetTeamResponse,
@@ -78,6 +79,25 @@ export const peopleApi = {
     policy: { directoryEnabled: boolean; orgChartEnabled: boolean },
   ): Promise<UpdateProfilePolicyResponse> => {
     return peopleClient.updateProfilePolicy({ organizationId, policy });
+  },
+
+  listCollaborators: async (params: {
+    organizationId: string;
+    query?: string;
+    limit?: number;
+    excludeUserIds?: string[];
+  }): Promise<Collaborator[]> => {
+    const response = await peopleClient.listCollaborators({
+      organizationId: params.organizationId,
+      query: params.query || undefined,
+      limit: params.limit,
+      excludeUserIds: params.excludeUserIds ?? [],
+    });
+    return response.collaborators;
+  },
+
+  recordPeoplePicks: async (organizationId: string, userIds: string[]): Promise<void> => {
+    await peopleClient.recordPeoplePicks({ organizationId, userIds });
   },
 
   listTeams: async (organizationId: string): Promise<ListTeamsResponse> => {

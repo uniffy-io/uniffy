@@ -41,6 +41,7 @@ export function AttendeesSelector({ attendees, onAdd, onRemove }: AttendeesSelec
             onClose={() => setIsPickerOpen(false)}
             placeholder="Add people, teams or groups..."
             autoFocus
+            showSelf
           />
         ) : (
           <button

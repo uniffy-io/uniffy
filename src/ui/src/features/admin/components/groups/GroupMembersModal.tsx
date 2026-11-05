@@ -97,7 +97,7 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
   }, [managerQuery, searchManagers]);
 
   // One list area: typing turns it into add-results, clearing shows the roster.
-  const showResults = query.trim().length >= 2;
+  const showResults = query.trim().length > 0;
 
   const handleRemove = async (userId: string) => {
     setRemoving(userId);
@@ -235,7 +235,7 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         placeholder="Search for a manager..."
                         disabled={saving}
                       />
-                      {managerQuery.trim().length >= 2 && (
+                      {managerQuery.trim().length > 0 && (
                         <SubjectSearchResults
                           results={managerResults}
                           loading={searchingManagers}

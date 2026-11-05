@@ -235,7 +235,7 @@ export function ChannelSettingsModal() {
   const agentsMap = useAppSelector(selectAllAgents);
   const agentMatches = useMemo(() => {
     const needle = addMemberQuery.trim().toLowerCase();
-    if (needle.length < 2) return [];
+    if (!needle) return [];
     return Object.values(agentsMap)
       .filter((a) => a.name.toLowerCase().includes(needle))
       .slice(0, 10);
@@ -621,7 +621,7 @@ export function ChannelSettingsModal() {
                       />
                     </div>
 
-                    {showAddMember && addMemberQuery.length >= 2 && (
+                    {showAddMember && (
                       <div className={cn(popoverShellClass, "mt-1 max-h-[260px] overflow-y-auto")}>
                         {searchLoading &&
                         searchResults.length === 0 &&

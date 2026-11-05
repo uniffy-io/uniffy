@@ -291,7 +291,7 @@ export function MemberProfileDialog({ userId, displayName, onClose }: MemberProf
                     placeholder="Search for a manager..."
                     disabled={isManaged("manager_user_id")}
                   />
-                  {managerQuery.trim().length >= 2 && (
+                  {managerQuery.trim().length > 0 && (
                     <SubjectSearchResults
                       results={managerResults}
                       loading={searchingManagers}

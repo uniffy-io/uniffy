@@ -32,6 +32,7 @@ import {
 } from "@/features/search/utils/recentItems";
 import { teardownStorageEncryption } from "@/shared/crypto/storageEncryption";
 import { clearRequestedTaskPages } from "@/features/projects/hooks/useAssignedTasks";
+import { resetPeoplePickerSession } from "@/components/subject/collaborators";
 
 /**
  * The boundary that ends this tab's caches. A switch moves only this tab, so only its memory goes;
@@ -60,6 +61,7 @@ export async function clearSessionCaches(
     clearLibraryScope(dispatch);
     clearBlobCache();
     clearRequestedTaskPages();
+    resetPeoplePickerSession();
   }
   const work: Promise<unknown>[] = [];
   if (boundary.reason === "switch") {

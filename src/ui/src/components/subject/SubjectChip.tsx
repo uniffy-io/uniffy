@@ -35,6 +35,7 @@ export function SubjectChip({ subject, onRemove, disabled = false, className }: 
           type="button"
           onClick={onRemove}
           disabled={disabled}
+          aria-label={`Remove ${subject.name || subject.email}`}
           className={cn(
             "rounded-full p-0.5 ml-0.5 transition-colors",
             isViolet ? "hover:bg-violet-500/20" : "hover:bg-primary/20",

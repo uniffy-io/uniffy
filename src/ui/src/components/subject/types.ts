@@ -23,7 +23,11 @@ export interface Subject {
   kind?: SubjectGroupKind;
   /** Private group visible to the actor through their own membership. */
   isPrivate?: boolean;
+  /** Why a suggested person is listed: recent interaction, shared team, or anyone else. */
+  tier?: SubjectTier;
 }
+
+export type SubjectTier = "collaborator" | "teammate" | "member";
 
 export type SubjectPickerMode = "single" | "multi";
 

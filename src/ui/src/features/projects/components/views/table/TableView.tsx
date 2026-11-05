@@ -88,6 +88,7 @@ import { BlockedBadge } from "@/features/projects/components/BlockedBadge";
 import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
+import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
 import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
@@ -1941,6 +1942,11 @@ function InlineAssigneeEditor({
     },
     [onSave],
   );
+  const pinnedOptions = useAssigneePinnedOptions({
+    value: currentAssigneeIds,
+    onChange: handleChange,
+    allowUnassigned: true,
+  });
 
   return (
     <>
@@ -1950,6 +1956,7 @@ function InlineAssigneeEditor({
         subjectTypes="all"
         value={currentAssigneeIds}
         onChange={handleChange}
+        pinnedOptions={pinnedOptions}
         portal
         anchorRef={triggerRef}
         onClose={onClose}

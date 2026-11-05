@@ -253,6 +253,7 @@ function ActorSection({ filter, onChange }: SubProps) {
         <SubjectPicker
           mode="single"
           subjectTypes="users"
+          showSelf
           value={filter.actorUserId ? [filter.actorUserId] : []}
           onChange={(ids) => {
             onChange({ ...filter, actorUserId: ids[0] ?? null });

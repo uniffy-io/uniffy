@@ -241,7 +241,7 @@ export function DmMembersModal() {
                   />
                 </div>
 
-                {showAddMember && addMemberQuery.length >= 2 && (
+                {showAddMember && (
                   <div className={cn(popoverShellClass, "mt-1 max-h-[220px] overflow-y-auto")}>
                     {searchLoading && searchResults.length === 0 ? (
                       <div className="px-4 py-6 text-center text-sm text-muted-foreground">
