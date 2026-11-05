@@ -745,13 +745,19 @@ export function ChatConversationScreen() {
   }, [restorePreEditCompose]);
 
   const dispatchSend = useCallback(
-    (content: string, replyId: string | undefined, attachmentFileIds: string[]) => {
+    async (content: string, replyId: string | undefined, attachmentFileIds: string[]) => {
       if (attachments.uploading) return;
-      flushOnSend();
-      resetCompose();
-      attachments.clear();
       messagesQuery.jumpToLatest();
-      sendMessage.mutate({ content, replyToId: replyId, attachmentFileIds });
+      sendMessage.mutate({
+        content,
+        replyToId: replyId,
+        attachmentFileIds,
+        onPrepared: () => {
+          flushOnSend();
+          resetCompose();
+          attachments.clear();
+        },
+      });
       // Only a scrolled-up sender needs snapping back to the newest message
       // (offset 0 in the inverted list). Firing it unconditionally animates the
       // list while it is already pinned there, which fights the insert the
@@ -863,8 +869,8 @@ export function ChatConversationScreen() {
         {
           text: "Retry",
           onPress: () => {
-            discardFailed(message.id);
             sendMessage.mutate({
+              clientMessageId: message.clientMessageId,
               content: message.content,
               replyToId: message.replyToId ?? undefined,
               attachmentFileIds: message.metadata?.attachmentIds

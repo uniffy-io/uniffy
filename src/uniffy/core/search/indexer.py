@@ -153,6 +153,7 @@ class SearchIndexer:
         tags: list[str] | None = None,
         rank_score: float | None = None,
         metadata: dict[str, str] | None = None,
+        wait: bool = False,
     ) -> None:
         await self.search.index_document(
             SearchDocumentInput(
@@ -177,7 +178,8 @@ class SearchIndexer:
                     rank_score if rank_score is not None else default_rank_score(entity_type)
                 ),
                 metadata=metadata,
-            )
+            ),
+            wait=wait,
         )
 
     async def batch_index(self, items: list[dict]) -> None:

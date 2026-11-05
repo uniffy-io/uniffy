@@ -1,3 +1,11 @@
+import {
+  preparePendingSend,
+  pendingSends,
+  forgetPendingSend,
+  type PendingSend,
+} from "@/features/chat/utils/pendingSends";
+import { randomUUID } from "@/shared/utils/uuid";
+import { pendingMessageId } from "@/features/chat/utils/pendingMessages";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import type { Dispatch, UnknownAction } from "@reduxjs/toolkit";
 import { timestampDate } from "@bufbuild/protobuf/wkt";
@@ -52,6 +60,7 @@ import {
 } from "@/features/chat/store/chatChannelsSlice";
 import {
   setMessages,
+  removeMessage as removePendingMessage,
   prependMessages,
   appendMessage,
   cacheMessage,
@@ -75,6 +84,8 @@ import {
 } from "@/features/chat/store/chatDraftsSlice";
 import {
   setThreadMessages,
+  appendThreadMessage,
+  removePendingThreadMessage,
   setThreadsInbox,
   followThread as followThreadAction,
   unfollowThread as unfollowThreadAction,
@@ -123,7 +134,7 @@ const getOrganizationId = (state: RootState): string => {
 
 const INITIAL_MESSAGE_RETRY_DELAY_MS = 250;
 
-const removeChannelLocally = (
+export const removeChannelLocally = (
   state: RootState,
   dispatch: Dispatch<UnknownAction>,
   organizationId: string,
@@ -516,10 +527,14 @@ export const deleteChannel = createAsyncThunk<
   }
 });
 
-async function loadMessagePage(
+export async function loadMessagePage(
   request: Parameters<typeof chatApi.getMessages>[0],
+  signal?: AbortSignal,
 ): Promise<MessagePage> {
-  const response = await chatApi.getMessages(request);
+  const response = await (signal
+    ? chatApi.getMessages(request, { signal })
+    : chatApi.getMessages(request));
+  signal?.throwIfAborted();
   const messages = response.messages.map(messageToPlain);
 
   // Attachments share one batched read for the whole message page.
@@ -698,6 +713,7 @@ export const fetchMessages = createAsyncThunk<
   }
 });
 
+const sending = new Map<string, ReturnType<typeof chatApi.sendMessage>>();
 export const sendMessage = createAsyncThunk<
   ChatMessage,
   {
@@ -708,35 +724,155 @@ export const sendMessage = createAsyncThunk<
     attachmentFileIds?: string[];
     metadata?: Record<string, string>;
     alsoSendToChannel?: boolean;
+    clientMessageId?: string;
   },
   { state: RootState; rejectValue: string }
 >("chat/sendMessage", async (params, { getState, dispatch, rejectWithValue }) => {
+  const auth = getState().auth;
+  const channelRevision = getState().chatChannels.revisionsById[params.channelId];
+  let clientMessageId = params.clientMessageId ?? randomUUID();
+  let localId = pendingMessageId(auth.user?.id ?? "", clientMessageId);
+  let pending: PendingSend | undefined;
+  let optimistic: ChatMessage | undefined;
+  const currentSession = () =>
+    isChatSessionCurrent(auth, getState().auth) &&
+    getState().chatChannels.revisionsById[params.channelId] === channelRevision;
+  const removePending = () => {
+    if (params.rootId) {
+      dispatch(removePendingThreadMessage({ rootMessageId: params.rootId, messageId: localId }));
+    } else {
+      dispatch(removePendingMessage({ channelId: params.channelId, messageId: localId }));
+    }
+  };
   try {
     const organizationId = getOrganizationId(getState());
-    const response = await chatApi.sendMessage({
-      organizationId,
+    const now = new Date().toISOString();
+    optimistic = {
+      id: localId,
+      clientMessageId,
+      sendStatus: "sending",
       channelId: params.channelId,
+      senderId: auth.user?.id ?? "",
+      senderType: "USER",
+      senderName: auth.user?.fullName || auth.user?.username || "You",
       content: params.content,
-      rootId: params.rootId,
-      replyToId: params.replyToId,
-      attachmentFileIds: params.attachmentFileIds ?? [],
+      rootId: params.rootId ?? null,
+      replyToId: params.replyToId ?? null,
+      isForwarded: false,
+      isDeleted: false,
+      isPinned: false,
+      editedAt: null,
       metadata: params.metadata ?? {},
-      alsoSendToChannel: params.alsoSendToChannel ?? false,
-    });
-    if (!response.message) {
-      return rejectWithValue("Failed to send message");
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (params.rootId) {
+      dispatch(appendThreadMessage({ rootMessageId: params.rootId, message: optimistic }));
+    } else {
+      dispatch(appendMessage({ channelId: params.channelId, message: optimistic }));
     }
+    pending = await preparePendingSend(auth.user!.id, organizationId, {
+      ...params,
+      clientMessageId,
+    });
+    if (!currentSession()) throw new Error("Session changed");
+    if (pending.request.clientMessageId !== clientMessageId) {
+      removePending();
+      clientMessageId = pending.request.clientMessageId;
+      localId = pendingMessageId(auth.user!.id, clientMessageId);
+      optimistic = { ...optimistic, id: localId, clientMessageId };
+      if (params.rootId)
+        dispatch(appendThreadMessage({ rootMessageId: params.rootId, message: optimistic }));
+      else dispatch(appendMessage({ channelId: params.channelId, message: optimistic }));
+    }
+    const sendKey = `${pending.key}:${clientMessageId}`;
+    let request = sending.get(sendKey);
+    if (!request) {
+      request = chatApi.sendMessage({
+        attachmentFileIds: [],
+        metadata: {},
+        alsoSendToChannel: false,
+        organizationId,
+        ...pending.request,
+      });
+      sending.set(sendKey, request);
+      void request.then(
+        () => sending.delete(sendKey),
+        () => sending.delete(sendKey),
+      );
+    }
+    const response = await request;
+    if (!response.message) throw new Error("Failed to send message");
     const plain = messageToPlain(response.message);
-    // Instant local clear; the server also clears the draft and fans out to other devices.
-    dispatch(draftRemoved(draftKey(params.channelId, params.rootId)));
-    // Append eagerly for immediate display; the stream will also deliver it.
-    if (!params.rootId) {
-      dispatch(appendMessage({ channelId: params.channelId, message: plain }));
+    await forgetPendingSend(pending).catch(() => {});
+    if (currentSession()) {
+      removePending();
+      if (
+        getState().chatDrafts.byKey[draftKey(params.channelId, params.rootId)]?.content ===
+        params.content
+      ) {
+        dispatch(draftRemoved(draftKey(params.channelId, params.rootId)));
+      }
+      if (params.rootId) {
+        dispatch(appendThreadMessage({ rootMessageId: params.rootId, message: plain }));
+      } else {
+        dispatch(appendMessage({ channelId: params.channelId, message: plain }));
+      }
     }
     return plain;
   } catch (error) {
+    if (currentSession()) {
+      removePending();
+      if (pending && optimistic) {
+        const failed = { ...optimistic, sendStatus: "failed" as const };
+        if (params.rootId)
+          dispatch(appendThreadMessage({ rootMessageId: params.rootId, message: failed }));
+        else dispatch(appendMessage({ channelId: params.channelId, message: failed }));
+      }
+    }
     return rejectWithValue(error instanceof Error ? error.message : "Failed to send message");
   }
+});
+
+const restoringSends = new Set<string>();
+export const restorePendingSends = createAsyncThunk<void, void, { state: RootState }>(
+  "chat/restorePendingSends",
+  async (_, { getState, dispatch }) => {
+    const auth = getState().auth;
+    if (!auth.user?.id || !auth.currentOrganizationId) return;
+    const scope = `${auth.user.id}:${auth.currentOrganizationId}`;
+    if (restoringSends.has(scope)) return;
+    restoringSends.add(scope);
+    try {
+      for (const pending of await pendingSends(auth.user.id, auth.currentOrganizationId)) {
+        if (!isChatSessionCurrent(auth, getState().auth)) return;
+        await dispatch(sendMessage(pending.request));
+      }
+    } finally {
+      restoringSends.delete(scope);
+    }
+  },
+);
+export const resolvePendingSend = createAsyncThunk<
+  void,
+  { clientMessageId: string; discard?: boolean },
+  { state: RootState }
+>("chat/resolvePendingSend", async (params, { getState, dispatch }) => {
+  const auth = getState().auth;
+  if (!auth.user?.id || !auth.currentOrganizationId) return;
+  const pending = (await pendingSends(auth.user.id, auth.currentOrganizationId)).find(
+    (row) => row.request.clientMessageId === params.clientMessageId,
+  );
+  if (!pending || !isChatSessionCurrent(auth, getState().auth)) return;
+  if (!params.discard) {
+    await dispatch(sendMessage(pending.request));
+    return;
+  }
+  await forgetPendingSend(pending);
+  const messageId = pendingMessageId(auth.user.id, params.clientMessageId);
+  if (pending.request.rootId)
+    dispatch(removePendingThreadMessage({ rootMessageId: pending.request.rootId, messageId }));
+  else dispatch(removePendingMessage({ channelId: pending.request.channelId, messageId }));
 });
 
 export const forwardMessage = createAsyncThunk<
@@ -1045,6 +1181,9 @@ export const fetchThreadMessages = createAsyncThunk<
   { channelId: string; rootMessageId: string; beforeId?: string; limit?: number },
   { state: RootState; rejectValue: string }
 >("chat/fetchThreadMessages", async (params, { getState, dispatch, rejectWithValue }) => {
+  const auth = getState().auth;
+  const revision = getState().chatChannels.revisionsById[params.channelId];
+  const before = getState().chatThreads.threadMessages[params.rootMessageId];
   try {
     const organizationId = getOrganizationId(getState());
     const response = await chatApi.getThreadMessages({
@@ -1055,6 +1194,12 @@ export const fetchThreadMessages = createAsyncThunk<
       limit: params.limit ?? 50,
     });
     const messages = response.messages.map(messageToPlain);
+    if (
+      !isChatSessionCurrent(auth, getState().auth) ||
+      getState().chatChannels.revisionsById[params.channelId] !== revision ||
+      getState().chatThreads.threadMessages[params.rootMessageId] !== before
+    )
+      return messages;
     dispatch(setThreadMessages({ rootMessageId: params.rootMessageId, messages }));
     return messages;
   } catch (error) {
@@ -1224,7 +1369,7 @@ export const clearActiveChannelUnread = createAsyncThunk<
   const channel = state.chatChannels.byId[channelId];
   if (!channel || ((channel.unreadCount ?? 0) === 0 && (channel.mentionCount ?? 0) === 0)) return;
   const ids = state.chatMessages.idsByChannel[channelId];
-  const lastId = ids?.[ids.length - 1];
+  const lastId = ids?.filter((id) => !state.chatMessages.byId[id]?.sendStatus).at(-1);
   if (!lastId) return;
   dispatch(updateUnreadCounts([{ channelId, unreadCount: 0, mentionCount: 0 }]));
   dispatch(markChannelRead({ channelId, lastReadMessageId: lastId }));

@@ -85,6 +85,7 @@ class AgentChatBridge:
         search_indexer: SearchIndexer,
         buffer: UpdateBuffer,
         call_lifecycle: ChannelCallLifecycle,
+        run_id: UUID | None = None,
     ) -> None:
         """Invoke the agent in response to a user chat message.
 
@@ -157,7 +158,7 @@ class AgentChatBridge:
                 channel_id=channel_id,
             )
 
-        run_id = generate_id()
+        run_id = run_id or generate_id()
         await set_run_state(
             run_id=run_id,
             user_id=user_id,
@@ -227,6 +228,9 @@ class AgentChatBridge:
             # Watcher cancelled the run on a user "stop" (interrupting the
             # in-flight tool / generation mid-await).
             cancelled = True
+            current = asyncio.current_task()
+            if current is not None and current.cancelling():
+                raise
         except Exception as exc:
             logger.exception("Agent chat invocation failed")
             try:
@@ -235,6 +239,7 @@ class AgentChatBridge:
                 )
             except Exception:
                 logger.exception("Failed to write agent error message to chat")
+            raise
         finally:
             heartbeat.cancel()
             watcher.cancel()

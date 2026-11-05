@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, ThreadInboxItem } from "@/features/chat/types";
+import { pendingMessageId, retainPendingMessages } from "@/features/chat/utils/pendingMessages";
 import type { RootState } from "@/app/store";
 import { deleteMessage, updateMessage } from "@/features/chat/store/chatMessagesSlice";
 import { REACTOR_PREVIEW_LIMIT } from "@/features/chat/utils/limits";
@@ -31,7 +32,10 @@ export const chatThreadsSlice = createSlice({
       state,
       action: PayloadAction<{ rootMessageId: string; messages: ChatMessage[] }>,
     ) => {
-      state.threadMessages[action.payload.rootMessageId] = action.payload.messages;
+      state.threadMessages[action.payload.rootMessageId] = retainPendingMessages(
+        state.threadMessages[action.payload.rootMessageId] ?? [],
+        action.payload.messages,
+      );
     },
     appendThreadMessage: (
       state,
@@ -41,7 +45,34 @@ export const chatThreadsSlice = createSlice({
       if (!state.threadMessages[rootMessageId]) {
         state.threadMessages[rootMessageId] = [];
       }
-      state.threadMessages[rootMessageId].push(message);
+      if (
+        message.sendStatus &&
+        state.threadMessages[rootMessageId].some(
+          (row) =>
+            !row.sendStatus &&
+            row.senderId === message.senderId &&
+            row.clientMessageId === message.clientMessageId,
+        )
+      )
+        return;
+      if (message.clientMessageId && !message.sendStatus) {
+        const pendingId = pendingMessageId(message.senderId, message.clientMessageId);
+        state.threadMessages[rootMessageId] = state.threadMessages[rootMessageId].filter(
+          (row) => row.id !== pendingId,
+        );
+      }
+      if (!state.threadMessages[rootMessageId].some((row) => row.id === message.id)) {
+        state.threadMessages[rootMessageId].push(message);
+      }
+    },
+    removePendingThreadMessage: (
+      state,
+      action: PayloadAction<{ rootMessageId: string; messageId: string }>,
+    ) => {
+      const { rootMessageId, messageId } = action.payload;
+      state.threadMessages[rootMessageId] = (state.threadMessages[rootMessageId] ?? []).filter(
+        (row) => row.id !== messageId || !row.sendStatus,
+      );
     },
     setFollowedThreads: (state, action: PayloadAction<string[]>) => {
       state.followedThreads = action.payload;
@@ -210,6 +241,7 @@ export const chatThreadsSlice = createSlice({
 export const {
   setActiveThread,
   setThreadMessages,
+  removePendingThreadMessage,
   appendThreadMessage,
   setFollowedThreads,
   followThread,

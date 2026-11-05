@@ -131,10 +131,6 @@ def _emit_patches(emit_mock, stream_mock):
     return (
         patch("uniffy.domains.chat.messages.notifications.emit_notification", emit_mock),
         patch(
-            "uniffy.domains.chat.messages.notifications.publish_user_chat_event",
-            stream_mock,
-        ),
-        patch(
             "uniffy.domains.chat.messages.notifications.publish_user_chat_events",
             AsyncMock(side_effect=_fan_out),
         ),
@@ -147,8 +143,8 @@ class TestEmitSendNotifications:
         stream_mock = AsyncMock()
         ops = ops or _ops()
         message = _message(channel.id, sender)
-        emit_patch, stream_patch, batch_patch = _emit_patches(emit_mock, stream_mock)
-        with emit_patch, stream_patch, batch_patch:
+        emit_patch, batch_patch = _emit_patches(emit_mock, stream_mock)
+        with emit_patch, batch_patch:
             await ops._emit_send_notifications(
                 message,
                 channel,
@@ -276,8 +272,8 @@ class TestBackgroundPostSendFanout:
         )
         ops._index_message = AsyncMock()
         ops._update_resources = AsyncMock()
-        ops._publish_unread_notifications = AsyncMock()
-        ops._emit_send_notifications = AsyncMock()
+        ops.prepared_events = []
+        ops._prepare_send_notifications = AsyncMock(return_value=[])
         sender = message.sender_id
         with (
             patch(
@@ -289,7 +285,9 @@ class TestBackgroundPostSendFanout:
                 AsyncMock(),
             ),
         ):
-            await ops.background_post_send(message, channel, sender, None, "Ada", member_ids)
+            ops.prepared_events = await ops.prepare_delivery_notifications(
+                message, channel, sender, None, "Ada", member_ids
+            )
         return ops
 
     async def test_team_recipients_reach_both_notification_paths(self) -> None:
@@ -302,9 +300,10 @@ class TestBackgroundPostSendFanout:
 
         ops = await self._run(channel, message, [sender, member], [expansion])
 
-        unread_call = ops._publish_unread_notifications.call_args.args
-        assert unread_call[3] == {member}
-        emit_call = ops._emit_send_notifications.call_args.args
+        assert {uid for uid, _, payload in ops.prepared_events if payload["mention_count"]} == {
+            member
+        }
+        emit_call = ops._prepare_send_notifications.call_args.args
         assert emit_call[6] == set()
         assert emit_call[7] == [(expansion, [member])]
 
@@ -315,7 +314,7 @@ class TestBackgroundPostSendFanout:
 
         ops = await self._run(channel, message, [sender], [])
 
-        assert ops._emit_send_notifications.call_args.args[7] == []
+        assert ops._prepare_send_notifications.call_args.args[7] == []
 
     async def test_system_message_chip_pings_nobody(self) -> None:
         actor, added = generate_id(), generate_id()
@@ -329,8 +328,8 @@ class TestBackgroundPostSendFanout:
 
         ops = await self._run(channel, message, [actor, added], [])
 
-        assert ops._publish_unread_notifications.call_args.args[3] == set()
-        emit_call = ops._emit_send_notifications.call_args.args
+        assert {uid for uid, _, payload in ops.prepared_events if payload["mention_count"]} == set()
+        emit_call = ops._prepare_send_notifications.call_args.args
         assert emit_call[6] == set()
         assert emit_call[7] == []
 
@@ -342,4 +341,4 @@ class TestBackgroundPostSendFanout:
 
         ops = await self._run(channel, message, [actor, added], [])
 
-        assert ops._publish_unread_notifications.call_args.args[2] == [actor, added]
+        assert [uid for uid, _, _ in ops.prepared_events] == [added]

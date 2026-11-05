@@ -162,6 +162,8 @@ def message_to_proto(
         is_forwarded=get_forward_metadata(message.message_metadata) is not None,
     )
 
+    if message.client_message_id:
+        proto.client_message_id = str(message.client_message_id)
     if message.root_id:
         proto.root_id = str(message.root_id)
     if message.reply_to_id:

@@ -147,7 +147,12 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
   );
 
   const handleSend = useCallback(
-    async (content: string, fileIds: string[], metadata?: Record<string, string>) => {
+    async (
+      content: string,
+      fileIds: string[],
+      metadata?: Record<string, string>,
+      clientMessageId?: string,
+    ) => {
       if (!activeThreadId || !rootMessage) return false;
       await dispatch(
         sendMessage({
@@ -157,6 +162,7 @@ export function ThreadPanel({ overlay = false }: ThreadPanelProps) {
           replyToId: replyToMessage?.id,
           attachmentFileIds: fileIds,
           metadata,
+          clientMessageId,
           alsoSendToChannel,
         }),
       ).unwrap();

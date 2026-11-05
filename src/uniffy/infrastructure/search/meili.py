@@ -224,13 +224,15 @@ class MeiliSearchEngine:
     def _index(self):
         return self.client.index(self.config.index_name)
 
-    async def put_documents(self, documents: list[SearchDocument]) -> None:
+    async def put_documents(self, documents: list[SearchDocument], *, wait: bool = False) -> None:
         if documents:
-            await self._observe(
+            task = await self._observe(
                 "index",
                 self._index().add_documents(documents),
                 count=len(documents),
             )
+            if wait:
+                await self._await_task(task)
 
     async def patch_documents(
         self,

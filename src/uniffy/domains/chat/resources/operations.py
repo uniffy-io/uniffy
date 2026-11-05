@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.content.references import extract_urns_with_types
 from uniffy.core.models.chat.channel_resource import ChatChannelResource
+from uniffy.core.models.chat.delivery import ChatDelivery, ChatDeliveryEffect
 from uniffy.core.types import ContentType, generate_id
 from uniffy.domains.chat.cache import (
     RESOURCES_HEAD_LIMIT,
@@ -31,12 +32,24 @@ class ChatResourceOperations:
         content: str,
         sender_id: UUID,
     ) -> None:
-        """Parse URN mentions and batch-upsert resources."""
+        touched = await self.stage_resources_from_message(channel_id, content, sender_id)
+        await self.session.commit()
+        if touched:
+            await invalidate_cached_channel_resources(channel_id, touched)
+
+    async def stage_resources_from_message(
+        self,
+        channel_id: UUID,
+        content: str,
+        sender_id: UUID,
+        *,
+        at: datetime | None = None,
+    ) -> list[str]:
         urns = extract_urns_with_types(content)
         if not urns:
-            return
+            return []
 
-        now = datetime.now(UTC)
+        now = at or datetime.now(UTC)
 
         rows = []
         for urn, ct in urns:
@@ -51,26 +64,47 @@ class ChatResourceOperations:
                 "first_mentioned_by": sender_id,
             })
 
-        try:
-            stmt = insert(ChatChannelResource).values(rows)
-            stmt = stmt.on_conflict_do_update(
-                constraint="uq_chat_resources_channel_urn",
-                set_={
-                    "last_mentioned_at": now,
-                    "mention_count": (ChatChannelResource.mention_count + 1),
-                },
-            )
-            await self.session.execute(stmt)
-            await self.session.commit()
-        except Exception:
-            logger.warning(
-                f"Failed to upsert resources for channel {channel_id}",
-                component=LOGGER_COMPONENT,
-            )
-            return
+        stmt = insert(ChatChannelResource).values(rows)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_chat_resources_channel_urn",
+            set_={
+                "last_mentioned_at": func.greatest(ChatChannelResource.last_mentioned_at, now),
+                "mention_count": ChatChannelResource.mention_count + 1,
+            },
+        )
+        await self.session.execute(stmt)
+        return sorted({ct.value for _, ct in urns})
 
-        touched_types = sorted({ct.value for _, ct in urns})
-        await invalidate_cached_channel_resources(channel_id, touched_types)
+    async def stage_replace_message_resources(
+        self,
+        message_id: UUID,
+        channel_id: UUID,
+        sender_id: UUID,
+        previous_content: str,
+        content: str,
+    ) -> list[str]:
+        """Call under the message lock so delayed delivery cannot double-count an edit."""
+        pending = await self.session.get(ChatDelivery, (message_id, ChatDeliveryEffect.RESOURCES))
+        if pending is not None:
+            return []
+        urns = extract_urns_with_types(previous_content)
+        if urns:
+            await self.session.execute(
+                update(ChatChannelResource)
+                .where(
+                    ChatChannelResource.channel_id == channel_id,
+                    ChatChannelResource.urn.in_([urn for urn, _ in urns]),
+                )
+                .values(mention_count=ChatChannelResource.mention_count - 1)
+            )
+            await self.session.execute(
+                delete(ChatChannelResource).where(
+                    ChatChannelResource.channel_id == channel_id,
+                    ChatChannelResource.mention_count <= 0,
+                )
+            )
+        touched = await self.stage_resources_from_message(channel_id, content, sender_id)
+        return sorted(set(touched) | {ct.value for _, ct in urns})
 
     async def decrement_resources_from_message(
         self,

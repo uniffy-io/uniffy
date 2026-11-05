@@ -214,7 +214,9 @@ class SearchEngine(Protocol):
 
     async def shutdown(self) -> None: ...
 
-    async def put_documents(self, documents: list[SearchDocument]) -> None: ...
+    async def put_documents(
+        self, documents: list[SearchDocument], *, wait: bool = False
+    ) -> None: ...
 
     async def patch_documents(
         self,

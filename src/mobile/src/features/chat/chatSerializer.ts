@@ -88,6 +88,7 @@ export interface SerializedChannel {
 
 export interface SerializedMessage {
   id: string;
+  clientMessageId?: string;
   channelId: string;
   senderId: string;
   senderType: SenderType;
@@ -244,6 +245,7 @@ export function messageToPlain(proto: ProtoChatMessage): SerializedMessage {
   const senderType = SENDER_TYPE_MAP[proto.senderType] ?? "USER";
   return {
     id: proto.id,
+    clientMessageId: proto.clientMessageId || undefined,
     channelId: proto.channelId,
     senderId: proto.senderId,
     senderType,

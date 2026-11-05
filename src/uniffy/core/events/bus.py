@@ -22,15 +22,21 @@ from uniffy.core.types import ContentType, NotificationType, generate_id
 
 logger = logger.bind(component="events.bus")
 _staging_session: ContextVar[AsyncSession | None] = ContextVar("notification_staging", default=None)
+_staged_event_ids: ContextVar[list[UUID] | None] = ContextVar(
+    "notification_staged_ids", default=None
+)
 
 
 @contextmanager
-def stage_notification_events(session: AsyncSession) -> Generator[None]:
+def stage_notification_events(session: AsyncSession) -> Generator[list[UUID]]:
     """Preserve original recipient deltas in the content owner's transaction."""
     token = _staging_session.set(session)
+    ids: list[UUID] = []
+    ids_token = _staged_event_ids.set(ids)
     try:
-        yield
+        yield ids
     finally:
+        _staged_event_ids.reset(ids_token)
         _staging_session.reset(token)
 
 
@@ -127,6 +133,9 @@ async def emit_notification(event: NotificationEvent) -> None:
                 payload=_event_to_json(event),
             )
         )
+        staged_ids = _staged_event_ids.get()
+        if staged_ids is not None:
+            staged_ids.append(event.event_id)
         return
     try:
         event_json = _event_to_json(event)

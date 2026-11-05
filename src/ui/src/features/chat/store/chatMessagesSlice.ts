@@ -1,5 +1,6 @@
 import { createSlice, createSelector, type PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage } from "@/features/chat/types";
+import { pendingMessageId, retainPendingMessages } from "@/features/chat/utils/pendingMessages";
 import type { RootState } from "@/app/store";
 import { REACTOR_PREVIEW_LIMIT } from "@/features/chat/utils/limits";
 
@@ -19,6 +20,8 @@ export interface AgentThinkingBlock {
 }
 
 interface ChatMessagesState {
+  recoveryRevision: number;
+  pinsRevisionByChannel: Record<string, number>;
   byId: Record<string, ChatMessage>;
   idsByChannel: Record<string, string[]>;
   idSetByChannel: Record<string, Record<string, true>>;
@@ -38,6 +41,8 @@ interface ChatMessagesState {
 }
 
 const initialState: ChatMessagesState = {
+  recoveryRevision: 0,
+  pinsRevisionByChannel: {},
   byId: {},
   idsByChannel: {},
   idSetByChannel: {},
@@ -60,6 +65,24 @@ export const chatMessagesSlice = createSlice({
   name: "chatMessages",
   initialState,
   reducers: {
+    resetTransient: (state) => {
+      state.typingByChannel = {};
+      state.typingByThread = {};
+      state.agentThinkingByMessage = {};
+    },
+    recovered: (state) => {
+      state.recoveryRevision++;
+    },
+    pruneChannelMessages: (
+      state,
+      action: PayloadAction<{ channelId: string; retainId?: string }>,
+    ) => {
+      const { channelId, retainId } = action.payload;
+      const keep = state.idSetByChannel[channelId] ?? {};
+      for (const [id, message] of Object.entries(state.byId)) {
+        if (message.channelId === channelId && !keep[id] && id !== retainId) delete state.byId[id];
+      }
+    },
     cacheMessage: (state, action: PayloadAction<ChatMessage>) => {
       state.byId[action.payload.id] = action.payload;
     },
@@ -75,12 +98,16 @@ export const chatMessagesSlice = createSlice({
       const ids: string[] = [];
       const set: Record<string, true> = {};
       let pinned = 0;
-      for (const m of messages) {
+      const existing = (state.idsByChannel[channelId] ?? []).map((id) => state.byId[id]);
+      for (const m of retainPendingMessages(existing, messages)) {
         if (set[m.id]) continue;
         set[m.id] = true;
         ids.push(m.id);
         state.byId[m.id] = m;
         if (isPinnedActive(m)) pinned += 1;
+      }
+      for (const m of existing) {
+        if (m.sendStatus && !set[m.id]) delete state.byId[m.id];
       }
       state.idsByChannel[channelId] = ids;
       state.idSetByChannel[channelId] = set;
@@ -93,6 +120,28 @@ export const chatMessagesSlice = createSlice({
       if (!state.idsByChannel[channelId]) state.idsByChannel[channelId] = [];
       if (!state.idSetByChannel[channelId]) state.idSetByChannel[channelId] = {};
       const set = state.idSetByChannel[channelId];
+      if (
+        message.sendStatus &&
+        state.idsByChannel[channelId].some((id) => {
+          const row = state.byId[id];
+          return (
+            !row.sendStatus &&
+            row.senderId === message.senderId &&
+            row.clientMessageId === message.clientMessageId
+          );
+        })
+      )
+        return;
+      if (message.clientMessageId && !message.sendStatus) {
+        const pendingId = pendingMessageId(message.senderId, message.clientMessageId);
+        if (set[pendingId]) {
+          state.idsByChannel[channelId] = state.idsByChannel[channelId].filter(
+            (id) => id !== pendingId,
+          );
+          delete set[pendingId];
+          delete state.byId[pendingId];
+        }
+      }
       if (set[message.id]) return;
       set[message.id] = true;
       state.idsByChannel[channelId].push(message.id);
@@ -132,6 +181,7 @@ export const chatMessagesSlice = createSlice({
       }>,
     ) => {
       const { channelId, message } = action.payload;
+      state.pinsRevisionByChannel[channelId] = (state.pinsRevisionByChannel[channelId] ?? 0) + 1;
       const existing = state.byId[message.id];
       if (!existing) return;
       const wasPinned = isPinnedActive(existing);
@@ -153,6 +203,7 @@ export const chatMessagesSlice = createSlice({
     },
     deleteMessage: (state, action: PayloadAction<{ channelId: string; messageId: string }>) => {
       const { channelId, messageId } = action.payload;
+      state.pinsRevisionByChannel[channelId] = (state.pinsRevisionByChannel[channelId] ?? 0) + 1;
       const existing = state.byId[messageId];
       if (!existing) return;
       const wasPinned = isPinnedActive(existing);
@@ -238,6 +289,7 @@ export const chatMessagesSlice = createSlice({
       delete state.idsByChannel[channelId];
       delete state.idSetByChannel[channelId];
       delete state.pinnedCountByChannel[channelId];
+      delete state.pinsRevisionByChannel[channelId];
       delete state.hasMoreByChannel[channelId];
       delete state.windowedByChannel[channelId];
       delete state.unreadSeparatorByChannel[channelId];
@@ -488,7 +540,10 @@ export const chatMessagesSlice = createSlice({
 });
 
 export const {
+  recovered,
+  resetTransient,
   cacheMessage,
+  pruneChannelMessages,
   setMessages,
   appendMessage,
   prependMessages,

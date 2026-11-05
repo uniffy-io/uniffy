@@ -12,7 +12,11 @@ import {
 } from "react-native";
 import { PaperPlaneRight, X } from "phosphor-react-native";
 import { useMessages } from "@features/chat/useChat";
-import { useSendMessage, useDiscardFailedMessage } from "@features/chat/useChatMutations";
+import {
+  useSendMessage,
+  useDiscardFailedMessage,
+  useRetryFailedMessage,
+} from "@features/chat/useChatMutations";
 import { useCall } from "@features/calls/CallContext";
 import { callErrorMessage } from "@features/calls/callErrors";
 import { MarkdownRenderer } from "@shared/components/MarkdownRenderer";
@@ -24,6 +28,7 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
   const { organizationId } = useAuth();
   const { data, isLoading, isError, refetch, loadOlder, isLoadingOlder } = useMessages(channelId);
   const sendMessage = useSendMessage(channelId);
+  const retryFailed = useRetryFailedMessage();
   const discard = useDiscardFailedMessage(channelId);
   const { showFeedback } = useCall();
   const [draft, setDraft] = useState("");
@@ -37,11 +42,12 @@ export function CallChat({ channelId, onClose }: { channelId: string; onClose: (
   const send = async (content: string, failedId?: string) => {
     if (!content.trim() || sendMessage.isPending) return;
     try {
-      if (failedId) discard(failedId);
-      await sendMessage.mutateAsync({ content });
-      setDraft("");
+      if (failedId) await retryFailed.mutateAsync(failedId);
+      else {
+        await sendMessage.mutateAsync({ content });
+        setDraft("");
+      }
     } catch (error) {
-      setDraft("");
       showFeedback(callErrorMessage(error));
     }
   };

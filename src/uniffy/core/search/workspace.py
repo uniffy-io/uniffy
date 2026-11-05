@@ -59,8 +59,8 @@ class WorkspaceSearch:
     async def shutdown(self) -> None:
         await self.engine.shutdown()
 
-    async def index_document(self, item: SearchDocumentInput) -> None:
-        await self.engine.put_documents([build_search_document(item)])
+    async def index_document(self, item: SearchDocumentInput, *, wait: bool = False) -> None:
+        await self.engine.put_documents([build_search_document(item)], wait=wait)
 
     async def batch_index_documents(self, documents: list[dict[str, Any]]) -> None:
         if documents:

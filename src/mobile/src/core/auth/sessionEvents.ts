@@ -1,4 +1,8 @@
 type Listener = () => void;
+let authGeneration = 0;
+export function getAuthGeneration(): number {
+  return authGeneration;
+}
 
 const sessionExpiredListeners = new Set<Listener>();
 const organizationLostListeners = new Set<Listener>();
@@ -76,5 +80,6 @@ export function onAuthBoundary(listener: (organizationId: string | null) => void
 }
 
 export function emitAuthBoundary(organizationId: string | null): void {
+  authGeneration++;
   for (const listener of authBoundaryListeners) listener(organizationId);
 }

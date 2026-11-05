@@ -60,6 +60,7 @@ def build_message_payload(
     is_forwarded: bool = False,
     forward_context: dict | None = None,
     thread_reply_context: dict | None = None,
+    client_message_id: UUID | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "message_id": str(message_id),
@@ -74,6 +75,8 @@ def build_message_payload(
         "sender_avatar_url": sender_avatar_url,
         "is_forwarded": is_forwarded,
     }
+    if client_message_id:
+        payload["client_message_id"] = str(client_message_id)
     if edited_at:
         payload["edited_at"] = edited_at.isoformat()
     if metadata:

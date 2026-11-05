@@ -1,3 +1,8 @@
+import { getAuthGeneration } from "@core/auth/sessionEvents";
+import { localSend, mergeSendRows } from "@features/chat/sendState";
+import { pendingSends, forgetPendingSend } from "@features/chat/pendingSends";
+import { deliverSend } from "@features/chat/sendDelivery";
+import { randomUUID } from "expo-crypto";
 import type { UnreadMap } from "@features/chat/unreadCounts";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { AgentConfirmationDecision } from "@uniffy/proto/chat/v1/chat_pb";
@@ -53,82 +58,110 @@ export function useSendMessage(channelId: string) {
   const key = messagesKey(organizationId, channelId);
 
   return useMutation({
-    mutationFn: (args: { content: string; attachmentFileIds?: string[]; replyToId?: string }) =>
-      chatApi.sendMessage({
-        organizationId: organizationId!,
-        channelId,
-        content: args.content,
-        attachmentFileIds: args.attachmentFileIds ?? [],
-        replyToId: args.replyToId,
-      }),
+    mutationFn: (args: {
+      content: string;
+      attachmentFileIds?: string[];
+      replyToId?: string;
+      clientMessageId?: string;
+      onPrepared?: () => void;
+    }) => {
+      args.clientMessageId ??= randomUUID();
+      const { onPrepared, ...request } = args;
+      return deliverSend(user!.id, organizationId!, { ...request, channelId }, (pending) => {
+        args.clientMessageId = pending.request.clientMessageId;
+        queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
+          mergeSendRows(old ?? [], [
+            localSend(pending.request, user!.id, false, user?.fullName || user?.username),
+          ]),
+        );
+        onPrepared?.();
+      });
+    },
     onMutate: async () => {
-      // Nothing is inserted here on purpose. An optimistic row and the server
-      // echo of the same message are both in the cache for a beat - the refetch
-      // carries optimistic rows across (see useMessages) while the mutation has
-      // not settled yet - so the transcript showed the message twice and it read
-      // as a ghost resolving into the real thing. The row is built only if the
-      // send actually fails, which is the only case that still needs one.
+      const generation = getAuthGeneration();
       await queryClient.cancelQueries({ queryKey: key });
+      return { generation };
     },
     // A failed send keeps its text on screen, flagged for retry or discard;
     // without this the composer has already been cleared and the message is gone.
-    onError: (_err, args) => {
-      const nowSeconds = Math.floor(Date.now() / 1000);
-      const failed: SerializedMessage = {
-        id: `optimistic-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
-        channelId,
-        senderId: user?.id ?? "",
-        senderType: "USER",
-        content: args.content,
-        rootId: null,
-        replyToId: args.replyToId ?? null,
-        replyContext: null,
-        threadReplyContext: null,
-        editedAtSeconds: null,
-        isDeleted: false,
-        isPinned: false,
-        // attachmentIds ride along so a failed send can be retried intact.
-        metadata: {
-          optimistic: "1",
-          failed: "1",
-          ...(args.attachmentFileIds?.length
-            ? { attachmentIds: args.attachmentFileIds.join(",") }
-            : {}),
-        },
-        createdAtSeconds: nowSeconds,
-        createdAtIso: new Date(nowSeconds * 1000).toISOString(),
-        timeLabel: "Not sent",
-        replyCount: 0,
-        reactions: [],
-        senderName: user?.fullName || user?.username || "You",
-        senderAvatarUrl: user?.avatarUrl || null,
-        attachments: [],
-      };
-      queryClient.setQueryData<SerializedMessage[]>(key, (old) => [failed, ...(old ?? [])]);
+    onError: (_err, args, context) => {
+      if (context?.generation !== getAuthGeneration()) return;
+      const failed = localSend(
+        { ...args, channelId },
+        user?.id ?? "",
+        true,
+        user?.fullName || user?.username,
+      );
+      queryClient.setQueryData<SerializedMessage[]>(key, (old) => {
+        if (
+          old?.some(
+            (row) =>
+              row.clientMessageId === args.clientMessageId && row.metadata.optimistic !== "1",
+          )
+        )
+          return old;
+        return [failed, ...(old ?? []).filter((row) => row.id !== failed.id)];
+      });
     },
     // The live stream echoes the same message, so it may already be here.
-    onSuccess: (res) => {
+    onSuccess: (res, _args, context) => {
+      if (context?.generation !== getAuthGeneration()) return;
       const real = res.message ? messageToPlain(res.message) : null;
       if (!real) return;
       queryClient.setQueryData<SerializedMessage[]>(key, (old) => {
         if (!old) return [real];
-        return old.some((m) => m.id === real.id) ? old : [real, ...old];
+        const remaining = old.filter(
+          (m) => m.clientMessageId !== real.clientMessageId || m.metadata.optimistic !== "1",
+        );
+        return remaining.some((m) => m.id === real.id) ? remaining : [real, ...remaining];
       });
     },
   });
 }
 
 /** Remove a failed optimistic message from the cache (discard, or clear before retry). */
-export function useDiscardFailedMessage(channelId: string) {
-  const { organizationId } = useAuth();
+export function useDiscardFailedMessage(channelId: string, rootId?: string) {
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
   const key = messagesKey(organizationId, channelId);
+  const targetKey = rootId ? ["chat", "threadMessages", organizationId, channelId, rootId] : key;
+  const discard = useMutation({
+    mutationFn: async (messageId: string) => {
+      const record = (await pendingSends(user!.id, organizationId!)).find(
+        (row) => `optimistic-${row.request.clientMessageId}` === messageId,
+      );
+      if (record) await forgetPendingSend(record);
+      return messageId;
+    },
+    onSuccess: (messageId) =>
+      queryClient.setQueryData<SerializedMessage[]>(targetKey, (old) =>
+        (old ?? []).filter((row) => row.id !== messageId),
+      ),
+  });
+  return discard.mutate;
+}
 
-  return (messageId: string) => {
-    queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
-      (old ?? []).filter((m) => m.id !== messageId),
-    );
-  };
+export function useRetryFailedMessage() {
+  const { organizationId, user } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (messageId: string) => {
+      const generation = getAuthGeneration();
+      const record = (await pendingSends(user!.id, organizationId!)).find(
+        (row) => `optimistic-${row.request.clientMessageId}` === messageId,
+      );
+      if (!record || generation !== getAuthGeneration()) return;
+      const request = record.request;
+      const key = request.rootId
+        ? ["chat", "threadMessages", organizationId, request.channelId, request.rootId]
+        : messagesKey(organizationId, request.channelId);
+      const response = await deliverSend(user!.id, organizationId!, request);
+      if (generation === getAuthGeneration() && response.message)
+        client.setQueryData<SerializedMessage[]>(key, (old) =>
+          mergeSendRows(old ?? [], [messageToPlain(response.message!)]),
+        );
+    },
+  });
 }
 
 export function useDeleteMessage(channelId: string) {
@@ -218,7 +251,7 @@ export function usePinMessage(channelId: string) {
 }
 
 export function useSendThreadReply(channelId: string, rootMessageId: string) {
-  const { organizationId } = useAuth();
+  const { organizationId, user } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -226,16 +259,42 @@ export function useSendThreadReply(channelId: string, rootMessageId: string) {
       content: string;
       attachmentFileIds?: string[];
       alsoSendToChannel?: boolean;
-    }) =>
-      chatApi.sendMessage({
-        organizationId: organizationId!,
-        channelId,
-        content: args.content,
-        rootId: rootMessageId,
-        attachmentFileIds: args.attachmentFileIds,
-        alsoSendToChannel: args.alsoSendToChannel,
-      }),
-    onSuccess: () => {
+      clientMessageId?: string;
+      onPrepared?: () => void;
+    }) => {
+      args.clientMessageId ??= randomUUID();
+      const { onPrepared, ...request } = args;
+      return deliverSend(
+        user!.id,
+        organizationId!,
+        { ...request, channelId, rootId: rootMessageId },
+        (pending) => {
+          args.clientMessageId = pending.request.clientMessageId;
+          queryClient.setQueryData<SerializedMessage[]>(
+            ["chat", "threadMessages", organizationId, channelId, rootMessageId],
+            (old) => mergeSendRows(old ?? [], [localSend(pending.request, user!.id, false)]),
+          );
+          onPrepared?.();
+        },
+      );
+    },
+    onMutate: () => ({ generation: getAuthGeneration() }),
+    onError: (_err, args, context) => {
+      if (context?.generation !== getAuthGeneration()) return;
+      const key = ["chat", "threadMessages", organizationId, channelId, rootMessageId];
+      queryClient.setQueryData<SerializedMessage[]>(key, (old) =>
+        mergeSendRows(old ?? [], [
+          localSend({ ...args, channelId, rootId: rootMessageId }, user!.id, true),
+        ]),
+      );
+    },
+    onSuccess: (response, _args, context) => {
+      if (context?.generation !== getAuthGeneration()) return;
+      if (response.message)
+        queryClient.setQueryData<SerializedMessage[]>(
+          ["chat", "threadMessages", organizationId, channelId, rootMessageId],
+          (old) => mergeSendRows(old ?? [], [messageToPlain(response.message!)]),
+        );
       queryClient.invalidateQueries({
         queryKey: ["chat", "threadMessages", organizationId, channelId, rootMessageId],
       });

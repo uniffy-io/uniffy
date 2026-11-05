@@ -110,7 +110,9 @@ async def test_stream_drops_events_of_other_organizations(
         },
     ]
 
-    async def subscribe(*_channels: str) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(
+        *_channels: str, notify_subscriptions: bool = False
+    ) -> AsyncIterator[dict[str, Any]]:
         for payload in payloads:
             yield payload
 
@@ -133,6 +135,8 @@ async def test_stream_drops_events_of_other_organizations(
         UserChatEventType.CHANNEL_EVENT,
         UserChatEventType.UNREAD_COUNT_CHANGED,
     ]
+    assert [event.sequence for event in received] == [1, 2]
+    assert received[0].stream_id == received[1].stream_id
     assert received[0].payload.value.event_type == ChatEventType.CHANNEL_CREATED
     assert received[0].payload.value.channel_id == str(own_channel)
     assert received[1].payload.value.channel_id == str(own_channel)
@@ -146,7 +150,9 @@ async def test_stream_heartbeats_during_foreign_organization_traffic(
     channels = _Channels({other_channel: generate_id()})
     elapsed = 0.0
 
-    async def subscribe(*_channels: str) -> AsyncIterator[dict[str, Any]]:
+    async def subscribe(
+        *_channels: str, notify_subscriptions: bool = False
+    ) -> AsyncIterator[dict[str, Any]]:
         nonlocal elapsed
         for tick in range(1, 181):
             elapsed = tick * 0.5
@@ -168,3 +174,39 @@ async def test_stream_heartbeats_during_foreign_organization_traffic(
     ]
 
     assert [event.event_type for event in received] == [UserChatEventType.HEARTBEAT] * 3
+    assert [event.sequence for event in received] == [1, 2, 3]
+
+
+async def test_subscription_readiness_rotates_epoch_without_sequence_gaps(
+    monkeypatch: pytest.MonkeyPatch,
+    principal_org: UUID,
+) -> None:
+    channel_id = generate_id()
+    channels = _Channels({channel_id: principal_org})
+
+    async def subscribe(
+        *_channels: str, notify_subscriptions: bool = False
+    ) -> AsyncIterator[dict[str, Any]]:
+        assert notify_subscriptions
+        yield {"_subscription_ready": True}
+        yield {"_type": evt.CHANNEL_CREATED, "channel_id": str(channel_id)}
+        yield {"_type": evt.UNREAD_COUNT_CHANGED, "channel_id": str(channel_id), "unread_count": 1}
+        yield {"_subscription_ready": True}
+        yield {"_type": evt.CHANNEL_CREATED, "channel_id": str(channel_id)}
+
+    monkeypatch.setattr(handlers_module, "subscribe_channels", subscribe)
+    monkeypatch.setattr(
+        handlers_module,
+        "ChannelOrganizationFilter",
+        lambda org: ChannelOrganizationFilter(org, lookup=channels.lookup),
+    )
+    received = [
+        event
+        async for event in ChatStreamHandlers().stream_user_chat_events(
+            StreamUserChatEventsRequest(organization_id=str(principal_org)), MagicMock()
+        )
+    ]
+    assert [event.sequence for event in received] == [1, 2, 3, 1, 2]
+    assert received[0].event_type == received[3].event_type == UserChatEventType.READY
+    assert received[0].stream_id == received[1].stream_id == received[2].stream_id
+    assert received[3].stream_id == received[4].stream_id != received[0].stream_id

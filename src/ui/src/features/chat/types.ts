@@ -111,6 +111,8 @@ export interface ThreadReplyContext {
 }
 
 export interface ChatMessage {
+  clientMessageId?: string;
+  sendStatus?: "sending" | "failed";
   id: string;
   channelId: string;
   senderId: string;

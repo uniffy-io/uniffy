@@ -13,8 +13,6 @@ from uniffy.core.content.references import (
     extract_mentioned_agent_ids_from_content,
 )
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.jobs import enqueue_job
-from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.chat.channel import ChatChannel
 from uniffy.core.models.chat.channel_member import (
@@ -28,10 +26,11 @@ from uniffy.core.models.chat.message import (
 )
 from uniffy.core.types import ContentType
 from uniffy.domains.agents.invocation import validate_chat_skill_invocation
-from uniffy.domains.chat.jobs.contracts import POST_SEND_CHAT_MESSAGE
 from uniffy.domains.chat.limits import SEND, check_chat_mutation_limit
 from uniffy.domains.chat.messages.broadcasts import remap_file_references
+from uniffy.domains.chat.messages.idempotency import send_fingerprint, stage_sent_message
 from uniffy.domains.chat.messages.limits import MAX_MESSAGE_LENGTH
+from uniffy.domains.chat.messages.outbox import stage_message_delivery, wake_message_delivery
 from uniffy.domains.chat.messages.stats import bump_channel_message_stats
 from uniffy.domains.chat.policies.operations import (
     BroadcastMinRole,
@@ -61,6 +60,7 @@ class MessageSender:
         sender_avatar: str = "",
         attachment_file_ids: list[UUID] | None = None,
         also_send_to_channel: bool = False,
+        client_message_id: UUID | None = None,
     ) -> tuple[ChatMessage, str, str]:
         """Persist a message before publishing its non-authoritative effects."""
         if len(content) > MAX_MESSAGE_LENGTH:
@@ -80,6 +80,18 @@ class MessageSender:
         member: ChatChannelMember | None = None
         if sender_type != SenderType.SYSTEM:
             member = await self.access.require_send(user_id, channel)
+        fingerprint = None
+        if client_message_id is not None:
+            if sender_type != SenderType.USER:
+                raise ValidationError("client_message_id", "Only user sends accept a client ID")
+            fingerprint = send_fingerprint(
+                content,
+                root_id,
+                reply_to_id,
+                message_metadata,
+                attachment_file_ids,
+                also_send_to_channel,
+            )
         if sender_type == SenderType.USER:
             await check_chat_mutation_limit(
                 SEND,
@@ -119,6 +131,8 @@ class MessageSender:
             extract_all_outgoing_references(content, organization_id=organization_id)
         )
         message = ChatMessage(
+            client_message_id=client_message_id,
+            request_fingerprint=fingerprint,
             channel_id=channel_id,
             sender_id=user_id,
             sender_type=sender_type,
@@ -132,8 +146,13 @@ class MessageSender:
             updated_at=now,
         )
         await validate_chat_skill_invocation(self.session, message, channel)
-        self.session.add(message)
-        await self.session.flush()
+        if client_message_id is not None:
+            message, inserted = await stage_sent_message(self.session, message)
+            if not inserted:
+                return message, sender_name, sender_avatar
+        else:
+            self.session.add(message)
+            await self.session.flush()
 
         owned_file_ids: list[UUID] = []
         if attachment_file_ids:
@@ -184,6 +203,7 @@ class MessageSender:
                 at=now,
             )
 
+        await stage_message_delivery(self.session, message, organization_id)
         await self.session.commit()
         await self.session.refresh(message)
         if channel_copy is not None:
@@ -336,6 +356,8 @@ class MessageSender:
         channel_copy: ChatMessage | None = None,
     ) -> None:
         """Publish the committed message and enqueue its remaining projections."""
+        await wake_message_delivery(message.id)
+
         # Sending marks the sender read up to their own message, so the badge
         # never lights up in the sender's other sessions or devices.
         if message.sender_type == SenderType.USER:
@@ -377,23 +399,4 @@ class MessageSender:
                 sender_avatar,
                 member_ids,
                 None,
-            )
-
-        # Agent detection finishes on this session before background work begins.
-        await self._maybe_trigger_agents(message, channel)
-
-        try:
-            await enqueue_job(
-                POST_SEND_CHAT_MESSAGE,
-                str(message.id),
-                str(channel.id),
-                str(user_id),
-                str(root_id) if root_id is not None else None,
-                sender_name,
-                dumps_str([str(member_id) for member_id in member_ids]),
-                str(channel_copy.id) if channel_copy is not None else None,
-            )
-        except Exception:
-            logger.opt(exception=True).warning(
-                f"Background post-send work was not queued for message {message.id}"
             )

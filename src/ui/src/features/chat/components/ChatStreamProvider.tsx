@@ -1,3 +1,12 @@
+import { useStore } from "react-redux";
+import type { RootState } from "@/app/store";
+import { createChatRecovery } from "@/features/chat/store/chatRecovery";
+import { StreamPosition } from "@/features/chat/utils/recoveryQueue";
+import { restorePendingSends } from "@/features/chat/store/chatThunks";
+import {
+  ENCRYPTION_READY_EVENT,
+  isStorageEncryptionReady,
+} from "@/shared/crypto/storageEncryption";
 /** One persistent stream per session; channel filtering happens client-side against the live channels (both panes and the open thread's channel). */
 
 import { useEffect, useRef } from "react";
@@ -24,11 +33,7 @@ import {
 import {
   fetchMembers,
   fetchChannel,
-  fetchChannels,
-  fetchMessages,
-  fetchUnreadCounts,
   fetchThreadsInbox,
-  fetchDrafts,
   fetchChatPolicy,
   markChannelRead,
   clearActiveChannelUnread,
@@ -57,7 +62,6 @@ import { isDocumentVisible } from "@/shared/utils/documentVisibility";
 import { ChatEventType, UserChatEventType } from "@uniffy/proto/chat/v1/chat_stream_pb";
 import { ChannelRole } from "@uniffy/proto/chat/v1/chat_pb";
 import { handleCallStreamEvent } from "@/features/calls/streamHandlers";
-import { syncActiveCalls } from "@/features/calls/store/callsThunks";
 import type { AppDispatch } from "@/app/store";
 import type { StreamUserChatEventsResponse } from "@uniffy/proto/chat/v1/chat_stream_pb";
 
@@ -489,6 +493,7 @@ function handleChannelEvent(
 }
 
 function usePersistentChatStream() {
+  const store = useStore<RootState>();
   const dispatch = useAppDispatch();
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const activeChannelId = useAppSelector((state) => state.chatChannels.activeChannelId);
@@ -539,6 +544,16 @@ function usePersistentChatStream() {
     };
   }, [dispatch]);
 
+  useEffect(() => {
+    if (!organizationId || !currentUserId) return;
+    const restore = () => {
+      if (!crypto.subtle || isStorageEncryptionReady()) void dispatch(restorePendingSends());
+    };
+    window.addEventListener(ENCRYPTION_READY_EVENT, restore);
+    restore();
+    return () => window.removeEventListener(ENCRYPTION_READY_EVENT, restore);
+  }, [organizationId, currentUserId, dispatch]);
+
   // Org chat policy gates the composer's broadcast typeahead; one fetch per org.
   useEffect(() => {
     if (!organizationId) return;
@@ -552,9 +567,12 @@ function usePersistentChatStream() {
 
     let backoff = INITIAL_BACKOFF_MS;
     let mounted = true;
-    let reconnecting = false;
     let controller: AbortController;
     let wakeRetry: (() => void) | undefined;
+    let lastEventAt = Date.now();
+    const onForeground = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastEventAt > 35000) onOnline();
+    };
 
     const onOnline = () => {
       backoff = INITIAL_BACKOFF_MS;
@@ -568,33 +586,34 @@ function usePersistentChatStream() {
         _activeController = controller;
 
         let sawEvent = false;
+        lastEventAt = Date.now();
+        const position = new StreamPosition();
+        const recovery = createChatRecovery(() => store.getState(), dispatch);
+        const watchdog = setInterval(() => {
+          if (Date.now() - lastEventAt > 75000) controller.abort();
+        }, 15000);
         try {
           const stream = chatStreamApi.streamUserChatEvents(
             { organizationId: organizationId! },
             controller.signal,
           );
 
-          // The stream is a latency optimization, not the source of truth:
-          // events published while disconnected are gone. Resync call and draft
-          // state on every (re)connect (keeps initial load and reconnect recovery
-          // prompt); both thunks swallow their own failures. The escalating
-          // backoff below bounds this to one sync per connect attempt during an
-          // outage.
-          void dispatch(syncActiveCalls());
-          void dispatch(fetchDrafts());
-          dispatch(invalidateArchivedChannels({ clear: true }));
-          if (reconnecting && callChannelIdRef.current)
-            void dispatch(fetchMessages({ channelId: callChannelIdRef.current }));
-          if (reconnecting) {
-            // Badges, cursors, and divider targets only move on events, so the
-            // gap is closed from the snapshot as well as from the channel list.
-            void dispatch(fetchChannels());
-            void dispatch(fetchUnreadCounts());
-          }
-          reconnecting = true;
-
           for await (const event of stream) {
-            if (!mounted) break;
+            if (!mounted || controller.signal.aborted) break;
+            lastEventAt = Date.now();
+            const movement = position.observe(event.streamId, event.sequence);
+            if (movement === "duplicate") continue;
+            if (
+              !sawEvent ||
+              movement === "new" ||
+              movement === "gap" ||
+              event.eventType === UserChatEventType.READY
+            ) {
+              recovery.recover();
+              if (!crypto.subtle || isStorageEncryptionReady())
+                void dispatch(restorePendingSends());
+            }
+            recovery.changed(event);
 
             if (!sawEvent) {
               // Reset the backoff only once the stream actually delivers an event
@@ -725,6 +744,9 @@ function usePersistentChatStream() {
           }
         } catch {
           // Connection failed, dropped, or aborted.
+        } finally {
+          clearInterval(watchdog);
+          recovery.stop();
         }
 
         if (!mounted) break;
@@ -746,18 +768,20 @@ function usePersistentChatStream() {
     }
 
     window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onForeground);
     connect();
 
     return () => {
       mounted = false;
       window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onForeground);
       _activeController?.abort();
       wakeRetry?.();
       if (_activeController === controller!) {
         _activeController = null;
       }
     };
-  }, [organizationId, dispatch]);
+  }, [organizationId, currentUserId, dispatch, store]);
 }
 
 /** Mount once at the app level to maintain the persistent chat stream. */

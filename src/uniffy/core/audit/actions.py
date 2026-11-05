@@ -224,6 +224,7 @@ class Action:
     CHAT_CHANNEL_MEMBER_KICKED = "chat_channel.member_kicked"
     CHAT_CHANNEL_MEMBER_ROLE_CHANGED = "chat_channel.member_role_changed"
     CHAT_MESSAGE_DELETED_BY_ADMIN = "chat_message.deleted_by_admin"
+    CHAT_DELIVERY_RETRIED = "chat.delivery_retried"
     CHAT_POLICY_UPDATED = "chat.policy_updated"
 
     # Calls (join/leave stay unaudited - calls_participants is the durable
