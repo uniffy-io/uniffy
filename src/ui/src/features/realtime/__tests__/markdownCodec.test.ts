@@ -99,6 +99,9 @@ const serialize = (node: ReturnType<typeof parse>) =>
 describe("editor Markdown fidelity", () => {
   it.each([
     "5. five\n6. six",
+    "5. five\n\n6. six",
+    "- one\n\n- two",
+    "- one\n  - nested\n- two",
     "![diagram alt](/diagram.png)",
     '![diagram alt](/diagram.png "A caption")',
     '![diagram alt](/diagram.png "A caption")<!--uniffy:image-ratio=0.5-->',
@@ -120,6 +123,33 @@ describe("editor Markdown fidelity", () => {
     expect(output).toBe(input);
     expect(serialize(parse(output))).toBe(output);
   });
+
+  it.each(["5. five\n6. six", "5. five\n\n6. six", "- one\n- two", "- one\n\n- two"])(
+    "reads persisted string list attributes without changing spacing: %j",
+    (input) => {
+      const editorSchema = ctx.get(schemaCtx);
+      const json = JSON.parse(
+        JSON.stringify(parse(input).toJSON()).replace(/"spread":(true|false)/g, '"spread":"$1"'),
+      );
+      const node = editorSchema.nodeFromJSON(json);
+      node.check();
+      const stored = new Y.Doc();
+      const restored = new Y.Doc();
+      try {
+        replaceProsemirrorFragment(stored, node, "seed");
+        Y.applyUpdate(restored, Y.encodeStateAsUpdate(stored));
+        const before = Y.encodeStateAsUpdate(restored);
+        const recovered = fragmentToProsemirrorNode(getProsemirrorFragment(restored), editorSchema);
+        recovered.check();
+        expect(serialize(recovered)).toBe(input);
+        expect(serialize(parse(serialize(recovered)))).toBe(input);
+        expect(Y.encodeStateAsUpdate(restored)).toEqual(before);
+      } finally {
+        restored.destroy();
+        stored.destroy();
+      }
+    },
+  );
 
   it("retains inline and trailing HTML breaks", () => {
     const doc = parse("line<br>break<br />");

@@ -4,6 +4,7 @@ import {
   orderedListSchema,
   orderedListAttr,
   bulletListSchema,
+  listItemSchema,
   hardbreakSchema,
   paragraphSchema,
 } from "@milkdown/kit/preset/commonmark";
@@ -27,6 +28,19 @@ export function configureMarkdown(configCtx: Ctx, images = true): void {
     listItemIndent: "one" as const,
     rule: "-" as const,
   }));
+  // Persisted Yjs fragments can carry string spread values alongside boolean values.
+  for (const listSchema of [orderedListSchema, bulletListSchema, listItemSchema]) {
+    configCtx.update(listSchema.key, (original) => (ctx) => {
+      const schema = original(ctx);
+      return {
+        ...schema,
+        attrs: {
+          ...schema.attrs,
+          spread: { ...schema.attrs?.spread, validate: "boolean|string" },
+        },
+      };
+    });
+  }
   configCtx.update(orderedListSchema.key, (original) => (ctx) => ({
     ...original(ctx),
     toDOM: (node) => [
@@ -42,7 +56,7 @@ export function configureMarkdown(configCtx: Ctx, images = true): void {
       match: ({ type, ordered }) => type === "list" && !!ordered,
       runner: (state, node, type) => {
         state
-          .openNode(type, { order: node.start ?? 1, spread: String(node.spread ?? false) })
+          .openNode(type, { order: node.start ?? 1, spread: node.spread ?? false })
           .next(node.children)
           .closeNode();
       },
@@ -54,7 +68,7 @@ export function configureMarkdown(configCtx: Ctx, images = true): void {
           .openNode("list", undefined, {
             ordered: true,
             start: node.attrs.order,
-            spread: node.attrs.spread === "true",
+            spread: node.attrs.spread === true || node.attrs.spread === "true",
           })
           .next(node.content)
           .closeNode();
@@ -90,7 +104,24 @@ export function configureMarkdown(configCtx: Ctx, images = true): void {
       match: (node) => node.type.name === "bullet_list",
       runner: (state, node) => {
         state
-          .openNode("list", undefined, { ordered: false, spread: node.attrs.spread === "true" })
+          .openNode("list", undefined, {
+            ordered: false,
+            spread: node.attrs.spread === true || node.attrs.spread === "true",
+          })
+          .next(node.content)
+          .closeNode();
+      },
+    },
+  }));
+  configCtx.update(listItemSchema.key, (original) => (ctx) => ({
+    ...original(ctx),
+    toMarkdown: {
+      match: (node) => node.type.name === "list_item",
+      runner: (state, node) => {
+        state
+          .openNode("listItem", undefined, {
+            spread: node.attrs.spread === true || node.attrs.spread === "true",
+          })
           .next(node.content)
           .closeNode();
       },
@@ -190,11 +221,7 @@ export const frontmatterNode = $node("frontmatter", () => ({
   },
 }));
 
-/**
- * An empty paragraph serializes as nothing between two block separators, so each one leaves two
- * extra newlines that CommonMark would collapse. Reading them back keeps a rendered preview line
- * for line with the editor that wrote it. Blank lines inside lists and quotes keep their meaning.
- */
+/** Preserve editor spacing while leaving list and quote whitespace to CommonMark. */
 function restoreEmptyParagraphs(tree: Parent, source: string, frontmatterEnd?: number): void {
   const children: Parent["children"] = [];
   // Without front matter the first block has no separator before it.

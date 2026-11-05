@@ -197,12 +197,18 @@ export function ExpandableEditor({
       return;
     editorHandle?.flushMarkdownMirror?.();
     const markdown = editorHandle?.run(serializeEditorMarkdown) ?? latestMarkdownRef.current;
+    // Milkdown debounces change listeners, so closing must deliver the final edit to the host.
+    if (markdown !== latestMarkdownRef.current) {
+      latestMarkdownRef.current = markdown;
+      onChange?.(markdown);
+    }
     onDone?.(markdown, {
       realtimeOwned: realtimeActive && realtimeOwned,
       baseContent: draftInitial,
     });
   }, [
     editing,
+    onChange,
     onDone,
     editorHandle,
     realtimeOwned,

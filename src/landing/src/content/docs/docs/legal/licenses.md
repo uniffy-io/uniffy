@@ -208,6 +208,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @babel/helper-replace-supers@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-helper-replace-supers |
 | @babel/helper-skip-transparent-expression-wrappers@7.29.7 | MIT | https://github.com/babel/babel#readme |
 | @babel/helper-string-parser@7.27.1 | MIT | https://babel.dev/docs/en/next/babel-helper-string-parser |
+| @babel/helper-string-parser@7.29.11 | MIT | https://babel.dev/docs/en/next/babel-helper-string-parser |
 | @babel/helper-string-parser@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-helper-string-parser |
 | @babel/helper-validator-identifier@7.28.5 | MIT | https://github.com/babel/babel#readme |
 | @babel/helper-validator-identifier@7.29.7 | MIT | https://github.com/babel/babel#readme |
@@ -216,6 +217,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @babel/helper-wrap-function@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-helper-wrap-function |
 | @babel/helpers@7.29.2 | MIT | https://babel.dev/docs/en/next/babel-helpers |
 | @babel/highlight@7.25.9 | MIT | https://babel.dev/docs/en/next/babel-highlight |
+| @babel/parser@7.29.12 | MIT | https://babel.dev/docs/en/next/babel-parser |
 | @babel/parser@7.29.2 | MIT | https://babel.dev/docs/en/next/babel-parser |
 | @babel/parser@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-parser |
 | @babel/plugin-proposal-decorators@7.29.0 | MIT | https://babel.dev/docs/en/next/babel-plugin-proposal-decorators |
@@ -274,30 +276,33 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @babel/traverse@7.29.0 | MIT | https://babel.dev/docs/en/next/babel-traverse |
 | @babel/traverse@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-traverse |
 | @babel/types@7.29.0 | MIT | https://babel.dev/docs/en/next/babel-types |
+| @babel/types@7.29.11 | MIT | https://babel.dev/docs/en/next/babel-types |
 | @babel/types@7.29.7 | MIT | https://babel.dev/docs/en/next/babel-types |
 | @bacons/apple-targets@5.0.0 | MIT | https://github.com/evanbacon/expo-apple-targets |
 | @bacons/xcode@1.0.0-alpha.32 | MIT | https://github.com/EvanBacon/xcode#readme |
 | @bruits/satteri-linux-x64-gnu@0.9.4 | Unknown | https://github.com/bruits/satteri#readme |
 | @bufbuild/protobuf@1.10.1 | (Apache-2.0 AND BSD-3-Clause) | https://protobufes.com/ |
-| @bufbuild/protobuf@2.15.0 | (Apache-2.0 AND BSD-3-Clause) | https://protobufes.com/ |
+| @bufbuild/protobuf@2.16.0 | (Apache-2.0 AND BSD-3-Clause) | https://protobufes.com/ |
 | @callstack/liquid-glass@0.8.0 | MIT | https://github.com/callstack/liquid-glass#readme |
 | @capsizecss/unpack@4.0.0 | MIT | https://github.com/seek-oss/capsize#readme |
 | @clack/core@1.3.1 | MIT | https://github.com/bombshell-dev/clack/tree/main/packages/core#readme |
 | @clack/prompts@1.4.0 | MIT | https://github.com/bombshell-dev/clack/tree/main/packages/prompts#readme |
-| @codemirror/autocomplete@6.20.1 | MIT | https://github.com/codemirror/autocomplete#readme |
-| @codemirror/commands@6.10.3 | MIT | https://github.com/codemirror/commands#readme |
+| @codemirror/autocomplete@6.20.1 | MIT |  |
+| @codemirror/autocomplete@6.20.4 | MIT |  |
+| @codemirror/commands@6.11.1 | MIT |  |
 | @codemirror/lang-angular@0.1.4 | MIT | https://github.com/codemirror/lang-angular#readme |
 | @codemirror/lang-cpp@6.0.3 | MIT | https://github.com/codemirror/lang-cpp#readme |
 | @codemirror/lang-css@6.3.1 | MIT | https://github.com/codemirror/lang-css#readme |
 | @codemirror/lang-go@6.0.1 | MIT | https://github.com/codemirror/lang-go#readme |
-| @codemirror/lang-html@6.4.11 | MIT | https://github.com/codemirror/lang-html#readme |
+| @codemirror/lang-html@6.4.11 | MIT |  |
+| @codemirror/lang-html@6.4.12 | MIT |  |
 | @codemirror/lang-java@6.0.2 | MIT | https://github.com/codemirror/lang-java#readme |
 | @codemirror/lang-javascript@6.2.5 | MIT | https://github.com/codemirror/lang-javascript#readme |
 | @codemirror/lang-jinja@6.0.0 | MIT | https://github.com/codemirror/lang-jinja#readme |
 | @codemirror/lang-json@6.0.2 | MIT | https://github.com/codemirror/lang-json#readme |
 | @codemirror/lang-less@6.0.2 | MIT | https://github.com/codemirror/lang-less#readme |
 | @codemirror/lang-liquid@6.3.2 | MIT | https://github.com/codemirror/lang-liquid#readme |
-| @codemirror/lang-markdown@6.5.0 | MIT | https://github.com/codemirror/lang-markdown#readme |
+| @codemirror/lang-markdown@6.5.2 | MIT |  |
 | @codemirror/lang-php@6.0.2 | MIT | https://github.com/codemirror/lang-php#readme |
 | @codemirror/lang-python@6.2.1 | MIT | https://github.com/codemirror/lang-python#readme |
 | @codemirror/lang-rust@6.0.2 | MIT | https://github.com/codemirror/lang-rust#readme |
@@ -308,17 +313,18 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @codemirror/lang-xml@6.1.0 | MIT | https://github.com/codemirror/lang-xml#readme |
 | @codemirror/lang-yaml@6.1.2 | MIT | https://github.com/codemirror/lang-yaml#readme |
 | @codemirror/language-data@6.5.2 | MIT | https://github.com/codemirror/language-data#readme |
-| @codemirror/language@6.12.2 | MIT | https://github.com/codemirror/language#readme |
+| @codemirror/language@6.13.1 | MIT |  |
 | @codemirror/legacy-modes@6.5.2 | MIT | https://github.com/codemirror/legacy-modes#readme |
 | @codemirror/lint@6.9.5 | MIT | https://github.com/codemirror/lint#readme |
 | @codemirror/search@6.6.0 | MIT | https://github.com/codemirror/search#readme |
-| @codemirror/state@6.6.0 | MIT | https://github.com/codemirror/state#readme |
+| @codemirror/state@6.7.6 | MIT |  |
+| @codemirror/streamparser@6.0.0 | MIT |  |
 | @codemirror/theme-one-dark@6.1.3 | MIT | https://github.com/codemirror/theme-one-dark#readme |
-| @codemirror/view@6.40.0 | MIT | https://github.com/codemirror/view#readme |
+| @codemirror/view@6.43.15 | MIT |  |
 | @config-plugins/react-native-webrtc@13.0.0 | MIT | https://github.com/expo/config-plugins#readme |
-| @connectrpc/connect-node@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
-| @connectrpc/connect-web@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
-| @connectrpc/connect@2.2.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect-node@2.3.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect-web@2.3.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
+| @connectrpc/connect@2.3.0 | Apache-2.0 | https://github.com/connectrpc/connect-es#readme |
 | @ctrl/tinycolor@4.2.0 | MIT | https://tinycolor.vercel.app |
 | @dnd-kit/accessibility@3.1.1 | MIT | https://github.com/clauderic/dnd-kit#readme |
 | @dnd-kit/core@6.3.1 | MIT | https://github.com/clauderic/dnd-kit#readme |
@@ -385,18 +391,21 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @expressive-code/plugin-frames@0.44.0 | MIT | https://github.com/expressive-code/expressive-code#readme |
 | @expressive-code/plugin-shiki@0.44.0 | MIT | https://github.com/expressive-code/expressive-code#readme |
 | @expressive-code/plugin-text-markers@0.44.0 | MIT | https://github.com/expressive-code/expressive-code#readme |
-| @floating-ui/core@1.7.5 | MIT | https://floating-ui.com |
+| @floating-ui/core@1.8.0 | MIT | https://floating-ui.com |
 | @floating-ui/dom@1.7.4 | MIT | https://floating-ui.com |
-| @floating-ui/dom@1.7.6 | MIT | https://floating-ui.com |
-| @floating-ui/react-dom@2.1.8 | MIT | https://floating-ui.com/docs/react-dom |
+| @floating-ui/dom@1.8.0 | MIT | https://floating-ui.com |
+| @floating-ui/react-dom@2.1.9 | MIT | https://floating-ui.com/docs/react-dom |
 | @floating-ui/react@0.26.28 | MIT | https://floating-ui.com/docs/react |
-| @floating-ui/utils@0.2.11 | MIT | https://floating-ui.com |
+| @floating-ui/utils@0.2.12 | MIT | https://floating-ui.com |
 | @fontsource-variable/geist@5.2.8 | OFL-1.1 | https://fontsource.org/fonts/geist |
 | @fontsource-variable/jetbrains-mono@5.2.8 | OFL-1.1 | https://fontsource.org/fonts/jetbrains-mono |
-| @headlessui/react@2.2.9 | MIT | https://github.com/tailwindlabs/headlessui#readme |
+| @headlessui/react@2.2.10 | MIT | https://github.com/tailwindlabs/headlessui#readme |
 | @img/colour@1.1.0 | MIT | https://github.com/lovell/colour#readme |
 | @img/sharp-libvips-linux-x64@1.2.4 | LGPL-3.0-or-later | https://sharp.pixelplumbing.com |
 | @img/sharp-linux-x64@0.34.5 | Apache-2.0 | https://sharp.pixelplumbing.com |
+| @internationalized/date@3.12.4 | Apache-2.0 | https://github.com/adobe/react-spectrum/tree/main#readme |
+| @internationalized/number@3.6.9 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
+| @internationalized/string@3.2.10 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
 | @isaacs/cliui@8.0.2 | ISC | https://github.com/yargs/cliui#readme |
 | @isaacs/ttlcache@1.4.1 | ISC | https://github.com/isaacs/ttlcache#readme |
 | @jest/schemas@29.6.3 | MIT | https://github.com/jestjs/jest#readme |
@@ -408,17 +417,18 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @jridgewell/sourcemap-codec@1.5.5 | MIT | https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec |
 | @jridgewell/sourcemap-codec@1.6.0 | MIT | https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec |
 | @jridgewell/trace-mapping@0.3.31 | MIT | https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping |
-| @lezer/common@1.5.1 | MIT | https://github.com/lezer-parser/common#readme |
+| @lezer/common@1.5.5 | MIT |  |
 | @lezer/cpp@1.1.5 | MIT | https://github.com/lezer-parser/cpp#readme |
-| @lezer/css@1.3.1 | MIT | https://github.com/lezer-parser/css#readme |
+| @lezer/css@1.3.1 | MIT |  |
+| @lezer/css@1.3.9 | MIT |  |
 | @lezer/go@1.0.1 | MIT | https://github.com/lezer-parser/go#readme |
-| @lezer/highlight@1.2.3 | MIT | https://github.com/lezer-parser/highlight#readme |
+| @lezer/highlight@1.2.5 | MIT |  |
 | @lezer/html@1.3.13 | MIT | https://github.com/lezer-parser/html#readme |
 | @lezer/java@1.1.3 | MIT | https://github.com/lezer-parser/java#readme |
 | @lezer/javascript@1.5.4 | MIT | https://github.com/lezer-parser/javascript#readme |
 | @lezer/json@1.0.3 | MIT | https://github.com/lezer-parser/json#readme |
-| @lezer/lr@1.4.8 | MIT | https://github.com/lezer-parser/lr#readme |
-| @lezer/markdown@1.6.3 | MIT | https://github.com/lezer-parser/markdown#readme |
+| @lezer/lr@1.4.12 | MIT |  |
+| @lezer/markdown@1.8.1 | MIT |  |
 | @lezer/php@1.0.5 | MIT | https://github.com/lezer-parser/php#readme |
 | @lezer/python@1.1.18 | MIT | https://github.com/lezer-parser/python#readme |
 | @lezer/rust@1.0.2 | MIT | https://github.com/lezer-parser/rust#readme |
@@ -433,36 +443,38 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @livekit/react-native-webrtc@144.1.1 | MIT | https://github.com/livekit/react-native-webrtc |
 | @livekit/react-native@2.11.1 | Apache-2.0 | https://github.com/livekit/client-sdk-react-native#readme |
 | @livekit/track-processors@0.8.2 | Apache-2.0 | https://github.com/livekit/track-processors-js#readme |
-| @lobehub/icons-static-svg@1.94.0 | MIT | https://github.com/lobehub/lobe-icons |
-| @marijn/find-cluster-break@1.0.2 | MIT | https://github.com/marijnh/find-cluster-break#readme |
+| @lobehub/icons-static-svg@1.101.0 | MIT | https://github.com/lobehub/lobe-icons |
+| @marijn/find-cluster-break@1.0.4 | MIT | https://code.haverbeke.berlin/marijn/find-cluster-break |
 | @mdx-js/mdx@3.1.1 | MIT | https://mdxjs.com |
 | @mediapipe/tasks-vision@0.10.14 | Apache-2.0 | http://mediapipe.dev |
-| @milkdown/components@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/core@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/crepe@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/ctx@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/exception@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/kit@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-block@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-clipboard@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-cursor@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-highlight@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-history@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-indent@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-listener@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-slash@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-tooltip@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-trailing@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/plugin-upload@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/preset-commonmark@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/preset-gfm@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/prose@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/react@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/theme-nord@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/transformer@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
-| @milkdown/utils@7.19.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/components@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/core@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/crepe@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/ctx@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/exception@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/kit@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-block@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-clipboard@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-cursor@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-diff@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-highlight@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-history@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-indent@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-listener@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-slash@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-streaming@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-tooltip@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-trailing@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/plugin-upload@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/preset-commonmark@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/preset-gfm@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/prose@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/react@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/theme-nord@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/transformer@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
+| @milkdown/utils@7.23.0 | MIT | https://github.com/Milkdown/milkdown#readme |
 | @napi-rs/lzma-linux-x64-gnu@1.5.1 | MIT | https://github.com/Brooooooklyn/lzma#readme |
-| @ocavue/utils@1.6.0 | MIT | https://github.com/ocavue/utils#readme |
+| @ocavue/utils@1.9.0 | MIT | https://github.com/ocavue/utils#readme |
 | @oslojs/encoding@1.1.0 | MIT | https://github.com/oslo-project/encoding#readme |
 | @oxc-project/types@0.138.0 | MIT | https://oxc.rs |
 | @pagefind/default-ui@1.5.2 | MIT | https://github.com/Pagefind/pagefind#readme |
@@ -474,8 +486,9 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @radix-ui/primitive@1.1.3 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-collection@1.1.7 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-compose-refs@1.1.2 | MIT | https://radix-ui.com/primitives |
+| @radix-ui/react-compose-refs@1.1.5 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-context@1.1.2 | MIT | https://radix-ui.com/primitives |
-| @radix-ui/react-context@1.1.3 | MIT | https://radix-ui.com/primitives |
+| @radix-ui/react-context@1.3.0 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-dialog@1.1.15 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-direction@1.1.1 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-dismissable-layer@1.1.11 | MIT | https://radix-ui.com/primitives |
@@ -485,21 +498,20 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @radix-ui/react-portal@1.1.9 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-presence@1.1.5 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-primitive@2.1.3 | MIT | https://radix-ui.com/primitives |
-| @radix-ui/react-primitive@2.1.4 | MIT | https://radix-ui.com/primitives |
-| @radix-ui/react-progress@1.1.8 | MIT | https://radix-ui.com/primitives |
+| @radix-ui/react-primitive@2.2.0 | MIT | https://radix-ui.com/primitives |
+| @radix-ui/react-progress@1.2.1 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-roving-focus@1.1.11 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-slot@1.2.3 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-slot@1.2.4 | MIT | https://radix-ui.com/primitives |
+| @radix-ui/react-slot@1.5.0 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-tabs@1.1.13 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-use-callback-ref@1.1.1 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-use-controllable-state@1.2.2 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-use-effect-event@0.0.2 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-use-escape-keydown@1.1.1 | MIT | https://radix-ui.com/primitives |
 | @radix-ui/react-use-layout-effect@1.1.1 | MIT | https://radix-ui.com/primitives |
-| @react-aria/focus@3.21.5 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @react-aria/interactions@3.27.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @react-aria/ssr@3.9.10 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @react-aria/utils@3.33.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
+| @react-aria/focus@3.22.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
+| @react-aria/interactions@3.28.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
 | @react-native-async-storage/async-storage@2.2.0 | MIT | https://github.com/react-native-async-storage/async-storage#readme |
 | @react-native-community/netinfo@12.0.1 | MIT | https://github.com/react-native-netinfo/react-native-netinfo#readme |
 | @react-native-masked-view/masked-view@0.3.2 | MIT | https://github.com/react-native-masked-view/masked-view#readme |
@@ -520,10 +532,8 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @react-native/normalize-colors@0.83.10 | MIT | https://github.com/facebook/react-native/tree/HEAD/packages/normalize-color#readme |
 | @react-native/normalize-colors@0.86.0 | MIT | https://github.com/facebook/react-native/tree/HEAD/packages/normalize-color#readme |
 | @react-native/virtualized-lists@0.86.0 | MIT | https://github.com/facebook/react-native/tree/HEAD/packages/virtualized-lists#readme |
-| @react-stately/flags@3.1.2 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @react-stately/utils@3.11.0 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @react-types/shared@3.33.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
-| @reduxjs/toolkit@2.11.2 | MIT | https://redux-toolkit.js.org |
+| @react-types/shared@3.37.0 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
+| @reduxjs/toolkit@2.13.0 | MIT | https://redux-toolkit.js.org |
 | @rolldown/binding-linux-x64-gnu@1.1.4 | MIT | https://rolldown.rs/ |
 | @rolldown/pluginutils@1.0.1 | MIT | https://github.com/rolldown/plugins/tree/main/packages/pluginutils#readme |
 | @rollup/pluginutils@5.3.0 | MIT | https://github.com/rollup/plugins/tree/master/packages/pluginutils#readme |
@@ -535,22 +545,21 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @shikijs/langs@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/primitive@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/themes@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
-| @shikijs/types@3.23.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/types@4.1.0 | MIT | https://github.com/shikijs/shiki#readme |
 | @shikijs/vscode-textmate@10.0.2 | MIT | https://github.com/shikijs/vscode-textmate#readme |
 | @sinclair/typebox@0.27.10 | MIT | https://github.com/sinclairzx81/typebox-legacy#readme |
 | @standard-schema/spec@1.1.0 | MIT | https://standardschema.dev |
 | @standard-schema/utils@0.3.0 | MIT | https://github.com/standard-schema/standard-schema#readme |
 | @stardazed/streams-text-encoding@1.0.2 | MIT | https://github.com/stardazed/sd-streams#readme |
-| @swc/helpers@0.5.19 | Apache-2.0 | https://swc.rs |
+| @swc/helpers@0.5.23 | Apache-2.0 | https://swc.rs |
 | @tailwindcss/node@4.2.2 | MIT | https://tailwindcss.com |
 | @tailwindcss/oxide-linux-x64-gnu@4.2.2 | MIT | https://github.com/tailwindlabs/tailwindcss#readme |
 | @tailwindcss/oxide@4.2.2 | MIT | https://github.com/tailwindlabs/tailwindcss#readme |
 | @tailwindcss/vite@4.2.2 | MIT | https://tailwindcss.com |
 | @tanstack/query-core@5.101.2 | MIT | https://tanstack.com/query |
 | @tanstack/react-query@5.101.2 | MIT | https://tanstack.com/query |
-| @tanstack/react-virtual@3.13.23 | MIT | https://tanstack.com/virtual |
-| @tanstack/virtual-core@3.13.23 | MIT | https://tanstack.com/virtual |
+| @tanstack/react-virtual@3.14.24 | MIT | https://tanstack.com/virtual |
+| @tanstack/virtual-core@3.19.9 | MIT | https://tanstack.com/virtual |
 | @testing-library/dom@10.4.1 | MIT | https://github.com/testing-library/dom-testing-library#readme |
 | @testing-library/jest-dom@6.9.1 | MIT | https://github.com/testing-library/jest-dom#readme |
 | @testing-library/user-event@14.6.1 | MIT | https://github.com/testing-library/user-event#readme |
@@ -563,12 +572,12 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @types/d3-interpolate@3.0.4 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-interpolate |
 | @types/d3-path@3.1.1 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-path |
 | @types/d3-scale@4.0.9 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-scale |
-| @types/d3-selection@3.0.11 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-selection |
-| @types/d3-shape@3.1.8 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-shape |
+| @types/d3-selection@3.0.12 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-selection |
+| @types/d3-shape@3.2.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-shape |
 | @types/d3-time@3.0.4 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-time |
 | @types/d3-timer@3.0.2 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-timer |
 | @types/d3-transition@3.0.9 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-transition |
-| @types/d3-zoom@3.0.8 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-zoom |
+| @types/d3-zoom@3.0.9 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/d3-zoom |
 | @types/debug@4.1.13 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/debug |
 | @types/dom-mediacapture-record@1.0.22 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dom-mediacapture-record |
 | @types/dom-mediacapture-transform@0.1.12 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/dom-mediacapture-transform |
@@ -579,21 +588,24 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @types/estree@1.0.9 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/estree |
 | @types/hammerjs@2.0.46 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hammerjs |
 | @types/hast@3.0.4 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hast |
+| @types/hast@3.0.5 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/hast |
 | @types/istanbul-lib-coverage@2.0.6 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/istanbul-lib-coverage |
 | @types/istanbul-lib-report@3.0.3 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/istanbul-lib-report |
 | @types/istanbul-reports@3.0.4 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/istanbul-reports |
 | @types/js-yaml@4.0.9 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/js-yaml |
 | @types/katex@0.16.8 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/katex |
 | @types/lodash-es@4.17.12 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash-es |
-| @types/lodash@4.17.24 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash |
+| @types/lodash@4.17.27 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/lodash |
 | @types/mdast@4.0.4 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdast |
 | @types/mdx@2.0.13 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/mdx |
 | @types/ms@2.1.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ms |
 | @types/nlcst@2.0.3 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/nlcst |
 | @types/node@24.12.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node |
-| @types/react-dom@19.2.3 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom |
+| @types/react-dom@19.2.7 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom |
+| @types/react-dom@19.3.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom |
 | @types/react-test-renderer@19.1.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-test-renderer |
 | @types/react@19.2.14 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react |
+| @types/react@19.3.0 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react |
 | @types/sax@1.2.7 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/sax |
 | @types/trusted-types@2.0.7 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/trusted-types |
 | @types/unist@2.0.11 | MIT | https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/unist |
@@ -614,19 +626,19 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | @volar/typescript@2.4.28 | MIT | https://github.com/volarjs/volar.js#readme |
 | @vscode/emmet-helper@2.11.0 | MIT | https://github.com/Microsoft/vscode-emmet-helper#readme |
 | @vscode/l10n@0.0.18 | MIT | https://github.com/Microsoft/vscode-l10n#readme |
-| @vue/compiler-core@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-core#readme |
-| @vue/compiler-dom@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-dom#readme |
-| @vue/compiler-sfc@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme |
-| @vue/compiler-ssr@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme |
-| @vue/reactivity@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/reactivity#readme |
-| @vue/runtime-core@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/runtime-core#readme |
-| @vue/runtime-dom@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme |
-| @vue/server-renderer@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/server-renderer#readme |
-| @vue/shared@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/shared#readme |
+| @vue/compiler-core@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-core#readme |
+| @vue/compiler-dom@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-dom#readme |
+| @vue/compiler-sfc@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme |
+| @vue/compiler-ssr@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme |
+| @vue/reactivity@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/reactivity#readme |
+| @vue/runtime-core@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/runtime-core#readme |
+| @vue/runtime-dom@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/runtime-dom#readme |
+| @vue/server-renderer@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/server-renderer#readme |
+| @vue/shared@3.5.44 | MIT | https://github.com/vuejs/core/tree/main/packages/shared#readme |
 | @xmldom/xmldom@0.7.13 | MIT | https://github.com/xmldom/xmldom |
 | @xmldom/xmldom@0.8.11 | MIT | https://github.com/xmldom/xmldom |
-| @xyflow/react@12.10.1 | MIT | https://reactflow.dev |
-| @xyflow/system@0.0.75 | MIT | https://github.com/xyflow/xyflow#readme |
+| @xyflow/react@12.12.0 | MIT | https://reactflow.dev |
+| @xyflow/system@0.0.83 | MIT | https://github.com/xyflow/xyflow#readme |
 | abort-controller@3.0.0 | MIT | https://github.com/mysticatea/abort-controller#readme |
 | accepts@1.3.8 | MIT | https://github.com/jshttp/accepts#readme |
 | accepts@2.0.0 | MIT | https://github.com/jshttp/accepts#readme |
@@ -741,6 +753,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | comma-separated-tokens@2.0.3 | MIT | https://github.com/wooorm/comma-separated-tokens#readme |
 | commander@11.1.0 | MIT | https://github.com/tj/commander.js#readme |
 | commander@12.1.0 | MIT | https://github.com/tj/commander.js#readme |
+| commander@15.0.0 | MIT | https://github.com/tj/commander.js#readme |
 | commander@2.20.3 | MIT | https://github.com/tj/commander.js#readme |
 | commander@7.2.0 | MIT | https://github.com/tj/commander.js#readme |
 | commander@8.3.0 | MIT | https://github.com/tj/commander.js#readme |
@@ -753,7 +766,8 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | cookie@1.1.1 | MIT | https://github.com/jshttp/cookie#readme |
 | core-js-compat@3.49.0 | MIT | https://core-js.io |
 | core-util-is@1.0.3 | MIT | https://github.com/isaacs/core-util-is#readme |
-| crelt@1.0.6 | MIT | https://github.com/marijnh/crelt#readme |
+| crelt@1.0.6 | MIT | https://code.haverbeke.berlin/marijn/crelt |
+| crelt@1.0.7 | MIT | https://code.haverbeke.berlin/marijn/crelt |
 | cross-fetch@3.2.0 | MIT | https://github.com/lquixada/cross-fetch |
 | cross-spawn@7.0.6 | MIT | https://github.com/moxystudio/node-cross-spawn |
 | crossws@0.3.5 | MIT | https://crossws.h3.dev |
@@ -793,7 +807,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | data-view-byte-length@1.0.2 | MIT | https://github.com/inspect-js/data-view-byte-length#readme |
 | data-view-byte-offset@1.0.1 | MIT | https://github.com/inspect-js/data-view-byte-offset#readme |
 | date-fns-tz@3.2.0 | MIT | https://github.com/marnusw/date-fns-tz#readme |
-| date-fns@4.1.0 | MIT | https://github.com/date-fns/date-fns#readme |
+| date-fns@4.4.0 | MIT | https://github.com/date-fns/date-fns#readme |
 | debug@2.6.9 | MIT | https://github.com/debug-js/debug#readme |
 | debug@3.2.7 | MIT | https://github.com/debug-js/debug#readme |
 | debug@4.3.4 | MIT | https://github.com/debug-js/debug#readme |
@@ -817,6 +831,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | devalue@5.8.1 | MIT | https://github.com/sveltejs/devalue#readme |
 | devlop@1.1.0 | MIT | https://github.com/wooorm/devlop#readme |
 | diff@8.0.4 | BSD-3-Clause | https://github.com/kpdecker/jsdiff#readme |
+| diff@9.0.0 | BSD-3-Clause | https://github.com/kpdecker/jsdiff#readme |
 | direction@2.0.1 | MIT | https://github.com/wooorm/direction#readme |
 | dnssd-advertise@1.1.6 | MIT | https://github.com/kitten/dnssd-advertise#readme |
 | dom-accessibility-api@0.5.16 | MIT | https://github.com/eps1lon/dom-accessibility-api#readme |
@@ -825,7 +840,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | dom-walk@0.1.2 | MIT | https://github.com/Raynos/dom-walk |
 | domelementtype@2.3.0 | BSD-2-Clause | https://github.com/fb55/domelementtype#readme |
 | domhandler@5.0.3 | BSD-2-Clause | https://github.com/fb55/domhandler#readme |
-| dompurify@3.3.3 | (MPL-2.0 OR Apache-2.0) | https://github.com/cure53/DOMPurify |
+| dompurify@3.4.17 | (MPL-2.0 OR Apache-2.0) | https://github.com/cure53/DOMPurify |
 | domutils@3.2.2 | BSD-2-Clause | https://github.com/fb55/domutils#readme |
 | dset@3.1.4 | MIT | https://github.com/lukeed/dset#readme |
 | dunder-proto@1.0.1 | MIT | https://github.com/es-shims/dunder-proto#readme |
@@ -856,7 +871,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | es-set-tostringtag@2.1.0 | MIT | https://github.com/es-shims/es-set-tostringtag#readme |
 | es-shim-unscopables@1.1.0 | MIT | https://github.com/ljharb/es-shim-unscopables#readme |
 | es-to-primitive@1.3.0 | MIT | https://github.com/ljharb/es-to-primitive#readme |
-| es-toolkit@1.45.1 | MIT | https://es-toolkit.dev |
+| es-toolkit@1.53.1 | MIT | https://es-toolkit.dev |
 | esast-util-from-estree@2.0.0 | MIT | https://github.com/syntax-tree/esast-util-from-estree#readme |
 | esast-util-from-js@2.0.1 | MIT | https://github.com/syntax-tree/esast-util-from-js#readme |
 | esbuild@0.28.1 | MIT | https://github.com/evanw/esbuild#readme |
@@ -935,7 +950,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | fontfaceobserver@2.3.0 | BSD-2-Clause | https://fontfaceobserver.com/ |
 | fontkitten@1.0.3 | MIT | https://github.com/delucis/fontkitten#readme |
 | for-each@0.3.5 | MIT | https://github.com/Raynos/for-each |
-| force-graph@1.51.2 | MIT | https://github.com/vasturiano/force-graph |
+| force-graph@1.52.0 | MIT | https://github.com/vasturiano/force-graph |
 | foreground-child@3.3.1 | ISC | https://github.com/tapjs/foreground-child#readme |
 | fresh@0.5.2 | MIT | https://github.com/jshttp/fresh#readme |
 | fs-constants@1.0.0 | MIT | https://github.com/mafintosh/fs-constants |
@@ -1007,13 +1022,12 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | https-proxy-agent@7.0.6 | MIT | https://github.com/TooTallNate/proxy-agents#readme |
 | hyphenate-style-name@1.1.0 | BSD-3-Clause | https://github.com/rexxars/hyphenate-style-name#readme |
 | i18next@26.2.0 | MIT | https://www.i18next.com |
-| idb@8.0.3 | ISC | https://github.com/jakearchibald/idb#readme |
+| idb@8.0.4 | ISC | https://github.com/jakearchibald/idb#readme |
 | ieee754@1.2.1 | BSD-3-Clause | https://github.com/feross/ieee754#readme |
 | ignore@5.3.2 | MIT | https://github.com/kaelzhang/node-ignore#readme |
 | image-size@1.2.1 | MIT | https://github.com/image-size/image-size#readme |
 | immediate@3.0.6 | MIT | https://github.com/calvinmetcalf/immediate#readme |
-| immer@10.2.0 | MIT | https://github.com/immerjs/immer#readme |
-| immer@11.1.4 | MIT | https://github.com/immerjs/immer#readme |
+| immer@11.2.9 | MIT | https://github.com/immerjs/immer#readme |
 | indent-string@4.0.0 | MIT | https://github.com/sindresorhus/indent-string#readme |
 | index-array-by@1.4.2 | MIT | https://github.com/vasturiano/index-array-by |
 | inherits@2.0.4 | ISC | https://github.com/isaacs/inherits#readme |
@@ -1087,9 +1101,10 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | json5@2.2.3 | MIT | http://json5.org/ |
 | jsonc-parser@2.3.1 | MIT | https://github.com/microsoft/node-jsonc-parser#readme |
 | jsonc-parser@3.3.1 | MIT | https://github.com/microsoft/node-jsonc-parser#readme |
-| jszip@3.10.1 | (MIT OR GPL-3.0-or-later) | https://github.com/Stuk/jszip#readme |
+| jszip@3.10.2 | (MIT OR GPL-3.0-or-later) | https://github.com/Stuk/jszip#readme |
 | kapsule@1.16.3 | MIT | https://github.com/vasturiano/kapsule |
-| katex@0.16.39 | MIT | https://katex.org |
+| katex@0.16.47 | MIT | https://katex.org |
+| katex@0.19.1 | MIT | https://katex.org |
 | kleur@3.0.3 | MIT | https://github.com/lukeed/kleur#readme |
 | kleur@4.1.5 | MIT | https://github.com/lukeed/kleur#readme |
 | klona@2.0.6 | MIT | https://github.com/lukeed/klona#readme |
@@ -1101,7 +1116,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | lightningcss-linux-x64-gnu@1.32.0 | MPL-2.0 | https://github.com/parcel-bundler/lightningcss#readme |
 | lightningcss@1.32.0 | MPL-2.0 | https://github.com/parcel-bundler/lightningcss#readme |
 | livekit-client@2.20.0 | Apache-2.0 | https://github.com/livekit/client-sdk-js#readme |
-| lodash-es@4.17.23 | MIT | https://lodash.com/custom-builds |
+| lodash-es@4.18.1 | MIT | https://lodash.com/custom-builds |
 | lodash.debounce@4.0.8 | MIT | https://lodash.com/ |
 | lodash.throttle@4.1.1 | MIT | https://lodash.com/ |
 | log-symbols@2.2.0 | MIT | https://github.com/sindresorhus/log-symbols#readme |
@@ -1128,6 +1143,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | mdast-util-directive@3.1.0 | MIT | https://github.com/syntax-tree/mdast-util-directive#readme |
 | mdast-util-find-and-replace@3.0.2 | MIT | https://github.com/syntax-tree/mdast-util-find-and-replace#readme |
 | mdast-util-from-markdown@2.0.3 | MIT | https://github.com/syntax-tree/mdast-util-from-markdown#readme |
+| mdast-util-from-markdown@2.1.0 | MIT | https://github.com/syntax-tree/mdast-util-from-markdown#readme |
 | mdast-util-gfm-autolink-literal@2.0.1 | MIT | https://github.com/syntax-tree/mdast-util-gfm-autolink-literal#readme |
 | mdast-util-gfm-footnote@2.1.0 | MIT | https://github.com/syntax-tree/mdast-util-gfm-footnote#readme |
 | mdast-util-gfm-strikethrough@2.0.0 | MIT | https://github.com/syntax-tree/mdast-util-gfm-strikethrough#readme |
@@ -1142,6 +1158,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | mdast-util-phrasing@4.1.0 | MIT | https://github.com/syntax-tree/mdast-util-phrasing#readme |
 | mdast-util-to-hast@13.2.1 | MIT | https://github.com/syntax-tree/mdast-util-to-hast#readme |
 | mdast-util-to-markdown@2.1.2 | MIT | https://github.com/syntax-tree/mdast-util-to-markdown#readme |
+| mdast-util-to-markdown@2.2.1 | MIT | https://github.com/syntax-tree/mdast-util-to-markdown#readme |
 | mdast-util-to-string@4.0.0 | MIT | https://github.com/syntax-tree/mdast-util-to-string#readme |
 | mdn-data@2.0.14 | CC0-1.0 | https://developer.mozilla.org |
 | mdn-data@2.0.28 | CC0-1.0 | https://developer.mozilla.org |
@@ -1166,6 +1183,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | metro-transform-worker@0.84.4 | MIT | https://github.com/facebook/metro#readme |
 | metro@0.84.4 | MIT | https://github.com/facebook/metro#readme |
 | micromark-core-commonmark@2.0.3 | MIT | https://github.com/micromark/micromark/tree/main#readme |
+| micromark-core-commonmark@2.0.4 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-extension-directive@4.0.0 | MIT | https://github.com/micromark/micromark-extension-directive#readme |
 | micromark-extension-gfm-autolink-literal@2.1.0 | MIT | https://github.com/micromark/micromark-extension-gfm-autolink-literal#readme |
 | micromark-extension-gfm-footnote@2.1.0 | MIT | https://github.com/micromark/micromark-extension-gfm-footnote#readme |
@@ -1184,6 +1202,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | micromark-factory-label@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-factory-mdx-expression@2.0.3 | MIT | https://github.com/micromark/micromark-extension-mdx-expression/tree/main#readme |
 | micromark-factory-space@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
+| micromark-factory-space@2.1.0 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-factory-title@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-factory-whitespace@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-character@2.1.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
@@ -1192,6 +1211,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | micromark-util-combine-extensions@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-decode-numeric-character-reference@2.0.2 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-decode-string@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
+| micromark-util-edit-map@1.0.0 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-encode@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-events-to-acorn@2.0.3 | MIT | https://github.com/micromark/micromark-extension-mdx-expression/tree/main#readme |
 | micromark-util-html-tag-name@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
@@ -1201,7 +1221,9 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | micromark-util-subtokenize@2.1.0 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-symbol@2.0.1 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark-util-types@2.0.2 | MIT | https://github.com/micromark/micromark/tree/main#readme |
+| micromark-util-types@2.0.3 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromark@4.0.2 | MIT | https://github.com/micromark/micromark/tree/main#readme |
+| micromark@4.0.3 | MIT | https://github.com/micromark/micromark/tree/main#readme |
 | micromatch@4.0.8 | MIT | https://github.com/micromatch/micromatch |
 | mime-db@1.52.0 | MIT | https://github.com/jshttp/mime-db#readme |
 | mime-db@1.54.0 | MIT | https://github.com/jshttp/mime-db#readme |
@@ -1228,7 +1250,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | mux.js@7.1.0 | Apache-2.0 | https://github.com/videojs/mux.js#readme |
 | nanoid@3.3.15 | MIT | https://github.com/ai/nanoid#readme |
 | nanoid@3.3.20 | MIT | https://github.com/ai/nanoid#readme |
-| nanoid@5.1.7 | MIT | https://github.com/ai/nanoid#readme |
+| nanoid@6.0.2 | MIT | https://github.com/ai/nanoid#readme |
 | napi-build-utils@2.0.0 | MIT | https://github.com/inspiredware/napi-build-utils#readme |
 | negotiator@0.6.3 | MIT | https://github.com/jshttp/negotiator#readme |
 | negotiator@0.6.4 | MIT | https://github.com/jshttp/negotiator#readme |
@@ -1302,7 +1324,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | postcss-value-parser@4.2.0 | MIT | https://github.com/TrySound/postcss-value-parser |
 | postcss@8.5.16 | MIT | https://postcss.org/ |
 | postcss@8.5.32 | MIT | https://postcss.org/ |
-| preact@10.29.0 | MIT | https://preactjs.com |
+| preact@10.29.8 | MIT | https://preactjs.com |
 | prebuild-install@7.1.3 | MIT | https://github.com/prebuild/prebuild-install |
 | prettier@3.9.4 | MIT | https://prettier.io |
 | pretty-format@27.5.1 | MIT | https://github.com/jestjs/jest#readme |
@@ -1319,22 +1341,22 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | prompts@2.4.2 | MIT | https://github.com/terkelg/prompts#readme |
 | prop-types@15.8.1 | MIT | https://facebook.github.io/react/ |
 | property-information@7.1.0 | MIT | https://github.com/wooorm/property-information#readme |
-| prosemirror-changeset@2.4.0 | MIT | https://github.com/prosemirror/prosemirror-changeset#readme |
-| prosemirror-commands@1.7.1 | MIT | https://github.com/prosemirror/prosemirror-commands#readme |
-| prosemirror-drop-indicator@0.1.3 | MIT | https://github.com/prosekit/prosemirror-drop-indicator#readme |
-| prosemirror-dropcursor@1.8.2 | MIT | https://github.com/prosemirror/prosemirror-dropcursor#readme |
+| prosemirror-changeset@2.4.5 | MIT |  |
+| prosemirror-commands@1.7.2 | MIT |  |
+| prosemirror-drop-indicator@0.1.4 | MIT | https://github.com/prosekit/prosemirror-drop-indicator#readme |
+| prosemirror-dropcursor@1.8.4 | MIT |  |
 | prosemirror-gapcursor@1.4.1 | MIT | https://github.com/prosemirror/prosemirror-gapcursor#readme |
-| prosemirror-highlight@0.15.0 | MIT | https://github.com/ocavue/prosemirror-highlight#readme |
-| prosemirror-history@1.5.0 | MIT | https://github.com/prosemirror/prosemirror-history#readme |
+| prosemirror-highlight@0.16.0 | MIT | https://github.com/ocavue/prosemirror-highlight#readme |
+| prosemirror-history@1.5.1 | MIT |  |
 | prosemirror-inputrules@1.5.1 | MIT | https://github.com/prosemirror/prosemirror-inputrules#readme |
 | prosemirror-keymap@1.2.3 | MIT | https://github.com/prosemirror/prosemirror-keymap#readme |
-| prosemirror-model@1.25.4 | MIT | https://github.com/prosemirror/prosemirror-model#readme |
+| prosemirror-model@1.25.12 | MIT |  |
 | prosemirror-safari-ime-span@1.0.2 | MIT | https://github.com/ocavue/prosemirror-safari-ime-span#readme |
-| prosemirror-schema-list@1.5.1 | MIT | https://github.com/prosemirror/prosemirror-schema-list#readme |
+| prosemirror-schema-list@1.6.0 | MIT |  |
 | prosemirror-state@1.4.4 | MIT | https://github.com/prosemirror/prosemirror-state#readme |
 | prosemirror-tables@1.8.5 | MIT | https://github.com/ProseMirror/prosemirror-tables#readme |
-| prosemirror-transform@1.11.0 | MIT | https://github.com/prosemirror/prosemirror-transform#readme |
-| prosemirror-view@1.41.7 | MIT | https://github.com/prosemirror/prosemirror-view#readme |
+| prosemirror-transform@1.12.4 | MIT |  |
+| prosemirror-view@1.42.8 | MIT |  |
 | prosemirror-virtual-cursor@0.4.2 | MIT | https://github.com/ocavue/prosemirror-virtual-cursor#readme |
 | pump@3.0.4 | MIT | https://github.com/mafintosh/pump#readme |
 | punycode@2.3.1 | MIT | https://mths.be/punycode |
@@ -1343,17 +1365,18 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | radix3@1.1.2 | MIT | https://github.com/unjs/radix3#readme |
 | range-parser@1.2.1 | MIT | https://github.com/jshttp/range-parser#readme |
 | rc@1.2.8 | (BSD-2-Clause OR MIT OR Apache-2.0) | https://github.com/dominictarr/rc#readme |
+| react-aria@3.53.1 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
 | react-devtools-core@6.1.5 | MIT | https://github.com/facebook/react#readme |
 | react-dom@19.2.3 | MIT | https://react.dev/ |
-| react-dom@19.2.4 | MIT | https://react.dev/ |
+| react-dom@19.3.1 | MIT | https://react.dev/ |
 | react-fast-compare@3.2.2 | MIT | https://github.com/FormidableLabs/react-fast-compare |
-| react-force-graph-2d@1.29.1 | MIT | https://github.com/vasturiano/react-force-graph |
+| react-force-graph-2d@1.29.2 | MIT | https://github.com/vasturiano/react-force-graph |
 | react-freeze@1.0.4 | MIT | https://github.com/software-mansion/react-freeze#readme |
 | react-is@16.13.1 | MIT | https://react.dev/ |
 | react-is@17.0.2 | MIT | https://react.dev/ |
 | react-is@18.3.1 | MIT | https://react.dev/ |
 | react-is@19.2.4 | MIT | https://react.dev/ |
-| react-kapsule@2.5.7 | MIT | https://github.com/vasturiano/react-kapsule |
+| react-kapsule@2.6.0 | MIT | https://github.com/vasturiano/react-kapsule |
 | react-markdown@10.1.0 | MIT | https://github.com/remarkjs/react-markdown#readme |
 | react-native-drawer-layout@4.2.7 | MIT | https://reactnavigation.org/docs/drawer-layout/ |
 | react-native-gesture-handler@2.32.0 | MIT | https://docs.swmansion.com/react-native-gesture-handler/ |
@@ -1369,22 +1392,23 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | react-native-worklets@0.10.0 | MIT | https://docs.swmansion.com/react-native-worklets |
 | react-native@0.86.0 | MIT | https://reactnative.dev/ |
 | react-pdf@9.2.1 | MIT | https://github.com/wojtekmaj/react-pdf#readme |
-| react-redux@9.2.0 | MIT | https://github.com/reduxjs/react-redux |
+| react-redux@9.3.1 | MIT | https://github.com/reduxjs/react-redux |
 | react-refresh@0.14.2 | MIT | https://reactjs.org/ |
 | react-remove-scroll-bar@2.3.8 | MIT | https://github.com/theKashey/react-remove-scroll-bar#readme |
 | react-remove-scroll@2.7.2 | MIT | https://github.com/theKashey/react-remove-scroll#readme |
-| react-resizable-panels@4.7.3 | MIT | https://react-resizable-panels.vercel.app/ |
-| react-router-dom@7.13.1 | MIT | https://github.com/remix-run/react-router#readme |
-| react-router@7.13.1 | MIT | https://github.com/remix-run/react-router#readme |
+| react-resizable-panels@4.15.3 | MIT | https://react-resizable-panels.vercel.app/ |
+| react-router-dom@7.18.5 | MIT | https://github.com/remix-run/react-router#readme |
+| react-router@7.18.5 | MIT | https://github.com/remix-run/react-router#readme |
+| react-stately@3.51.0 | Apache-2.0 | https://github.com/adobe/react-spectrum#readme |
 | react-style-singleton@2.2.3 | MIT | https://github.com/theKashey/react-style-singleton#readme |
-| react-virtuoso@4.18.6 | MIT | https://virtuoso.dev/ |
+| react-virtuoso@4.18.20 | MIT | https://virtuoso.dev/ |
 | react@19.2.3 | MIT | https://react.dev/ |
-| react@19.2.4 | MIT | https://react.dev/ |
+| react@19.3.1 | MIT | https://react.dev/ |
 | readable-stream@2.3.8 | MIT | https://github.com/nodejs/readable-stream#readme |
 | readable-stream@3.6.2 | MIT | https://github.com/nodejs/readable-stream#readme |
 | readdirp@4.1.2 | MIT | https://github.com/paulmillr/readdirp |
 | readdirp@5.0.0 | MIT | https://github.com/paulmillr/readdirp |
-| recharts@3.8.0 | MIT | https://github.com/recharts/recharts |
+| recharts@3.10.1 | MIT | https://github.com/recharts/recharts |
 | recma-build-jsx@1.0.0 | MIT | https://github.com/mdx-js/recma |
 | recma-jsx@1.0.1 | MIT | https://github.com/mdx-js/recma |
 | recma-parse@1.0.0 | MIT | https://github.com/mdx-js/recma |
@@ -1426,7 +1450,8 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | request-light@0.7.0 | MIT | https://github.com/microsoft/node-request-light#readme |
 | require-directory@2.1.1 | MIT | https://github.com/troygoode/node-require-directory/ |
 | require-from-string@2.0.2 | MIT | https://github.com/floatdrop/require-from-string#readme |
-| reselect@5.1.1 | MIT | https://github.com/reduxjs/reselect#readme |
+| reselect@5.2.0 | MIT | https://github.com/reduxjs/reselect#readme |
+| reselect@5.3.0 | MIT | https://github.com/reduxjs/reselect#readme |
 | resolve-from@5.0.0 | MIT | https://github.com/sindresorhus/resolve-from#readme |
 | resolve-pkg-maps@1.0.0 | MIT | https://github.com/privatenumber/resolve-pkg-maps#readme |
 | resolve-workspace-root@2.0.1 | MIT | https://github.com/byCedric/resolve-workspace-root#readme |
@@ -1448,6 +1473,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | satteri@0.9.4 | MIT | https://github.com/bruits/satteri#readme |
 | sax@1.6.0 | BlueOak-1.0.0 | https://github.com/isaacs/sax-js#readme |
 | scheduler@0.27.0 | MIT | https://react.dev/ |
+| scheduler@0.28.0 | MIT | https://react.dev/ |
 | sdp-transform@2.15.0 | MIT | https://github.com/clux/sdp-transform#readme |
 | sdp@3.2.2 | MIT | https://github.com/fippo/sdp#readme |
 | semver@6.3.1 | ISC | https://github.com/npm/node-semver#readme |
@@ -1457,7 +1483,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | serialize-error@2.1.0 | MIT | https://github.com/sindresorhus/serialize-error#readme |
 | serve-static@1.16.3 | MIT | https://github.com/expressjs/serve-static#readme |
 | server-only@0.0.1 | MIT | https://reactjs.org/ |
-| set-cookie-parser@2.7.2 | MIT | https://github.com/nfriedly/set-cookie-parser |
+| set-cookie-parser@2.7.3 | MIT | https://github.com/nfriedly/set-cookie-parser |
 | set-function-length@1.2.2 | MIT | https://github.com/ljharb/set-function-length#readme |
 | set-function-name@2.0.2 | MIT | https://github.com/ljharb/set-function-name#readme |
 | set-proto@1.0.0 | MIT | https://github.com/ljharb/set-proto#readme |
@@ -1484,7 +1510,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | sitemap@9.0.1 | MIT | https://github.com/ekalinin/sitemap.js#readme |
 | slugify@1.6.8 | MIT | https://github.com/simov/slugify |
 | smol-toml@1.6.0 | BSD-3-Clause | https://github.com/squirrelchat/smol-toml#readme |
-| sonner@2.0.7 | MIT | https://sonner.emilkowal.ski/ |
+| sonner@2.0.8 | MIT | https://sonner.emilkowal.ski/ |
 | source-map-js@1.2.1 | BSD-3-Clause | https://github.com/7rulnik/source-map-js |
 | source-map-js@1.2.2 | BSD-3-Clause | https://github.com/7rulnik/source-map-js |
 | source-map-support@0.5.21 | MIT | https://github.com/evanw/node-source-map-support#readme |
@@ -1516,7 +1542,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | strip-indent@3.0.0 | MIT | https://github.com/sindresorhus/strip-indent#readme |
 | strip-json-comments@2.0.1 | MIT | https://github.com/sindresorhus/strip-json-comments#readme |
 | structured-headers@0.4.1 | MIT | https://github.com/evert/structured-header#readme |
-| style-mod@4.1.3 | MIT | https://github.com/marijnh/style-mod#readme |
+| style-mod@4.1.4 | MIT | https://code.haverbeke.berlin/marijn/style-mod |
 | style-to-js@1.1.21 | MIT | https://github.com/remarkablemark/style-to-js#readme |
 | style-to-object@1.0.14 | MIT | https://github.com/remarkablemark/style-to-object#readme |
 | styleq@0.1.3 | MIT | https://github.com/necolas/styleq#readme |
@@ -1526,7 +1552,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | supports-hyperlinks@2.3.0 | MIT | https://github.com/jamestalmage/supports-hyperlinks#readme |
 | supports-preserve-symlinks-flag@1.0.0 | MIT | https://github.com/inspect-js/node-supports-preserve-symlinks-flag#readme |
 | svgo@4.0.1 | MIT | https://svgo.dev |
-| tabbable@6.4.0 | MIT | https://github.com/focus-trap/tabbable#readme |
+| tabbable@6.5.1 | MIT | https://github.com/focus-trap/tabbable#readme |
 | tailwind-merge@3.5.0 | MIT | https://github.com/dcastil/tailwind-merge |
 | tailwindcss@4.2.2 | MIT | https://tailwindcss.com |
 | tapable@2.3.0 | MIT | https://github.com/webpack/tapable |
@@ -1551,6 +1577,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | trough@2.2.0 | MIT | https://github.com/wooorm/trough#readme |
 | tslib@1.14.1 | 0BSD | https://www.typescriptlang.org/ |
 | tslib@2.8.1 | 0BSD | https://www.typescriptlang.org/ |
+| tslib@2.9.1 | 0BSD | https://www.typescriptlang.org/ |
 | tunnel-agent@0.6.0 | Apache-2.0 | https://github.com/mikeal/tunnel-agent#readme |
 | type-fest@0.21.3 | (MIT OR CC0-1.0) | https://github.com/sindresorhus/type-fest#readme |
 | type-fest@0.7.1 | (MIT OR CC0-1.0) | https://github.com/sindresorhus/type-fest#readme |
@@ -1582,8 +1609,9 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | unist-util-remove-position@5.0.0 | MIT | https://github.com/syntax-tree/unist-util-remove-position#readme |
 | unist-util-stringify-position@4.0.0 | MIT | https://github.com/syntax-tree/unist-util-stringify-position#readme |
 | unist-util-visit-children@3.0.0 | MIT | https://github.com/syntax-tree/unist-util-visit-children#readme |
-| unist-util-visit-parents@6.0.2 | MIT | https://github.com/syntax-tree/unist-util-visit-parents#readme |
+| unist-util-visit-parents@6.1.0 | MIT | https://github.com/syntax-tree/unist-util-visit-parents#readme |
 | unist-util-visit@5.1.0 | MIT | https://github.com/syntax-tree/unist-util-visit#readme |
+| unist-util-visit@5.2.0 | MIT | https://github.com/syntax-tree/unist-util-visit#readme |
 | unpipe@1.0.0 | MIT | https://github.com/stream-utils/unpipe#readme |
 | unstorage@1.17.5 | MIT | https://unstorage.unjs.io |
 | update-browserslist-db@1.2.3 | MIT | https://github.com/browserslist/update-db#readme |
@@ -1591,7 +1619,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | use-callback-ref@1.3.3 | MIT | https://github.com/theKashey/use-callback-ref#readme |
 | use-latest-callback@0.2.6 | MIT | https://github.com/satya164/use-latest-callback#readme |
 | use-sidecar@1.1.3 | MIT | https://github.com/theKashey/use-sidecar |
-| use-sync-external-store@1.6.0 | MIT | https://github.com/facebook/react#readme |
+| use-sync-external-store@1.7.0 | MIT | https://github.com/react/react#readme |
 | usehooks-ts@3.1.1 | MIT | https://usehooks-ts.com |
 | util-deprecate@1.0.2 | MIT | https://github.com/TooTallNate/util-deprecate |
 | utils-merge@1.0.1 | MIT | https://github.com/jaredhanson/utils-merge#readme |
@@ -1603,7 +1631,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | vfile-location@5.0.3 | MIT | https://github.com/vfile/vfile-location#readme |
 | vfile-message@4.0.3 | MIT | https://github.com/vfile/vfile-message#readme |
 | vfile@6.0.3 | MIT | https://github.com/vfile/vfile#readme |
-| victory-vendor@37.3.6 | MIT AND ISC | https://commerce.nearform.com/open-source/victory |
+| victory-vendor@37.4.1 | MIT AND ISC AND BSD-3-Clause | https://commerce.nearform.com/open-source/victory |
 | video.js@8.23.7 | Apache-2.0 | https://videojs.com |
 | videojs-contrib-quality-levels@4.1.0 | Apache-2.0 | https://github.com/videojs/videojs-contrib-quality-levels#readme |
 | videojs-font@4.2.0 | Apache-2.0 | https://github.com/videojs/font |
@@ -1628,7 +1656,7 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | vscode-languageserver@9.0.1 | MIT | https://github.com/Microsoft/vscode-languageserver-node#readme |
 | vscode-nls@5.2.0 | MIT | https://github.com/Microsoft/vscode-nls#readme |
 | vscode-uri@3.1.0 | MIT | https://github.com/microsoft/vscode-uri#readme |
-| vue@3.5.30 | MIT | https://github.com/vuejs/core/tree/main/packages/vue#readme |
+| vue@3.5.44 | MIT | https://vuejs.org/ |
 | w3c-keyname@2.2.8 | MIT | https://github.com/marijnh/w3c-keyname#readme |
 | walker@1.0.8 | Apache-2.0 | https://github.com/daaku/nodejs-walker |
 | warn-once@0.1.1 | MIT | https://github.com/satya164/warn-once#readme |
@@ -1677,8 +1705,8 @@ Provider names and logos are covered in [trademarks](https://uniffy.io/docs/lega
 | yocto-queue@1.2.2 | MIT | https://github.com/sindresorhus/yocto-queue#readme |
 | zod-validation-error@3.5.4 | MIT | https://github.com/causaly/zod-validation-error#readme |
 | zod@3.25.76 | MIT | https://zod.dev |
-| zod@4.3.6 | MIT | https://zod.dev |
 | zod@4.4.3 | MIT | https://zod.dev |
+| zod@4.6.7 | MIT | https://zod.dev |
 | zustand@4.5.7 | MIT | https://github.com/pmndrs/zustand |
 | zwitch@2.0.4 | MIT | https://github.com/wooorm/zwitch#readme |
 
