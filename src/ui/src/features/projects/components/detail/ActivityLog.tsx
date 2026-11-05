@@ -27,7 +27,7 @@ import { SubjectAvatar } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import type { Subject } from "@/components/subject/types";
 import { Select } from "@/components/ui/select";
-import type { ActivityAction } from "@/features/projects/types/activity";
+import type { ActivityAction, TaskActivity } from "@/features/projects/types/activity";
 import type {
   FieldDefinition,
   SelectOption as FieldOption,
@@ -130,8 +130,10 @@ export function ActivityLog({ taskId, maxInitialItems, filter }: ActivityLogProp
     for (const entry of visible) {
       ids.add(entry.actorId);
       if (entry.action === "assigned") {
-        for (const id of splitList(entry.previousValue)) ids.add(id);
-        for (const id of splitList(entry.newValue)) ids.add(id);
+        for (const change of [entry, ...entry.steps]) {
+          for (const id of splitList(change.previousValue)) ids.add(id);
+          for (const id of splitList(change.newValue)) ids.add(id);
+        }
       }
     }
     return [...ids];
@@ -185,6 +187,7 @@ function ActivityItem({ entry, lookups }: { entry: ActivityEntry; lookups: Looku
   const actor = lookups.people[entry.actorId];
   const actorName = actor?.name || "Unknown user";
   const when = new Date(entry.timestamp);
+  const [showSteps, setShowSteps] = useState(false);
 
   return (
     <div className="flex gap-2.5 text-sm" data-testid="task-activity-entry">
@@ -212,18 +215,45 @@ function ActivityItem({ entry, lookups }: { entry: ActivityEntry; lookups: Looku
           <span className="text-subtle-foreground shrink-0">{activityIcon(entry.action)}</span>
           <span className="text-foreground">{activityContent(entry, lookups)}</span>
           {entry.count > 1 && (
-            <span className="text-subtle-foreground">({entry.count} changes)</span>
+            <button
+              type="button"
+              onClick={() => setShowSteps((open) => !open)}
+              aria-expanded={showSteps}
+              className="text-subtle-foreground underline-offset-2 hover:text-foreground hover:underline"
+              data-testid="task-activity-steps-toggle"
+            >
+              ({entry.count} changes)
+            </button>
           )}
-          <time
-            dateTime={entry.timestamp}
-            title={formatDateTimeFull(entry.timestamp)}
-            className="text-muted-foreground text-[10px] shrink-0"
-          >
-            {formatDistanceToNow(when, { addSuffix: true })}
-          </time>
+          <ActivityTime timestamp={entry.timestamp} when={when} />
         </div>
+        {showSteps && entry.steps.length > 0 && (
+          <ol
+            className="mt-1.5 space-y-1 border-l border-border/60 pl-3"
+            data-testid="task-activity-steps"
+          >
+            {entry.steps.map((step) => (
+              <li key={step.id} className="flex items-center gap-1.5 flex-wrap text-xs">
+                <span className="text-foreground">{activityContent(step, lookups)}</span>
+                <ActivityTime timestamp={step.timestamp} when={new Date(step.timestamp)} />
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
+  );
+}
+
+function ActivityTime({ timestamp, when }: { timestamp: string; when: Date }) {
+  return (
+    <time
+      dateTime={timestamp}
+      title={formatDateTimeFull(timestamp)}
+      className="text-muted-foreground text-[10px] shrink-0"
+    >
+      {formatDistanceToNow(when, { addSuffix: true })}
+    </time>
   );
 }
 
@@ -334,7 +364,7 @@ function customFieldValue(field: FieldDefinition | undefined, raw: string | unde
   return <Strong>{raw}</Strong>;
 }
 
-function activityContent(entry: ActivityEntry, lookups: Lookups): ReactNode {
+function activityContent(entry: TaskActivity, lookups: Lookups): ReactNode {
   const { previousValue: from, newValue: to } = entry;
   switch (entry.action) {
     case "created":
