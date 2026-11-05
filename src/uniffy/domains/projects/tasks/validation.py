@@ -6,10 +6,15 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
+from uniffy.core.models.login.group import Group
+from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.projects.project import Project
 from uniffy.core.models.projects.task import Task
+from uniffy.domains.directory.membership import filter_active_members
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.validation import validate_field_values
+
+MAX_ASSIGNEES = 50
 
 
 class TaskValidator:
@@ -176,3 +181,52 @@ class TaskValidator:
         )
         if errors:
             raise ValidationError("field_values", "; ".join(errors))
+
+    async def validate_assignees(
+        self,
+        organization_id: UUID,
+        actor_id: UUID,
+        assignee_ids: list[str],
+        *,
+        total: int,
+        previous_total: int = 0,
+    ) -> None:
+        """Each added id is an active member or a group the actor can see; removals stay free."""
+        # A list already over the cap may still shrink one assignee at a time.
+        if total > MAX_ASSIGNEES and total > previous_total:
+            raise ValidationError(
+                "assignee_ids", f"A task can have at most {MAX_ASSIGNEES} assignees"
+            )
+        invalid = ValidationError(
+            "assignee_ids", "Assignees must be people or groups in this organization"
+        )
+        wanted: set[UUID] = set()
+        for value in assignee_ids:
+            try:
+                parsed = UUID(str(value))
+            except ValueError:
+                raise invalid
+            # Stored ids are compared as text, so only the canonical spelling is accepted.
+            if str(parsed) != str(value):
+                raise invalid
+            wanted.add(parsed)
+        if not wanted:
+            return
+
+        found = await filter_active_members(self.session, organization_id, wanted)
+        remaining = wanted - found
+        if remaining:
+            actor_groups = select(GroupMember.group_id).where(
+                GroupMember.user_id == actor_id, GroupMember.is_active.is_(True)
+            )
+            groups = await self.session.execute(
+                select(Group.id).where(
+                    Group.organization_id == organization_id,
+                    Group.id.in_(remaining),
+                    # A private group's roster is its grant list; only its members may target it.
+                    Group.is_private.is_(False) | Group.id.in_(actor_groups),
+                )
+            )
+            found.update(row[0] for row in groups.all())
+        if wanted - found:
+            raise invalid

@@ -100,6 +100,17 @@ class TaskMutationOperations:
                 task_id, kwargs["blocked_by_task_ids"]
             )
 
+        if kwargs.get("assignee_ids"):
+            proposed = {str(value) for value in kwargs["assignee_ids"]}
+            current = set(task.assignee_ids or [])
+            await TaskValidator(self.session).validate_assignees(
+                organization_id,
+                user_id,
+                sorted(proposed - current),
+                total=len(proposed),
+                previous_total=len(current),
+            )
+
         if "parent_id" in kwargs and kwargs["parent_id"] is not None:  # noqa: PLR2004
             proposed_parent = kwargs["parent_id"]
             if isinstance(proposed_parent, str):
