@@ -185,6 +185,51 @@ export function instantDayKey(instant: Date | string): string {
   return formatInTimeZone(d, getEffectiveTimeZone(), "yyyy-MM-dd");
 }
 
+function dayKeyIn(instant: Date, timeZone: string): string {
+  try {
+    return formatInTimeZone(instant, timeZone, "yyyy-MM-dd");
+  } catch {
+    return formatInTimeZone(instant, getEffectiveTimeZone(), "yyyy-MM-dd");
+  }
+}
+
+function isMidnightIn(instant: Date, timeZone: string): boolean {
+  try {
+    return formatInTimeZone(instant, timeZone, "HH:mm:ss.SSS") === "00:00:00.000";
+  } catch {
+    return formatInTimeZone(instant, getEffectiveTimeZone(), "HH:mm:ss.SSS") === "00:00:00.000";
+  }
+}
+
+/**
+ * Days an all-day event covers, read in the event's own zone so a date-only entry keeps its
+ * date for every viewer. An end on midnight is exclusive, as iCalendar DTEND is.
+ */
+export function allDayDayKeys(event: { startTime: string; endTime: string; timezone?: string }): {
+  startKey: string;
+  endKey: string;
+} {
+  const timeZone = event.timezone || getEffectiveTimeZone();
+  const start = parseISO(event.startTime);
+  const end = parseISO(event.endTime);
+  const startKey = dayKeyIn(start, timeZone);
+  let endKey = dayKeyIn(end, timeZone);
+  if (end > start && isMidnightIn(end, timeZone)) {
+    endKey = format(subDays(parseISO(endKey), 1), "yyyy-MM-dd");
+  }
+  return { startKey, endKey: endKey < startKey ? startKey : endKey };
+}
+
+/** The day an event is listed under: its own date when all-day, the display-zone day otherwise. */
+export function eventDayKey(event: {
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+  timezone?: string;
+}): string {
+  return event.isAllDay ? allDayDayKeys(event).startKey : instantDayKey(event.startTime);
+}
+
 /** Compares display-zone yyyy-MM-dd so DST and UTC-midnight events do not get mis-bucketed. */
 export function areSameDay(date1: Date | string, date2: Date | string): boolean {
   return displayDayKey(date1) === displayDayKey(date2);
