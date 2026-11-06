@@ -10,7 +10,10 @@ from sqlalchemy import func, select
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.realtime.metrics import REALTIME_BACKLOG_DEPTH
-from uniffy.domains.notifications.jobs.contracts import DELIVER_NOTIFICATION_OUTBOX
+from uniffy.domains.notifications.jobs.contracts import (
+    DELIVER_NOTIFICATION_OUTBOX,
+    notification_outbox_job_id,
+)
 from uniffy.domains.notifications.jobs.jobs import process_notification_event
 from uniffy.infrastructure.database.session import open_session
 
@@ -59,5 +62,5 @@ async def recover_notification_events(ctx: dict[str, Any]) -> None:
         await enqueue_job(
             DELIVER_NOTIFICATION_OUTBOX,
             str(event.event_id),
-            _job_id=f"notification-outbox:{event.event_id}",
+            _job_id=notification_outbox_job_id(event.event_id),
         )

@@ -6,9 +6,9 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from uniffy.core.content.external_text import strip_controls
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.rule import AgentRule, RuleStatus
-from uniffy.domains.agents.memories.sanitize import strip_control_chars
 from uniffy.domains.agents.skills.validation import has_hard_injection, sanitize_skill_text
 
 MAX_ENABLED_RULES = 50
@@ -64,7 +64,7 @@ def clean_rule_fields(
         "description": sanitize_skill_text(description),
         "content": sanitize_skill_text(content),
     }
-    fields = {key: strip_control_chars(value, keep_newlines=True) for key, value in fields.items()}
+    fields = {key: strip_controls(value) for key, value in fields.items()}
     for key, cap in (
         ("name", 100),
         ("display_name", 255),

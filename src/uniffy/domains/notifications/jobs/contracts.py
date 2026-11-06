@@ -64,6 +64,12 @@ RECOVER_NOTIFICATION_EVENTS_SCHEDULE = JobRef(
     recovery=JobRecovery(fact="notification_outbox row", trigger="10-second recovery schedule"),
 )
 
+
+def notification_outbox_job_id(event_id: object) -> str:
+    """One delivery job per outbox event, whichever fleet wakes it."""
+    return f"notification-outbox:{event_id}"
+
+
 NOTIFICATION_JOB_REFS = (
     DELIVER_NOTIFICATION_OUTBOX,
     DELIVER_PUSH_NOTIFICATION,

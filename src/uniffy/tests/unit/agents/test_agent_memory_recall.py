@@ -14,6 +14,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from uniffy.core.content.external_text import strip_controls
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.memory import AgentMemory, MemoryScope
 from uniffy.core.types import generate_id
@@ -30,7 +31,7 @@ from uniffy.domains.agents.memories.recall import (
     build_recall_query,
     render_recall_block,
 )
-from uniffy.domains.agents.memories.sanitize import escape_like, strip_control_chars
+from uniffy.domains.agents.memories.sanitize import escape_like
 from uniffy.domains.agents.memories.scope import MemoryScopeRef
 from uniffy.domains.agents.memories.scoring import (
     TrigramMemoryScorer,
@@ -64,14 +65,14 @@ def _memory(**overrides):
 class TestSanitize:
     def test_strips_zero_width_bidi_and_tag_block(self):
         smuggled = "dep\u200bloy\u202e win\U000e0041dow"
-        assert strip_control_chars(smuggled) == "deploy window"
+        assert strip_controls(smuggled, keep_newlines=False) == "deploy window"
 
     def test_content_keeps_newlines_and_tabs(self):
         text = "line one\n\tline two\r\u200b"
-        assert strip_control_chars(text, keep_newlines=True) == "line one\n\tline two"
+        assert strip_controls(text) == "line one\n\tline two"
 
     def test_key_mode_strips_newlines_too(self):
-        assert strip_control_chars("a\nb\tc") == "abc"
+        assert strip_controls("a\nb\tc", keep_newlines=False) == "abc"
 
     def test_escape_like(self):
         assert escape_like("100%_done\\") == "100\\%\\_done\\\\"
