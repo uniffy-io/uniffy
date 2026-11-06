@@ -16,11 +16,15 @@ let membersRequestInFlight = false;
 let groupsRequestInFlight = false;
 
 /** Resolves IDs against admin.members/groups/agents; unresolved IDs get a truncated-ID fallback Subject. */
-export function useSubjectResolver(ids: string[]): {
+export function useSubjectResolver(
+  ids: string[],
+  knownSubjects: Subject[] = [],
+): {
   subjects: Subject[];
   loading: boolean;
 } {
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.auth.user);
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
   const members = useAppSelector((state) => state.admin.members) as SerializedMemberInfo[];
   const membersLoading = useAppSelector((state) => state.admin.membersLoading);
@@ -72,7 +76,19 @@ export function useSubjectResolver(ids: string[]): {
   }, [groups]);
 
   const subjects = useMemo(() => {
+    const known = new Map(knownSubjects.map((subject) => [subject.id, subject]));
     return (ids ?? []).map((id): Subject => {
+      const picked = known.get(id);
+      if (picked) return picked;
+      if (currentUser?.id === id) {
+        return {
+          id,
+          type: SUBJECT_TYPE.USER,
+          name: currentUser.fullName || currentUser.username,
+          email: currentUser.email,
+          avatarUrl: currentUser.avatarUrl || undefined,
+        };
+      }
       const member = memberMap[id];
       if (member) {
         return {
@@ -110,7 +126,7 @@ export function useSubjectResolver(ids: string[]): {
         name: id.slice(-6),
       };
     });
-  }, [ids, memberMap, groupMap, agents]);
+  }, [ids, knownSubjects, currentUser, memberMap, groupMap, agents]);
 
   return { subjects, loading: membersLoading || groupsLoading };
 }

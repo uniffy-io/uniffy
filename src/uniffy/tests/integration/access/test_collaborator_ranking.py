@@ -19,8 +19,9 @@ from uniffy.domains.directory.collaborators.reader import CollaboratorReader, Co
 from uniffy.domains.directory.collaborators.recorder import record_notification_interactions
 from uniffy.domains.directory.collaborators.signals import CollaboratorSignal, stage_interactions
 from uniffy.domains.directory.groups.lifecycle import GroupOperations
-from uniffy.domains.organizations.operations import OrganizationOperations
+from uniffy.domains.directory.membership import filter_active_members
 from uniffy.domains.notifications.jobs.jobs import _resolve_recipients
+from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.projects.tasks import notifications as task_notifications
 from uniffy.domains.projects.tasks.notifications import TaskNotifications
 from uniffy.domains.projects.tasks.validation import TaskValidator
@@ -332,52 +333,69 @@ async def test_people_reached_through_an_assigned_group_record_nothing(session, 
     assert await record_notification_interactions(session, via_group, [access.peer_id]) == 0
 
 
-async def test_nightly_upkeep_pairs_people_who_changed_the_same_task(session, access):
+@pytest.mark.parametrize("private", [False, True])
+async def test_nightly_upkeep_requires_current_task_access(session, access, private, monkeypatch):
+    monkeypatch.setattr("uniffy.domains.directory.collaborators.jobs.jobs.ACTIVITY_PAGE_SIZE", 1)
     project = Project(
         organization_id=access.org_id,
         owner_id=access.member_id,
         name="Co-activity",
         slug=f"co-{generate_id().hex[-12:]}",
-        access_mode=AccessMode.OPEN_TO_ORG,
+        access_mode=AccessMode.OWNER_ONLY if private else AccessMode.OPEN_TO_ORG,
         baseline_role=ContentRole.EDITOR,
         task_counter=1,
     )
     session.add(project)
     await session.flush()
-    task = Task(
-        organization_id=access.org_id,
-        owner_id=access.member_id,
-        project_id=project.id,
-        title="Shared",
-        number=1,
-        description="",
-    )
-    session.add(task)
+    tasks = [
+        Task(
+            organization_id=access.org_id,
+            owner_id=access.member_id,
+            project_id=project.id,
+            title="Shared",
+            number=number,
+            description="",
+        )
+        for number in (1, 2)
+    ]
+    session.add_all(tasks)
     await session.flush()
     session.add_all([
-        TaskActivity(task_id=task.id, actor_id=access.member_id, action="title_changed"),
-        TaskActivity(task_id=task.id, actor_id=access.peer_id, action="status_changed"),
-        TaskActivity(task_id=task.id, actor_id=access.peer_id, action="priority_changed"),
+        TaskActivity(task_id=task.id, actor_id=actor, action="title_changed")
+        for task in tasks
+        for actor in (access.member_id, access.peer_id, access.peer_id)
     ])
-    project_id, task_id = project.id, task.id
+    project_id, task_ids = project.id, [task.id for task in tasks]
     await session.commit()
     try:
         now = datetime.now(UTC)
-        pairs = (await _shared_work(session, now - timedelta(days=1)))[access.org_id]
-        assert sorted(pairs) == sorted([
-            (access.member_id, access.peer_id, CollaboratorSignal.CO_ACTIVITY),
-            (access.peer_id, access.member_id, CollaboratorSignal.CO_ACTIVITY),
-        ])
+        pairs = []
+        async for org_id, batch in _shared_work(session, now - timedelta(days=1), now):
+            if org_id == access.org_id:
+                assert len(batch) <= 2
+                pairs.extend(batch)
+        expected = (
+            []
+            if private
+            else [
+                (access.member_id, access.peer_id, CollaboratorSignal.CO_ACTIVITY),
+                (access.peer_id, access.member_id, CollaboratorSignal.CO_ACTIVITY),
+            ]
+        )
+        assert sorted(pairs) == sorted(expected * len(tasks))
         # Within the cap nothing is pruned; the statement must still run on real PostgreSQL.
         await stage_interactions(session, access.org_id, pairs, at=now)
         await session.commit()
         assert await _prune(session, now) >= 0
         member_view = await CollaboratorReader(session).list(access.org_id, access.member_id)
-        assert member_view[0].user.id == access.peer_id
+        if private:
+            assert _tiers(member_view)[access.peer_id] is CollaboratorTier.MEMBER
+        else:
+            assert member_view[0].user.id == access.peer_id
     finally:
         await session.rollback()
-        await session.execute(delete(TaskActivity).where(TaskActivity.task_id == task_id))
-        await session.execute(delete(Task).where(Task.id == task_id))
+        await session.execute(delete(TaskActivity).where(TaskActivity.task_id.in_(task_ids)))
+        await session.execute(delete(Task).where(Task.id.in_(task_ids)))
         await session.execute(delete(Project).where(Project.id == project_id))
         await session.commit()
 
@@ -416,3 +434,12 @@ class TestAssigneeValidation:
         await TaskValidator(session).validate_assignees(
             access.org_id, access.member_id, [], total=60, previous_total=61
         )
+
+
+async def test_active_member_filter_accepts_more_than_the_driver_parameter_limit(session, access):
+    candidates = [generate_id() for _ in range(32_767)]
+    candidates.extend([access.member_id, access.peer_id, access.ghost_id, access.outsider_id])
+    assert await filter_active_members(session, access.org_id, candidates) == {
+        access.member_id,
+        access.peer_id,
+    }

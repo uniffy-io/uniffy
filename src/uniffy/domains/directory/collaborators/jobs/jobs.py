@@ -1,17 +1,20 @@
 """Nightly collaborator upkeep: credit shared work that sends no notification, then prune."""
 
 from collections import defaultdict
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from itertools import permutations
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import CTE, Select, func, select, text
+from sqlalchemy import Select, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.calls.call import CallParticipant
 from uniffy.core.models.projects.activity import TaskActivity
 from uniffy.core.models.projects.task import Task
+from uniffy.core.types import ContentType
 from uniffy.domains.directory.collaborators.signals import (
     HALF_LIFE,
     LN2,
@@ -21,6 +24,7 @@ from uniffy.domains.directory.collaborators.signals import (
     Interaction,
     stage_interactions,
 )
+from uniffy.domains.permissions.access import ResourceAudienceResolver, ResourceKey
 from uniffy.infrastructure.database import open_session
 
 logger = logger.bind(component="directory.collaborators.jobs")
@@ -30,50 +34,37 @@ LOOKBACK = timedelta(days=1)
 MAX_PARTICIPANTS = 8
 
 
-def _pairs(people: CTE, group_column: str, person_column: str) -> Select[tuple[UUID, UUID, UUID]]:
-    """Every ordered pair of distinct people within each small group of `people`."""
-    group = people.c[group_column]
-    small = (
-        select(group)
-        .group_by(group)
-        .having(func.count().between(2, MAX_PARTICIPANTS))
-        .scalar_subquery()
-    )
-    x, y = people.alias("x"), people.alias("y")
+ACTIVITY_PAGE_SIZE = 100
+
+
+def _task_people(since: datetime, until: datetime) -> Select[tuple[UUID, UUID, list[UUID]]]:
     return (
-        select(x.c.organization_id, x.c[person_column], y.c[person_column])
-        .join(
-            y,
-            (y.c[group_column] == x.c[group_column]) & (y.c[person_column] != x.c[person_column]),
-        )
-        .where(x.c[group_column].in_(small))
-    )
-
-
-def _task_pairs(since: datetime) -> Select[tuple[UUID, UUID, UUID]]:
-    # Humans who changed the same task in the window; agent changes credit no one.
-    actors = (
-        select(Task.organization_id, TaskActivity.task_id, TaskActivity.actor_id)
-        .distinct()
-        .join(Task, Task.id == TaskActivity.task_id)
+        select(Task.organization_id, Task.id, func.array_agg(TaskActivity.actor_id.distinct()))
+        .join(TaskActivity, TaskActivity.task_id == Task.id)
         .where(
             TaskActivity.timestamp >= since,
+            TaskActivity.timestamp < until,
             TaskActivity.agent_id.is_(None),
             Task.is_deleted.is_(False),
         )
-        .cte("actors")
+        .group_by(Task.organization_id, Task.id)
+        .having(func.count(TaskActivity.actor_id.distinct()).between(2, MAX_PARTICIPANTS))
+        .order_by(Task.id)
     )
-    return _pairs(actors, "task_id", "actor_id")
 
 
-def _call_pairs(since: datetime) -> Select[tuple[UUID, UUID, UUID]]:
-    people = (
-        select(CallParticipant.organization_id, CallParticipant.call_id, CallParticipant.user_id)
-        .distinct()
-        .where(CallParticipant.joined_at >= since)
-        .cte("people")
+def _call_people(since: datetime, until: datetime) -> Select[tuple[UUID, UUID, list[UUID]]]:
+    return (
+        select(
+            CallParticipant.organization_id,
+            CallParticipant.call_id,
+            func.array_agg(CallParticipant.user_id.distinct()),
+        )
+        .where(CallParticipant.joined_at >= since, CallParticipant.joined_at < until)
+        .group_by(CallParticipant.organization_id, CallParticipant.call_id)
+        .having(func.count(CallParticipant.user_id.distinct()).between(2, MAX_PARTICIPANTS))
+        .order_by(CallParticipant.call_id)
     )
-    return _pairs(people, "call_id", "user_id")
 
 
 _PRUNE_EXPIRED = text("DELETE FROM people_collaborator_scores WHERE last_interaction_at < :cutoff")
@@ -110,32 +101,57 @@ _PRUNE_OVERFLOW = text(
 )
 
 
-async def _shared_work(session: AsyncSession, since: datetime) -> dict[UUID, list[Interaction]]:
-    by_org: dict[UUID, list[Interaction]] = defaultdict(list)
-    for statement in (_task_pairs(since), _call_pairs(since)):
-        result = await session.execute(statement)
-        for organization_id, user_id, peer_id in result.all():
-            by_org[organization_id].append((user_id, peer_id, CollaboratorSignal.CO_ACTIVITY))
-    return by_org
+async def _shared_work(
+    session: AsyncSession, since: datetime, until: datetime
+) -> AsyncIterator[tuple[UUID, list[Interaction]]]:
+    sources = (
+        (_task_people(since, until), Task.id, ContentType.TASK),
+        (_call_people(since, until), CallParticipant.call_id, ContentType.CALL),
+    )
+    for statement, item_column, content_type in sources:
+        after: UUID | None = None
+        while True:
+            page = statement.limit(ACTIVITY_PAGE_SIZE)
+            if after is not None:
+                page = page.where(item_column > after)
+            rows = (await session.execute(page)).all()
+            if not rows:
+                break
+            by_org: dict[UUID, list[Interaction]] = defaultdict(list)
+            for organization_id, item_id, people in rows:
+                if content_type == ContentType.TASK:
+                    # Former editors must not learn about work done after their access ended.
+                    people = await ResourceAudienceResolver(session).filter_resource(
+                        organization_id=organization_id,
+                        key=ResourceKey(ContentType.TASK, item_id),
+                        candidate_user_ids=people,
+                    )
+                by_org[organization_id].extend(
+                    (user_id, peer_id, CollaboratorSignal.CO_ACTIVITY)
+                    for user_id, peer_id in permutations(people, 2)
+                )
+            after = rows[-1][1]
+            for organization_id, pairs in by_org.items():
+                if pairs:
+                    yield organization_id, pairs
 
 
 async def _credit_shared_work(session: AsyncSession, now: datetime) -> int:
     credited = 0
     try:
-        by_org = await _shared_work(session, now - LOOKBACK)
+        async for organization_id, pairs in _shared_work(session, now - LOOKBACK, now):
+            try:
+                written = await stage_interactions(session, organization_id, pairs, at=now)
+                await session.commit()
+                credited += written
+            except Exception:
+                await session.rollback()
+                logger.opt(exception=True).warning(
+                    "Failed to credit shared work", organization_id=str(organization_id)
+                )
     except Exception:
         await session.rollback()
         logger.opt(exception=True).warning("Failed to read shared work")
-        return 0
-    for organization_id, pairs in by_org.items():
-        try:
-            credited += await stage_interactions(session, organization_id, pairs, at=now)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            logger.opt(exception=True).warning(
-                "Failed to credit shared work", organization_id=str(organization_id)
-            )
     return credited
 
 

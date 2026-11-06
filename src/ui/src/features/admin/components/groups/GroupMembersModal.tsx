@@ -235,17 +235,15 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         placeholder="Search for a manager..."
                         disabled={saving}
                       />
-                      {managerQuery.trim().length > 0 && (
-                        <SubjectSearchResults
-                          results={managerResults}
-                          loading={searchingManagers}
-                          query={managerQuery}
-                          actionLabel="Select"
-                          busyId={saving ? member.userId : null}
-                          onSelect={(subject) => applyManager(member.userId, subject.id)}
-                          className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
-                        />
-                      )}
+                      <SubjectSearchResults
+                        results={managerResults}
+                        loading={searchingManagers}
+                        query={managerQuery}
+                        actionLabel="Select"
+                        busyId={saving ? member.userId : null}
+                        onSelect={(subject) => applyManager(member.userId, subject.id)}
+                        className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
+                      />
                       {managerId && (
                         <button
                           type="button"

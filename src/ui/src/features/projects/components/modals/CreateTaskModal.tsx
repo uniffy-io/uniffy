@@ -13,13 +13,14 @@ import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
+import type { Subject } from "@/components/subject/types";
 import { SubjectChip, SubjectPicker } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
-import { selectCurrentProject } from "../../store/projectsSlice";
-import { closeCreateTaskModal } from "../../store/projectsUiSlice";
-import { createTask } from "../../store/projectsThunks";
-import { SYSTEM_FIELD_IDS } from "../../types";
+import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
+import { closeCreateTaskModal } from "@/features/projects/store/projectsUiSlice";
+import { createTask } from "@/features/projects/store/projectsThunks";
+import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
@@ -55,7 +56,8 @@ export function CreateTaskModal() {
   const pendingFileIdsRef = useRef<string[]>([]);
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
-  const { subjects: assignees } = useSubjectResolver(assigneeIds);
+  const [pickedAssignees, setPickedAssignees] = useState<Subject[]>([]);
+  const { subjects: assignees } = useSubjectResolver(assigneeIds, pickedAssignees);
   const assigneePinnedOptions = useAssigneePinnedOptions({
     value: assigneeIds,
     onChange: setAssigneeIds,
@@ -91,6 +93,7 @@ export function CreateTaskModal() {
     setTitle("");
     setDescription("");
     setAssigneeIds([]);
+    setPickedAssignees([]);
     setStartDate("");
     setDueDate("");
     setTaskType("task");
@@ -318,7 +321,11 @@ export function CreateTaskModal() {
                 mode="multi"
                 subjectTypes="all"
                 value={assigneeIds}
-                onChange={(ids) => setAssigneeIds(ids)}
+                knownSubjects={assignees}
+                onChange={(ids, subjects) => {
+                  setAssigneeIds(ids);
+                  setPickedAssignees(subjects);
+                }}
                 pinnedOptions={assigneePinnedOptions}
                 onClose={() => setIsAssigneeDropdownOpen(false)}
                 autoFocus

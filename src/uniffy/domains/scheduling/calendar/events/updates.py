@@ -16,7 +16,6 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.events import (
-    NotificationEvent,
     emit_notification,
 )
 from uniffy.core.events.realtime import ContentAccessAction
@@ -34,7 +33,6 @@ from uniffy.core.types import (
     EventStatus,
     EventTransparency,
     EventVisibility,
-    NotificationType,
     RecurrenceEditScope,
     RecurrencePattern,
 )
@@ -46,7 +44,10 @@ from uniffy.domains.scheduling.calendar.calendars.search import (
     enqueue_calendar_search_acl_refresh,
     record_calendar_search_acl_refresh,
 )
-from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
+from uniffy.domains.scheduling.calendar.events.notifications import (
+    invitation_notifications,
+    publish_event_change,
+)
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -505,16 +506,10 @@ class EventUpdateOperations:
                 newly_invited_ids,
                 ContentAccessAction.GRANTED,
             )
-            await emit_notification(
-                NotificationEvent(
-                    notification_type=NotificationType.CALENDAR_INVITE,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Invited to: {event.title}",
-                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                    target_user_ids=newly_invited_ids,
-                )
-            )
+            for notification in invitation_notifications(
+                event, user_id, newly_invited_ids, invited_via
+            ):
+                await emit_notification(notification)
 
         if removed_attendee_ids:
             await self.events._publish_attendee_access_change(

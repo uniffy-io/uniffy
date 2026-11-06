@@ -1049,6 +1049,9 @@ class ContentMembersOperations:
                     title=f"You were added as {role.value.lower()}",
                     source_urn=build_content_urn(content_type, content_id),
                     target_user_ids=target_ids,
+                    metadata={"group_ids": [str(subject_id)]}
+                    if subject_type == SubjectType.GROUP
+                    else None,
                 )
             )
         except Exception:

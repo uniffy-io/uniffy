@@ -33,6 +33,7 @@ interface SubjectPickerProps {
   mode: SubjectPickerMode;
   subjectTypes?: SubjectTypeFilter;
   value: string[];
+  knownSubjects?: Subject[];
   onChange: (ids: string[], subjects: Subject[]) => void;
   excludeIds?: string[];
   /** Render as a portal anchored to anchorRef. */
@@ -53,6 +54,7 @@ export function SubjectPicker({
   mode,
   subjectTypes = "all",
   value,
+  knownSubjects = [],
   onChange,
   excludeIds = [],
   portal = false,
@@ -78,10 +80,12 @@ export function SubjectPicker({
     excludeIds,
   });
 
-  const { subjects: resolvedSelected } = useSubjectResolver(value);
+  const [pickedSubjects, setPickedSubjects] = useState<Subject[]>([]);
+  const { subjects: resolvedSelected } = useSubjectResolver(value, [
+    ...knownSubjects,
+    ...pickedSubjects,
+  ]);
   const currentUser = useAppSelector((s) => s.auth.user);
-
-  const selectedSubjectsRef = useRef<Map<string, Subject>>(new Map());
 
   useEffect(() => {
     search(query);
@@ -152,6 +156,7 @@ export function SubjectPicker({
         if (subject.type === SUBJECT_TYPE.USER && !value.includes(subject.id)) {
           recordPicks([subject.id]);
         }
+        setPickedSubjects([subject]);
         onChange([subject.id], [subject]);
         setQuery("");
         return;
@@ -161,16 +166,18 @@ export function SubjectPicker({
       let nextIds: string[];
       if (isSelected) {
         nextIds = value.filter((id) => id !== subject.id);
-        selectedSubjectsRef.current.delete(subject.id);
       } else {
         nextIds = [...value, subject.id];
-        selectedSubjectsRef.current.set(subject.id, subject);
         if (subject.type === SUBJECT_TYPE.USER) recordPicks([subject.id]);
       }
-      const nextSubjects = nextIds.map((id) => selectedSubjectsRef.current.get(id) || subject);
+      const known = new Map(
+        [...resolvedSelected, ...results, subject].map((item) => [item.id, item]),
+      );
+      const nextSubjects = nextIds.flatMap((id) => known.get(id) ?? []);
+      setPickedSubjects(nextSubjects);
       onChange(nextIds, nextSubjects);
     },
-    [mode, value, onChange, recordPicks],
+    [mode, value, onChange, recordPicks, resolvedSelected, results],
   );
 
   const {

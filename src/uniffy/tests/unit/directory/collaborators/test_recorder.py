@@ -1,20 +1,22 @@
 """Which delivered notifications count as working together, and for whom."""
 
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from uniffy.core.events.types import NotificationEvent
-from uniffy.core.types import NotificationType, generate_id
-from uniffy.domains.directory.collaborators import recorder
-from uniffy.domains.directory.collaborators import signals
+from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.types import ContentRole, ContentType, NotificationType, SubjectType, generate_id
+from uniffy.domains.directory.collaborators import recorder, signals
 from uniffy.domains.directory.collaborators.signals import (
     HALF_LIFE,
     CollaboratorSignal,
     decay_factor,
     stage_interactions,
 )
+from uniffy.domains.permissions.members import ContentMembersOperations
+from uniffy.domains.scheduling.calendar.events.notifications import invitation_notifications
 
 _RECORDER = "uniffy.domains.directory.collaborators.recorder"
 
@@ -126,3 +128,44 @@ class TestRecorder:
         self, notification_type
     ) -> None:
         assert await _record(_event(notification_type), [generate_id()], fresh=False) == []
+
+
+async def test_group_grant_with_one_recipient_does_not_count_as_a_personal_share() -> None:
+    actor, peer, group = generate_id(), generate_id(), generate_id()
+    ops = ContentMembersOperations(MagicMock(), MagicMock())
+    with (
+        patch.object(ops, "_resolve_notification_targets", AsyncMock(return_value=[actor, peer])),
+        patch("uniffy.domains.permissions.members.emit_notification", AsyncMock()) as emit,
+    ):
+        await ops._emit_granted_notification(
+            organization_id=generate_id(),
+            actor_user_id=actor,
+            content_type=ContentType.NOTE,
+            content_id=generate_id(),
+            subject_type=SubjectType.GROUP,
+            subject_id=group,
+            role=ContentRole.VIEWER,
+        )
+    event = emit.call_args.args[0]
+    assert event.metadata == {"group_ids": [str(group)]}
+    assert await _record(event, [peer]) == []
+
+
+async def test_calendar_invites_credit_direct_picks_without_crediting_group_members() -> None:
+    actor, direct, grouped, group = (generate_id() for _ in range(4))
+    now = datetime.now(UTC)
+    event = CalendarEvent(
+        organization_id=generate_id(),
+        organizer_id=actor,
+        calendar_id=generate_id(),
+        title="Working session",
+        start_time=now,
+        end_time=now + timedelta(hours=1),
+    )
+    direct_event, group_event = invitation_notifications(
+        event, actor, [direct, grouped], {grouped: group}
+    )
+    assert direct_event.target_user_ids == [direct]
+    assert group_event.target_user_ids == [grouped]
+    assert len(await _record(direct_event, [direct])) == 2
+    assert await _record(group_event, [grouped]) == []

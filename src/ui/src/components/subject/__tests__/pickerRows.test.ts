@@ -47,4 +47,15 @@ describe("buildPickerRows", () => {
     const rows = buildPickerRows({ ...base, suggested: false, results: [person("eve")] });
     expect(rows.suggestions).toEqual([]);
   });
+  it("keeps server metadata when selected person is outside cached member page", () => {
+    const full = { ...person("outside-page"), name: "Known colleague", avatarUrl: "/avatar" };
+    const rows = buildPickerRows({
+      ...base,
+      value: [full.id],
+      resolvedSelected: [{ ...person(full.id), name: "abcdef" }],
+      results: [full],
+    });
+    expect(rows.selectedRows).toEqual([full]);
+    expect(rows.suggestions).toEqual([]);
+  });
 });

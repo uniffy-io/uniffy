@@ -37,6 +37,7 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
+from uniffy.domains.scheduling.calendar.events.notifications import invitation_notifications
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
     retire_pending_event_mail,
@@ -136,16 +137,8 @@ class AttendeeOperations:
                 added_ids,
                 ContentAccessAction.GRANTED,
             )
-            await emit_notification(
-                NotificationEvent(
-                    notification_type=NotificationType.CALENDAR_INVITE,
-                    organization_id=organization_id,
-                    actor_id=user_id,
-                    title=f"Invited to: {event.title}",
-                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                    target_user_ids=added_ids,
-                )
-            )
+            for notification in invitation_notifications(event, user_id, added_ids, invited_via):
+                await emit_notification(notification)
 
         await self.events._finish_auto_created_room_members(event, staged_room)
 

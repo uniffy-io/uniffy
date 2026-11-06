@@ -10,7 +10,6 @@ from uniffy.core.errors import (
     ValidationError,
 )
 from uniffy.core.events import (
-    NotificationEvent,
     emit_notification,
 )
 from uniffy.core.events.realtime import ContentAccessAction
@@ -22,15 +21,16 @@ from uniffy.core.types import (
     AccessMode,
     AttendeeRole,
     AttendeeStatus,
-    ContentType,
     EventStatus,
     EventTransparency,
     EventVisibility,
-    NotificationType,
     RecurrencePattern,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
-from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
+from uniffy.domains.scheduling.calendar.events.notifications import (
+    invitation_notifications,
+    publish_event_change,
+)
 from uniffy.domains.scheduling.calendar.events.state import _StagedCalendarEventCreate
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, stage_event_mail
 from uniffy.domains.scheduling.rooms.events import EventBookingOperations
@@ -232,7 +232,7 @@ class EventCreateOperations:
         await self.session.refresh(event)
 
         await self._finish_calendar_event_create_after_commit(
-            _StagedCalendarEventCreate(event, staged_tags, tuple(attendee_ids or ()))
+            _StagedCalendarEventCreate(event, staged_tags, tuple(attendee_ids or ()), invited_via)
         )
 
         return event
@@ -273,16 +273,10 @@ class EventCreateOperations:
                 ContentAccessAction.GRANTED,
             )
             try:
-                await emit_notification(
-                    NotificationEvent(
-                        notification_type=NotificationType.CALENDAR_INVITE,
-                        organization_id=event.organization_id,
-                        actor_id=event.owner_id,
-                        title=f"Invited to: {event.title}",
-                        source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
-                        target_user_ids=invited,
-                    )
-                )
+                for notification in invitation_notifications(
+                    event, event.owner_id, invited, staged.invited_via
+                ):
+                    await emit_notification(notification)
             except Exception:
                 logger.opt(exception=True).warning(
                     "Calendar event created with degraded invite notifications",

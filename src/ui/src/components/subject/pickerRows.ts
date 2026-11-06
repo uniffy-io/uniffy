@@ -53,7 +53,10 @@ export function buildPickerRows({
     ...(self ? [self.id] : []),
     ...pinnedOptions.flatMap((option) => option.subjectId ?? []),
   ]);
-  const selectedRows = resolvedSelected.filter((subject) => !pinnedSubjectIds.has(subject.id));
+  const resultById = new Map(results.map((subject) => [subject.id, subject]));
+  const selectedRows = resolvedSelected
+    .filter((subject) => !pinnedSubjectIds.has(subject.id))
+    .map((subject) => resultById.get(subject.id) ?? subject);
   const suggestions = suggested
     ? results.filter((subject) => !value.includes(subject.id) && !pinnedSubjectIds.has(subject.id))
     : [];

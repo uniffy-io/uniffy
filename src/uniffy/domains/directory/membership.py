@@ -3,7 +3,8 @@
 from collections.abc import Iterable
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import Uuid, any_, literal, select
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.login.group import Group, GroupKind
@@ -53,7 +54,7 @@ async def filter_active_members(
         .join(User, User.id == OrganizationMember.user_id)
         .where(
             OrganizationMember.organization_id == organization_id,
-            OrganizationMember.user_id.in_(candidates),
+            OrganizationMember.user_id == any_(literal(sorted(candidates), ARRAY(Uuid()))),
             OrganizationMember.is_active.is_(True),
             User.is_active.is_(True),
         )
