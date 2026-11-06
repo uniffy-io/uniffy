@@ -19,44 +19,47 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CalendarService_ListCalendars_FullMethodName          = "/cal.v1.CalendarService/ListCalendars"
-	CalendarService_GetCalendar_FullMethodName            = "/cal.v1.CalendarService/GetCalendar"
-	CalendarService_CreateCalendar_FullMethodName         = "/cal.v1.CalendarService/CreateCalendar"
-	CalendarService_UpdateCalendar_FullMethodName         = "/cal.v1.CalendarService/UpdateCalendar"
-	CalendarService_DeleteCalendar_FullMethodName         = "/cal.v1.CalendarService/DeleteCalendar"
-	CalendarService_SetCalendarVisibility_FullMethodName  = "/cal.v1.CalendarService/SetCalendarVisibility"
-	CalendarService_GetCalendarPolicy_FullMethodName      = "/cal.v1.CalendarService/GetCalendarPolicy"
-	CalendarService_UpdateCalendarPolicy_FullMethodName   = "/cal.v1.CalendarService/UpdateCalendarPolicy"
-	CalendarService_CreateEvent_FullMethodName            = "/cal.v1.CalendarService/CreateEvent"
-	CalendarService_GetEvent_FullMethodName               = "/cal.v1.CalendarService/GetEvent"
-	CalendarService_UpdateEvent_FullMethodName            = "/cal.v1.CalendarService/UpdateEvent"
-	CalendarService_DeleteEvent_FullMethodName            = "/cal.v1.CalendarService/DeleteEvent"
-	CalendarService_ListEvents_FullMethodName             = "/cal.v1.CalendarService/ListEvents"
-	CalendarService_GetEventsInRange_FullMethodName       = "/cal.v1.CalendarService/GetEventsInRange"
-	CalendarService_ExportEvent_FullMethodName            = "/cal.v1.CalendarService/ExportEvent"
-	CalendarService_ExportCalendar_FullMethodName         = "/cal.v1.CalendarService/ExportCalendar"
-	CalendarService_PreviewCalendarImport_FullMethodName  = "/cal.v1.CalendarService/PreviewCalendarImport"
-	CalendarService_ApplyCalendarImport_FullMethodName    = "/cal.v1.CalendarService/ApplyCalendarImport"
-	CalendarService_GetCalendarFeedUrl_FullMethodName     = "/cal.v1.CalendarService/GetCalendarFeedUrl"
-	CalendarService_RegenerateCalendarFeed_FullMethodName = "/cal.v1.CalendarService/RegenerateCalendarFeed"
-	CalendarService_RevokeCalendarFeed_FullMethodName     = "/cal.v1.CalendarService/RevokeCalendarFeed"
-	CalendarService_CreateCategory_FullMethodName         = "/cal.v1.CalendarService/CreateCategory"
-	CalendarService_GetCategory_FullMethodName            = "/cal.v1.CalendarService/GetCategory"
-	CalendarService_UpdateCategory_FullMethodName         = "/cal.v1.CalendarService/UpdateCategory"
-	CalendarService_DeleteCategory_FullMethodName         = "/cal.v1.CalendarService/DeleteCategory"
-	CalendarService_ListCategories_FullMethodName         = "/cal.v1.CalendarService/ListCategories"
-	CalendarService_UpdateAttendeeStatus_FullMethodName   = "/cal.v1.CalendarService/UpdateAttendeeStatus"
-	CalendarService_AddAttendees_FullMethodName           = "/cal.v1.CalendarService/AddAttendees"
-	CalendarService_UpdateAttendeeRole_FullMethodName     = "/cal.v1.CalendarService/UpdateAttendeeRole"
-	CalendarService_RemoveAttendees_FullMethodName        = "/cal.v1.CalendarService/RemoveAttendees"
-	CalendarService_GetFreeBusy_FullMethodName            = "/cal.v1.CalendarService/GetFreeBusy"
-	CalendarService_SuggestMeetingTimes_FullMethodName    = "/cal.v1.CalendarService/SuggestMeetingTimes"
-	CalendarService_ListEventActivities_FullMethodName    = "/cal.v1.CalendarService/ListEventActivities"
-	CalendarService_CreateEventTemplate_FullMethodName    = "/cal.v1.CalendarService/CreateEventTemplate"
-	CalendarService_GetEventTemplate_FullMethodName       = "/cal.v1.CalendarService/GetEventTemplate"
-	CalendarService_UpdateEventTemplate_FullMethodName    = "/cal.v1.CalendarService/UpdateEventTemplate"
-	CalendarService_DeleteEventTemplate_FullMethodName    = "/cal.v1.CalendarService/DeleteEventTemplate"
-	CalendarService_ListEventTemplates_FullMethodName     = "/cal.v1.CalendarService/ListEventTemplates"
+	CalendarService_ListCalendars_FullMethodName               = "/cal.v1.CalendarService/ListCalendars"
+	CalendarService_GetCalendar_FullMethodName                 = "/cal.v1.CalendarService/GetCalendar"
+	CalendarService_CreateCalendar_FullMethodName              = "/cal.v1.CalendarService/CreateCalendar"
+	CalendarService_UpdateCalendar_FullMethodName              = "/cal.v1.CalendarService/UpdateCalendar"
+	CalendarService_DeleteCalendar_FullMethodName              = "/cal.v1.CalendarService/DeleteCalendar"
+	CalendarService_SetCalendarVisibility_FullMethodName       = "/cal.v1.CalendarService/SetCalendarVisibility"
+	CalendarService_GetCalendarPolicy_FullMethodName           = "/cal.v1.CalendarService/GetCalendarPolicy"
+	CalendarService_UpdateCalendarPolicy_FullMethodName        = "/cal.v1.CalendarService/UpdateCalendarPolicy"
+	CalendarService_CreateEvent_FullMethodName                 = "/cal.v1.CalendarService/CreateEvent"
+	CalendarService_GetEvent_FullMethodName                    = "/cal.v1.CalendarService/GetEvent"
+	CalendarService_UpdateEvent_FullMethodName                 = "/cal.v1.CalendarService/UpdateEvent"
+	CalendarService_DeleteEvent_FullMethodName                 = "/cal.v1.CalendarService/DeleteEvent"
+	CalendarService_ListEvents_FullMethodName                  = "/cal.v1.CalendarService/ListEvents"
+	CalendarService_GetEventsInRange_FullMethodName            = "/cal.v1.CalendarService/GetEventsInRange"
+	CalendarService_ExportEvent_FullMethodName                 = "/cal.v1.CalendarService/ExportEvent"
+	CalendarService_ExportCalendar_FullMethodName              = "/cal.v1.CalendarService/ExportCalendar"
+	CalendarService_PreviewCalendarImport_FullMethodName       = "/cal.v1.CalendarService/PreviewCalendarImport"
+	CalendarService_ApplyCalendarImport_FullMethodName         = "/cal.v1.CalendarService/ApplyCalendarImport"
+	CalendarService_GetCalendarFeedUrl_FullMethodName          = "/cal.v1.CalendarService/GetCalendarFeedUrl"
+	CalendarService_RegenerateCalendarFeed_FullMethodName      = "/cal.v1.CalendarService/RegenerateCalendarFeed"
+	CalendarService_RevokeCalendarFeed_FullMethodName          = "/cal.v1.CalendarService/RevokeCalendarFeed"
+	CalendarService_CreateCalendarSubscription_FullMethodName  = "/cal.v1.CalendarService/CreateCalendarSubscription"
+	CalendarService_UpdateCalendarSubscription_FullMethodName  = "/cal.v1.CalendarService/UpdateCalendarSubscription"
+	CalendarService_RefreshCalendarSubscription_FullMethodName = "/cal.v1.CalendarService/RefreshCalendarSubscription"
+	CalendarService_CreateCategory_FullMethodName              = "/cal.v1.CalendarService/CreateCategory"
+	CalendarService_GetCategory_FullMethodName                 = "/cal.v1.CalendarService/GetCategory"
+	CalendarService_UpdateCategory_FullMethodName              = "/cal.v1.CalendarService/UpdateCategory"
+	CalendarService_DeleteCategory_FullMethodName              = "/cal.v1.CalendarService/DeleteCategory"
+	CalendarService_ListCategories_FullMethodName              = "/cal.v1.CalendarService/ListCategories"
+	CalendarService_UpdateAttendeeStatus_FullMethodName        = "/cal.v1.CalendarService/UpdateAttendeeStatus"
+	CalendarService_AddAttendees_FullMethodName                = "/cal.v1.CalendarService/AddAttendees"
+	CalendarService_UpdateAttendeeRole_FullMethodName          = "/cal.v1.CalendarService/UpdateAttendeeRole"
+	CalendarService_RemoveAttendees_FullMethodName             = "/cal.v1.CalendarService/RemoveAttendees"
+	CalendarService_GetFreeBusy_FullMethodName                 = "/cal.v1.CalendarService/GetFreeBusy"
+	CalendarService_SuggestMeetingTimes_FullMethodName         = "/cal.v1.CalendarService/SuggestMeetingTimes"
+	CalendarService_ListEventActivities_FullMethodName         = "/cal.v1.CalendarService/ListEventActivities"
+	CalendarService_CreateEventTemplate_FullMethodName         = "/cal.v1.CalendarService/CreateEventTemplate"
+	CalendarService_GetEventTemplate_FullMethodName            = "/cal.v1.CalendarService/GetEventTemplate"
+	CalendarService_UpdateEventTemplate_FullMethodName         = "/cal.v1.CalendarService/UpdateEventTemplate"
+	CalendarService_DeleteEventTemplate_FullMethodName         = "/cal.v1.CalendarService/DeleteEventTemplate"
+	CalendarService_ListEventTemplates_FullMethodName          = "/cal.v1.CalendarService/ListEventTemplates"
 )
 
 // CalendarServiceClient is the client API for CalendarService service.
@@ -107,6 +110,13 @@ type CalendarServiceClient interface {
 	RegenerateCalendarFeed(ctx context.Context, in *RegenerateCalendarFeedRequest, opts ...grpc.CallOption) (*RegenerateCalendarFeedResponse, error)
 	// Stop the caller's subscribe URL for a calendar
 	RevokeCalendarFeed(ctx context.Context, in *RevokeCalendarFeedRequest, opts ...grpc.CallOption) (*RevokeCalendarFeedResponse, error)
+	// Subscribe to an external iCalendar feed as a new read-only calendar.
+	// Unsubscribing is DeleteCalendar.
+	CreateCalendarSubscription(ctx context.Context, in *CreateCalendarSubscriptionRequest, opts ...grpc.CallOption) (*CreateCalendarSubscriptionResponse, error)
+	// Replace a subscription's address or change its refresh interval or busy setting
+	UpdateCalendarSubscription(ctx context.Context, in *UpdateCalendarSubscriptionRequest, opts ...grpc.CallOption) (*UpdateCalendarSubscriptionResponse, error)
+	// Refresh a subscription now instead of waiting for its schedule
+	RefreshCalendarSubscription(ctx context.Context, in *RefreshCalendarSubscriptionRequest, opts ...grpc.CallOption) (*RefreshCalendarSubscriptionResponse, error)
 	// Create a new category
 	CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CreateCategoryResponse, error)
 	// Get a category by ID
@@ -363,6 +373,36 @@ func (c *calendarServiceClient) RevokeCalendarFeed(ctx context.Context, in *Revo
 	return out, nil
 }
 
+func (c *calendarServiceClient) CreateCalendarSubscription(ctx context.Context, in *CreateCalendarSubscriptionRequest, opts ...grpc.CallOption) (*CreateCalendarSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateCalendarSubscriptionResponse)
+	err := c.cc.Invoke(ctx, CalendarService_CreateCalendarSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) UpdateCalendarSubscription(ctx context.Context, in *UpdateCalendarSubscriptionRequest, opts ...grpc.CallOption) (*UpdateCalendarSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCalendarSubscriptionResponse)
+	err := c.cc.Invoke(ctx, CalendarService_UpdateCalendarSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *calendarServiceClient) RefreshCalendarSubscription(ctx context.Context, in *RefreshCalendarSubscriptionRequest, opts ...grpc.CallOption) (*RefreshCalendarSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RefreshCalendarSubscriptionResponse)
+	err := c.cc.Invoke(ctx, CalendarService_RefreshCalendarSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *calendarServiceClient) CreateCategory(ctx context.Context, in *CreateCategoryRequest, opts ...grpc.CallOption) (*CreateCategoryResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateCategoryResponse)
@@ -581,6 +621,13 @@ type CalendarServiceServer interface {
 	RegenerateCalendarFeed(context.Context, *RegenerateCalendarFeedRequest) (*RegenerateCalendarFeedResponse, error)
 	// Stop the caller's subscribe URL for a calendar
 	RevokeCalendarFeed(context.Context, *RevokeCalendarFeedRequest) (*RevokeCalendarFeedResponse, error)
+	// Subscribe to an external iCalendar feed as a new read-only calendar.
+	// Unsubscribing is DeleteCalendar.
+	CreateCalendarSubscription(context.Context, *CreateCalendarSubscriptionRequest) (*CreateCalendarSubscriptionResponse, error)
+	// Replace a subscription's address or change its refresh interval or busy setting
+	UpdateCalendarSubscription(context.Context, *UpdateCalendarSubscriptionRequest) (*UpdateCalendarSubscriptionResponse, error)
+	// Refresh a subscription now instead of waiting for its schedule
+	RefreshCalendarSubscription(context.Context, *RefreshCalendarSubscriptionRequest) (*RefreshCalendarSubscriptionResponse, error)
 	// Create a new category
 	CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error)
 	// Get a category by ID
@@ -689,6 +736,15 @@ func (UnimplementedCalendarServiceServer) RegenerateCalendarFeed(context.Context
 }
 func (UnimplementedCalendarServiceServer) RevokeCalendarFeed(context.Context, *RevokeCalendarFeedRequest) (*RevokeCalendarFeedResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeCalendarFeed not implemented")
+}
+func (UnimplementedCalendarServiceServer) CreateCalendarSubscription(context.Context, *CreateCalendarSubscriptionRequest) (*CreateCalendarSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCalendarSubscription not implemented")
+}
+func (UnimplementedCalendarServiceServer) UpdateCalendarSubscription(context.Context, *UpdateCalendarSubscriptionRequest) (*UpdateCalendarSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCalendarSubscription not implemented")
+}
+func (UnimplementedCalendarServiceServer) RefreshCalendarSubscription(context.Context, *RefreshCalendarSubscriptionRequest) (*RefreshCalendarSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RefreshCalendarSubscription not implemented")
 }
 func (UnimplementedCalendarServiceServer) CreateCategory(context.Context, *CreateCategoryRequest) (*CreateCategoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateCategory not implemented")
@@ -1140,6 +1196,60 @@ func _CalendarService_RevokeCalendarFeed_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CalendarService_CreateCalendarSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCalendarSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).CreateCalendarSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_CreateCalendarSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).CreateCalendarSubscription(ctx, req.(*CreateCalendarSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_UpdateCalendarSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCalendarSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).UpdateCalendarSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_UpdateCalendarSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).UpdateCalendarSubscription(ctx, req.(*UpdateCalendarSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CalendarService_RefreshCalendarSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RefreshCalendarSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CalendarServiceServer).RefreshCalendarSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CalendarService_RefreshCalendarSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CalendarServiceServer).RefreshCalendarSubscription(ctx, req.(*RefreshCalendarSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CalendarService_CreateCategory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateCategoryRequest)
 	if err := dec(in); err != nil {
@@ -1536,6 +1646,18 @@ var CalendarService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeCalendarFeed",
 			Handler:    _CalendarService_RevokeCalendarFeed_Handler,
+		},
+		{
+			MethodName: "CreateCalendarSubscription",
+			Handler:    _CalendarService_CreateCalendarSubscription_Handler,
+		},
+		{
+			MethodName: "UpdateCalendarSubscription",
+			Handler:    _CalendarService_UpdateCalendarSubscription_Handler,
+		},
+		{
+			MethodName: "RefreshCalendarSubscription",
+			Handler:    _CalendarService_RefreshCalendarSubscription_Handler,
 		},
 		{
 			MethodName: "CreateCategory",

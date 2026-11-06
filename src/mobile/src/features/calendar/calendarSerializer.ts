@@ -10,6 +10,7 @@ import {
   AttendeeRole,
   AttendeeStatus,
   CalendarListSection,
+  CalendarSubscriptionState,
   DayOfWeek,
   EventStatus,
   EventTransparency,
@@ -116,7 +117,7 @@ export interface SerializedCategory {
   icon?: string;
 }
 
-export type CalendarSection = "mine" | "shared" | "organization";
+export type CalendarSection = "mine" | "shared" | "organization" | "subscribed";
 
 export interface SerializedCalendar {
   id: string;
@@ -132,12 +133,19 @@ export interface SerializedCalendar {
   /** Hidden for the caller only; the server leaves its events out of range reads. */
   isHidden: boolean;
   section: CalendarSection;
+  /** Events come from an external feed and cannot be created or changed. */
+  isReadOnly: boolean;
+  /** The owner chose to count the feed's events as busy. */
+  countsAsBusy: boolean;
+  /** Three or more refreshes in a row failed. */
+  feedBroken: boolean;
 }
 
 const CALENDAR_SECTION: Record<number, CalendarSection> = {
   [CalendarListSection.MINE]: "mine",
   [CalendarListSection.SHARED]: "shared",
   [CalendarListSection.ORGANIZATION]: "organization",
+  [CalendarListSection.SUBSCRIBED]: "subscribed",
 };
 
 export function calendarToPlain(calendar: Calendar): SerializedCalendar {
@@ -152,6 +160,9 @@ export function calendarToPlain(calendar: Calendar): SerializedCalendar {
     userRole: calendar.userRole,
     isHidden: calendar.isHidden,
     section: CALENDAR_SECTION[calendar.section] ?? "mine",
+    isReadOnly: calendar.isReadOnly,
+    countsAsBusy: calendar.subscription?.countsAsBusy ?? false,
+    feedBroken: calendar.subscription?.state === CalendarSubscriptionState.BROKEN,
   };
 }
 

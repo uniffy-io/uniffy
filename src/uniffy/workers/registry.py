@@ -258,10 +258,13 @@ from uniffy.domains.projects.jobs.jobs import (
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_JOB_REFS,
     CALENDAR_SCHEDULED_JOB_REFS,
+    CHECK_CALENDAR_FEED,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
+    DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
     FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
     REFRESH_CALENDAR_SEARCH_ACL,
+    REFRESH_CALENDAR_SUBSCRIPTION,
     SEND_EVENT_MAIL,
 )
 from uniffy.domains.scheduling.calendar.jobs.event_mail import (
@@ -272,6 +275,14 @@ from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminder
 from uniffy.domains.scheduling.calendar.jobs.search import (
     flush_calendar_search_acl_refreshes,
     refresh_calendar_search_acl,
+)
+from uniffy.domains.scheduling.calendar.jobs.subscriptions import (
+    CHECK_JOB_TIMEOUT_SECONDS,
+    CHECK_RESULT_SECONDS,
+    REFRESH_JOB_TIMEOUT_SECONDS,
+    check_calendar_feed,
+    dispatch_calendar_subscription_refreshes,
+    refresh_calendar_subscription,
 )
 from uniffy.domains.search.jobs.contracts import (
     FLUSH_SEARCH_REMOVALS,
@@ -408,6 +419,19 @@ EGRESS_JOB_REGISTRATIONS = (
         sync_identity_source,
         timeout=SYNC_IDENTITY_SOURCE_JOB_TIMEOUT_SECONDS,
     ),
+    _bind(
+        REFRESH_CALENDAR_SUBSCRIPTION,
+        refresh_calendar_subscription,
+        timeout=REFRESH_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        CHECK_CALENDAR_FEED,
+        check_calendar_feed,
+        timeout=CHECK_JOB_TIMEOUT_SECONDS,
+        keep_result=CHECK_RESULT_SECONDS,
+        max_tries=1,
+    ),
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
@@ -450,6 +474,10 @@ CORE_SCHEDULED_REGISTRATIONS = (
     _bind_schedule(
         DISPATCH_EVENT_MAIL_SCHEDULE,
         dispatch_calendar_event_mail,
+    ),
+    _bind_schedule(
+        DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
+        dispatch_calendar_subscription_refreshes,
     ),
     _bind_schedule(
         CHECK_TASK_DUE_DATES_SCHEDULE,

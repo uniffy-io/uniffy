@@ -173,3 +173,41 @@ class TestHostileInput:
 
         assert parsed.events == ()
         assert parsed.skipped == ()
+
+    def test_an_oversized_uid_is_reported_not_stored(self) -> None:
+        parsed = parse_calendar(_document(_vevent(uid=b"u" * 501), _vevent(uid=b"ok@example.com")))
+
+        assert [event.ical_uid for event in parsed.events] == ["ok@example.com"]
+        assert [entry.rejection for entry in parsed.skipped] == [ImportRejection.INVALID_UID]
+
+    def test_an_unknown_zone_is_stored_as_the_zone_actually_used(self) -> None:
+        parsed = parse_calendar(
+            _document(_vevent(dtstart=b"DTSTART;TZID=Not/A_Zone:20260318T090000\r\n"))
+        )
+
+        assert parsed.events[0].timezone == "UTC"
+
+    def test_a_join_link_with_control_characters_is_dropped(self) -> None:
+        parsed = parse_calendar(_document(_vevent(extra=b"URL:https://a.example/\x01x\r\n")))
+
+        assert parsed.events[0].meeting_url is None
+
+    def test_a_series_skipping_too_many_dates_is_reported(self) -> None:
+        from uniffy.domains.scheduling.calendar.ical.parse import MAX_SERIES_EXCEPTIONS
+
+        days = [
+            f"{year}{month:02d}{day:02d}"
+            for year in range(2026, 2031)
+            for month in range(1, 13)
+            for day in range(1, 29)
+        ]
+        exdates = ",".join(f"{day}T090000Z" for day in days)
+        series = _vevent(
+            extra=b"RRULE:FREQ=DAILY\r\nEXDATE:" + exdates.encode() + b"\r\n",
+        )
+
+        parsed = parse_calendar(_document(series))
+
+        assert len(days) > MAX_SERIES_EXCEPTIONS
+        assert parsed.events == ()
+        assert [entry.rejection for entry in parsed.skipped] == [ImportRejection.TOO_MANY_EXCEPTIONS]

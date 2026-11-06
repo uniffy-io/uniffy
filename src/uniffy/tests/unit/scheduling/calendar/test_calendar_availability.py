@@ -70,6 +70,10 @@ def _make_event(
     )
 
 
+# Nobody in these tests counts a subscribed feed as busy.
+_NO_FEEDS = MagicMock(all=MagicMock(return_value=[]))
+
+
 def _session_returning(rows: list, exception_rows: list | None = None) -> MagicMock:
     """Session whose execute answers membership, event join, then exceptions."""
     session = MagicMock()
@@ -81,7 +85,7 @@ def _session_returning(rows: list, exception_rows: list | None = None) -> MagicM
     exceptions.scalars = MagicMock(
         return_value=MagicMock(all=MagicMock(return_value=exception_rows or []))
     )
-    session.execute = AsyncMock(side_effect=[membership, events, exceptions])
+    session.execute = AsyncMock(side_effect=[membership, events, _NO_FEEDS, exceptions])
     return session
 
 
@@ -105,6 +109,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(uid,) for uid in users])),
                 MagicMock(all=MagicMock(return_value=[])),
+                _NO_FEEDS,
             ]
         )
 
@@ -121,6 +126,7 @@ class TestGetBusyIntervals:
         session.execute.side_effect = [
             MagicMock(all=MagicMock(return_value=[(user,)])),
             MagicMock(all=MagicMock(return_value=[(early, user), (overlapping, user)])),
+            _NO_FEEDS,
         ]
 
         busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(4, 0))
@@ -135,6 +141,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[(ooo, user)])),
+                _NO_FEEDS,
             ]
         )
 
@@ -154,9 +161,25 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[(master, user)])),
+                _NO_FEEDS,
                 MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))),
             ]
         )
 
         busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(10, 0))
         assert BusyInterval(_dt(3, 9), _dt(3, 9, 30)) in busy[user]
+
+    async def test_a_feed_counted_as_busy_blocks_its_owner(self) -> None:
+        user = generate_id()
+        shift = _make_event(start=_dt(3, 8), end=_dt(3, 16))
+        session = MagicMock()
+        session.execute = AsyncMock(
+            side_effect=[
+                MagicMock(all=MagicMock(return_value=[(user,)])),
+                MagicMock(all=MagicMock(return_value=[])),
+                MagicMock(all=MagicMock(return_value=[(shift, user)])),
+            ]
+        )
+
+        busy = await get_busy_intervals(session, generate_id(), [user], _dt(3, 0), _dt(4, 0))
+        assert busy[user] == [BusyInterval(_dt(3, 8), _dt(3, 16))]

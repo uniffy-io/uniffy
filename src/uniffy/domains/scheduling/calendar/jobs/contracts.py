@@ -57,9 +57,45 @@ FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE = JobRef(
     ),
 )
 
-CALENDAR_JOB_REFS = (SEND_EVENT_MAIL, REFRESH_CALENDAR_SEARCH_ACL)
+REFRESH_CALENDAR_SUBSCRIPTION = JobRef(
+    name="refresh_calendar_subscription",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="calendar_subscriptions.next_refresh_at past its dispatch lease",
+        trigger="every-minute core schedule",
+    ),
+)
+
+# Read a candidate address before anything is saved; its caller waits for the answer.
+CHECK_CALENDAR_FEED = JobRef(
+    name="check_calendar_feed",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.BEST_EFFORT,
+)
+
+DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE = JobRef(
+    name="cron:dispatch_calendar_subscription_refreshes",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="due calendar_subscriptions rows",
+        trigger="every-minute core schedule",
+    ),
+)
+
+CALENDAR_JOB_REFS = (
+    SEND_EVENT_MAIL,
+    REFRESH_CALENDAR_SEARCH_ACL,
+    REFRESH_CALENDAR_SUBSCRIPTION,
+    CHECK_CALENDAR_FEED,
+)
 CALENDAR_SCHEDULED_JOB_REFS = (
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
     FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
+    DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
 )

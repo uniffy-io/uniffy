@@ -137,6 +137,11 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         label: "Event cancelled",
         defaults: { in_app: true, browser: true, email: true },
       },
+      {
+        type: "CALENDAR_SUBSCRIPTION_FAILED",
+        label: "Subscribed calendar stopped updating",
+        defaults: { in_app: true, browser: true, email: true },
+      },
     ],
   },
   {

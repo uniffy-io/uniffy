@@ -204,6 +204,7 @@ class SearchIndexer:
                         blocked_user_ids=tuple(item.get("blocked_user_ids") or ()),
                         blocked_group_ids=tuple(item.get("blocked_group_ids") or ()),
                         attendee_user_ids=tuple(item.get("attendee_user_ids") or ()),
+                        container=item.get("container"),
                         tags=tuple(item.get("tags") or ()),
                         rank_score=item.get("rank_score") or default_rank_score(entity_type),
                         metadata=item.get("metadata"),

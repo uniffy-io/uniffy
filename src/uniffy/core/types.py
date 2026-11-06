@@ -102,6 +102,8 @@ class CalendarType(str, Enum):
     WORK = "WORK"
     TEAM = "TEAM"
     SHARED = "SHARED"
+    # Mirrors an external iCalendar feed; its events change only through the feed.
+    SUBSCRIBED = "SUBSCRIBED"
 
 
 class RecurrencePattern(str, Enum):
@@ -200,6 +202,7 @@ class NotificationType(str, Enum):
     CALENDAR_INVITE = "CALENDAR_INVITE"
     CALENDAR_RESPONSE = "CALENDAR_RESPONSE"
     CALENDAR_CANCELLED = "CALENDAR_CANCELLED"
+    CALENDAR_SUBSCRIPTION_FAILED = "CALENDAR_SUBSCRIPTION_FAILED"
     PERMISSION_GRANTED = "PERMISSION_GRANTED"
     PERMISSION_REVOKED = "PERMISSION_REVOKED"
     SYSTEM_ANNOUNCEMENT = "SYSTEM_ANNOUNCEMENT"

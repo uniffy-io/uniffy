@@ -1,5 +1,6 @@
 """Search access that events inherit from the calendar they sit on."""
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -12,17 +13,22 @@ from uniffy.core.auth.permissions.defaults import (
     resolve_content_defaults,
     resolve_effective_policy,
 )
+from uniffy.core.content.mentions import publish_mention_state
 from uniffy.core.jobs import enqueue_job
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.search_acl_refresh import CalendarSearchAclRefresh
 from uniffy.core.models.permissions.content_member import ContentMember
+from uniffy.core.search.engine import SearchTerm, all_of, any_of
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.search.policy import SearchContainerAccess, build_document_id
 from uniffy.core.types import AccessMode, ContentRole, ContentType, SubjectType
 from uniffy.domains.scheduling.calendar.jobs.contracts import REFRESH_CALENDAR_SEARCH_ACL
 
 logger = logger.bind(component="scheduling.calendar.calendars.search")
+
+# URNs per filtered removal; one durable removal row covers each batch.
+_REMOVAL_BATCH = 200
 
 
 async def calendar_search_access(
@@ -176,3 +182,32 @@ async def enqueue_calendar_search_acl_refresh(calendar_id: UUID) -> None:
         logger.opt(exception=True).warning(
             f"Failed to enqueue search ACL refresh for calendar {calendar_id}"
         )
+
+
+async def remove_event_documents(
+    search_indexer: SearchIndexer,
+    organization_id: UUID,
+    event_ids: Sequence[UUID],
+    *,
+    tombstone: bool = True,
+) -> None:
+    """Drop removed events from search, through the durable removal queue."""
+    for start in range(0, len(event_ids), _REMOVAL_BATCH):
+        urns = [
+            build_content_urn(ContentType.CALENDAR_EVENT, event_id)
+            for event_id in event_ids[start : start + _REMOVAL_BATCH]
+        ]
+        await search_indexer.remove_by_filter(
+            all_of(
+                SearchTerm("organization_id", str(organization_id)),
+                any_of(*(SearchTerm("urn", urn) for urn in urns)),
+            )
+        )
+        # Each tombstone fans out to every open stream in the organization, so a
+        # whole calendar going away leaves its chips to resolve as deleted instead.
+        for urn in urns if tombstone else ():
+            await publish_mention_state(
+                organization_id=organization_id,
+                urn=urn,
+                changes={"urn_status": "DELETED"},
+            )

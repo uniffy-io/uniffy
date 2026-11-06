@@ -37,7 +37,7 @@ from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader, 
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, read_event_mail
 from uniffy.domains.scheduling.calendar.queries import ensure_default_calendar
-from uniffy.domains.scheduling.calendar.rpc.calendars import _to_proto
+from uniffy.domains.scheduling.calendar.rpc.calendars import listings_to_proto
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -179,7 +179,7 @@ class TestList:
         listings = await CalendarReader(session).list_calendars(access.peer_id, access.org_id)
         owner_names = {
             message.id: message.owner_name
-            for message in await _to_proto(session, access.peer_id, access.org_id, listings)
+            for message in await listings_to_proto(session, access.peer_id, access.org_id, listings)
         }
         users = {
             user.id: user.full_name or user.email

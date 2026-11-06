@@ -3,6 +3,8 @@ import { create } from "@bufbuild/protobuf";
 import {
   CalendarListSection,
   CalendarSchema,
+  CalendarSubscriptionError,
+  CalendarSubscriptionState,
   CalendarType,
 } from "@uniffy/proto/cal/v1/calendar_pb";
 import { AccessMode, ContentRole } from "@uniffy/proto/common/v1/common_pb";
@@ -43,6 +45,49 @@ describe("calendarFromProto", () => {
       userRole: ContentRole.EDITOR,
       baselineRole: undefined,
     });
+  });
+});
+
+describe("calendarFromProto for a followed feed", () => {
+  it("carries the read-only flag and the feed's health, never an address", () => {
+    const feed = calendarFromProto(
+      create(CalendarSchema, {
+        id: "holidays",
+        calendarType: CalendarType.SUBSCRIBED,
+        section: CalendarListSection.SUBSCRIBED,
+        userRole: ContentRole.OWNER,
+        isReadOnly: true,
+        subscription: {
+          urlHost: "calendar.google.com",
+          refreshIntervalMinutes: 60,
+          countsAsBusy: true,
+          state: CalendarSubscriptionState.BROKEN,
+          consecutiveFailures: 3,
+          lastError: CalendarSubscriptionError.HTTP_STATUS,
+          lastErrorStatus: 404,
+          eventCount: 12,
+        },
+      }),
+    );
+
+    expect(feed).toMatchObject({
+      kind: "subscribed",
+      section: "subscribed",
+      isReadOnly: true,
+      subscription: {
+        urlHost: "calendar.google.com",
+        state: "broken",
+        lastError: "http_status",
+        lastErrorStatus: 404,
+        countsAsBusy: true,
+      },
+    });
+    expect(feed.subscription?.lastSuccessAt).toBeUndefined();
+  });
+
+  it("leaves an ordinary calendar writable with no feed", () => {
+    expect(stored.isReadOnly).toBe(false);
+    expect(stored.subscription).toBeUndefined();
   });
 });
 

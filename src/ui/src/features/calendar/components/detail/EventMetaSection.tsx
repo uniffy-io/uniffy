@@ -43,6 +43,11 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
         {eventTags.map((tag) => (
           <TagChip key={tag.id} tag={tag} />
         ))}
+        {eventCalendar?.isReadOnly && (
+          <p className="w-full text-xs text-subtle-foreground" data-testid="event-read-only-note">
+            From a subscribed calendar. Changes come from its source.
+          </p>
+        )}
       </div>
     ) : null;
   }

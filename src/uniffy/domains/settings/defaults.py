@@ -178,6 +178,12 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.CALENDAR_INVITE: {"in_app": True, "browser": True, "email": True},
     NotificationType.CALENDAR_RESPONSE: {"in_app": True, "browser": False, "email": False},
     NotificationType.CALENDAR_CANCELLED: {"in_app": True, "browser": True, "email": True},
+    # Email on: a feed breaks quietly, and its owner may not look at the calendar for days.
+    NotificationType.CALENDAR_SUBSCRIPTION_FAILED: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
     NotificationType.PERMISSION_GRANTED: {"in_app": True, "browser": False, "email": True},
     NotificationType.PERMISSION_REVOKED: {"in_app": True, "browser": False, "email": True},
     NotificationType.SYSTEM_ANNOUNCEMENT: {"in_app": True, "browser": True, "email": True},

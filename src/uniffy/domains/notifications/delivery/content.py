@@ -59,6 +59,10 @@ def notification_action_path(delivery: NotificationEmailDelivery) -> str:
         if channel_id:
             return f"/chat/{channel_id}?{JOIN_CALL_QUERY}"
 
+    if notification_type is NotificationType.CALENDAR_SUBSCRIPTION_FAILED:
+        # The broken feed shows on its calendar row; there is no page per calendar.
+        return "/calendar"
+
     target = _delivery_content_target(delivery)
     if target is None:
         return "/notifications"

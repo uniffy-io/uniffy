@@ -38,7 +38,8 @@ def resolve_event_zone(timezone: str) -> ZoneInfo:
     """Invalid stored zones degrade to UTC instead of failing every expansion."""
     try:
         return ZoneInfo(timezone)
-    except KeyError, ValueError:
+    except KeyError, ValueError, OSError:
+        # OSError: a name too long for the filesystem the zone database lives on.
         return ZoneInfo("UTC")
 
 

@@ -78,6 +78,11 @@ Adding a new domain:
   suppressions disabled, so inline and file-level `noqa` directives cannot waive these boundaries.
   When an external process is unavoidable, use `asyncio.create_subprocess_exec` with a fixed
   executable and separate arguments; never construct a shell command.
+- **A URL a person typed is fetched only through `core/outbound.fetch_public`, on a worker, never
+  in the API process.** It refuses private, loopback, link-local and metadata addresses (operators
+  open ranges with `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`), pins the connection to the address it
+  checked, re-checks every redirect, caps the body and never puts the URL in an error. Hosts an
+  admin configures (an integration `base_url`, SMTP) are trusted configuration and stay outside it.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.

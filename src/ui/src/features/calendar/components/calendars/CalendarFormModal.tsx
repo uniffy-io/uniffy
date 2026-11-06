@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
-import { CATEGORY_COLORS } from "@/features/calendar/constants";
+import { DEFAULT_CALENDAR_COLOR } from "@/features/calendar/constants";
+import { CalendarColorPicker } from "@/features/calendar/components/calendars/CalendarColorPicker";
 import { createCalendar, updateCalendarThunk } from "@/features/calendar/store";
 import type { CalendarInfo } from "@/features/calendar/types";
-import { cn } from "@/shared/utils/cn";
 
 interface CalendarFormModalProps {
   /** The calendar being edited; omitted to create one. */
@@ -21,7 +21,7 @@ export function CalendarFormModal({ calendar, onClose }: CalendarFormModalProps)
   const isEditing = !!calendar;
   const [name, setName] = useState(calendar?.name ?? "");
   const [description, setDescription] = useState(calendar?.description ?? "");
-  const [color, setColor] = useState(calendar?.color ?? CATEGORY_COLORS[0].value);
+  const [color, setColor] = useState(calendar?.color ?? DEFAULT_CALENDAR_COLOR);
   const [submitting, setSubmitting] = useState(false);
 
   const fieldId = useId();
@@ -94,27 +94,7 @@ export function CalendarFormModal({ calendar, onClose }: CalendarFormModalProps)
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-muted-foreground mb-1">Color</label>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORY_COLORS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setColor(option.value)}
-                  className={cn(
-                    "focus-ring w-11 h-11 rounded-full transition-transform hover:scale-105",
-                    color.toLowerCase() === option.value.toLowerCase() &&
-                      "outline outline-2 outline-offset-2 outline-primary",
-                  )}
-                  style={{ backgroundColor: option.value }}
-                  title={option.name}
-                  aria-label={option.name}
-                  aria-pressed={color.toLowerCase() === option.value.toLowerCase()}
-                />
-              ))}
-            </div>
-          </div>
+          <CalendarColorPicker value={color} onChange={setColor} />
 
           {!isEditing && policy && !policy.canCreateTeamCalendars && (
             <p className="text-sm text-muted-foreground">

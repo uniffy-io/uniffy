@@ -47,3 +47,16 @@ export const DISPLAY_HOURS = [
   { hour: 22, label: "10 PM" },
   { hour: 23, label: "11 PM" },
 ] as const;
+
+/** How often a subscribed calendar is refreshed; the server accepts exactly these. */
+export const REFRESH_INTERVAL_OPTIONS: { value: number; label: string }[] = [
+  { value: 15, label: "Every 15 minutes" },
+  { value: 30, label: "Every 30 minutes" },
+  { value: 60, label: "Every hour" },
+  { value: 180, label: "Every 3 hours" },
+  { value: 360, label: "Every 6 hours" },
+  { value: 720, label: "Every 12 hours" },
+  { value: 1440, label: "Once a day" },
+];
+
+export const DEFAULT_REFRESH_INTERVAL = 60;

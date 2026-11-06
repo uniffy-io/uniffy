@@ -142,6 +142,8 @@ class CalendarEvent(SQLModel, table=True):
     # Identity carried in from an imported file; re-importing it must not
     # duplicate the event. Rows created in the product leave this NULL.
     ical_uid: str | None = Field(default=None, max_length=500)
+    # Digest of the source entry a feed sync last wrote; an unchanged entry is skipped.
+    ical_fingerprint: str | None = Field(default=None, max_length=64)
     # RFC 5545 revision counter. Clients ignore an update whose sequence has
     # not moved, so every change mail has to advance it.
     ical_sequence: int = Field(default=0, nullable=False)

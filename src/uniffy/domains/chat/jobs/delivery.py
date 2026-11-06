@@ -25,7 +25,10 @@ from uniffy.domains.chat.messages.operations import ChatMessageOperations
 from uniffy.domains.chat.resources.operations import ChatResourceOperations
 from uniffy.domains.chat.streaming.events import DRAFT_CHANGED, build_draft_changed_payload
 from uniffy.domains.chat.streaming.publisher import publish_user_chat_events
-from uniffy.domains.notifications.jobs.contracts import DELIVER_NOTIFICATION_OUTBOX
+from uniffy.domains.notifications.jobs.contracts import (
+    DELIVER_NOTIFICATION_OUTBOX,
+    notification_outbox_job_id,
+)
 
 logger = logger.bind(component="chat.jobs.delivery")
 MAX_DELIVERY_ATTEMPTS = 10
@@ -137,7 +140,7 @@ async def _deliver_effect(ctx: dict[str, Any], message_id: UUID, effect: ChatDel
                 await enqueue_job(
                     DELIVER_NOTIFICATION_OUTBOX,
                     str(event_id),
-                    _job_id=f"notification-outbox:{event_id}",
+                    _job_id=notification_outbox_job_id(event_id),
                 )
         except Exception:
             logger.warning("Notification wakeup deferred for {}", event_id)

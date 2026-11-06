@@ -19,6 +19,7 @@ import { SEARCH_RESULT_TYPE_TO_URN_TYPE } from "@/shared/utils/searchResultTypes
 import { type UrnTypeTheme } from "@/config/theme/urnColors";
 import { getContentTypeConfig } from "@/config/theme/contentTypes";
 import { stripMarkdown } from "@/features/search/utils/stripMarkdown";
+import { eventWhen } from "@/features/search/utils/eventWhen";
 import { hasHighlight, renderHighlightedText } from "@/features/search/utils/highlight";
 import { useThumbnailUrl } from "@/features/files/hooks/useThumbnail";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
@@ -231,7 +232,7 @@ export function SearchResultsList({
               // Chat messages index their content as both title and description;
               // the duplicate line is noise unless the crop adds context.
               const showDescription = !!description && description !== result.title;
-              const personRole =
+              const subtitle =
                 result.type === SearchResultType.USER
                   ? [result.metadata["job_title"], result.metadata["department"]]
                       .filter(Boolean)
@@ -245,7 +246,9 @@ export function SearchResultsList({
                       ]
                         .filter(Boolean)
                         .join(" · ")
-                    : "";
+                    : result.type === SearchResultType.CALENDAR_EVENT
+                      ? eventWhen(result.metadata)
+                      : "";
 
               return (
                 <li
@@ -327,9 +330,9 @@ export function SearchResultsList({
                             ? renderHighlightedText(result.titleHighlighted)
                             : result.title}
                         </span>
-                        {personRole && (
+                        {subtitle && (
                           <span className="text-xs text-muted-foreground/70 truncate min-w-0">
-                            {personRole}
+                            {subtitle}
                           </span>
                         )}
                         <span

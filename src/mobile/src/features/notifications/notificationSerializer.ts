@@ -53,6 +53,7 @@ const TYPE_META: Record<number, TypeMeta> = {
   [NotificationType.CALENDAR_INVITE]: { kind: "calendar" },
   [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar" },
   [NotificationType.CALENDAR_CANCELLED]: { kind: "calendar", tone: "danger" },
+  [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: { kind: "calendar", tone: "warning" },
   [NotificationType.PERMISSION_GRANTED]: { kind: "permission" },
   [NotificationType.PERMISSION_REVOKED]: { kind: "permission", tone: "danger" },
   [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", tone: "warning" },

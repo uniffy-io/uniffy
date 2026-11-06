@@ -23,6 +23,9 @@ function calendar(overrides: Partial<SerializedCalendar> & { id: string }): Seri
     userRole: ContentRole.OWNER,
     isHidden: false,
     section: "mine",
+    isReadOnly: false,
+    countsAsBusy: false,
+    feedBroken: false,
     ...overrides,
   };
 }
@@ -136,5 +139,17 @@ describe("calendar labels", () => {
   it("keeps the stored name for the owner and for other calendars", () => {
     expect(calendarLabel(theirs, "user-lead")).toBe(theirs.name);
     expect(calendarLabel({ ...theirs, isDefault: false }, ME)).toBe(theirs.name);
+  });
+});
+
+describe("subscribed calendars", () => {
+  const FEED = calendar({ id: "holidays", section: "subscribed", isReadOnly: true });
+
+  it("are never a place to file an event, though the member owns them", () => {
+    expect(writableCalendars([FEED, calendar({ id: "work" })]).map((c) => c.id)).toEqual(["work"]);
+  });
+
+  it("read as subscribed in a picker hint", () => {
+    expect(calendarHint(FEED)).toBe("Subscribed");
   });
 });

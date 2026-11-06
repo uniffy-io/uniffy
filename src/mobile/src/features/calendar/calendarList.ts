@@ -8,6 +8,7 @@ import type {
 
 export const CALENDAR_SECTIONS: { section: CalendarSection; title: string }[] = [
   { section: "mine", title: "My calendars" },
+  { section: "subscribed", title: "Subscribed" },
   { section: "shared", title: "Shared with me" },
   { section: "organization", title: "Organization" },
 ];
@@ -36,13 +37,14 @@ function isOwnDefault(calendar: SerializedCalendar): boolean {
 /** Calendars the member may file events on; their own default calendar leads. */
 export function writableCalendars(calendars: readonly SerializedCalendar[]): SerializedCalendar[] {
   return calendars
-    .filter((calendar) => roleCanEdit(calendar.userRole))
+    .filter((calendar) => !calendar.isReadOnly && roleCanEdit(calendar.userRole))
     .sort((a, b) => Number(isOwnDefault(b)) - Number(isOwnDefault(a)));
 }
 
 /** Short context for a picker row: whose calendar it is, when it is not simply one of the member's. */
 export function calendarHint(calendar: SerializedCalendar): string | undefined {
   if (isOwnDefault(calendar)) return "Default";
+  if (calendar.section === "subscribed") return "Subscribed";
   if (calendar.section === "shared") return "Shared with you";
   if (calendar.section === "organization") return "Open to the organization";
   return undefined;

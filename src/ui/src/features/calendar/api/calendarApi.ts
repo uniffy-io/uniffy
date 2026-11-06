@@ -22,6 +22,9 @@ import {
   ExportCalendarRequestSchema,
   ExportEventRequestSchema,
   GetCalendarFeedUrlRequestSchema,
+  CreateCalendarSubscriptionRequestSchema,
+  RefreshCalendarSubscriptionRequestSchema,
+  UpdateCalendarSubscriptionRequestSchema,
   EventActivityAction as ProtoEventActivityAction,
   GetEventRequestSchema,
   GetEventTemplateRequestSchema,
@@ -249,5 +252,23 @@ export const calendarApi = {
 
   revokeCalendarFeed: async (request: MessageInitShape<typeof RevokeCalendarFeedRequestSchema>) => {
     return calendarClient.revokeCalendarFeed(request);
+  },
+
+  createCalendarSubscription: async (
+    request: MessageInitShape<typeof CreateCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.createCalendarSubscription(request);
+  },
+
+  updateCalendarSubscription: async (
+    request: MessageInitShape<typeof UpdateCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.updateCalendarSubscription(request);
+  },
+
+  refreshCalendarSubscription: async (
+    request: MessageInitShape<typeof RefreshCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.refreshCalendarSubscription(request);
   },
 };

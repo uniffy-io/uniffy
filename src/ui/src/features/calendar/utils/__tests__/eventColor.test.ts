@@ -18,6 +18,7 @@ function calendar(overrides: Partial<CalendarInfo>): CalendarInfo {
     userRole: 0,
     isHidden: false,
     section: "mine",
+    isReadOnly: false,
     createdAt: "",
     updatedAt: "",
     ...overrides,

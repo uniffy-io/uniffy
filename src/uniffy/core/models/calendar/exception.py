@@ -3,7 +3,7 @@
 from datetime import UTC, date, datetime
 from uuid import UUID
 
-from sqlalchemy import Column, Date, DateTime, UniqueConstraint
+from sqlalchemy import Column, Date, DateTime, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 from uniffy.core.types import generate_id
@@ -19,6 +19,11 @@ class RecurrenceException(SQLModel, table=True):
             "event_id",
             "original_date",
             name="uq_recurrence_exception_event_date",
+        ),
+        Index(
+            "ix_calendar_recurrence_exceptions_override_event_id",
+            "override_event_id",
+            postgresql_where=text("override_event_id IS NOT NULL"),
         ),
     )
 

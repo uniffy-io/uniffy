@@ -1,11 +1,14 @@
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
-import { CopySimple, Plus, PencilSimple, Trash } from "@phosphor-icons/react";
+import { CopySimple, PencilSimple, Trash } from "@phosphor-icons/react";
 import {
   openCreateTemplateModal,
   openEditTemplateModal,
   openEventModal,
 } from "@/features/calendar/store";
-import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
+import {
+  SidebarSection,
+  SidebarSectionAdd,
+} from "@/features/calendar/components/sidebar/SidebarSection";
 import { listEventTemplates, deleteEventTemplate } from "@/features/calendar/store/calendarThunks";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useEffect, useState } from "react";
@@ -69,16 +72,10 @@ export function TemplateList() {
       id="templates"
       title="Templates"
       action={
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch(openCreateTemplateModal());
-          }}
-          className="p-0.5 rounded hover:bg-muted cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-          title="Create Template"
-        >
-          <Plus size={14} weight="bold" />
-        </button>
+        <SidebarSectionAdd
+          label="Create template"
+          onClick={() => dispatch(openCreateTemplateModal())}
+        />
       }
     >
       <div className="space-y-1">

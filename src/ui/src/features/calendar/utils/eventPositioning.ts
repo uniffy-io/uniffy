@@ -1,6 +1,11 @@
 import type { CalendarEvent, PositionedEvent, MultiDayPosition } from "@/features/calendar/types";
 import { GRID } from "@/features/calendar/constants";
-import { parseISO, getDurationMinutes, format } from "@/features/calendar/utils/dateUtils";
+import {
+  allDayDayKeys,
+  parseISO,
+  getDurationMinutes,
+  format,
+} from "@/features/calendar/utils/dateUtils";
 import { formatInTimeZone } from "date-fns-tz";
 import { getEffectiveTimeZone } from "@/shared/utils/timezone";
 
@@ -283,23 +288,23 @@ export function positionAllDayEvents(
   spanColumns: number;
   row: number;
 }[] {
-  const allDayEvents = events.filter((e) => e.isAllDay);
+  if (weekDates.length === 0) return [];
+  const weekKeys = weekDates.map((date) => format(date, "yyyy-MM-dd"));
+  const firstKey = weekKeys[0];
+  const lastKey = weekKeys[weekKeys.length - 1];
 
-  if (allDayEvents.length === 0) return [];
+  const spans = events
+    .filter((e) => e.isAllDay)
+    .map((event) => ({ event, ...allDayDayKeys(event) }))
+    .filter(({ startKey, endKey }) => startKey <= lastKey && endKey >= firstKey);
 
-  const dateToColumn = new Map<string, number>();
-  weekDates.forEach((date, index) => {
-    dateToColumn.set(format(date, "yyyy-MM-dd"), index);
-  });
+  if (spans.length === 0) return [];
 
   // Longer spans first so they claim contiguous cells before shorter events fill the gaps.
-  const sorted = [...allDayEvents].sort((a, b) => {
-    const startDiff = parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime();
-    if (startDiff !== 0) return startDiff;
-
-    const spanA = getDurationMinutes(a.startTime, a.endTime);
-    const spanB = getDurationMinutes(b.startTime, b.endTime);
-    return spanB - spanA;
+  const sorted = [...spans].sort((a, b) => {
+    if (a.startKey !== b.startKey) return a.startKey < b.startKey ? -1 : 1;
+    if (a.endKey !== b.endKey) return a.endKey > b.endKey ? -1 : 1;
+    return parseISO(a.event.startTime).getTime() - parseISO(b.event.startTime).getTime();
   });
 
   const positions: {
@@ -312,13 +317,11 @@ export function positionAllDayEvents(
   // row -> set of occupied column indices.
   const occupiedCells: Set<string>[] = [];
 
-  for (const event of sorted) {
-    const startKey = getLocalDateString(event.startTime);
-    const endKey = getLocalDateString(event.endTime);
-
-    const startColumn = dateToColumn.get(startKey) ?? 0;
-    const endColumn = dateToColumn.get(endKey) ?? weekDates.length - 1;
-    const spanColumns = Math.min(endColumn - startColumn + 1, weekDates.length);
+  for (const { event, startKey, endKey } of sorted) {
+    const startColumn = startKey < firstKey ? 0 : weekKeys.indexOf(startKey);
+    const endColumn = endKey > lastKey ? weekKeys.length - 1 : weekKeys.indexOf(endKey);
+    if (startColumn < 0 || endColumn < startColumn) continue;
+    const spanColumns = endColumn - startColumn + 1;
 
     let row = 0;
     let foundRow = false;

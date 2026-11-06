@@ -11,13 +11,9 @@ import { DayHeadersRow } from "@/features/calendar/components/calendar/DayHeader
 import { GridLines } from "@/features/calendar/components/calendar/GridLines";
 import { CurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
 import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
-import { GRID, LAYOUT, eventTint } from "@/features/calendar/constants";
-import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
-import { positionAllDayEvents } from "@/features/calendar/utils/eventPositioning";
-import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
-import { cn } from "@/shared/utils/cn";
+import { AllDayLane } from "@/features/calendar/components/calendar/AllDayLane";
+import { GRID, LAYOUT } from "@/features/calendar/constants";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
-import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
 export function WeekView() {
   const dispatch = useAppDispatch();
@@ -63,17 +59,6 @@ export function WeekView() {
   );
 
   const { visibleEvents } = useCalendarEvents();
-  const allDayPositions = useMemo(
-    () => positionAllDayEvents(visibleEvents, weekDates),
-    [visibleEvents, weekDates],
-  );
-  const allDayMaxRow =
-    allDayPositions.length > 0 ? Math.max(...allDayPositions.map((p) => p.row)) + 1 : 0;
-  const allDayRowHeight = 26;
-  const allDaySectionHeight = allDayMaxRow > 0 ? allDayMaxRow * allDayRowHeight + 6 : 0;
-  const categories = useAppSelector((state) => state.calendar.categories);
-  const calendars = useAppSelector((state) => state.calendar.calendars);
-  const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
   const hourCount = GRID.END_HOUR - GRID.START_HOUR + 1;
   const gridHeight = hourCount * GRID.HOUR_HEIGHT;
@@ -261,65 +246,7 @@ export function WeekView() {
           <DayHeadersRow days={displayColumns} />
         </div>
 
-        {allDaySectionHeight > 0 && (
-          <div className="flex border-b border-border flex-shrink-0 min-w-0">
-            <div
-              className="flex-shrink-0 border-r border-border flex items-center justify-center"
-              style={{ width: LAYOUT.TIME_COLUMN_WIDTH }}
-            >
-              <span className="text-[10px] text-muted-foreground">All day</span>
-            </div>
-            <div className="flex-1 relative" style={{ height: allDaySectionHeight }}>
-              {allDayPositions
-                .filter(({ startColumn, spanColumns }) => {
-                  const displayStart = weekColumns.indexOf(displayColumns[0]);
-                  const displayEnd = displayStart + displayColumns.length;
-                  return startColumn < displayEnd && startColumn + spanColumns > displayStart;
-                })
-                .map(({ event, startColumn, spanColumns, row }) => {
-                  const displayStart = weekColumns.indexOf(displayColumns[0]);
-                  const adjustedStart = Math.max(0, startColumn - displayStart);
-                  const adjustedEnd = Math.min(
-                    columnCount,
-                    startColumn + spanColumns - displayStart,
-                  );
-                  const adjustedSpan = adjustedEnd - adjustedStart;
-                  if (adjustedSpan <= 0) return null;
-
-                  const color = resolveEventColor(event, categories, calendars);
-                  const isSelected = selectedEventId === event.id;
-                  const display = eventDisplayState(event);
-
-                  return (
-                    <button
-                      key={event.id}
-                      onClick={() => dispatch(selectEvent(event.id))}
-                      className={cn(
-                        "absolute text-left text-xs truncate px-2 py-0.5 rounded transition-colors",
-                        "hover:brightness-90",
-                        isSelected && "ring-2 ring-primary",
-                        display.cancelled && "line-through opacity-50",
-                        display.tentative && "opacity-60",
-                      )}
-                      style={{
-                        left: `${(adjustedStart / columnCount) * 100}%`,
-                        width: `${(adjustedSpan / columnCount) * 100 - 0.5}%`,
-                        top: row * allDayRowHeight + 3,
-                        height: allDayRowHeight - 4,
-                        backgroundColor: eventTint(color, display.free ? 6 : 12),
-                        color: color,
-                        borderLeft: `3px solid ${color}`,
-                        borderLeftStyle: display.outOfOffice ? "dashed" : "solid",
-                      }}
-                      title={display.title}
-                    >
-                      {display.title}
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        )}
+        <AllDayLane events={visibleEvents} columns={weekColumns} displayColumns={displayColumns} />
 
         <div ref={scrollRef} className="flex-1 overflow-y-scroll overflow-x-auto min-w-0">
           <div className="flex min-w-full">
