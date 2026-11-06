@@ -182,6 +182,19 @@ Stores original uploads, attachments, file versions, thumbnails, and completed v
 |---|---|---|
 | `CHAT_TYPING_MEMBER_LIMIT` | `50` | Channels larger than this skip typing broadcasts to bound Valkey pub/sub work. |
 
+## External calendar feeds
+
+Members can follow an external calendar link, such as a Google or Outlook secret address or a holiday feed, as a read only calendar. The egress worker fetches each link on a schedule. The API process never does.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CALENDAR_EXTERNAL_SUBSCRIPTIONS_ENABLED` | `true` | Whether members can subscribe, for every organization that has not set it on its calendar admin page. Set `false` to keep it off until an org admin turns it on. |
+| `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` | empty | CIDRs a member typed link may reach. Empty means the public internet only. |
+
+A link a member types is a request your servers make on their behalf, so we refuse anything that resolves to a private, loopback, link local or cloud metadata address. We check every address a name resolves to, pin the connection to the address we checked, and check again after every redirect. If your team publishes a calendar from a server on your own network, list its range in `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`, for example `10.20.0.0/16`. Nobody can change that from inside an organization.
+
+If you route outbound traffic through `HTTPS_PROXY` or `HTTP_PROXY`, the proxy resolves names. It becomes the place that decides which networks are reachable, so give it the same rule.
+
 ## Video processing
 
 Media workers prepare completed MP4 copies for uploaded videos. Browsers try the original first and use the copy if original playback fails. Uploaded originals remain in storage; screen recordings replace their WebM source with the promised MP4 after conversion succeeds.
