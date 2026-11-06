@@ -1,6 +1,14 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { Check, Crosshair, Eye, EyeSlash, Prohibit, ShareNetwork } from "phosphor-react-native";
+import {
+  Check,
+  Crosshair,
+  Eye,
+  EyeSlash,
+  Prohibit,
+  ShareNetwork,
+  Warning,
+} from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetSearchBar } from "@shared/components/SheetSearchBar";
 import { useTheme } from "@shared/hooks/useTheme";
@@ -93,7 +101,11 @@ export function CalendarFilterSheet({
                     activeOpacity={0.7}
                     accessibilityRole="switch"
                     accessibilityState={{ checked: shown }}
-                    accessibilityLabel={`Show ${calendar.label}`}
+                    accessibilityLabel={
+                      calendar.feedBroken
+                        ? `Show ${calendar.label}, which stopped updating`
+                        : `Show ${calendar.label}`
+                    }
                   >
                     <View
                       style={[
@@ -111,23 +123,28 @@ export function CalendarFilterSheet({
                     >
                       {calendar.label}
                     </Text>
+                    {calendar.feedBroken ? (
+                      <Warning size={16} color={T.yellow} weight="fill" />
+                    ) : null}
                     <EyeIcon
                       size={16}
                       color={shown ? calendar.color : T.textDim}
                       weight="duotone"
                     />
-                    <TouchableOpacity
-                      onPress={() => onShareCalendar(calendar)}
-                      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        roleCanManage(calendar.userRole)
-                          ? `Share ${calendar.label}`
-                          : `Who has access to ${calendar.label}`
-                      }
-                    >
-                      <ShareNetwork size={16} color={T.textDim} weight="duotone" />
-                    </TouchableOpacity>
+                    {calendar.isReadOnly ? null : (
+                      <TouchableOpacity
+                        onPress={() => onShareCalendar(calendar)}
+                        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          roleCanManage(calendar.userRole)
+                            ? `Share ${calendar.label}`
+                            : `Who has access to ${calendar.label}`
+                        }
+                      >
+                        <ShareNetwork size={16} color={T.textDim} weight="duotone" />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 );
               })}
