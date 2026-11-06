@@ -96,6 +96,15 @@ const (
 	// CalendarServiceRevokeCalendarFeedProcedure is the fully-qualified name of the CalendarService's
 	// RevokeCalendarFeed RPC.
 	CalendarServiceRevokeCalendarFeedProcedure = "/cal.v1.CalendarService/RevokeCalendarFeed"
+	// CalendarServiceCreateCalendarSubscriptionProcedure is the fully-qualified name of the
+	// CalendarService's CreateCalendarSubscription RPC.
+	CalendarServiceCreateCalendarSubscriptionProcedure = "/cal.v1.CalendarService/CreateCalendarSubscription"
+	// CalendarServiceUpdateCalendarSubscriptionProcedure is the fully-qualified name of the
+	// CalendarService's UpdateCalendarSubscription RPC.
+	CalendarServiceUpdateCalendarSubscriptionProcedure = "/cal.v1.CalendarService/UpdateCalendarSubscription"
+	// CalendarServiceRefreshCalendarSubscriptionProcedure is the fully-qualified name of the
+	// CalendarService's RefreshCalendarSubscription RPC.
+	CalendarServiceRefreshCalendarSubscriptionProcedure = "/cal.v1.CalendarService/RefreshCalendarSubscription"
 	// CalendarServiceCreateCategoryProcedure is the fully-qualified name of the CalendarService's
 	// CreateCategory RPC.
 	CalendarServiceCreateCategoryProcedure = "/cal.v1.CalendarService/CreateCategory"
@@ -193,6 +202,13 @@ type CalendarServiceClient interface {
 	RegenerateCalendarFeed(context.Context, *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error)
 	// Stop the caller's subscribe URL for a calendar
 	RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error)
+	// Subscribe to an external iCalendar feed as a new read-only calendar.
+	// Unsubscribing is DeleteCalendar.
+	CreateCalendarSubscription(context.Context, *connect.Request[v1.CreateCalendarSubscriptionRequest]) (*connect.Response[v1.CreateCalendarSubscriptionResponse], error)
+	// Replace a subscription's address or change its refresh interval or busy setting
+	UpdateCalendarSubscription(context.Context, *connect.Request[v1.UpdateCalendarSubscriptionRequest]) (*connect.Response[v1.UpdateCalendarSubscriptionResponse], error)
+	// Refresh a subscription now instead of waiting for its schedule
+	RefreshCalendarSubscription(context.Context, *connect.Request[v1.RefreshCalendarSubscriptionRequest]) (*connect.Response[v1.RefreshCalendarSubscriptionResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -368,6 +384,24 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarFeed")),
 			connect.WithClientOptions(opts...),
 		),
+		createCalendarSubscription: connect.NewClient[v1.CreateCalendarSubscriptionRequest, v1.CreateCalendarSubscriptionResponse](
+			httpClient,
+			baseURL+CalendarServiceCreateCalendarSubscriptionProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("CreateCalendarSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCalendarSubscription: connect.NewClient[v1.UpdateCalendarSubscriptionRequest, v1.UpdateCalendarSubscriptionResponse](
+			httpClient,
+			baseURL+CalendarServiceUpdateCalendarSubscriptionProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		refreshCalendarSubscription: connect.NewClient[v1.RefreshCalendarSubscriptionRequest, v1.RefreshCalendarSubscriptionResponse](
+			httpClient,
+			baseURL+CalendarServiceRefreshCalendarSubscriptionProcedure,
+			connect.WithSchema(calendarServiceMethods.ByName("RefreshCalendarSubscription")),
+			connect.WithClientOptions(opts...),
+		),
 		createCategory: connect.NewClient[v1.CreateCategoryRequest, v1.CreateCategoryResponse](
 			httpClient,
 			baseURL+CalendarServiceCreateCategoryProcedure,
@@ -475,44 +509,47 @@ func NewCalendarServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 
 // calendarServiceClient implements CalendarServiceClient.
 type calendarServiceClient struct {
-	listCalendars          *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
-	getCalendar            *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
-	createCalendar         *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
-	updateCalendar         *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
-	deleteCalendar         *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
-	setCalendarVisibility  *connect.Client[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse]
-	getCalendarPolicy      *connect.Client[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse]
-	updateCalendarPolicy   *connect.Client[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse]
-	createEvent            *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
-	getEvent               *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
-	updateEvent            *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
-	deleteEvent            *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
-	listEvents             *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
-	getEventsInRange       *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
-	exportEvent            *connect.Client[v1.ExportEventRequest, v1.ExportEventResponse]
-	exportCalendar         *connect.Client[v1.ExportCalendarRequest, v1.ExportCalendarResponse]
-	previewCalendarImport  *connect.Client[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse]
-	applyCalendarImport    *connect.Client[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse]
-	getCalendarFeedUrl     *connect.Client[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse]
-	regenerateCalendarFeed *connect.Client[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse]
-	revokeCalendarFeed     *connect.Client[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse]
-	createCategory         *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
-	getCategory            *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
-	updateCategory         *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
-	deleteCategory         *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
-	listCategories         *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
-	updateAttendeeStatus   *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
-	addAttendees           *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
-	updateAttendeeRole     *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
-	removeAttendees        *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
-	getFreeBusy            *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
-	suggestMeetingTimes    *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
-	listEventActivities    *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
-	createEventTemplate    *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
-	getEventTemplate       *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
-	updateEventTemplate    *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
-	deleteEventTemplate    *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
-	listEventTemplates     *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
+	listCalendars               *connect.Client[v1.ListCalendarsRequest, v1.ListCalendarsResponse]
+	getCalendar                 *connect.Client[v1.GetCalendarRequest, v1.GetCalendarResponse]
+	createCalendar              *connect.Client[v1.CreateCalendarRequest, v1.CreateCalendarResponse]
+	updateCalendar              *connect.Client[v1.UpdateCalendarRequest, v1.UpdateCalendarResponse]
+	deleteCalendar              *connect.Client[v1.DeleteCalendarRequest, v1.DeleteCalendarResponse]
+	setCalendarVisibility       *connect.Client[v1.SetCalendarVisibilityRequest, v1.SetCalendarVisibilityResponse]
+	getCalendarPolicy           *connect.Client[v1.GetCalendarPolicyRequest, v1.GetCalendarPolicyResponse]
+	updateCalendarPolicy        *connect.Client[v1.UpdateCalendarPolicyRequest, v1.UpdateCalendarPolicyResponse]
+	createEvent                 *connect.Client[v1.CreateEventRequest, v1.CreateEventResponse]
+	getEvent                    *connect.Client[v1.GetEventRequest, v1.GetEventResponse]
+	updateEvent                 *connect.Client[v1.UpdateEventRequest, v1.UpdateEventResponse]
+	deleteEvent                 *connect.Client[v1.DeleteEventRequest, v1.DeleteEventResponse]
+	listEvents                  *connect.Client[v1.ListEventsRequest, v1.ListEventsResponse]
+	getEventsInRange            *connect.Client[v1.GetEventsInRangeRequest, v1.GetEventsInRangeResponse]
+	exportEvent                 *connect.Client[v1.ExportEventRequest, v1.ExportEventResponse]
+	exportCalendar              *connect.Client[v1.ExportCalendarRequest, v1.ExportCalendarResponse]
+	previewCalendarImport       *connect.Client[v1.PreviewCalendarImportRequest, v1.PreviewCalendarImportResponse]
+	applyCalendarImport         *connect.Client[v1.ApplyCalendarImportRequest, v1.ApplyCalendarImportResponse]
+	getCalendarFeedUrl          *connect.Client[v1.GetCalendarFeedUrlRequest, v1.GetCalendarFeedUrlResponse]
+	regenerateCalendarFeed      *connect.Client[v1.RegenerateCalendarFeedRequest, v1.RegenerateCalendarFeedResponse]
+	revokeCalendarFeed          *connect.Client[v1.RevokeCalendarFeedRequest, v1.RevokeCalendarFeedResponse]
+	createCalendarSubscription  *connect.Client[v1.CreateCalendarSubscriptionRequest, v1.CreateCalendarSubscriptionResponse]
+	updateCalendarSubscription  *connect.Client[v1.UpdateCalendarSubscriptionRequest, v1.UpdateCalendarSubscriptionResponse]
+	refreshCalendarSubscription *connect.Client[v1.RefreshCalendarSubscriptionRequest, v1.RefreshCalendarSubscriptionResponse]
+	createCategory              *connect.Client[v1.CreateCategoryRequest, v1.CreateCategoryResponse]
+	getCategory                 *connect.Client[v1.GetCategoryRequest, v1.GetCategoryResponse]
+	updateCategory              *connect.Client[v1.UpdateCategoryRequest, v1.UpdateCategoryResponse]
+	deleteCategory              *connect.Client[v1.DeleteCategoryRequest, v1.DeleteCategoryResponse]
+	listCategories              *connect.Client[v1.ListCategoriesRequest, v1.ListCategoriesResponse]
+	updateAttendeeStatus        *connect.Client[v1.UpdateAttendeeStatusRequest, v1.UpdateAttendeeStatusResponse]
+	addAttendees                *connect.Client[v1.AddAttendeesRequest, v1.AddAttendeesResponse]
+	updateAttendeeRole          *connect.Client[v1.UpdateAttendeeRoleRequest, v1.UpdateAttendeeRoleResponse]
+	removeAttendees             *connect.Client[v1.RemoveAttendeesRequest, v1.RemoveAttendeesResponse]
+	getFreeBusy                 *connect.Client[v1.GetFreeBusyRequest, v1.GetFreeBusyResponse]
+	suggestMeetingTimes         *connect.Client[v1.SuggestMeetingTimesRequest, v1.SuggestMeetingTimesResponse]
+	listEventActivities         *connect.Client[v1.ListEventActivitiesRequest, v1.ListEventActivitiesResponse]
+	createEventTemplate         *connect.Client[v1.CreateEventTemplateRequest, v1.CreateEventTemplateResponse]
+	getEventTemplate            *connect.Client[v1.GetEventTemplateRequest, v1.GetEventTemplateResponse]
+	updateEventTemplate         *connect.Client[v1.UpdateEventTemplateRequest, v1.UpdateEventTemplateResponse]
+	deleteEventTemplate         *connect.Client[v1.DeleteEventTemplateRequest, v1.DeleteEventTemplateResponse]
+	listEventTemplates          *connect.Client[v1.ListEventTemplatesRequest, v1.ListEventTemplatesResponse]
 }
 
 // ListCalendars calls cal.v1.CalendarService.ListCalendars.
@@ -618,6 +655,21 @@ func (c *calendarServiceClient) RegenerateCalendarFeed(ctx context.Context, req 
 // RevokeCalendarFeed calls cal.v1.CalendarService.RevokeCalendarFeed.
 func (c *calendarServiceClient) RevokeCalendarFeed(ctx context.Context, req *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error) {
 	return c.revokeCalendarFeed.CallUnary(ctx, req)
+}
+
+// CreateCalendarSubscription calls cal.v1.CalendarService.CreateCalendarSubscription.
+func (c *calendarServiceClient) CreateCalendarSubscription(ctx context.Context, req *connect.Request[v1.CreateCalendarSubscriptionRequest]) (*connect.Response[v1.CreateCalendarSubscriptionResponse], error) {
+	return c.createCalendarSubscription.CallUnary(ctx, req)
+}
+
+// UpdateCalendarSubscription calls cal.v1.CalendarService.UpdateCalendarSubscription.
+func (c *calendarServiceClient) UpdateCalendarSubscription(ctx context.Context, req *connect.Request[v1.UpdateCalendarSubscriptionRequest]) (*connect.Response[v1.UpdateCalendarSubscriptionResponse], error) {
+	return c.updateCalendarSubscription.CallUnary(ctx, req)
+}
+
+// RefreshCalendarSubscription calls cal.v1.CalendarService.RefreshCalendarSubscription.
+func (c *calendarServiceClient) RefreshCalendarSubscription(ctx context.Context, req *connect.Request[v1.RefreshCalendarSubscriptionRequest]) (*connect.Response[v1.RefreshCalendarSubscriptionResponse], error) {
+	return c.refreshCalendarSubscription.CallUnary(ctx, req)
 }
 
 // CreateCategory calls cal.v1.CalendarService.CreateCategory.
@@ -749,6 +801,13 @@ type CalendarServiceHandler interface {
 	RegenerateCalendarFeed(context.Context, *connect.Request[v1.RegenerateCalendarFeedRequest]) (*connect.Response[v1.RegenerateCalendarFeedResponse], error)
 	// Stop the caller's subscribe URL for a calendar
 	RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error)
+	// Subscribe to an external iCalendar feed as a new read-only calendar.
+	// Unsubscribing is DeleteCalendar.
+	CreateCalendarSubscription(context.Context, *connect.Request[v1.CreateCalendarSubscriptionRequest]) (*connect.Response[v1.CreateCalendarSubscriptionResponse], error)
+	// Replace a subscription's address or change its refresh interval or busy setting
+	UpdateCalendarSubscription(context.Context, *connect.Request[v1.UpdateCalendarSubscriptionRequest]) (*connect.Response[v1.UpdateCalendarSubscriptionResponse], error)
+	// Refresh a subscription now instead of waiting for its schedule
+	RefreshCalendarSubscription(context.Context, *connect.Request[v1.RefreshCalendarSubscriptionRequest]) (*connect.Response[v1.RefreshCalendarSubscriptionResponse], error)
 	// Create a new category
 	CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error)
 	// Get a category by ID
@@ -920,6 +979,24 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 		connect.WithSchema(calendarServiceMethods.ByName("RevokeCalendarFeed")),
 		connect.WithHandlerOptions(opts...),
 	)
+	calendarServiceCreateCalendarSubscriptionHandler := connect.NewUnaryHandler(
+		CalendarServiceCreateCalendarSubscriptionProcedure,
+		svc.CreateCalendarSubscription,
+		connect.WithSchema(calendarServiceMethods.ByName("CreateCalendarSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceUpdateCalendarSubscriptionHandler := connect.NewUnaryHandler(
+		CalendarServiceUpdateCalendarSubscriptionProcedure,
+		svc.UpdateCalendarSubscription,
+		connect.WithSchema(calendarServiceMethods.ByName("UpdateCalendarSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	calendarServiceRefreshCalendarSubscriptionHandler := connect.NewUnaryHandler(
+		CalendarServiceRefreshCalendarSubscriptionProcedure,
+		svc.RefreshCalendarSubscription,
+		connect.WithSchema(calendarServiceMethods.ByName("RefreshCalendarSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
 	calendarServiceCreateCategoryHandler := connect.NewUnaryHandler(
 		CalendarServiceCreateCategoryProcedure,
 		svc.CreateCategory,
@@ -1066,6 +1143,12 @@ func NewCalendarServiceHandler(svc CalendarServiceHandler, opts ...connect.Handl
 			calendarServiceRegenerateCalendarFeedHandler.ServeHTTP(w, r)
 		case CalendarServiceRevokeCalendarFeedProcedure:
 			calendarServiceRevokeCalendarFeedHandler.ServeHTTP(w, r)
+		case CalendarServiceCreateCalendarSubscriptionProcedure:
+			calendarServiceCreateCalendarSubscriptionHandler.ServeHTTP(w, r)
+		case CalendarServiceUpdateCalendarSubscriptionProcedure:
+			calendarServiceUpdateCalendarSubscriptionHandler.ServeHTTP(w, r)
+		case CalendarServiceRefreshCalendarSubscriptionProcedure:
+			calendarServiceRefreshCalendarSubscriptionHandler.ServeHTTP(w, r)
 		case CalendarServiceCreateCategoryProcedure:
 			calendarServiceCreateCategoryHandler.ServeHTTP(w, r)
 		case CalendarServiceGetCategoryProcedure:
@@ -1191,6 +1274,18 @@ func (UnimplementedCalendarServiceHandler) RegenerateCalendarFeed(context.Contex
 
 func (UnimplementedCalendarServiceHandler) RevokeCalendarFeed(context.Context, *connect.Request[v1.RevokeCalendarFeedRequest]) (*connect.Response[v1.RevokeCalendarFeedResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RevokeCalendarFeed is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) CreateCalendarSubscription(context.Context, *connect.Request[v1.CreateCalendarSubscriptionRequest]) (*connect.Response[v1.CreateCalendarSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.CreateCalendarSubscription is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) UpdateCalendarSubscription(context.Context, *connect.Request[v1.UpdateCalendarSubscriptionRequest]) (*connect.Response[v1.UpdateCalendarSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.UpdateCalendarSubscription is not implemented"))
+}
+
+func (UnimplementedCalendarServiceHandler) RefreshCalendarSubscription(context.Context, *connect.Request[v1.RefreshCalendarSubscriptionRequest]) (*connect.Response[v1.RefreshCalendarSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("cal.v1.CalendarService.RefreshCalendarSubscription is not implemented"))
 }
 
 func (UnimplementedCalendarServiceHandler) CreateCategory(context.Context, *connect.Request[v1.CreateCategoryRequest]) (*connect.Response[v1.CreateCategoryResponse], error) {

@@ -19,7 +19,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import calendar_pb
-from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCalendarPolicyRequest, GetCalendarPolicyResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SetCalendarVisibilityRequest, SetCalendarVisibilityResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
+from .calendar_pb import AddAttendeesRequest, AddAttendeesResponse, ApplyCalendarImportRequest, ApplyCalendarImportResponse, CreateCalendarRequest, CreateCalendarResponse, CreateCalendarSubscriptionRequest, CreateCalendarSubscriptionResponse, CreateCategoryRequest, CreateCategoryResponse, CreateEventRequest, CreateEventResponse, CreateEventTemplateRequest, CreateEventTemplateResponse, DeleteCalendarRequest, DeleteCalendarResponse, DeleteCategoryRequest, DeleteCategoryResponse, DeleteEventRequest, DeleteEventResponse, DeleteEventTemplateRequest, DeleteEventTemplateResponse, ExportCalendarRequest, ExportCalendarResponse, ExportEventRequest, ExportEventResponse, GetCalendarFeedUrlRequest, GetCalendarFeedUrlResponse, GetCalendarPolicyRequest, GetCalendarPolicyResponse, GetCalendarRequest, GetCalendarResponse, GetCategoryRequest, GetCategoryResponse, GetEventRequest, GetEventResponse, GetEventTemplateRequest, GetEventTemplateResponse, GetEventsInRangeRequest, GetEventsInRangeResponse, GetFreeBusyRequest, GetFreeBusyResponse, ListCalendarsRequest, ListCalendarsResponse, ListCategoriesRequest, ListCategoriesResponse, ListEventActivitiesRequest, ListEventActivitiesResponse, ListEventTemplatesRequest, ListEventTemplatesResponse, ListEventsRequest, ListEventsResponse, PreviewCalendarImportRequest, PreviewCalendarImportResponse, RefreshCalendarSubscriptionRequest, RefreshCalendarSubscriptionResponse, RegenerateCalendarFeedRequest, RegenerateCalendarFeedResponse, RemoveAttendeesRequest, RemoveAttendeesResponse, RevokeCalendarFeedRequest, RevokeCalendarFeedResponse, SetCalendarVisibilityRequest, SetCalendarVisibilityResponse, SuggestMeetingTimesRequest, SuggestMeetingTimesResponse, UpdateAttendeeRoleRequest, UpdateAttendeeRoleResponse, UpdateAttendeeStatusRequest, UpdateAttendeeStatusResponse, UpdateCalendarPolicyRequest, UpdateCalendarPolicyResponse, UpdateCalendarRequest, UpdateCalendarResponse, UpdateCalendarSubscriptionRequest, UpdateCalendarSubscriptionResponse, UpdateCategoryRequest, UpdateCategoryResponse, UpdateEventRequest, UpdateEventResponse, UpdateEventTemplateRequest, UpdateEventTemplateResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -159,6 +159,25 @@ class CalendarService(Protocol):
     async def revoke_calendar_feed(self, request: RevokeCalendarFeedRequest, ctx: RequestContext[RevokeCalendarFeedRequest, RevokeCalendarFeedResponse], /) -> RevokeCalendarFeedResponse:
         """
         Stop the caller's subscribe URL for a calendar
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def create_calendar_subscription(self, request: CreateCalendarSubscriptionRequest, ctx: RequestContext[CreateCalendarSubscriptionRequest, CreateCalendarSubscriptionResponse], /) -> CreateCalendarSubscriptionResponse:
+        """
+        Subscribe to an external iCalendar feed as a new read-only calendar.
+        Unsubscribing is DeleteCalendar.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_calendar_subscription(self, request: UpdateCalendarSubscriptionRequest, ctx: RequestContext[UpdateCalendarSubscriptionRequest, UpdateCalendarSubscriptionResponse], /) -> UpdateCalendarSubscriptionResponse:
+        """
+        Replace a subscription's address or change its refresh interval or busy setting
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def refresh_calendar_subscription(self, request: RefreshCalendarSubscriptionRequest, ctx: RequestContext[RefreshCalendarSubscriptionRequest, RefreshCalendarSubscriptionResponse], /) -> RefreshCalendarSubscriptionResponse:
+        """
+        Refresh a subscription now instead of waiting for its schedule
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
@@ -514,6 +533,39 @@ class CalendarServiceASGIApplication(ConnectASGIApplication[CalendarService]):
                         stream_type=StreamType.UNARY,
                     ),
                     function=svc.revoke_calendar_feed,
+                ),
+                "/cal.v1.CalendarService/CreateCalendarSubscription": Endpoint.unary(
+                    method=MethodInfo(
+                        name="CreateCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=CreateCalendarSubscriptionRequest,
+                        output=CreateCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.create_calendar_subscription,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendarSubscription": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarSubscriptionRequest,
+                        output=UpdateCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.update_calendar_subscription,
+                ),
+                "/cal.v1.CalendarService/RefreshCalendarSubscription": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RefreshCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=RefreshCalendarSubscriptionRequest,
+                        output=RefreshCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.refresh_calendar_subscription,
                 ),
                 "/cal.v1.CalendarService/CreateCategory": Endpoint.unary(
                     method=MethodInfo(
@@ -1204,6 +1256,76 @@ class CalendarServiceClient(ConnectClient):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+    async def create_calendar_subscription(
+        self,
+        request: CreateCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateCalendarSubscriptionResponse:
+        """
+        Subscribe to an external iCalendar feed as a new read-only calendar.
+        Unsubscribing is DeleteCalendar.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=CreateCalendarSubscriptionRequest,
+                output=CreateCalendarSubscriptionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def update_calendar_subscription(
+        self,
+        request: UpdateCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarSubscriptionResponse:
+        """
+        Replace a subscription's address or change its refresh interval or busy setting
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarSubscriptionRequest,
+                output=UpdateCalendarSubscriptionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def refresh_calendar_subscription(
+        self,
+        request: RefreshCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RefreshCalendarSubscriptionResponse:
+        """
+        Refresh a subscription now instead of waiting for its schedule
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RefreshCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=RefreshCalendarSubscriptionRequest,
+                output=RefreshCalendarSubscriptionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
     async def create_category(
         self,
         request: CreateCategoryRequest,
@@ -1730,6 +1852,25 @@ class CalendarServiceSync(Protocol):
         """
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
+    def create_calendar_subscription(self, request: CreateCalendarSubscriptionRequest, ctx: RequestContext[CreateCalendarSubscriptionRequest, CreateCalendarSubscriptionResponse], /) -> CreateCalendarSubscriptionResponse:
+        """
+        Subscribe to an external iCalendar feed as a new read-only calendar.
+        Unsubscribing is DeleteCalendar.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_calendar_subscription(self, request: UpdateCalendarSubscriptionRequest, ctx: RequestContext[UpdateCalendarSubscriptionRequest, UpdateCalendarSubscriptionResponse], /) -> UpdateCalendarSubscriptionResponse:
+        """
+        Replace a subscription's address or change its refresh interval or busy setting
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def refresh_calendar_subscription(self, request: RefreshCalendarSubscriptionRequest, ctx: RequestContext[RefreshCalendarSubscriptionRequest, RefreshCalendarSubscriptionResponse], /) -> RefreshCalendarSubscriptionResponse:
+        """
+        Refresh a subscription now instead of waiting for its schedule
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
     def create_category(self, request: CreateCategoryRequest, ctx: RequestContext[CreateCategoryRequest, CreateCategoryResponse], /) -> CreateCategoryResponse:
         """
         Create a new category
@@ -2080,6 +2221,39 @@ class CalendarServiceWSGIApplication(ConnectWSGIApplication):
                         stream_type=StreamType.UNARY,
                     ),
                     function=service.revoke_calendar_feed,
+                ),
+                "/cal.v1.CalendarService/CreateCalendarSubscription": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="CreateCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=CreateCalendarSubscriptionRequest,
+                        output=CreateCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.create_calendar_subscription,
+                ),
+                "/cal.v1.CalendarService/UpdateCalendarSubscription": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=UpdateCalendarSubscriptionRequest,
+                        output=UpdateCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.update_calendar_subscription,
+                ),
+                "/cal.v1.CalendarService/RefreshCalendarSubscription": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RefreshCalendarSubscription",
+                        service_name="cal.v1.CalendarService",
+                        input=RefreshCalendarSubscriptionRequest,
+                        output=RefreshCalendarSubscriptionResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.refresh_calendar_subscription,
                 ),
                 "/cal.v1.CalendarService/CreateCategory": EndpointSync.unary(
                     method=MethodInfo(
@@ -2764,6 +2938,76 @@ class CalendarServiceClientSync(ConnectClientSync):
                 service_name="cal.v1.CalendarService",
                 input=RevokeCalendarFeedRequest,
                 output=RevokeCalendarFeedResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def create_calendar_subscription(
+        self,
+        request: CreateCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> CreateCalendarSubscriptionResponse:
+        """
+        Subscribe to an external iCalendar feed as a new read-only calendar.
+        Unsubscribing is DeleteCalendar.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="CreateCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=CreateCalendarSubscriptionRequest,
+                output=CreateCalendarSubscriptionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_calendar_subscription(
+        self,
+        request: UpdateCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateCalendarSubscriptionResponse:
+        """
+        Replace a subscription's address or change its refresh interval or busy setting
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=UpdateCalendarSubscriptionRequest,
+                output=UpdateCalendarSubscriptionResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def refresh_calendar_subscription(
+        self,
+        request: RefreshCalendarSubscriptionRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RefreshCalendarSubscriptionResponse:
+        """
+        Refresh a subscription now instead of waiting for its schedule
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RefreshCalendarSubscription",
+                service_name="cal.v1.CalendarService",
+                input=RefreshCalendarSubscriptionRequest,
+                output=RefreshCalendarSubscriptionResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
                 stream_type=StreamType.UNARY,
             ),

@@ -21,7 +21,9 @@ from uniffy.core.types import (
 )
 from uniffy.domains.scheduling.calendar.calendars.access import (
     accessible_calendar_ids,
+    calendar_is_read_only,
     calendar_role,
+    cap_read_only,
     event_calendar_id,
     event_role_from_calendar,
     higher_role,
@@ -51,6 +53,7 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         # read once per operation. The hints are candidates only, and a sharing
         # change refreshes them durably.
         self._container_access: dict[tuple[UUID, UUID], SearchContainerAccess] = {}
+        self._read_only_calendars: dict[UUID, bool] = {}
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         # Tag slugs land in the dedicated `tags` array via
@@ -114,8 +117,28 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
     ) -> ContentRole | None:
         """The event's own grants, its calendar's grants, then the attendee floor.
 
-        An explicit BLOCKED on the event beats both the calendar and the invitation.
+        An explicit BLOCKED on the event beats both the calendar and the invitation,
+        and an event mirrored from a feed is capped at VIEWER for everyone.
         """
+        role = await self._granted_role(user_id, organization_id, content)
+        if role is None:
+            return None
+        return cap_read_only(role, await self._on_read_only_calendar(content))
+
+    async def _on_read_only_calendar(self, content: CalendarEvent) -> bool:
+        calendar_id = await event_calendar_id(self.session, content)
+        cached = self._read_only_calendars.get(calendar_id)
+        if cached is None:
+            cached = await calendar_is_read_only(self.session, calendar_id)
+            self._read_only_calendars[calendar_id] = cached
+        return cached
+
+    async def _granted_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: CalendarEvent,
+    ) -> ContentRole | None:
         # Expanded occurrences carry a synthetic string id; permissions live on
         # the master row, so every lookup below resolves to the master UUID.
         master_id = _master_event_id(content)

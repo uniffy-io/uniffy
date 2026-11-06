@@ -39,6 +39,7 @@ def _policy_to_proto(policy: ResolvedCalendarPolicy) -> CalendarPolicy:
         organization_id=str(policy.organization_id),
         team_calendar_creators=_AUDIENCE_TO_PROTO[policy.team_calendar_creators],
         org_wide_calendar_sharers=_AUDIENCE_TO_PROTO[policy.org_wide_calendar_sharers],
+        allow_external_subscriptions=policy.allow_external_subscriptions,
     )
 
 
@@ -63,6 +64,7 @@ class CalendarPolicyHandlers:
             policy=_policy_to_proto(view.policy),
             can_create_team_calendars=view.can_create_team_calendars,
             can_share_calendars_org_wide=view.can_share_calendars_org_wide,
+            can_subscribe_external_calendars=view.can_subscribe_external_calendars,
         )
 
     async def update_calendar_policy(
@@ -86,6 +88,11 @@ class CalendarPolicyHandlers:
                     organization_id,
                     team_calendar_creators=team_calendar_creators,
                     org_wide_calendar_sharers=org_wide_calendar_sharers,
+                    allow_external_subscriptions=(
+                        request.allow_external_subscriptions
+                        if request.has_field("allow_external_subscriptions")
+                        else None
+                    ),
                 )
         except ConnectError:
             raise
@@ -95,4 +102,5 @@ class CalendarPolicyHandlers:
             policy=_policy_to_proto(view.policy),
             can_create_team_calendars=view.can_create_team_calendars,
             can_share_calendars_org_wide=view.can_share_calendars_org_wide,
+            can_subscribe_external_calendars=view.can_subscribe_external_calendars,
         )

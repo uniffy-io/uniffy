@@ -10,7 +10,7 @@ from uniffy.core.auth.permissions.defaults import (
 )
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.calendar import Calendar
-from uniffy.core.types import AccessMode, ContentRole, ContentType
+from uniffy.core.types import AccessMode, CalendarType, ContentRole, ContentType
 from uniffy.domains.scheduling.calendar.policy import require_can_open_calendar_to_org
 
 
@@ -22,6 +22,9 @@ async def guard_calendar_access_mode(
     new_access_mode: AccessMode | None,
     new_baseline_role: ContentRole | None,
 ) -> None:
+    # A feed stays its subscriber's alone: OWNER_ONLY is also what refuses adding members.
+    if _is_subscribed(content):
+        raise ValidationError("access_mode", "A subscribed calendar cannot be shared.")
     # Clearing the mode inherits the org default live, so it may open the calendar
     # now or whenever an admin later opens that default; both count as opening it.
     if new_access_mode is None:
@@ -43,6 +46,10 @@ async def guard_calendar_transfer(
     content: object,
     new_owner_user_id: UUID,
 ) -> None:
+    if _is_subscribed(content):
+        raise ValidationError(
+            "content_id", "A subscribed calendar cannot be transferred to someone else."
+        )
     # Everyone keeps exactly one default calendar, so it never changes hands.
     if isinstance(content, Calendar) and content.is_default:
         raise ValidationError(
@@ -63,3 +70,7 @@ async def guard_event_access_mode(
             "access_mode",
             "Calendar events are invite-only and cannot be opened to the organization.",
         )
+
+
+def _is_subscribed(content: object) -> bool:
+    return isinstance(content, Calendar) and content.calendar_type == CalendarType.SUBSCRIBED

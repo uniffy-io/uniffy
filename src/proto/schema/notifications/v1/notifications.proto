@@ -90,6 +90,8 @@ enum NotificationType {
   NOTIFICATION_TYPE_TIMESHEET_REJECTED = 33;
   // A period ended without a submitted sheet, or a reviewer has sheets waiting
   NOTIFICATION_TYPE_TIMESHEET_REMINDER = 34;
+  // A subscribed calendar feed failed three refreshes in a row
+  NOTIFICATION_TYPE_CALENDAR_SUBSCRIPTION_FAILED = 35;
 }
 
 // Notification model

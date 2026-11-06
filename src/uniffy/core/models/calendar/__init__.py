@@ -10,6 +10,7 @@ from uniffy.core.models.calendar.feed_token import CalendarFeedToken
 from uniffy.core.models.calendar.member_settings import CalendarMemberSettings
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.search_acl_refresh import CalendarSearchAclRefresh
+from uniffy.core.models.calendar.subscription import CalendarSubscription
 from uniffy.core.models.calendar.template import EventTemplate
 
 __all__ = [
@@ -19,6 +20,7 @@ __all__ = [
     "CalendarFeedToken",
     "CalendarMemberSettings",
     "CalendarSearchAclRefresh",
+    "CalendarSubscription",
     "EventActivity",
     "EventAttendee",
     "EventReminder",

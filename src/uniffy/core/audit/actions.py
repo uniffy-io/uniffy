@@ -176,6 +176,8 @@ class Action:
     CALENDAR_UPDATED = "calendar.updated"
     CALENDAR_DELETED = "calendar.deleted"
     CALENDAR_POLICY_UPDATED = "calendar.policy_updated"
+    CALENDAR_SUBSCRIPTION_CREATED = "calendar.subscription_created"
+    CALENDAR_SUBSCRIPTION_UPDATED = "calendar.subscription_updated"
     CALENDAR_EVENT_DELETED = "calendar_event.deleted"
     CALENDAR_EVENT_RESTORED = "calendar_event.restored"
     CALENDAR_EVENT_PERMANENTLY_DELETED = "calendar_event.permanently_deleted"

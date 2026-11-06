@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.queries import ContentAccessQuery
 from uniffy.core.auth.permissions.roles import ROLE_ORDINAL, role_can_edit, role_can_view
-from uniffy.core.errors import NotFoundError, PermissionDeniedError
+from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
-from uniffy.core.types import ContentRole, ContentType
+from uniffy.core.types import CalendarType, ContentRole, ContentType
 
 # Owning a calendar makes you its keeper, not the organizer of what others filed
 # on it: the event's own organizer stays its OWNER and alone can transfer it.
@@ -28,6 +28,22 @@ def event_role_from_calendar(role: ContentRole | None) -> ContentRole | None:
     if role is None:
         return None
     return CALENDAR_ROLE_TO_EVENT_ROLE.get(role)
+
+
+def cap_read_only(role: ContentRole | None, read_only: bool) -> ContentRole | None:
+    """A feed's events change only through the feed, so nobody holds more than VIEWER on them."""
+    if role is None or not read_only:
+        return role
+    if ROLE_ORDINAL[role] > ROLE_ORDINAL[ContentRole.VIEWER]:
+        return ContentRole.VIEWER
+    return role
+
+
+async def calendar_is_read_only(session: AsyncSession, calendar_id: UUID) -> bool:
+    calendar_type = await session.scalar(
+        select(Calendar.calendar_type).where(Calendar.id == calendar_id)
+    )
+    return calendar_type == CalendarType.SUBSCRIBED
 
 
 def higher_role(a: ContentRole | None, b: ContentRole | None) -> ContentRole | None:
@@ -100,6 +116,11 @@ async def require_calendar_edit(
     role = await require_calendar_view(session, user_id, organization_id, calendar_id, hold=True)
     if not role_can_edit(role):
         raise PermissionDeniedError("edit", ContentType.CALENDAR.value)
+    if await calendar_is_read_only(session, calendar_id):
+        raise ValidationError(
+            "calendar_id",
+            "Events on a subscribed calendar come from its source and cannot be added here.",
+        )
     return role
 
 
