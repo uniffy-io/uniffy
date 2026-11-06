@@ -291,19 +291,17 @@ export function MemberProfileDialog({ userId, displayName, onClose }: MemberProf
                     placeholder="Search for a manager..."
                     disabled={isManaged("manager_user_id")}
                   />
-                  {managerQuery.trim().length >= 2 && (
-                    <SubjectSearchResults
-                      results={managerResults}
-                      loading={searchingManagers}
-                      query={managerQuery}
-                      actionLabel="Select"
-                      onSelect={(subject) => {
-                        setManagerUserId(subject.id);
-                        setManagerQuery("");
-                      }}
-                      className="max-h-48 overflow-y-auto rounded-md border border-border p-1"
-                    />
-                  )}
+                  <SubjectSearchResults
+                    results={managerResults}
+                    loading={searchingManagers}
+                    query={managerQuery}
+                    actionLabel="Select"
+                    onSelect={(subject) => {
+                      setManagerUserId(subject.id);
+                      setManagerQuery("");
+                    }}
+                    className="max-h-48 overflow-y-auto rounded-md border border-border p-1"
+                  />
                 </div>
               )}
             </div>

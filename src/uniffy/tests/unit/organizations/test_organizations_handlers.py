@@ -19,6 +19,7 @@ from uniffy_proto.organizations.v1.organizations_pb import (
     DeleteOrganizationRequest,
     InviteMemberRequest,
     LeaveOrganizationRequest,
+    ListMembersRequest,
     ListMyInvitationsRequest,
     ListMyOrganizationsRequest,
     ResendInvitationRequest,
@@ -781,3 +782,34 @@ class TestUpdateOrganization:
             org_id=org.id, name="Acme Labs", slug=None, actor_user_id=user_id
         )
         assert response.organization.id == str(org.id)
+
+
+class TestListMembersInactive:
+    async def test_only_admins_may_list_deactivated_members(self) -> None:
+        user_id, org_id = generate_id(), generate_id()
+        session = MagicMock()
+        ops = MagicMock()
+        ops.require_org_member = AsyncMock()
+        ops.require_org_admin = AsyncMock(
+            side_effect=PermissionDeniedError("Requires organization admin privileges")
+        )
+        ops.list_members = AsyncMock(return_value=([], 0))
+        with (
+            _signed_in(user_id, org_id),
+            patch(f"{_HANDLERS}.open_session", _open_session(session)),
+            patch(f"{_HANDLERS}.OrganizationOperations", return_value=ops),
+        ):
+            refused = await _refusal(
+                _service().list_members(
+                    ListMembersRequest(organization_id=str(org_id), include_inactive=True),
+                    MagicMock(),
+                )
+            )
+            assert refused.code == Code.PERMISSION_DENIED
+            ops.list_members.assert_not_called()
+
+            await _service().list_members(
+                ListMembersRequest(organization_id=str(org_id)), MagicMock()
+            )
+            ops.require_org_admin.assert_awaited_once()
+            assert ops.list_members.call_args.kwargs["include_inactive"] is False

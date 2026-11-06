@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { MagnifyingGlass, Check, LockSimple } from "@phosphor-icons/react";
+import { MagnifyingGlass, Check, LockSimple, User } from "@phosphor-icons/react";
+import { useAppSelector } from "@/app/hooks";
 import { cn } from "@/shared/utils/cn";
 import { controlShellClass } from "@/components/ui/input";
 import { popoverShellClass } from "@/components/ui/popover";
@@ -13,6 +14,7 @@ import {
 } from "@/components/subject/types";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { partitionSubjects } from "@/components/subject/utils";
+import { buildPickerRows } from "@/components/subject/pickerRows";
 import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 
@@ -23,12 +25,15 @@ export interface SubjectPickerPinnedOption {
   icon?: ReactNode;
   selected: boolean;
   onToggle: () => void;
+  /** The person this row stands for, so they are not listed again below it. */
+  subjectId?: string;
 }
 
 interface SubjectPickerProps {
   mode: SubjectPickerMode;
   subjectTypes?: SubjectTypeFilter;
   value: string[];
+  knownSubjects?: Subject[];
   onChange: (ids: string[], subjects: Subject[]) => void;
   excludeIds?: string[];
   /** Render as a portal anchored to anchorRef. */
@@ -41,12 +46,15 @@ interface SubjectPickerProps {
   dropdownWidth?: number;
   align?: "left" | "right";
   pinnedOptions?: SubjectPickerPinnedOption[];
+  /** Offer the caller as a "Me" row; for pickers where choosing yourself is a normal choice. */
+  showSelf?: boolean;
 }
 
 export function SubjectPicker({
   mode,
   subjectTypes = "all",
   value,
+  knownSubjects = [],
   onChange,
   excludeIds = [],
   portal = false,
@@ -58,6 +66,7 @@ export function SubjectPicker({
   dropdownWidth = 240,
   align = "right",
   pinnedOptions = [],
+  showSelf = false,
 }: SubjectPickerProps) {
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(
@@ -66,14 +75,17 @@ export function SubjectPicker({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { results, loading, search } = useSubjectSearch({
+  const { results, suggested, loading, search, recordPicks } = useSubjectSearch({
     subjectTypes,
     excludeIds,
   });
 
-  const { subjects: resolvedSelected } = useSubjectResolver(value);
-
-  const selectedSubjectsRef = useRef<Map<string, Subject>>(new Map());
+  const [pickedSubjects, setPickedSubjects] = useState<Subject[]>([]);
+  const { subjects: resolvedSelected } = useSubjectResolver(value, [
+    ...knownSubjects,
+    ...pickedSubjects,
+  ]);
+  const currentUser = useAppSelector((s) => s.auth.user);
 
   useEffect(() => {
     search(query);
@@ -141,6 +153,10 @@ export function SubjectPicker({
     (subject: Subject) => {
       if (mode === "single") {
         // Single mode callers handle add/remove toggle themselves.
+        if (subject.type === SUBJECT_TYPE.USER && !value.includes(subject.id)) {
+          recordPicks([subject.id]);
+        }
+        setPickedSubjects([subject]);
         onChange([subject.id], [subject]);
         setQuery("");
         return;
@@ -150,16 +166,51 @@ export function SubjectPicker({
       let nextIds: string[];
       if (isSelected) {
         nextIds = value.filter((id) => id !== subject.id);
-        selectedSubjectsRef.current.delete(subject.id);
       } else {
         nextIds = [...value, subject.id];
-        selectedSubjectsRef.current.set(subject.id, subject);
+        if (subject.type === SUBJECT_TYPE.USER) recordPicks([subject.id]);
       }
-      const nextSubjects = nextIds.map((id) => selectedSubjectsRef.current.get(id) || subject);
+      const known = new Map(
+        [...resolvedSelected, ...results, subject].map((item) => [item.id, item]),
+      );
+      const nextSubjects = nextIds.flatMap((id) => known.get(id) ?? []);
+      setPickedSubjects(nextSubjects);
       onChange(nextIds, nextSubjects);
     },
-    [mode, value, onChange],
+    [mode, value, onChange, recordPicks, resolvedSelected, results],
   );
+
+  const {
+    self: selfSubject,
+    selectedRows,
+    suggestions,
+  } = buildPickerRows({
+    currentUser:
+      showSelf && currentUser
+        ? { ...currentUser, avatarUrl: currentUser.avatarUrl || undefined }
+        : null,
+    subjectTypes,
+    excludeIds,
+    pinnedOptions,
+    value,
+    resolvedSelected,
+    results,
+    suggested,
+  });
+  const pinnedRows: Omit<SubjectPickerPinnedOption, "onToggle">[] = [
+    ...(selfSubject
+      ? [
+          {
+            id: "me",
+            label: "Me",
+            icon: <User size={16} className="text-muted-foreground" />,
+            selected: value.includes(selfSubject.id),
+            subjectId: selfSubject.id,
+          },
+        ]
+      : []),
+    ...pinnedOptions,
+  ];
 
   const defaultPlaceholder =
     subjectTypes === "users"
@@ -256,17 +307,22 @@ export function SubjectPicker({
       </div>
 
       <div className="max-h-48 overflow-y-auto py-1">
-        {pinnedOptions.length > 0 && query.length < 2 && (
+        {suggested && pinnedRows.length > 0 && (
           <div className="border-b border-border/60 pb-1 mb-1">
-            {pinnedOptions.map((option) => (
+            {pinnedRows.map((option) => (
               <button
                 key={option.id}
                 type="button"
-                onClick={option.onToggle}
+                onClick={() => {
+                  const pinned = pinnedOptions.find((candidate) => candidate.id === option.id);
+                  if (pinned) pinned.onToggle();
+                  else if (selfSubject) handleSelect(selfSubject);
+                }}
                 className={cn(
                   "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
                   option.selected ? "bg-primary/10" : "hover:bg-muted",
                 )}
+                data-testid={`subject-picker-pinned-${option.id}`}
               >
                 {option.icon}
                 <span className="flex-1 truncate text-foreground">{option.label}</span>
@@ -275,40 +331,30 @@ export function SubjectPicker({
             ))}
           </div>
         )}
-        {loading && results.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
-        ) : query.length >= 2 && results.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
-        ) : query.length < 2 && value.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">Type to search...</div>
-        ) : query.length < 2 && value.length > 0 ? (
-          resolvedSelected.map((subject) => {
-            return (
-              <button
-                key={subject.id}
-                type="button"
-                onClick={() => handleSelect(subject)}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors bg-primary/10"
-              >
-                <SubjectAvatar subject={subject} size="sm" showPresence />
-                <div className="flex-1 min-w-0">
-                  <div className="text-foreground truncate">{subject.name}</div>
-                  {subject.type === SUBJECT_TYPE.USER && subject.email && (
-                    <div className="text-xs text-muted-foreground truncate">{subject.email}</div>
-                  )}
-                  {subject.type === SUBJECT_TYPE.GROUP &&
-                    subject.memberCount != null &&
-                    subject.memberCount > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        {subject.memberCount} member
-                        {subject.memberCount !== 1 ? "s" : ""}
-                      </div>
-                    )}
+        {suggested ? (
+          <>
+            {selectedRows.length > 0 && (
+              <div className={cn(suggestions.length > 0 && "border-b border-border/60 pb-1 mb-1")}>
+                {selectedRows.map(renderResultRow)}
+              </div>
+            )}
+            {suggestions.length > 0 ? (
+              <div data-testid="subject-picker-suggestions">
+                <div className="text-xs uppercase text-muted-foreground px-3 pt-2 pb-1">
+                  {subjectTypes === "groups" ? "Groups" : "Suggested"}
                 </div>
-                <Check size={14} className="text-primary shrink-0" />
-              </button>
-            );
-          })
+                {suggestions.map(renderResultRow)}
+              </div>
+            ) : loading ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
+            ) : selectedRows.length === 0 && pinnedRows.length === 0 ? (
+              <div className="px-3 py-2 text-sm text-muted-foreground">Type to search...</div>
+            ) : null}
+          </>
+        ) : loading && results.length === 0 ? (
+          <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
+        ) : results.length === 0 ? (
+          <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
         ) : subjectTypes === "all" ? (
           partitionSubjects(results).map((section) => (
             <div key={section.label}>

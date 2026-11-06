@@ -19,7 +19,7 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import people_pb
-from .people_pb import CreateIdentitySourceRequest, CreateIdentitySourceResponse, DeleteIdentitySourceRequest, DeleteIdentitySourceResponse, GetOrgChartRequest, GetOrgChartResponse, GetPersonRequest, GetPersonResponse, GetProfilePolicyRequest, GetProfilePolicyResponse, GetTeamRequest, GetTeamResponse, ListIdentitySourcesRequest, ListIdentitySourcesResponse, ListPeopleRequest, ListPeopleResponse, ListTeamsRequest, ListTeamsResponse, SetManagerRequest, SetManagerResponse, TriggerDirectorySyncRequest, TriggerDirectorySyncResponse, UpdateIdentitySourceRequest, UpdateIdentitySourceResponse, UpdateMyProfileRequest, UpdateMyProfileResponse, UpdatePersonProfileRequest, UpdatePersonProfileResponse, UpdateProfilePolicyRequest, UpdateProfilePolicyResponse, UpdateTeamRequest, UpdateTeamResponse
+from .people_pb import CreateIdentitySourceRequest, CreateIdentitySourceResponse, DeleteIdentitySourceRequest, DeleteIdentitySourceResponse, GetOrgChartRequest, GetOrgChartResponse, GetPersonRequest, GetPersonResponse, GetProfilePolicyRequest, GetProfilePolicyResponse, GetTeamRequest, GetTeamResponse, ListCollaboratorsRequest, ListCollaboratorsResponse, ListIdentitySourcesRequest, ListIdentitySourcesResponse, ListPeopleRequest, ListPeopleResponse, ListTeamsRequest, ListTeamsResponse, RecordPeoplePicksRequest, RecordPeoplePicksResponse, SetManagerRequest, SetManagerResponse, TriggerDirectorySyncRequest, TriggerDirectorySyncResponse, UpdateIdentitySourceRequest, UpdateIdentitySourceResponse, UpdateMyProfileRequest, UpdateMyProfileResponse, UpdatePersonProfileRequest, UpdatePersonProfileResponse, UpdateProfilePolicyRequest, UpdateProfilePolicyResponse, UpdateTeamRequest, UpdateTeamResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable, Mapping
@@ -77,6 +77,16 @@ class PeopleService(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     async def trigger_directory_sync(self, request: TriggerDirectorySyncRequest, ctx: RequestContext[TriggerDirectorySyncRequest, TriggerDirectorySyncResponse], /) -> TriggerDirectorySyncResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def list_collaborators(self, request: ListCollaboratorsRequest, ctx: RequestContext[ListCollaboratorsRequest, ListCollaboratorsResponse], /) -> ListCollaboratorsResponse:
+        """
+        People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+        pickers keep working when the directory page is off; never returns another member's ranking.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def record_people_picks(self, request: RecordPeoplePicksRequest, ctx: RequestContext[RecordPeoplePicksRequest, RecordPeoplePicksResponse], /) -> RecordPeoplePicksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -272,6 +282,28 @@ class PeopleServiceASGIApplication(ConnectASGIApplication[PeopleService]):
                         stream_type=StreamType.UNARY,
                     ),
                     function=svc.trigger_directory_sync,
+                ),
+                "/people.v1.PeopleService/ListCollaborators": Endpoint.unary(
+                    method=MethodInfo(
+                        name="ListCollaborators",
+                        service_name="people.v1.PeopleService",
+                        input=ListCollaboratorsRequest,
+                        output=ListCollaboratorsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.list_collaborators,
+                ),
+                "/people.v1.PeopleService/RecordPeoplePicks": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RecordPeoplePicks",
+                        service_name="people.v1.PeopleService",
+                        input=RecordPeoplePicksRequest,
+                        output=RecordPeoplePicksResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.record_people_picks,
                 ),
             },
             interceptors=interceptors,
@@ -607,6 +639,50 @@ class PeopleServiceClient(ConnectClient):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+    async def list_collaborators(
+        self,
+        request: ListCollaboratorsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCollaboratorsResponse:
+        """
+        People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+        pickers keep working when the directory page is off; never returns another member's ranking.
+        """
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCollaborators",
+                service_name="people.v1.PeopleService",
+                input=ListCollaboratorsRequest,
+                output=ListCollaboratorsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def record_people_picks(
+        self,
+        request: RecordPeoplePicksRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordPeoplePicksResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordPeoplePicks",
+                service_name="people.v1.PeopleService",
+                input=RecordPeoplePicksRequest,
+                output=RecordPeoplePicksResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
 
 class PeopleServiceSync(Protocol):
     def list_people(self, request: ListPeopleRequest, ctx: RequestContext[ListPeopleRequest, ListPeopleResponse], /) -> ListPeopleResponse:
@@ -655,6 +731,16 @@ class PeopleServiceSync(Protocol):
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     def trigger_directory_sync(self, request: TriggerDirectorySyncRequest, ctx: RequestContext[TriggerDirectorySyncRequest, TriggerDirectorySyncResponse], /) -> TriggerDirectorySyncResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def list_collaborators(self, request: ListCollaboratorsRequest, ctx: RequestContext[ListCollaboratorsRequest, ListCollaboratorsResponse], /) -> ListCollaboratorsResponse:
+        """
+        People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+        pickers keep working when the directory page is off; never returns another member's ranking.
+        """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def record_people_picks(self, request: RecordPeoplePicksRequest, ctx: RequestContext[RecordPeoplePicksRequest, RecordPeoplePicksResponse], /) -> RecordPeoplePicksResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -848,6 +934,28 @@ class PeopleServiceWSGIApplication(ConnectWSGIApplication):
                         stream_type=StreamType.UNARY,
                     ),
                     function=service.trigger_directory_sync,
+                ),
+                "/people.v1.PeopleService/ListCollaborators": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="ListCollaborators",
+                        service_name="people.v1.PeopleService",
+                        input=ListCollaboratorsRequest,
+                        output=ListCollaboratorsResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.list_collaborators,
+                ),
+                "/people.v1.PeopleService/RecordPeoplePicks": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RecordPeoplePicks",
+                        service_name="people.v1.PeopleService",
+                        input=RecordPeoplePicksRequest,
+                        output=RecordPeoplePicksResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.record_people_picks,
                 ),
             },
             interceptors=interceptors,
@@ -1177,6 +1285,50 @@ class PeopleServiceClientSync(ConnectClientSync):
                 service_name="people.v1.PeopleService",
                 input=TriggerDirectorySyncRequest,
                 output=TriggerDirectorySyncResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def list_collaborators(
+        self,
+        request: ListCollaboratorsRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> ListCollaboratorsResponse:
+        """
+        People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+        pickers keep working when the directory page is off; never returns another member's ranking.
+        """
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="ListCollaborators",
+                service_name="people.v1.PeopleService",
+                input=ListCollaboratorsRequest,
+                output=ListCollaboratorsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def record_people_picks(
+        self,
+        request: RecordPeoplePicksRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RecordPeoplePicksResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RecordPeoplePicks",
+                service_name="people.v1.PeopleService",
+                input=RecordPeoplePicksRequest,
+                output=RecordPeoplePicksResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
                 stream_type=StreamType.UNARY,
             ),

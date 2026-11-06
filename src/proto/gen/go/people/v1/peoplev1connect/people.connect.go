@@ -78,6 +78,12 @@ const (
 	// PeopleServiceTriggerDirectorySyncProcedure is the fully-qualified name of the PeopleService's
 	// TriggerDirectorySync RPC.
 	PeopleServiceTriggerDirectorySyncProcedure = "/people.v1.PeopleService/TriggerDirectorySync"
+	// PeopleServiceListCollaboratorsProcedure is the fully-qualified name of the PeopleService's
+	// ListCollaborators RPC.
+	PeopleServiceListCollaboratorsProcedure = "/people.v1.PeopleService/ListCollaborators"
+	// PeopleServiceRecordPeoplePicksProcedure is the fully-qualified name of the PeopleService's
+	// RecordPeoplePicks RPC.
+	PeopleServiceRecordPeoplePicksProcedure = "/people.v1.PeopleService/RecordPeoplePicks"
 )
 
 // PeopleServiceClient is a client for the people.v1.PeopleService service.
@@ -98,6 +104,10 @@ type PeopleServiceClient interface {
 	UpdateIdentitySource(context.Context, *connect.Request[v1.UpdateIdentitySourceRequest]) (*connect.Response[v1.UpdateIdentitySourceResponse], error)
 	DeleteIdentitySource(context.Context, *connect.Request[v1.DeleteIdentitySourceRequest]) (*connect.Response[v1.DeleteIdentitySourceResponse], error)
 	TriggerDirectorySync(context.Context, *connect.Request[v1.TriggerDirectorySyncRequest]) (*connect.Response[v1.TriggerDirectorySyncResponse], error)
+	// People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+	// pickers keep working when the directory page is off; never returns another member's ranking.
+	ListCollaborators(context.Context, *connect.Request[v1.ListCollaboratorsRequest]) (*connect.Response[v1.ListCollaboratorsResponse], error)
+	RecordPeoplePicks(context.Context, *connect.Request[v1.RecordPeoplePicksRequest]) (*connect.Response[v1.RecordPeoplePicksResponse], error)
 }
 
 // NewPeopleServiceClient constructs a client for the people.v1.PeopleService service. By default,
@@ -207,6 +217,18 @@ func NewPeopleServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(peopleServiceMethods.ByName("TriggerDirectorySync")),
 			connect.WithClientOptions(opts...),
 		),
+		listCollaborators: connect.NewClient[v1.ListCollaboratorsRequest, v1.ListCollaboratorsResponse](
+			httpClient,
+			baseURL+PeopleServiceListCollaboratorsProcedure,
+			connect.WithSchema(peopleServiceMethods.ByName("ListCollaborators")),
+			connect.WithClientOptions(opts...),
+		),
+		recordPeoplePicks: connect.NewClient[v1.RecordPeoplePicksRequest, v1.RecordPeoplePicksResponse](
+			httpClient,
+			baseURL+PeopleServiceRecordPeoplePicksProcedure,
+			connect.WithSchema(peopleServiceMethods.ByName("RecordPeoplePicks")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -228,6 +250,8 @@ type peopleServiceClient struct {
 	updateIdentitySource *connect.Client[v1.UpdateIdentitySourceRequest, v1.UpdateIdentitySourceResponse]
 	deleteIdentitySource *connect.Client[v1.DeleteIdentitySourceRequest, v1.DeleteIdentitySourceResponse]
 	triggerDirectorySync *connect.Client[v1.TriggerDirectorySyncRequest, v1.TriggerDirectorySyncResponse]
+	listCollaborators    *connect.Client[v1.ListCollaboratorsRequest, v1.ListCollaboratorsResponse]
+	recordPeoplePicks    *connect.Client[v1.RecordPeoplePicksRequest, v1.RecordPeoplePicksResponse]
 }
 
 // ListPeople calls people.v1.PeopleService.ListPeople.
@@ -310,6 +334,16 @@ func (c *peopleServiceClient) TriggerDirectorySync(ctx context.Context, req *con
 	return c.triggerDirectorySync.CallUnary(ctx, req)
 }
 
+// ListCollaborators calls people.v1.PeopleService.ListCollaborators.
+func (c *peopleServiceClient) ListCollaborators(ctx context.Context, req *connect.Request[v1.ListCollaboratorsRequest]) (*connect.Response[v1.ListCollaboratorsResponse], error) {
+	return c.listCollaborators.CallUnary(ctx, req)
+}
+
+// RecordPeoplePicks calls people.v1.PeopleService.RecordPeoplePicks.
+func (c *peopleServiceClient) RecordPeoplePicks(ctx context.Context, req *connect.Request[v1.RecordPeoplePicksRequest]) (*connect.Response[v1.RecordPeoplePicksResponse], error) {
+	return c.recordPeoplePicks.CallUnary(ctx, req)
+}
+
 // PeopleServiceHandler is an implementation of the people.v1.PeopleService service.
 type PeopleServiceHandler interface {
 	ListPeople(context.Context, *connect.Request[v1.ListPeopleRequest]) (*connect.Response[v1.ListPeopleResponse], error)
@@ -328,6 +362,10 @@ type PeopleServiceHandler interface {
 	UpdateIdentitySource(context.Context, *connect.Request[v1.UpdateIdentitySourceRequest]) (*connect.Response[v1.UpdateIdentitySourceResponse], error)
 	DeleteIdentitySource(context.Context, *connect.Request[v1.DeleteIdentitySourceRequest]) (*connect.Response[v1.DeleteIdentitySourceResponse], error)
 	TriggerDirectorySync(context.Context, *connect.Request[v1.TriggerDirectorySyncRequest]) (*connect.Response[v1.TriggerDirectorySyncResponse], error)
+	// People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+	// pickers keep working when the directory page is off; never returns another member's ranking.
+	ListCollaborators(context.Context, *connect.Request[v1.ListCollaboratorsRequest]) (*connect.Response[v1.ListCollaboratorsResponse], error)
+	RecordPeoplePicks(context.Context, *connect.Request[v1.RecordPeoplePicksRequest]) (*connect.Response[v1.RecordPeoplePicksResponse], error)
 }
 
 // NewPeopleServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -433,6 +471,18 @@ func NewPeopleServiceHandler(svc PeopleServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(peopleServiceMethods.ByName("TriggerDirectorySync")),
 		connect.WithHandlerOptions(opts...),
 	)
+	peopleServiceListCollaboratorsHandler := connect.NewUnaryHandler(
+		PeopleServiceListCollaboratorsProcedure,
+		svc.ListCollaborators,
+		connect.WithSchema(peopleServiceMethods.ByName("ListCollaborators")),
+		connect.WithHandlerOptions(opts...),
+	)
+	peopleServiceRecordPeoplePicksHandler := connect.NewUnaryHandler(
+		PeopleServiceRecordPeoplePicksProcedure,
+		svc.RecordPeoplePicks,
+		connect.WithSchema(peopleServiceMethods.ByName("RecordPeoplePicks")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/people.v1.PeopleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PeopleServiceListPeopleProcedure:
@@ -467,6 +517,10 @@ func NewPeopleServiceHandler(svc PeopleServiceHandler, opts ...connect.HandlerOp
 			peopleServiceDeleteIdentitySourceHandler.ServeHTTP(w, r)
 		case PeopleServiceTriggerDirectorySyncProcedure:
 			peopleServiceTriggerDirectorySyncHandler.ServeHTTP(w, r)
+		case PeopleServiceListCollaboratorsProcedure:
+			peopleServiceListCollaboratorsHandler.ServeHTTP(w, r)
+		case PeopleServiceRecordPeoplePicksProcedure:
+			peopleServiceRecordPeoplePicksHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -538,4 +592,12 @@ func (UnimplementedPeopleServiceHandler) DeleteIdentitySource(context.Context, *
 
 func (UnimplementedPeopleServiceHandler) TriggerDirectorySync(context.Context, *connect.Request[v1.TriggerDirectorySyncRequest]) (*connect.Response[v1.TriggerDirectorySyncResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("people.v1.PeopleService.TriggerDirectorySync is not implemented"))
+}
+
+func (UnimplementedPeopleServiceHandler) ListCollaborators(context.Context, *connect.Request[v1.ListCollaboratorsRequest]) (*connect.Response[v1.ListCollaboratorsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("people.v1.PeopleService.ListCollaborators is not implemented"))
+}
+
+func (UnimplementedPeopleServiceHandler) RecordPeoplePicks(context.Context, *connect.Request[v1.RecordPeoplePicksRequest]) (*connect.Response[v1.RecordPeoplePicksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("people.v1.PeopleService.RecordPeoplePicks is not implemented"))
 }

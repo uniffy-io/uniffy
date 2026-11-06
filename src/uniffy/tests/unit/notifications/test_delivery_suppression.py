@@ -224,6 +224,11 @@ async def test_worker_keeps_in_app_delivery_when_push_context_is_suppressed() ->
             "load_interruptive_delivery_contexts",
             new=AsyncMock(return_value={user_id: context}),
         ),
+        patch.object(
+            notification_tasks,
+            "record_notification_interactions",
+            new=AsyncMock(return_value=0),
+        ) as record_interactions,
     ):
         result = await notification_tasks.process_notification_event(
             {
@@ -237,6 +242,9 @@ async def test_worker_keeps_in_app_delivery_when_push_context_is_suppressed() ->
         )
 
     assert result == {"status": "success", "recipients": 1, "in_app": 1}
+    # Ranking signals come from the recipients the worker already filtered to viewers.
+    record_interactions.assert_awaited_once()
+    assert record_interactions.await_args.args[1:] == (event, [user_id])
     in_app.deliver_with_session.assert_awaited_once_with(session, user_id, event)
     in_app.publish_realtime.assert_awaited_once_with(notification, actor_name="")
     push.deliver_with_session.assert_awaited_once()

@@ -97,7 +97,7 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
   }, [managerQuery, searchManagers]);
 
   // One list area: typing turns it into add-results, clearing shows the roster.
-  const showResults = query.trim().length >= 2;
+  const showResults = query.trim().length > 0;
 
   const handleRemove = async (userId: string) => {
     setRemoving(userId);
@@ -235,17 +235,15 @@ export function GroupMembersModal({ group, onClose }: GroupMembersModalProps) {
                         placeholder="Search for a manager..."
                         disabled={saving}
                       />
-                      {managerQuery.trim().length >= 2 && (
-                        <SubjectSearchResults
-                          results={managerResults}
-                          loading={searchingManagers}
-                          query={managerQuery}
-                          actionLabel="Select"
-                          busyId={saving ? member.userId : null}
-                          onSelect={(subject) => applyManager(member.userId, subject.id)}
-                          className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
-                        />
-                      )}
+                      <SubjectSearchResults
+                        results={managerResults}
+                        loading={searchingManagers}
+                        query={managerQuery}
+                        actionLabel="Select"
+                        busyId={saving ? member.userId : null}
+                        onSelect={(subject) => applyManager(member.userId, subject.id)}
+                        className="max-h-44 overflow-y-auto rounded-md border border-border p-1"
+                      />
                       {managerId && (
                         <button
                           type="button"

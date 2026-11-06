@@ -19,6 +19,7 @@ class _StagedCalendarEventCreate:
     event: CalendarEvent
     tags: StagedManualTagReplacement | None
     attendee_ids: tuple[UUID, ...]
+    invited_via: dict[UUID, UUID]
 
 
 def _activity_value(value: object) -> str | None:

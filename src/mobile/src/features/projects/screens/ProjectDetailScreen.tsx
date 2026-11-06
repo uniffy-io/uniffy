@@ -38,6 +38,7 @@ import { bottomBarBlockHeight } from "@shared/components/BottomNav";
 import { BOTTOM_NAV_HEIGHT } from "@theme/theme";
 import { FONT } from "@theme/typography";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
+import { useAssigneePinnedRows } from "@features/projects/useAssigneePinnedRows";
 import { useDateTimePrefs } from "@core/datetimePrefs";
 import { zonedDayKey } from "@shared/lib/zonedTime";
 import { useDirectory } from "@shared/directory/useDirectory";
@@ -101,6 +102,8 @@ const DROP_DIMENSIONS: ReadonlySet<GroupDimension["kind"]> = new Set([
 
 const STATUS_DIMENSION: GroupDimension = { kind: "status" };
 const EMPTY_DEFINITION = create(ViewDefinitionSchema);
+// Bulk assignment replaces every selected task's list, so its "Assign to me" never shows as picked.
+const NO_IDS: string[] = [];
 
 function groupByStatus(
   columns: { key: string }[],
@@ -429,6 +432,14 @@ export function ProjectBoardScreen() {
       },
     );
   };
+
+  const bulkAssigneePinned = useAssigneePinnedRows({
+    selectedIds: NO_IDS,
+    onAssignToMe: (userId) => {
+      runBulk({ assigneeIds: [userId] });
+      setBulkSheet(null);
+    },
+  });
 
   const selectView = (viewId: string) => {
     clearSelection();
@@ -872,6 +883,7 @@ export function ProjectBoardScreen() {
           runBulk({ assigneeIds: [subjectId] });
           setBulkSheet(null);
         }}
+        pinned={bulkAssigneePinned}
       />
 
       <TaskFilterSheet

@@ -13,11 +13,14 @@ import { attachmentsApi } from "@/features/files/api/attachmentsApi";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
-import { SubjectPicker } from "@/components/subject";
-import { selectCurrentProject } from "../../store/projectsSlice";
-import { closeCreateTaskModal } from "../../store/projectsUiSlice";
-import { createTask } from "../../store/projectsThunks";
-import { SYSTEM_FIELD_IDS } from "../../types";
+import type { Subject } from "@/components/subject/types";
+import { SubjectChip, SubjectPicker } from "@/components/subject";
+import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
+import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
+import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
+import { closeCreateTaskModal } from "@/features/projects/store/projectsUiSlice";
+import { createTask } from "@/features/projects/store/projectsThunks";
+import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import { TaskTypeIcon } from "@/features/projects/components/TaskTypeIcon";
 import { TASK_TYPES, getFieldsForTaskType } from "@/features/projects/utils/taskTypes";
 import type { FieldDefinition, FieldValue, SelectOption } from "@/features/projects/types";
@@ -35,7 +38,11 @@ export function CreateTaskModal() {
   // Null until the user picks one; the project's field options supply the default until then.
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [priorityOverride, setPriorityOverride] = useState<string | null>(null);
-  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  const currentUserId = useAppSelector((state) => state.auth.user?.id);
+  // New work defaults to its creator; one click on the chip hands it to nobody.
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(() =>
+    currentUserId ? [currentUserId] : [],
+  );
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [recurrenceRule, setRecurrenceRule] = useState<string | null>(null);
@@ -49,6 +56,12 @@ export function CreateTaskModal() {
   const pendingFileIdsRef = useRef<string[]>([]);
 
   const organizationId = useAppSelector((state) => state.auth.currentOrganizationId);
+  const [pickedAssignees, setPickedAssignees] = useState<Subject[]>([]);
+  const { subjects: assignees } = useSubjectResolver(assigneeIds, pickedAssignees);
+  const assigneePinnedOptions = useAssigneePinnedOptions({
+    value: assigneeIds,
+    onChange: setAssigneeIds,
+  });
 
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
@@ -80,6 +93,7 @@ export function CreateTaskModal() {
     setTitle("");
     setDescription("");
     setAssigneeIds([]);
+    setPickedAssignees([]);
     setStartDate("");
     setDueDate("");
     setTaskType("task");
@@ -271,30 +285,48 @@ export function CreateTaskModal() {
           <div className="relative" ref={assigneeDropdownRef}>
             <label className="block text-sm text-muted-foreground mb-1">Assignees</label>
 
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => {
-                setIsAssigneeDropdownOpen((prev) => !prev);
-              }}
+            <div
               className={cn(
                 controlShellClass,
-                "focus-ring flex items-center gap-2 w-full h-10 px-3 py-2 text-sm",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-                "text-subtle-foreground",
+                "flex flex-wrap items-center gap-1.5 w-full min-h-10 px-2 py-1.5 text-sm",
+                isSubmitting && "opacity-50",
                 isAssigneeDropdownOpen && "border-border-strong",
               )}
+              data-testid="create-task-assignees"
             >
-              <span className="flex-1 text-left truncate">Select assignees...</span>
-              <CaretDown size={14} className="text-muted-foreground shrink-0" />
-            </button>
+              {assignees.map((subject) => (
+                <SubjectChip
+                  key={subject.id}
+                  subject={subject}
+                  disabled={isSubmitting}
+                  onRemove={() => setAssigneeIds((ids) => ids.filter((id) => id !== subject.id))}
+                />
+              ))}
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => setIsAssigneeDropdownOpen((prev) => !prev)}
+                className="focus-ring flex min-w-24 flex-1 items-center gap-2 rounded px-1 text-left text-subtle-foreground disabled:cursor-not-allowed"
+                data-testid="create-task-assignees-open"
+              >
+                <span className="flex-1 truncate">
+                  {assigneeIds.length > 0 ? "Add assignee" : "Select assignees..."}
+                </span>
+                <CaretDown size={14} className="text-muted-foreground shrink-0" />
+              </button>
+            </div>
 
             {isAssigneeDropdownOpen && (
               <SubjectPicker
                 mode="multi"
                 subjectTypes="all"
                 value={assigneeIds}
-                onChange={(ids) => setAssigneeIds(ids)}
+                knownSubjects={assignees}
+                onChange={(ids, subjects) => {
+                  setAssigneeIds(ids);
+                  setPickedAssignees(subjects);
+                }}
+                pinnedOptions={assigneePinnedOptions}
                 onClose={() => setIsAssigneeDropdownOpen(false)}
                 autoFocus
               />

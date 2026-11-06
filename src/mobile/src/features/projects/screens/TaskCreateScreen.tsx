@@ -16,6 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DomainHeader } from "@shared/components/DomainHeader";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
+import { useAssigneePinnedRows } from "@features/projects/useAssigneePinnedRows";
+import { useAuth } from "@core/providers/AuthContext";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
 import { TaskTypePickerSheet } from "@features/projects/components/TaskTypePickerSheet";
@@ -45,6 +47,8 @@ export function CreateTaskScreen() {
     status: initialStatus,
   } = useLocalSearchParams<{ projectId?: string; taskId?: string; status?: string }>();
   const isEditing = !!taskId;
+  const { user } = useAuth();
+  const currentUserId = user?.id;
   const T = useTheme();
   const insets = useSafeAreaInsets();
   const bottomPad =
@@ -78,7 +82,10 @@ export function CreateTaskScreen() {
   const [selectedPriority, setSelectedPriority] = useState<string>("");
   const [startDate, setStartDate] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<string | null>(null);
-  const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
+  // New work defaults to its creator; editing keeps the task's own list once it loads.
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(() =>
+    !isEditing && currentUserId ? [currentUserId] : [],
+  );
   const [assigneesOpen, setAssigneesOpen] = useState(false);
   const [taskType, setTaskType] = useState("task");
   const [sprintId, setSprintId] = useState<string | null>(null);
@@ -91,6 +98,16 @@ export function CreateTaskScreen() {
   if (!isEditing && statusOptions.length > 0 && !selectedStatus) {
     setSelectedStatus(initialStatus ?? statusOptions[0].id);
   }
+
+  const toggleAssignee = (userId: string) =>
+    setAssigneeIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+
+  const assigneePinned = useAssigneePinnedRows({
+    selectedIds: assigneeIds,
+    onAssignToMe: toggleAssignee,
+  });
 
   // Prefill editable fields once the task to edit loads.
   const [prefilled, setPrefilled] = useState(false);
@@ -454,11 +471,8 @@ export function CreateTaskScreen() {
         title="Assignees"
         selectedIds={assigneeIds}
         accentColor={T.accent}
-        onToggle={(userId) =>
-          setAssigneeIds((prev) =>
-            prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
-          )
-        }
+        onToggle={toggleAssignee}
+        pinned={assigneePinned}
       />
 
       <TaskTypePickerSheet

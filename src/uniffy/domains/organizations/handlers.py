@@ -295,15 +295,18 @@ class OrganizationsHandlers(OrganizationLifecycleHandlers, OrganizationOnboardin
                 if request.has_field("role_filter"):
                     role_filter = org_role_from_proto(request.role_filter)
 
+                include_inactive = request.has_field("include_inactive") and request.include_inactive
+                if include_inactive:
+                    # Deactivated accounts are an admin roster concern, as in the people directory.
+                    await ops.require_org_admin(user_id, org_id)
+
                 members, total = await ops.list_members(
                     org_id=org_id,
                     page=page,
                     page_size=page_size,
                     role_filter=role_filter,
                     search=request.search if request.has_field("search") else None,
-                    include_inactive=(
-                        request.include_inactive if request.has_field("include_inactive") else False
-                    ),
+                    include_inactive=include_inactive,
                 )
 
                 total_pages = (total + page_size - 1) // page_size

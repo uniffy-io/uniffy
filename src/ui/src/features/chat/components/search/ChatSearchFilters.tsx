@@ -106,6 +106,7 @@ export function ChatSearchFilters({
               mode="single"
               subjectTypes="users"
               placeholder="Filter by sender..."
+              showSelf
               value={[]}
               onChange={handleSenderSelect}
               portal

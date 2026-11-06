@@ -85,6 +85,7 @@ from uniffy.core.models.notifications.email_delivery import (
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.models.notifications.push_subscription import PushSubscription
+from uniffy.core.models.people.collaborator_score import CollaboratorScore
 from uniffy.core.models.people.identity import IdentityLink, IdentitySource, IdentitySourceKind
 from uniffy.core.models.people.profile import PeopleProfile
 from uniffy.core.models.permissions.content_access_request import (
@@ -216,6 +217,7 @@ __all__ = [
     "EventReminder",
     # People models
     "PeopleProfile",
+    "CollaboratorScore",
     "IdentitySource",
     "IdentitySourceKind",
     "IdentityLink",

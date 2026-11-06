@@ -454,9 +454,9 @@ class OrganizationOperations:
 
         if search:
             base_query = base_query.where(
-                User.email.ilike(f"%{search}%")
-                | User.full_name.ilike(f"%{search}%")
-                | User.username.ilike(f"%{search}%")
+                User.email.icontains(search, autoescape=True)
+                | User.full_name.icontains(search, autoescape=True)
+                | User.username.icontains(search, autoescape=True)
             )
 
         count_query = select(func.count()).select_from(base_query.subquery())

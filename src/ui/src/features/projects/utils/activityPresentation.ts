@@ -71,6 +71,8 @@ const MERGEABLE = new Set<ActivityAction>([
 export interface ActivityEntry extends TaskActivity {
   /** How many recorded changes this entry stands for. */
   count: number;
+  /** The recorded changes behind a merged entry, newest first; empty for a single change. */
+  steps: TaskActivity[];
 }
 
 function sameRun(a: TaskActivity, b: TaskActivity): boolean {
@@ -92,11 +94,13 @@ export function mergeActivityRuns(newestFirst: TaskActivity[]): ActivityEntry[] 
   for (const activity of newestFirst) {
     const last = entries.at(-1);
     if (last && sameRun(last, activity)) {
+      if (last.steps.length === 0) last.steps.push({ ...last });
+      last.steps.push(activity);
       last.previousValue = activity.previousValue;
       last.count += 1;
       continue;
     }
-    entries.push({ ...activity, count: 1 });
+    entries.push({ ...activity, count: 1, steps: [] });
   }
   return entries;
 }

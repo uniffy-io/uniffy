@@ -3,6 +3,13 @@ import { useAppSelector } from "@/app/hooks";
 import { adminApi } from "@/features/admin/api/adminApi";
 import { SUBJECT_TYPE, type Subject, type SubjectTypeFilter } from "@/components/subject/types";
 import { subjectKindFromGroupKind } from "@/components/subject/utils";
+import {
+  cachedSuggestedPeople,
+  loadSuggestedPeople,
+  PEOPLE_PAGE_SIZE,
+  recordPeoplePicks,
+  searchPeople,
+} from "@/components/subject/collaborators";
 
 interface UseSubjectSearchOptions {
   subjectTypes?: SubjectTypeFilter;
@@ -13,104 +20,111 @@ interface UseSubjectSearchOptions {
 
 interface UseSubjectSearchResult {
   results: Subject[];
+  /** True while the results are suggestions for an empty query rather than matches. */
+  suggested: boolean;
   loading: boolean;
   error: string | null;
   search: (query: string) => void;
   clear: () => void;
+  /** Tell the ranking the caller chose these people. */
+  recordPicks: (userIds: string[]) => void;
 }
 
+async function searchGroups(organizationId: string, query: string, limit: number) {
+  const res = await adminApi.listGroups({
+    organizationId,
+    search: query || undefined,
+    pagination: { page: 1, pageSize: limit },
+  });
+  return res.groups.map((g): Subject => ({
+    id: g.id,
+    type: SUBJECT_TYPE.GROUP,
+    name: g.name,
+    memberCount: g.memberCount,
+    kind: subjectKindFromGroupKind(g.kind),
+    isPrivate: g.isPrivate || undefined,
+  }));
+}
+
+/**
+ * People and groups for pickers. An empty query lists the caller's ranked colleagues at once
+ * (groups only when the picker is groups-only); one character or more searches.
+ */
 export function useSubjectSearch(options: UseSubjectSearchOptions = {}): UseSubjectSearchResult {
-  const { subjectTypes = "all", excludeIds = [], debounceMs = 300, limit = 20 } = options;
+  const {
+    subjectTypes = "all",
+    excludeIds = [],
+    debounceMs = 300,
+    limit = PEOPLE_PAGE_SIZE,
+  } = options;
 
   const organizationId = useAppSelector((s) => s.auth.currentOrganizationId);
+  const userId = useAppSelector((s) => s.auth.user?.id);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Subject[]>([]);
+  // Tagged with the query they answer, so a mode switch never shows the other mode's rows.
+  const [results, setResults] = useState<{ term: string; items: Subject[] }>({
+    term: "",
+    items: [],
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const requestIdRef = useRef(0);
 
   const includeUsers = subjectTypes === "users" || subjectTypes === "all";
   const includeGroups = subjectTypes === "groups" || subjectTypes === "all";
+  const term = query.trim();
+  const excludeKey = excludeIds.join(",");
 
   useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-
-    if (query.trim().length < 2 || !organizationId) {
-      // eslint-disable-next-line react/react-compiler -- a query that drops below the threshold must drop the previous results here; the debounced fetch below never runs for it
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+    if (!organizationId || !userId) return;
     const requestId = ++requestIdRef.current;
+    const exclude = excludeKey ? excludeKey.split(",") : [];
 
-    timerRef.current = setTimeout(async () => {
+    const run = async () => {
       try {
-        const promises: Promise<Subject[]>[] = [];
-        if (includeUsers) {
-          promises.push(
-            adminApi
-              .listMembers({
-                organizationId,
-                search: query,
-                pagination: { page: 1, pageSize: limit },
-              })
-              .then((res): Subject[] =>
-                res.members.map((m) => ({
-                  id: m.userId,
-                  type: SUBJECT_TYPE.USER,
-                  name: m.displayName,
-                  email: m.email,
-                  avatarUrl: m.avatarUrl || undefined,
-                })),
-              ),
+        const sources: Promise<Subject[]>[] = [];
+        if (term) {
+          if (includeUsers) sources.push(searchPeople(organizationId, term, exclude));
+          if (includeGroups) sources.push(searchGroups(organizationId, term, limit));
+        } else if (includeUsers) {
+          // A list that rules out many people asks the server for the rest of the ranking.
+          sources.push(
+            exclude.length > 0
+              ? searchPeople(organizationId, "", exclude)
+              : loadSuggestedPeople(organizationId, userId),
           );
+        } else if (includeGroups) {
+          sources.push(searchGroups(organizationId, "", limit));
         }
-        if (includeGroups) {
-          promises.push(
-            adminApi
-              .listGroups({
-                organizationId,
-                search: query,
-                pagination: { page: 1, pageSize: limit },
-              })
-              .then((res): Subject[] =>
-                res.groups.map((g) => ({
-                  id: g.id,
-                  type: SUBJECT_TYPE.GROUP,
-                  name: g.name,
-                  memberCount: g.memberCount,
-                  kind: subjectKindFromGroupKind(g.kind),
-                  isPrivate: g.isPrivate || undefined,
-                })),
-              ),
-          );
-        }
-
-        const settled = await Promise.all(promises);
+        const settled = await Promise.all(sources);
         if (requestId !== requestIdRef.current) return;
-
-        const combined = settled.flat();
-        setResults(combined);
+        setResults({ term, items: settled.flat() });
         setError(null);
       } catch (err) {
         if (requestId !== requestIdRef.current) return;
         setError(err instanceof Error ? err.message : "Failed to search");
-        setResults([]);
+        setResults({ term, items: [] });
       } finally {
         if (requestId === requestIdRef.current) setLoading(false);
       }
-    }, debounceMs);
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [query, organizationId, includeUsers, includeGroups, debounceMs, limit]);
+
+    const cached = !term && includeUsers ? cachedSuggestedPeople(organizationId, userId) : null;
+    if (cached) {
+      // eslint-disable-next-line react/react-compiler -- paint the last ranking at once; run() swaps in the fresh one
+      setResults({ term: "", items: cached });
+    } else {
+      setLoading(true);
+    }
+    // Suggestions are cached and cheap, so only typed queries wait for the debounce.
+    const timer = setTimeout(() => void run(), term ? debounceMs : 0);
+    return () => clearTimeout(timer);
+  }, [term, organizationId, userId, includeUsers, includeGroups, debounceMs, limit, excludeKey]);
 
   const excludeSet = new Set(excludeIds);
-  const filtered = results.filter((s) => !excludeSet.has(s.id));
+  // Typing on from one query to the next keeps the last matches; only a mode switch clears them.
+  const current = (results.term === "") === (term === "");
+  const filtered = current ? results.items.filter((s) => !excludeSet.has(s.id)) : [];
 
   const search = useCallback((q: string) => {
     setQuery(q);
@@ -118,8 +132,22 @@ export function useSubjectSearch(options: UseSubjectSearchOptions = {}): UseSubj
 
   const clear = useCallback(() => {
     setQuery("");
-    setResults([]);
   }, []);
 
-  return { results: filtered, loading, error, search, clear };
+  const recordPicks = useCallback(
+    (userIds: string[]) => {
+      if (organizationId) recordPeoplePicks(organizationId, userIds);
+    },
+    [organizationId],
+  );
+
+  return {
+    results: filtered,
+    suggested: !term,
+    loading: loading || !current,
+    error,
+    search,
+    clear,
+    recordPicks,
+  };
 }

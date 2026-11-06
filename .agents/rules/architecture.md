@@ -69,10 +69,12 @@ domains/
 │   ├── mfa/
 │   └── support/
 ├── directory/
+│   ├── collaborators/
 │   ├── groups/
 │   ├── people/
 │   ├── sync/
 │   ├── access.py
+│   ├── membership.py
 │   └── projection.py
 ├── scheduling/
 │   ├── calendar/
@@ -100,7 +102,7 @@ domains/
 ```
 
 `users` owns global accounts, self-profile preferences, avatars, and platform-role facts. Tenant
-profiles, groups, identity synchronization, and USER/TEAM search projection belong to `directory`.
+profiles, groups, identity synchronization, people-picker collaborator ranking, and USER/TEAM search projection belong to `directory`.
 `scheduling/calendar` and `scheduling/rooms` remain separate child domains; only pure interval
 algebra belongs to their parent. Tenant audit behavior remains distinct from the operator-facing
 `platform/audit` surface.

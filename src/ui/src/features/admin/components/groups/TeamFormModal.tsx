@@ -143,6 +143,7 @@ export function TeamFormModal({ team, allTeams, onSave, onClose }: TeamFormModal
                   if (subject) setLeadUserId(subject.id);
                 }}
                 placeholder="Search for a lead..."
+                showSelf
               />
             )}
           </div>

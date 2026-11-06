@@ -135,6 +135,12 @@ from uniffy.domains.chat.jobs.jobs import (
     refresh_chat_search_acl,
 )
 from uniffy.domains.chat.reads.flush import flush_chat_read_cursors
+from uniffy.domains.directory.collaborators.jobs.contracts import (
+    COLLABORATOR_JOB_REFS,
+    COLLABORATOR_SCHEDULED_JOB_REFS,
+    DERIVE_COLLABORATOR_ACTIVITY_SCHEDULE,
+)
+from uniffy.domains.directory.collaborators.jobs.jobs import derive_collaborator_activity
 from uniffy.domains.directory.sync.jobs.contracts import (
     DIRECTORY_JOB_REFS,
     DIRECTORY_SCHEDULED_JOB_REFS,
@@ -486,6 +492,12 @@ CORE_SCHEDULED_REGISTRATIONS = (
         second=(0,),
     ),
     _bind_schedule(
+        DERIVE_COLLABORATOR_ACTIVITY_SCHEDULE,
+        derive_collaborator_activity,
+        hour=4,
+        minute=20,
+    ),
+    _bind_schedule(
         RECALCULATE_ALL_STORAGE_USAGE_SCHEDULE,
         recalculate_all_storage_usage,
         hour=3,
@@ -568,6 +580,7 @@ _JOB_REFS = (
     *MAIL_JOB_REFS,
     *NOTIFICATION_JOB_REFS,
     *DIRECTORY_JOB_REFS,
+    *COLLABORATOR_JOB_REFS,
     *PERMISSION_JOB_REFS,
     *PLATFORM_JOB_REFS,
     *SUPPORT_SESSION_JOB_REFS,
@@ -592,6 +605,7 @@ _SCHEDULED_JOB_REFS = (
     *MAIL_SCHEDULED_JOB_REFS,
     *NOTIFICATION_SCHEDULED_JOB_REFS,
     *DIRECTORY_SCHEDULED_JOB_REFS,
+    *COLLABORATOR_SCHEDULED_JOB_REFS,
     *PERMISSION_SCHEDULED_JOB_REFS,
     *PLATFORM_SCHEDULED_JOB_REFS,
     *SUPPORT_SESSION_SCHEDULED_JOB_REFS,

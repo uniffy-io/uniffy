@@ -10,6 +10,7 @@ import ast
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import uniffy.domains.directory.collaborators as collaborators_package
 import uniffy.domains.directory.people as people_package
 from uniffy.core.auth.permissions.checker import PermissionChecker
 from uniffy.core.auth.permissions.scalar import ScalarAuthorizationFacts
@@ -20,6 +21,8 @@ from uniffy.domains.directory.people.access import ViewerRelation, relation_for
 from uniffy.domains.directory.people.converters import profile_to_proto
 
 PEOPLE_DIR = Path(people_package.__file__).parent
+# Picker rankings are member-record data about the caller's own work, held to the same rule.
+COLLABORATORS_DIR = Path(collaborators_package.__file__).parent
 
 # Calling any of these from the people domain would route member-record gating
 # through the content path. Matched over the AST, so the prose in access.py's
@@ -196,7 +199,7 @@ class TestNoContentBypass:
 
     def test_people_domain_never_reaches_for_the_content_path(self) -> None:
         offenders = {}
-        for path in sorted(PEOPLE_DIR.rglob("*.py")):
+        for path in sorted([*PEOPLE_DIR.rglob("*.py"), *COLLABORATORS_DIR.rglob("*.py")]):
             found = _content_path_references(ast.parse(path.read_text()))
             if found:
                 offenders[path.name] = sorted(found)

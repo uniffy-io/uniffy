@@ -66,6 +66,14 @@ class TaskCreateOperations:
             project_id, kwargs.get("field_values"), task_type=task_type
         )
 
+        if kwargs.get("assignee_ids"):
+            await TaskValidator(self.session).validate_assignees(
+                organization_id,
+                user_id,
+                list(kwargs["assignee_ids"]),
+                total=len(set(kwargs["assignee_ids"])),
+            )
+
         parent_id = kwargs.get("parent_id")
         if parent_id is not None:
             if isinstance(parent_id, str):

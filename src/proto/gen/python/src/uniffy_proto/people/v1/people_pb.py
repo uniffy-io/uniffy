@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from protobuf import DescFile
     from protobuf.wkt.google.protobuf.timestamp_pb import Timestamp
 
-    from ...common.v1.common_pb import OrganizationRole, PaginationRequest, PaginationResponse
+    from ...common.v1.common_pb import MemberInfo, OrganizationRole, PaginationRequest, PaginationResponse
 
 
 _ProfileLinkFields: TypeAlias = Literal["label", "url"]
@@ -1718,6 +1718,174 @@ class TriggerDirectorySyncResponse(Message[_TriggerDirectorySyncResponseFields])
 
         enqueued: bool
 
+_ListCollaboratorsRequestFields: TypeAlias = Literal["organization_id", "query", "limit", "exclude_user_ids"]
+
+class ListCollaboratorsRequest(Message[_ListCollaboratorsRequestFields]):
+    """
+    ```proto
+    message people.v1.ListCollaboratorsRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        query:
+            empty lists suggestions; otherwise matches name, username or email
+
+            ```proto
+            optional string query = 2;
+            ```
+        limit:
+            default 20, max 50
+
+            ```proto
+            optional int32 limit = 3;
+            ```
+        exclude_user_ids:
+            max 100
+
+            ```proto
+            repeated string exclude_user_ids = 4;
+            ```
+    """
+
+    __slots__ = ("organization_id", "query", "limit", "exclude_user_ids")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            query: str | None = None,
+            limit: int | None = None,
+            exclude_user_ids: list[str] | None = None,
+        ) -> None:
+            pass
+
+        organization_id: str
+        query: str
+        limit: int
+        exclude_user_ids: list[str]
+
+_CollaboratorFields: TypeAlias = Literal["member", "tier"]
+
+class Collaborator(Message[_CollaboratorFields]):
+    """
+    ```proto
+    message people.v1.Collaborator
+    ```
+
+    Attributes:
+        member:
+            ```proto
+            optional common.v1.MemberInfo member = 1;
+            ```
+        tier:
+            ```proto
+            people.v1.CollaboratorTier tier = 2;
+            ```
+    """
+
+    __slots__ = ("member", "tier")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            member: MemberInfo | None = None,
+            tier: CollaboratorTier | None = None,
+        ) -> None:
+            pass
+
+        member: MemberInfo | None
+        tier: CollaboratorTier
+
+_ListCollaboratorsResponseFields: TypeAlias = Literal["collaborators"]
+
+class ListCollaboratorsResponse(Message[_ListCollaboratorsResponseFields]):
+    """
+    ```proto
+    message people.v1.ListCollaboratorsResponse
+    ```
+
+    Attributes:
+        collaborators:
+            ```proto
+            repeated people.v1.Collaborator collaborators = 1;
+            ```
+    """
+
+    __slots__ = ("collaborators",)
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            collaborators: list[Collaborator] | None = None,
+        ) -> None:
+            pass
+
+        collaborators: list[Collaborator]
+
+_RecordPeoplePicksRequestFields: TypeAlias = Literal["organization_id", "user_ids"]
+
+class RecordPeoplePicksRequest(Message[_RecordPeoplePicksRequestFields]):
+    """
+    ```proto
+    message people.v1.RecordPeoplePicksRequest
+    ```
+
+    Attributes:
+        organization_id:
+            ```proto
+            string organization_id = 1;
+            ```
+        user_ids:
+            max 20; ids outside the organization are ignored
+
+            ```proto
+            repeated string user_ids = 2;
+            ```
+    """
+
+    __slots__ = ("organization_id", "user_ids")
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+            *,
+            organization_id: str = "",
+            user_ids: list[str] | None = None,
+        ) -> None:
+            pass
+
+        organization_id: str
+        user_ids: list[str]
+
+_RecordPeoplePicksResponseFields: TypeAlias = NoReturn
+
+class RecordPeoplePicksResponse(Message[_RecordPeoplePicksResponseFields]):
+    """
+    ```proto
+    message people.v1.RecordPeoplePicksResponse
+    ```
+    """
+
+    __slots__ = ()
+
+    if TYPE_CHECKING:
+
+        def __init__(
+            self,
+        ) -> None:
+            pass
+
 class IdentitySourceKind(Enum):
     """
     ```proto
@@ -1753,9 +1921,47 @@ class IdentitySourceKind(Enum):
     LDAP = 3
     OIDC = 4
 
+class CollaboratorTier(Enum):
+    """
+    Why a person is listed; the score behind it never leaves the server.
+
+    ```proto
+    enum people.v1.CollaboratorTier
+    ```
+
+    Attributes:
+        UNSPECIFIED:
+            ```proto
+            COLLABORATOR_TIER_UNSPECIFIED = 0
+            ```
+        COLLABORATOR:
+            recent interaction with the caller
+
+            ```proto
+            COLLABORATOR_TIER_COLLABORATOR = 1
+            ```
+        TEAMMATE:
+            shares a team with the caller
+
+            ```proto
+            COLLABORATOR_TIER_TEAMMATE = 2
+            ```
+        MEMBER:
+            any other active member
+
+            ```proto
+            COLLABORATOR_TIER_MEMBER = 3
+            ```
+    """
+
+    UNSPECIFIED = 0
+    COLLABORATOR = 1
+    TEAMMATE = 2
+    MEMBER = 3
+
 
 _DESC = file_desc(
-    b'\n\x16people/v1/people.proto\x12\tpeople.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"5\n\x0bProfileLink\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x10\n\x03url\x18\x02 \x01(\tR\x03url"<\n\x0cProfileLinks\x12,\n\x05links\x18\x01 \x03(\x0b2\x16.people.v1.ProfileLinkR\x05links"p\n\x07TeamRef\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12%\n\x0clead_user_id\x18\x03 \x01(\tH\x00R\nleadUserId\x88\x01\x01B\x0f\n\r_lead_user_id"\xf3\x08\n\rPersonProfile\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12!\n\x0cdisplay_name\x18\x02 \x01(\tR\x0bdisplayName\x12\x1f\n\x08username\x18\x03 \x01(\tH\x00R\x08username\x88\x01\x01\x12"\n\navatar_url\x18\x04 \x01(\tH\x01R\tavatarUrl\x88\x01\x01\x12\x1d\n\nhas_avatar\x18\x05 \x01(\x08R\thasAvatar\x126\n\x08org_role\x18\x06 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x07orgRole\x12\x1b\n\tis_active\x18\x07 \x01(\x08R\x08isActive\x12 \n\tjob_title\x18\n \x01(\tH\x02R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x0b \x01(\tH\x03R\ndepartment\x88\x01\x01\x12\x19\n\x05email\x18\x0c \x01(\tH\x04R\x05email\x88\x01\x01\x12"\n\nwork_phone\x18\r \x01(\tH\x05R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x0e \x01(\tH\x06R\x0bmobilePhone\x88\x01\x01\x12,\n\x0foffice_location\x18\x0f \x01(\tH\x07R\x0eofficeLocation\x88\x01\x01\x12\x1f\n\x08timezone\x18\x10 \x01(\tH\x08R\x08timezone\x88\x01\x01\x12\x1f\n\x08pronouns\x18\x11 \x01(\tH\tR\x08pronouns\x88\x01\x01\x12\x15\n\x03bio\x18\x12 \x01(\tH\nR\x03bio\x88\x01\x01\x12>\n\nstart_date\x18\x13 \x01(\x0b2\x1a.google.protobuf.TimestampH\x0bR\tstartDate\x88\x01\x01\x12\x1f\n\x08birthday\x18\x14 \x01(\tH\x0cR\x08birthday\x88\x01\x01\x12,\n\x05links\x18\x15 \x03(\x0b2\x16.people.v1.ProfileLinkR\x05links\x12+\n\x0fmanager_user_id\x18\x1e \x01(\tH\rR\rmanagerUserId\x88\x01\x01\x12(\n\x05teams\x18\x1f \x03(\x0b2\x12.people.v1.TeamRefR\x05teams\x12.\n\x13direct_report_count\x18  \x01(\x05R\x11directReportCount\x12%\n\x0emanaged_fields\x18( \x03(\tR\rmanagedFields\x12\x17\n\x07is_self\x18* \x01(\x08R\x06isSelf\x12\x19\n\x08can_edit\x18+ \x01(\x08R\x07canEditB\x0b\n\t_usernameB\r\n\x0b_avatar_urlB\x0c\n\n_job_titleB\r\n\x0b_departmentB\x08\n\x06_emailB\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\x12\n\x10_office_locationB\x0b\n\t_timezoneB\x0b\n\t_pronounsB\x06\n\x04_bioB\r\n\x0b_start_dateB\x0b\n\t_birthdayB\x12\n\x10_manager_user_id"\xd9\x02\n\x11ListPeopleRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n\npagination\x18\x02 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x12\x1b\n\x06search\x18\x03 \x01(\tH\x01R\x06search\x88\x01\x01\x12#\n\ndepartment\x18\x04 \x01(\tH\x02R\ndepartment\x88\x01\x01\x12\x1c\n\x07team_id\x18\x05 \x01(\tH\x03R\x06teamId\x88\x01\x01\x12.\n\x10include_inactive\x18\x06 \x01(\x08H\x04R\x0fincludeInactive\x88\x01\x01B\r\n\x0b_paginationB\t\n\x07_searchB\r\n\x0b_departmentB\n\n\x08_team_idB\x13\n\x11_include_inactive"\x99\x01\n\x12ListPeopleResponse\x120\n\x06people\x18\x01 \x03(\x0b2\x18.people.v1.PersonProfileR\x06people\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"T\n\x10GetPersonRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"E\n\x11GetPersonResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"\xe6\x02\n\x16UpdateMyProfileRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12"\n\nwork_phone\x18\x02 \x01(\tH\x00R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x03 \x01(\tH\x01R\x0bmobilePhone\x88\x01\x01\x12\x1f\n\x08timezone\x18\x04 \x01(\tH\x02R\x08timezone\x88\x01\x01\x12\x15\n\x03bio\x18\x05 \x01(\tH\x03R\x03bio\x88\x01\x01\x12\x1f\n\x08birthday\x18\x06 \x01(\tH\x04R\x08birthday\x88\x01\x01\x122\n\x05links\x18\x07 \x01(\x0b2\x17.people.v1.ProfileLinksH\x05R\x05links\x88\x01\x01B\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\x0b\n\t_timezoneB\x06\n\x04_bioB\x0b\n\t_birthdayB\x08\n\x06_links"K\n\x17UpdateMyProfileResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"\xbf\x03\n\x1aUpdatePersonProfileRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12 \n\tjob_title\x18\x03 \x01(\tH\x00R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x04 \x01(\tH\x01R\ndepartment\x88\x01\x01\x12,\n\x0foffice_location\x18\x05 \x01(\tH\x02R\x0eofficeLocation\x88\x01\x01\x12"\n\nwork_phone\x18\x06 \x01(\tH\x03R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x07 \x01(\tH\x04R\x0bmobilePhone\x88\x01\x01\x12>\n\nstart_date\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x05R\tstartDate\x88\x01\x01B\x0c\n\n_job_titleB\r\n\x0b_departmentB\x12\n\x10_office_locationB\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\r\n\x0b_start_date"O\n\x1bUpdatePersonProfileResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"=\n\x12GetOrgChartRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xf7\x02\n\x0cOrgChartNode\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12!\n\x0cdisplay_name\x18\x02 \x01(\tR\x0bdisplayName\x12"\n\navatar_url\x18\x03 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12 \n\tjob_title\x18\x04 \x01(\tH\x01R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x05 \x01(\tH\x02R\ndepartment\x88\x01\x01\x12+\n\x0fmanager_user_id\x18\x06 \x01(\tH\x03R\rmanagerUserId\x88\x01\x01\x12(\n\x05teams\x18\x07 \x03(\x0b2\x12.people.v1.TeamRefR\x05teams\x12)\n\x10descendant_count\x18\x08 \x01(\x05R\x0fdescendantCountB\r\n\x0b_avatar_urlB\x0c\n\n_job_titleB\r\n\x0b_departmentB\x12\n\x10_manager_user_id"\xe9\x01\n\x08TeamNode\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x12+\n\x0fparent_group_id\x18\x04 \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12%\n\x0clead_user_id\x18\x05 \x01(\tH\x02R\nleadUserId\x88\x01\x01B\x0e\n\x0c_descriptionB\x12\n\x10_parent_group_idB\x0f\n\r_lead_user_id"\xcb\x01\n\x13GetOrgChartResponse\x12-\n\x05nodes\x18\x01 \x03(\x0b2\x17.people.v1.OrgChartNodeR\x05nodes\x12"\n\rroot_user_ids\x18\x02 \x03(\tR\x0brootUserIds\x12)\n\x05teams\x18\x03 \x03(\x0b2\x13.people.v1.TeamNodeR\x05teams\x12\x1c\n\ttruncated\x18\x04 \x01(\x08R\ttruncated\x12\x18\n\x07enabled\x18\x05 \x01(\x08R\x07enabled"\x96\x01\n\x11SetManagerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12+\n\x0fmanager_user_id\x18\x03 \x01(\tH\x00R\rmanagerUserId\x88\x01\x01B\x12\n\x10_manager_user_id"F\n\x12SetManagerResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person";\n\x10ListTeamsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId">\n\x11ListTeamsResponse\x12)\n\x05teams\x18\x01 \x03(\x0b2\x13.people.v1.TeamNodeR\x05teams"T\n\x0eGetTeamRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08group_id\x18\x02 \x01(\tR\x07groupId"b\n\x0fGetTeamResponse\x12\'\n\x04team\x18\x01 \x01(\x0b2\x13.people.v1.TeamNodeR\x04team\x12&\n\x0fmember_user_ids\x18\x02 \x03(\tR\rmemberUserIds"\x92\x02\n\x11UpdateTeamRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08group_id\x18\x02 \x01(\tR\x07groupId\x12%\n\x0clead_user_id\x18\x03 \x01(\tH\x00R\nleadUserId\x88\x01\x01\x12+\n\x0fparent_group_id\x18\x04 \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12\x1d\n\nclear_lead\x18\x05 \x01(\x08R\tclearLead\x12!\n\x0cclear_parent\x18\x06 \x01(\x08R\x0bclearParentB\x0f\n\r_lead_user_idB\x12\n\x10_parent_group_id"=\n\x12UpdateTeamResponse\x12\'\n\x04team\x18\x01 \x01(\x0b2\x13.people.v1.TeamNodeR\x04team"h\n\rProfilePolicy\x12+\n\x11directory_enabled\x18\x01 \x01(\x08R\x10directoryEnabled\x12*\n\x11org_chart_enabled\x18\x02 \x01(\x08R\x0forgChartEnabled"B\n\x17GetProfilePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"L\n\x18GetProfilePolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"w\n\x1aUpdateProfilePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x120\n\x06policy\x18\x02 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"O\n\x1bUpdateProfilePolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"\xb9\x03\n\x0eIdentitySource\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x121\n\x04kind\x18\x02 \x01(\x0e2\x1d.people.v1.IdentitySourceKindR\x04kind\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n\tis_active\x18\x04 \x01(\x08R\x08isActive\x12\x1f\n\x0bconfig_json\x18\x05 \x01(\tR\nconfigJson\x12A\n\x0clast_sync_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\nlastSyncAt\x88\x01\x01\x12-\n\x10last_sync_status\x18\x07 \x01(\tH\x01R\x0elastSyncStatus\x88\x01\x01\x12+\n\x0flast_sync_error\x18\x08 \x01(\tH\x02R\rlastSyncError\x88\x01\x01\x129\n\ncreated_at\x18\t \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAtB\x0f\n\r_last_sync_atB\x13\n\x11_last_sync_statusB\x12\n\x10_last_sync_error"E\n\x1aListIdentitySourcesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"R\n\x1bListIdentitySourcesResponse\x123\n\x07sources\x18\x01 \x03(\x0b2\x19.people.v1.IdentitySourceR\x07sources"\xd6\x01\n\x1bCreateIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x121\n\x04kind\x18\x02 \x01(\x0e2\x1d.people.v1.IdentitySourceKindR\x04kind\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n\x0bconfig_json\x18\x04 \x01(\tR\nconfigJson\x12\x1b\n\x06secret\x18\x05 \x01(\tH\x00R\x06secret\x88\x01\x01B\t\n\x07_secret"Q\n\x1cCreateIdentitySourceResponse\x121\n\x06source\x18\x01 \x01(\x0b2\x19.people.v1.IdentitySourceR\x06source"\x93\x02\n\x1bUpdateIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n\tis_active\x18\x04 \x01(\x08H\x01R\x08isActive\x88\x01\x01\x12$\n\x0bconfig_json\x18\x05 \x01(\tH\x02R\nconfigJson\x88\x01\x01\x12\x1b\n\x06secret\x18\x06 \x01(\tH\x03R\x06secret\x88\x01\x01B\x07\n\x05_nameB\x0c\n\n_is_activeB\x0e\n\x0c_config_jsonB\t\n\x07_secret"Q\n\x1cUpdateIdentitySourceResponse\x121\n\x06source\x18\x01 \x01(\x0b2\x19.people.v1.IdentitySourceR\x06source"c\n\x1bDeleteIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId"\x1e\n\x1cDeleteIdentitySourceResponse"c\n\x1bTriggerDirectorySyncRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId":\n\x1cTriggerDirectorySyncResponse\x12\x1a\n\x08enqueued\x18\x01 \x01(\x08R\x08enqueued*\xb7\x01\n\x12IdentitySourceKind\x12$\n IDENTITY_SOURCE_KIND_UNSPECIFIED\x10\x00\x12\x1e\n\x1aIDENTITY_SOURCE_KIND_LOCAL\x10\x01\x12\x1d\n\x19IDENTITY_SOURCE_KIND_SCIM\x10\x02\x12\x1d\n\x19IDENTITY_SOURCE_KIND_LDAP\x10\x03\x12\x1d\n\x19IDENTITY_SOURCE_KIND_OIDC\x10\x042\x9d\x0b\n\rPeopleService\x12I\n\nListPeople\x12\x1c.people.v1.ListPeopleRequest\x1a\x1d.people.v1.ListPeopleResponse\x12F\n\tGetPerson\x12\x1b.people.v1.GetPersonRequest\x1a\x1c.people.v1.GetPersonResponse\x12X\n\x0fUpdateMyProfile\x12!.people.v1.UpdateMyProfileRequest\x1a".people.v1.UpdateMyProfileResponse\x12d\n\x13UpdatePersonProfile\x12%.people.v1.UpdatePersonProfileRequest\x1a&.people.v1.UpdatePersonProfileResponse\x12L\n\x0bGetOrgChart\x12\x1d.people.v1.GetOrgChartRequest\x1a\x1e.people.v1.GetOrgChartResponse\x12I\n\nSetManager\x12\x1c.people.v1.SetManagerRequest\x1a\x1d.people.v1.SetManagerResponse\x12F\n\tListTeams\x12\x1b.people.v1.ListTeamsRequest\x1a\x1c.people.v1.ListTeamsResponse\x12@\n\x07GetTeam\x12\x19.people.v1.GetTeamRequest\x1a\x1a.people.v1.GetTeamResponse\x12I\n\nUpdateTeam\x12\x1c.people.v1.UpdateTeamRequest\x1a\x1d.people.v1.UpdateTeamResponse\x12[\n\x10GetProfilePolicy\x12".people.v1.GetProfilePolicyRequest\x1a#.people.v1.GetProfilePolicyResponse\x12d\n\x13UpdateProfilePolicy\x12%.people.v1.UpdateProfilePolicyRequest\x1a&.people.v1.UpdateProfilePolicyResponse\x12d\n\x13ListIdentitySources\x12%.people.v1.ListIdentitySourcesRequest\x1a&.people.v1.ListIdentitySourcesResponse\x12g\n\x14CreateIdentitySource\x12&.people.v1.CreateIdentitySourceRequest\x1a\'.people.v1.CreateIdentitySourceResponse\x12g\n\x14UpdateIdentitySource\x12&.people.v1.UpdateIdentitySourceRequest\x1a\'.people.v1.UpdateIdentitySourceResponse\x12g\n\x14DeleteIdentitySource\x12&.people.v1.DeleteIdentitySourceRequest\x1a\'.people.v1.DeleteIdentitySourceResponse\x12g\n\x14TriggerDirectorySync\x12&.people.v1.TriggerDirectorySyncRequest\x1a\'.people.v1.TriggerDirectorySyncResponseB9Z7github.com/uniffy-io/uniffy-proto-go/people/v1;peoplev1b\x06proto3',
+    b'\n\x16people/v1/people.proto\x12\tpeople.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto"5\n\x0bProfileLink\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x10\n\x03url\x18\x02 \x01(\tR\x03url"<\n\x0cProfileLinks\x12,\n\x05links\x18\x01 \x03(\x0b2\x16.people.v1.ProfileLinkR\x05links"p\n\x07TeamRef\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12%\n\x0clead_user_id\x18\x03 \x01(\tH\x00R\nleadUserId\x88\x01\x01B\x0f\n\r_lead_user_id"\xf3\x08\n\rPersonProfile\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12!\n\x0cdisplay_name\x18\x02 \x01(\tR\x0bdisplayName\x12\x1f\n\x08username\x18\x03 \x01(\tH\x00R\x08username\x88\x01\x01\x12"\n\navatar_url\x18\x04 \x01(\tH\x01R\tavatarUrl\x88\x01\x01\x12\x1d\n\nhas_avatar\x18\x05 \x01(\x08R\thasAvatar\x126\n\x08org_role\x18\x06 \x01(\x0e2\x1b.common.v1.OrganizationRoleR\x07orgRole\x12\x1b\n\tis_active\x18\x07 \x01(\x08R\x08isActive\x12 \n\tjob_title\x18\n \x01(\tH\x02R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x0b \x01(\tH\x03R\ndepartment\x88\x01\x01\x12\x19\n\x05email\x18\x0c \x01(\tH\x04R\x05email\x88\x01\x01\x12"\n\nwork_phone\x18\r \x01(\tH\x05R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x0e \x01(\tH\x06R\x0bmobilePhone\x88\x01\x01\x12,\n\x0foffice_location\x18\x0f \x01(\tH\x07R\x0eofficeLocation\x88\x01\x01\x12\x1f\n\x08timezone\x18\x10 \x01(\tH\x08R\x08timezone\x88\x01\x01\x12\x1f\n\x08pronouns\x18\x11 \x01(\tH\tR\x08pronouns\x88\x01\x01\x12\x15\n\x03bio\x18\x12 \x01(\tH\nR\x03bio\x88\x01\x01\x12>\n\nstart_date\x18\x13 \x01(\x0b2\x1a.google.protobuf.TimestampH\x0bR\tstartDate\x88\x01\x01\x12\x1f\n\x08birthday\x18\x14 \x01(\tH\x0cR\x08birthday\x88\x01\x01\x12,\n\x05links\x18\x15 \x03(\x0b2\x16.people.v1.ProfileLinkR\x05links\x12+\n\x0fmanager_user_id\x18\x1e \x01(\tH\rR\rmanagerUserId\x88\x01\x01\x12(\n\x05teams\x18\x1f \x03(\x0b2\x12.people.v1.TeamRefR\x05teams\x12.\n\x13direct_report_count\x18  \x01(\x05R\x11directReportCount\x12%\n\x0emanaged_fields\x18( \x03(\tR\rmanagedFields\x12\x17\n\x07is_self\x18* \x01(\x08R\x06isSelf\x12\x19\n\x08can_edit\x18+ \x01(\x08R\x07canEditB\x0b\n\t_usernameB\r\n\x0b_avatar_urlB\x0c\n\n_job_titleB\r\n\x0b_departmentB\x08\n\x06_emailB\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\x12\n\x10_office_locationB\x0b\n\t_timezoneB\x0b\n\t_pronounsB\x06\n\x04_bioB\r\n\x0b_start_dateB\x0b\n\t_birthdayB\x12\n\x10_manager_user_id"\xd9\x02\n\x11ListPeopleRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12A\n\npagination\x18\x02 \x01(\x0b2\x1c.common.v1.PaginationRequestH\x00R\npagination\x88\x01\x01\x12\x1b\n\x06search\x18\x03 \x01(\tH\x01R\x06search\x88\x01\x01\x12#\n\ndepartment\x18\x04 \x01(\tH\x02R\ndepartment\x88\x01\x01\x12\x1c\n\x07team_id\x18\x05 \x01(\tH\x03R\x06teamId\x88\x01\x01\x12.\n\x10include_inactive\x18\x06 \x01(\x08H\x04R\x0fincludeInactive\x88\x01\x01B\r\n\x0b_paginationB\t\n\x07_searchB\r\n\x0b_departmentB\n\n\x08_team_idB\x13\n\x11_include_inactive"\x99\x01\n\x12ListPeopleResponse\x120\n\x06people\x18\x01 \x03(\x0b2\x18.people.v1.PersonProfileR\x06people\x12B\n\npagination\x18\x02 \x01(\x0b2\x1d.common.v1.PaginationResponseH\x00R\npagination\x88\x01\x01B\r\n\x0b_pagination"T\n\x10GetPersonRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId"E\n\x11GetPersonResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"\xe6\x02\n\x16UpdateMyProfileRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12"\n\nwork_phone\x18\x02 \x01(\tH\x00R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x03 \x01(\tH\x01R\x0bmobilePhone\x88\x01\x01\x12\x1f\n\x08timezone\x18\x04 \x01(\tH\x02R\x08timezone\x88\x01\x01\x12\x15\n\x03bio\x18\x05 \x01(\tH\x03R\x03bio\x88\x01\x01\x12\x1f\n\x08birthday\x18\x06 \x01(\tH\x04R\x08birthday\x88\x01\x01\x122\n\x05links\x18\x07 \x01(\x0b2\x17.people.v1.ProfileLinksH\x05R\x05links\x88\x01\x01B\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\x0b\n\t_timezoneB\x06\n\x04_bioB\x0b\n\t_birthdayB\x08\n\x06_links"K\n\x17UpdateMyProfileResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"\xbf\x03\n\x1aUpdatePersonProfileRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12 \n\tjob_title\x18\x03 \x01(\tH\x00R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x04 \x01(\tH\x01R\ndepartment\x88\x01\x01\x12,\n\x0foffice_location\x18\x05 \x01(\tH\x02R\x0eofficeLocation\x88\x01\x01\x12"\n\nwork_phone\x18\x06 \x01(\tH\x03R\tworkPhone\x88\x01\x01\x12&\n\x0cmobile_phone\x18\x07 \x01(\tH\x04R\x0bmobilePhone\x88\x01\x01\x12>\n\nstart_date\x18\x08 \x01(\x0b2\x1a.google.protobuf.TimestampH\x05R\tstartDate\x88\x01\x01B\x0c\n\n_job_titleB\r\n\x0b_departmentB\x12\n\x10_office_locationB\r\n\x0b_work_phoneB\x0f\n\r_mobile_phoneB\r\n\x0b_start_date"O\n\x1bUpdatePersonProfileResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person"=\n\x12GetOrgChartRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"\xf7\x02\n\x0cOrgChartNode\x12\x17\n\x07user_id\x18\x01 \x01(\tR\x06userId\x12!\n\x0cdisplay_name\x18\x02 \x01(\tR\x0bdisplayName\x12"\n\navatar_url\x18\x03 \x01(\tH\x00R\tavatarUrl\x88\x01\x01\x12 \n\tjob_title\x18\x04 \x01(\tH\x01R\x08jobTitle\x88\x01\x01\x12#\n\ndepartment\x18\x05 \x01(\tH\x02R\ndepartment\x88\x01\x01\x12+\n\x0fmanager_user_id\x18\x06 \x01(\tH\x03R\rmanagerUserId\x88\x01\x01\x12(\n\x05teams\x18\x07 \x03(\x0b2\x12.people.v1.TeamRefR\x05teams\x12)\n\x10descendant_count\x18\x08 \x01(\x05R\x0fdescendantCountB\r\n\x0b_avatar_urlB\x0c\n\n_job_titleB\r\n\x0b_departmentB\x12\n\x10_manager_user_id"\xe9\x01\n\x08TeamNode\x12\x19\n\x08group_id\x18\x01 \x01(\tR\x07groupId\x12\x12\n\x04name\x18\x02 \x01(\tR\x04name\x12%\n\x0bdescription\x18\x03 \x01(\tH\x00R\x0bdescription\x88\x01\x01\x12+\n\x0fparent_group_id\x18\x04 \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12%\n\x0clead_user_id\x18\x05 \x01(\tH\x02R\nleadUserId\x88\x01\x01B\x0e\n\x0c_descriptionB\x12\n\x10_parent_group_idB\x0f\n\r_lead_user_id"\xcb\x01\n\x13GetOrgChartResponse\x12-\n\x05nodes\x18\x01 \x03(\x0b2\x17.people.v1.OrgChartNodeR\x05nodes\x12"\n\rroot_user_ids\x18\x02 \x03(\tR\x0brootUserIds\x12)\n\x05teams\x18\x03 \x03(\x0b2\x13.people.v1.TeamNodeR\x05teams\x12\x1c\n\ttruncated\x18\x04 \x01(\x08R\ttruncated\x12\x18\n\x07enabled\x18\x05 \x01(\x08R\x07enabled"\x96\x01\n\x11SetManagerRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12+\n\x0fmanager_user_id\x18\x03 \x01(\tH\x00R\rmanagerUserId\x88\x01\x01B\x12\n\x10_manager_user_id"F\n\x12SetManagerResponse\x120\n\x06person\x18\x01 \x01(\x0b2\x18.people.v1.PersonProfileR\x06person";\n\x10ListTeamsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId">\n\x11ListTeamsResponse\x12)\n\x05teams\x18\x01 \x03(\x0b2\x13.people.v1.TeamNodeR\x05teams"T\n\x0eGetTeamRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08group_id\x18\x02 \x01(\tR\x07groupId"b\n\x0fGetTeamResponse\x12\'\n\x04team\x18\x01 \x01(\x0b2\x13.people.v1.TeamNodeR\x04team\x12&\n\x0fmember_user_ids\x18\x02 \x03(\tR\rmemberUserIds"\x92\x02\n\x11UpdateTeamRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08group_id\x18\x02 \x01(\tR\x07groupId\x12%\n\x0clead_user_id\x18\x03 \x01(\tH\x00R\nleadUserId\x88\x01\x01\x12+\n\x0fparent_group_id\x18\x04 \x01(\tH\x01R\rparentGroupId\x88\x01\x01\x12\x1d\n\nclear_lead\x18\x05 \x01(\x08R\tclearLead\x12!\n\x0cclear_parent\x18\x06 \x01(\x08R\x0bclearParentB\x0f\n\r_lead_user_idB\x12\n\x10_parent_group_id"=\n\x12UpdateTeamResponse\x12\'\n\x04team\x18\x01 \x01(\x0b2\x13.people.v1.TeamNodeR\x04team"h\n\rProfilePolicy\x12+\n\x11directory_enabled\x18\x01 \x01(\x08R\x10directoryEnabled\x12*\n\x11org_chart_enabled\x18\x02 \x01(\x08R\x0forgChartEnabled"B\n\x17GetProfilePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"L\n\x18GetProfilePolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"w\n\x1aUpdateProfilePolicyRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x120\n\x06policy\x18\x02 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"O\n\x1bUpdateProfilePolicyResponse\x120\n\x06policy\x18\x01 \x01(\x0b2\x18.people.v1.ProfilePolicyR\x06policy"\xb9\x03\n\x0eIdentitySource\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x121\n\x04kind\x18\x02 \x01(\x0e2\x1d.people.v1.IdentitySourceKindR\x04kind\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1b\n\tis_active\x18\x04 \x01(\x08R\x08isActive\x12\x1f\n\x0bconfig_json\x18\x05 \x01(\tR\nconfigJson\x12A\n\x0clast_sync_at\x18\x06 \x01(\x0b2\x1a.google.protobuf.TimestampH\x00R\nlastSyncAt\x88\x01\x01\x12-\n\x10last_sync_status\x18\x07 \x01(\tH\x01R\x0elastSyncStatus\x88\x01\x01\x12+\n\x0flast_sync_error\x18\x08 \x01(\tH\x02R\rlastSyncError\x88\x01\x01\x129\n\ncreated_at\x18\t \x01(\x0b2\x1a.google.protobuf.TimestampR\tcreatedAtB\x0f\n\r_last_sync_atB\x13\n\x11_last_sync_statusB\x12\n\x10_last_sync_error"E\n\x1aListIdentitySourcesRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId"R\n\x1bListIdentitySourcesResponse\x123\n\x07sources\x18\x01 \x03(\x0b2\x19.people.v1.IdentitySourceR\x07sources"\xd6\x01\n\x1bCreateIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x121\n\x04kind\x18\x02 \x01(\x0e2\x1d.people.v1.IdentitySourceKindR\x04kind\x12\x12\n\x04name\x18\x03 \x01(\tR\x04name\x12\x1f\n\x0bconfig_json\x18\x04 \x01(\tR\nconfigJson\x12\x1b\n\x06secret\x18\x05 \x01(\tH\x00R\x06secret\x88\x01\x01B\t\n\x07_secret"Q\n\x1cCreateIdentitySourceResponse\x121\n\x06source\x18\x01 \x01(\x0b2\x19.people.v1.IdentitySourceR\x06source"\x93\x02\n\x1bUpdateIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId\x12\x17\n\x04name\x18\x03 \x01(\tH\x00R\x04name\x88\x01\x01\x12 \n\tis_active\x18\x04 \x01(\x08H\x01R\x08isActive\x88\x01\x01\x12$\n\x0bconfig_json\x18\x05 \x01(\tH\x02R\nconfigJson\x88\x01\x01\x12\x1b\n\x06secret\x18\x06 \x01(\tH\x03R\x06secret\x88\x01\x01B\x07\n\x05_nameB\x0c\n\n_is_activeB\x0e\n\x0c_config_jsonB\t\n\x07_secret"Q\n\x1cUpdateIdentitySourceResponse\x121\n\x06source\x18\x01 \x01(\x0b2\x19.people.v1.IdentitySourceR\x06source"c\n\x1bDeleteIdentitySourceRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId"\x1e\n\x1cDeleteIdentitySourceResponse"c\n\x1bTriggerDirectorySyncRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x1b\n\tsource_id\x18\x02 \x01(\tR\x08sourceId":\n\x1cTriggerDirectorySyncResponse\x12\x1a\n\x08enqueued\x18\x01 \x01(\x08R\x08enqueued"\xb7\x01\n\x18ListCollaboratorsRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x05query\x18\x02 \x01(\tH\x00R\x05query\x88\x01\x01\x12\x19\n\x05limit\x18\x03 \x01(\x05H\x01R\x05limit\x88\x01\x01\x12(\n\x10exclude_user_ids\x18\x04 \x03(\tR\x0eexcludeUserIdsB\x08\n\x06_queryB\x08\n\x06_limit"n\n\x0cCollaborator\x12-\n\x06member\x18\x01 \x01(\x0b2\x15.common.v1.MemberInfoR\x06member\x12/\n\x04tier\x18\x02 \x01(\x0e2\x1b.people.v1.CollaboratorTierR\x04tier"Z\n\x19ListCollaboratorsResponse\x12=\n\rcollaborators\x18\x01 \x03(\x0b2\x17.people.v1.CollaboratorR\rcollaborators"^\n\x18RecordPeoplePicksRequest\x12\'\n\x0forganization_id\x18\x01 \x01(\tR\x0eorganizationId\x12\x19\n\x08user_ids\x18\x02 \x03(\tR\x07userIds"\x1b\n\x19RecordPeoplePicksResponse*\xb7\x01\n\x12IdentitySourceKind\x12$\n IDENTITY_SOURCE_KIND_UNSPECIFIED\x10\x00\x12\x1e\n\x1aIDENTITY_SOURCE_KIND_LOCAL\x10\x01\x12\x1d\n\x19IDENTITY_SOURCE_KIND_SCIM\x10\x02\x12\x1d\n\x19IDENTITY_SOURCE_KIND_LDAP\x10\x03\x12\x1d\n\x19IDENTITY_SOURCE_KIND_OIDC\x10\x04*\x97\x01\n\x10CollaboratorTier\x12!\n\x1dCOLLABORATOR_TIER_UNSPECIFIED\x10\x00\x12"\n\x1eCOLLABORATOR_TIER_COLLABORATOR\x10\x01\x12\x1e\n\x1aCOLLABORATOR_TIER_TEAMMATE\x10\x02\x12\x1c\n\x18COLLABORATOR_TIER_MEMBER\x10\x032\xdd\x0c\n\rPeopleService\x12I\n\nListPeople\x12\x1c.people.v1.ListPeopleRequest\x1a\x1d.people.v1.ListPeopleResponse\x12F\n\tGetPerson\x12\x1b.people.v1.GetPersonRequest\x1a\x1c.people.v1.GetPersonResponse\x12X\n\x0fUpdateMyProfile\x12!.people.v1.UpdateMyProfileRequest\x1a".people.v1.UpdateMyProfileResponse\x12d\n\x13UpdatePersonProfile\x12%.people.v1.UpdatePersonProfileRequest\x1a&.people.v1.UpdatePersonProfileResponse\x12L\n\x0bGetOrgChart\x12\x1d.people.v1.GetOrgChartRequest\x1a\x1e.people.v1.GetOrgChartResponse\x12I\n\nSetManager\x12\x1c.people.v1.SetManagerRequest\x1a\x1d.people.v1.SetManagerResponse\x12F\n\tListTeams\x12\x1b.people.v1.ListTeamsRequest\x1a\x1c.people.v1.ListTeamsResponse\x12@\n\x07GetTeam\x12\x19.people.v1.GetTeamRequest\x1a\x1a.people.v1.GetTeamResponse\x12I\n\nUpdateTeam\x12\x1c.people.v1.UpdateTeamRequest\x1a\x1d.people.v1.UpdateTeamResponse\x12[\n\x10GetProfilePolicy\x12".people.v1.GetProfilePolicyRequest\x1a#.people.v1.GetProfilePolicyResponse\x12d\n\x13UpdateProfilePolicy\x12%.people.v1.UpdateProfilePolicyRequest\x1a&.people.v1.UpdateProfilePolicyResponse\x12d\n\x13ListIdentitySources\x12%.people.v1.ListIdentitySourcesRequest\x1a&.people.v1.ListIdentitySourcesResponse\x12g\n\x14CreateIdentitySource\x12&.people.v1.CreateIdentitySourceRequest\x1a\'.people.v1.CreateIdentitySourceResponse\x12g\n\x14UpdateIdentitySource\x12&.people.v1.UpdateIdentitySourceRequest\x1a\'.people.v1.UpdateIdentitySourceResponse\x12g\n\x14DeleteIdentitySource\x12&.people.v1.DeleteIdentitySourceRequest\x1a\'.people.v1.DeleteIdentitySourceResponse\x12g\n\x14TriggerDirectorySync\x12&.people.v1.TriggerDirectorySyncRequest\x1a\'.people.v1.TriggerDirectorySyncResponse\x12^\n\x11ListCollaborators\x12#.people.v1.ListCollaboratorsRequest\x1a$.people.v1.ListCollaboratorsResponse\x12^\n\x11RecordPeoplePicks\x12#.people.v1.RecordPeoplePicksRequest\x1a$.people.v1.RecordPeoplePicksResponseB9Z7github.com/uniffy-io/uniffy-proto-go/people/v1;peoplev1b\x06proto3',
     [
         common_pb.desc(),
         timestamp_pb.desc(),
@@ -1801,7 +2007,13 @@ _DESC = file_desc(
         "DeleteIdentitySourceResponse": DeleteIdentitySourceResponse,
         "TriggerDirectorySyncRequest": TriggerDirectorySyncRequest,
         "TriggerDirectorySyncResponse": TriggerDirectorySyncResponse,
+        "ListCollaboratorsRequest": ListCollaboratorsRequest,
+        "Collaborator": Collaborator,
+        "ListCollaboratorsResponse": ListCollaboratorsResponse,
+        "RecordPeoplePicksRequest": RecordPeoplePicksRequest,
+        "RecordPeoplePicksResponse": RecordPeoplePicksResponse,
         "IdentitySourceKind": IdentitySourceKind,
+        "CollaboratorTier": CollaboratorTier,
     },
 )
 

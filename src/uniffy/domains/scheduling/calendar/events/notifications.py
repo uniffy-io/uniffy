@@ -30,6 +30,34 @@ from uniffy.core.types import (
 logger = logger.bind(component="scheduling.calendar.events.notifications")
 
 
+def invitation_notifications(
+    event: CalendarEvent,
+    actor_id: UUID,
+    recipient_ids: list[UUID],
+    invited_via: dict[UUID, UUID],
+) -> list[NotificationEvent]:
+    direct = [uid for uid in recipient_ids if uid not in invited_via]
+    grouped = [uid for uid in recipient_ids if uid in invited_via]
+    events: list[NotificationEvent] = []
+    for recipients, metadata in (
+        (direct, None),
+        (grouped, {"group_ids": sorted({str(invited_via[uid]) for uid in grouped})}),
+    ):
+        if recipients:
+            events.append(
+                NotificationEvent(
+                    notification_type=NotificationType.CALENDAR_INVITE,
+                    organization_id=event.organization_id,
+                    actor_id=actor_id,
+                    title=f"Invited to: {event.title}",
+                    source_urn=build_content_urn(ContentType.CALENDAR_EVENT, event.id),
+                    target_user_ids=recipients,
+                    metadata=metadata,
+                )
+            )
+    return events
+
+
 async def publish_event_change(event: CalendarEvent, *, access_changed: bool = False) -> None:
     try:
         if access_changed:

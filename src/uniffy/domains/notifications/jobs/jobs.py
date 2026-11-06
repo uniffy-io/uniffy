@@ -14,6 +14,7 @@ from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.shared import NotificationType
 from uniffy.core.types import ContentType
+from uniffy.domains.directory.collaborators.recorder import record_notification_interactions
 from uniffy.domains.notifications.delivery import (
     DELIVERY_ADAPTERS_CTX_KEY,
     DeliveryAdapters,
@@ -161,17 +162,25 @@ async def process_notification_event(
             for delivery in pending_email_deliveries:
                 await email_adapter.enqueue_if_due(delivery)
 
-        NOTIFICATION_EVENTS_TOTAL.labels(status="success").inc()
-        logger.info(
-            f"Processed notification: type={event.notification_type}, "
-            f"recipients={len(recipient_ids)}, "
-            f"in_app={len(pending_notifications)}"
-        )
-        return {
-            "status": "success",
-            "recipients": len(recipient_ids),
-            "in_app": len(pending_notifications),
-        }
+    # Last and in its own transaction: a retry after a delivery failure must not count twice,
+    # and ranking trouble must never cost anyone a notification.
+    try:
+        async with session_factory() as signal_session:
+            await record_notification_interactions(signal_session, event, recipient_ids)
+    except Exception:
+        logger.opt(exception=True).warning("Failed to record collaborator interactions")
+
+    NOTIFICATION_EVENTS_TOTAL.labels(status="success").inc()
+    logger.info(
+        f"Processed notification: type={event.notification_type}, "
+        f"recipients={len(recipient_ids)}, "
+        f"in_app={len(pending_notifications)}"
+    )
+    return {
+        "status": "success",
+        "recipients": len(recipient_ids),
+        "in_app": len(pending_notifications),
+    }
 
 
 async def deliver_push_notification(

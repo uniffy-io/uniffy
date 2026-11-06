@@ -33,7 +33,7 @@ export function NewDmModal() {
   const onlySelf = selectedUsers.length > 0 && recipients.length === 0;
   const atCap = recipients.length >= NEW_DM_MAX_RECIPIENTS;
 
-  const { results, loading, search } = useSubjectSearch({
+  const { results, suggested, loading, search } = useSubjectSearch({
     subjectTypes: "users",
     excludeIds: selectedUserIds,
   });
@@ -178,7 +178,7 @@ export function NewDmModal() {
               {results.length > 0 && (
                 <div className="py-1">
                   <div className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-wide text-subtle-foreground">
-                    People
+                    {suggested ? "Suggested" : "People"}
                   </div>
                   {results.map((subject) => (
                     <button
@@ -212,13 +212,13 @@ export function NewDmModal() {
                 </div>
               )}
 
-              {query.length >= 2 && results.length === 0 && (
+              {!suggested && results.length === 0 && (
                 <div className="px-6 py-8 text-center text-sm text-muted-foreground">
                   No matches
                 </div>
               )}
 
-              {query.length < 2 && results.length === 0 && (
+              {suggested && results.length === 0 && (
                 <div className="px-6 py-8 text-center text-sm text-muted-foreground">
                   Type a name to find someone to message
                 </div>

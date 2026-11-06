@@ -43,6 +43,12 @@ describe("mergeActivityRuns", () => {
       newValue: "urgent",
       count: 3,
     });
+    // Each recorded change stays available, untouched by the merge, for the expanded view.
+    expect(merged[0].steps.map((step) => [step.id, step.previousValue, step.newValue])).toEqual([
+      ["3", "high", "urgent"],
+      ["2", "medium", "high"],
+      ["1", "low", "medium"],
+    ]);
   });
 
   it("keeps changes apart when the person, the agent, the field or the action differ", () => {

@@ -405,17 +405,21 @@ class GroupOperations:
         if not include_private:
             query = query.where(visibility)
 
-        if search:
-            pattern = f"%{search}%"
-            query = query.where(Group.name.ilike(pattern) | Group.description.ilike(pattern))
+        # Autoescaped, so a typed `%` or `_` matches itself instead of everything.
+        matches = (
+            Group.name.icontains(search, autoescape=True)
+            | Group.description.icontains(search, autoescape=True)
+            if search
+            else None
+        )
+        if matches is not None:
+            query = query.where(matches)
 
         count_base = select(Group.id).where(Group.organization_id == organization_id)
         if not include_private:
             count_base = count_base.where(visibility)
-        if search:
-            count_base = count_base.where(
-                Group.name.ilike(f"%{search}%") | Group.description.ilike(f"%{search}%")
-            )
+        if matches is not None:
+            count_base = count_base.where(matches)
         count_query = select(func.count()).select_from(count_base.subquery())
         total = (await self._session.execute(count_query)).scalar() or 0
 

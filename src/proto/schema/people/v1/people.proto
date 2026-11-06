@@ -31,6 +31,11 @@ service PeopleService {
   rpc UpdateIdentitySource(UpdateIdentitySourceRequest) returns (UpdateIdentitySourceResponse);
   rpc DeleteIdentitySource(DeleteIdentitySourceRequest) returns (DeleteIdentitySourceResponse);
   rpc TriggerDirectorySync(TriggerDirectorySyncRequest) returns (TriggerDirectorySyncResponse);
+
+  // People pickers: the caller's own colleagues ranked by recent interaction. Member-gated, so
+  // pickers keep working when the directory page is off; never returns another member's ranking.
+  rpc ListCollaborators(ListCollaboratorsRequest) returns (ListCollaboratorsResponse);
+  rpc RecordPeoplePicks(RecordPeoplePicksRequest) returns (RecordPeoplePicksResponse);
 }
 
 enum IdentitySourceKind {
@@ -301,3 +306,34 @@ message TriggerDirectorySyncRequest {
 message TriggerDirectorySyncResponse {
   bool enqueued = 1;
 }
+
+// Why a person is listed; the score behind it never leaves the server.
+enum CollaboratorTier {
+  COLLABORATOR_TIER_UNSPECIFIED = 0;
+  COLLABORATOR_TIER_COLLABORATOR = 1; // recent interaction with the caller
+  COLLABORATOR_TIER_TEAMMATE = 2; // shares a team with the caller
+  COLLABORATOR_TIER_MEMBER = 3; // any other active member
+}
+
+message ListCollaboratorsRequest {
+  string organization_id = 1;
+  optional string query = 2; // empty lists suggestions; otherwise matches name, username or email
+  optional int32 limit = 3; // default 20, max 50
+  repeated string exclude_user_ids = 4; // max 100
+}
+
+message Collaborator {
+  common.v1.MemberInfo member = 1;
+  CollaboratorTier tier = 2;
+}
+
+message ListCollaboratorsResponse {
+  repeated Collaborator collaborators = 1;
+}
+
+message RecordPeoplePicksRequest {
+  string organization_id = 1;
+  repeated string user_ids = 2; // max 20; ids outside the organization are ignored
+}
+
+message RecordPeoplePicksResponse {}

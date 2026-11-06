@@ -2955,6 +2955,45 @@ Use two browsers, one per person.
 - [ ] 1280px, 768px and 375px, light and dark: no horizontal scroll, pills wrap, the pin menu is a
       bottom sheet on a phone. `(both products)`
 
+## People pickers: suggestions, one-character search and Assign to me
+
+Two browsers signed in as two members of the same organization (A and B), a project both can
+edit, and a third member C whom A has never messaged or assigned. A second organization that A
+also belongs to helps with the last step.
+
+- [ ] `(both products)` Open any people picker without typing (task assignees, the new task
+      modal, the table's assignee cell, sharing, event attendees, New message, adding to a
+      channel): results appear at once. On the web, event attendees, the chat sender filter, the
+      audit actor filter and a team lead offer a "Me" row first; sharing, ownership transfer and
+      domain admin grants never do.
+- [ ] Type one character: matches appear. Names that start with it rank above names that only
+      contain it. A `%` or `_` matches literally, not everything, for people and teams alike:
+      "No results found".
+- [ ] New task modal: you are already assigned as a chip; its x removes you in one click and the
+      task is created unassigned. Pick C instead and create: the task is assigned to C only.
+- [ ] Task detail, the modal, the full page and the table cell: the picker starts with "Assign to
+      me" and "Unassigned". Assign to me toggles you; Unassigned clears everyone and the activity
+      log records both changes. Several quick changes collapse into one entry with "(N changes)";
+      clicking it lists each change with its time. Already-picked people sit above "Suggested" and are not repeated.
+- [ ] As A, message C once (New message, one character, pick C, send). Reopen New message: C is
+      now first under Suggested, above A's teammates. B's suggestions do not change.
+- [ ] Assign C to a task as A, then open any assignee picker as A: C ranks first. As C, A now
+      ranks first too (the assignment notified C).
+- [ ] Mention C in a note C cannot open: C's suggestions do not change and A's do not either.
+- [ ] Assign a group of which C is a member to a task as A: C is notified, but neither A's nor
+      C's suggestions change. Add and remove a mention of C five times in a minute: C ranks no
+      higher than after the first.
+- [ ] Add C to a channel that already holds most of A's suggested colleagues: the picker still
+      fills with the next people in A's ranking instead of showing a short list.
+- [ ] Deactivate C under Admin > Members: C disappears from every picker and search for A and B.
+      Reactivate: C returns in A's suggestions where they were.
+- [ ] Switch A to the second organization: suggestions and search list only that organization's
+      members, with none of the first organization's ranking.
+- [ ] Mobile: task detail, new task and bulk assign offer "Assign to me" first (task detail also
+      "Unassigned"); a new task starts assigned to you. With nothing typed the sheet lists
+      suggestions; one character searches the whole organization, including members beyond the
+      first 200.
+
 ## Projects: table sort, assignee filter and large projects
 
 A project with tasks in every status and priority, assigned to at least three people (one task with
