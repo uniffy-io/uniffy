@@ -1,6 +1,11 @@
 """Producer-facing background-job contracts."""
 
-from uniffy.core.jobs.dispatch import JobEnqueueResult, enqueue_job, enqueue_job_reconnecting
+from uniffy.core.jobs.dispatch import (
+    JobEnqueueResult,
+    enqueue_job,
+    enqueue_job_reconnecting,
+    run_job_and_wait,
+)
 from uniffy.core.jobs.types import (
     JobEnqueueOutcome,
     JobRecovery,
@@ -22,4 +27,5 @@ __all__ = [
     "RecoveryStore",
     "enqueue_job",
     "enqueue_job_reconnecting",
+    "run_job_and_wait",
 ]
