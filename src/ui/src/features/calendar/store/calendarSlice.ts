@@ -32,12 +32,15 @@ import {
 } from "@/features/calendar/store/calendarThunks";
 import {
   createCalendar,
+  createCalendarSubscription,
   deleteCalendar,
   fetchCalendarPolicy,
   fetchCalendars,
+  refreshCalendarSubscription,
   setCalendarVisibility,
   updateCalendar,
   updateCalendarPolicy,
+  updateCalendarSubscription,
 } from "@/features/calendar/store/calendarsThunks";
 import type { FreeBusyData, MeetingSuggestion } from "@/features/calendar/types/scheduling";
 import type { CalendarInfo, CalendarPolicyInfo } from "@/features/calendar/types";
@@ -305,6 +308,15 @@ const calendarSlice = createSlice({
       })
       .addCase(createCalendar.fulfilled, (state, action) => storeCalendar(state, action.payload))
       .addCase(updateCalendar.fulfilled, (state, action) => storeCalendar(state, action.payload))
+      .addCase(createCalendarSubscription.fulfilled, (state, action) => {
+        if (action.payload.calendar) storeCalendar(state, action.payload.calendar);
+      })
+      .addCase(updateCalendarSubscription.fulfilled, (state, action) => {
+        if (action.payload.calendar) storeCalendar(state, action.payload.calendar);
+      })
+      .addCase(refreshCalendarSubscription.fulfilled, (state, action) =>
+        storeCalendar(state, action.payload),
+      )
       .addCase(setCalendarVisibility.pending, (state, action) => {
         // Optimistic: the eye toggles at once and the events follow the refetch.
         const { calendarId, hidden } = action.meta.arg;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PencilSimple, Plus, Trash } from "@phosphor-icons/react";
+import { PencilSimple, Trash } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import {
   toggleCategoryFilter,
@@ -7,7 +7,10 @@ import {
   openEditCategoryModal,
   deleteCategory,
 } from "@/features/calendar/store";
-import { SidebarSection } from "@/features/calendar/components/sidebar/SidebarSection";
+import {
+  SidebarSection,
+  SidebarSectionAdd,
+} from "@/features/calendar/components/sidebar/SidebarSection";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/shared/utils/cn";
 
@@ -52,13 +55,7 @@ export function CategoryList() {
       id="categories"
       title="Categories"
       action={
-        <span
-          onClick={() => dispatch(openAddCategoryModal())}
-          className="p-0.5 rounded hover:bg-muted cursor-pointer"
-          title="Add Category"
-        >
-          <Plus size={14} weight="bold" className="text-muted-foreground" />
-        </span>
+        <SidebarSectionAdd label="Add category" onClick={() => dispatch(openAddCategoryModal())} />
       }
     >
       <div className="space-y-1">

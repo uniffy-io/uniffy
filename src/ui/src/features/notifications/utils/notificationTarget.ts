@@ -59,6 +59,10 @@ export function notificationTargetPath(notification: NotificationTarget): string
   if (TIMESHEET_TYPES.includes(notification.notificationType)) {
     return timesheetPath(notification);
   }
+  // A broken feed shows on its calendar row in the sidebar; there is no page per calendar.
+  if (notification.notificationType === NotificationType.CALENDAR_SUBSCRIPTION_FAILED) {
+    return "/calendar";
+  }
   if (CHAT_MESSAGE_TYPES.includes(notification.notificationType)) {
     const channelId = notification.metadata?.channel_id;
     const messageId = notification.metadata?.message_id;

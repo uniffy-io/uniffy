@@ -96,6 +96,12 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
     color: "text-red-400",
     bgColor: "bg-red-500",
   },
+  [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: {
+    icon: CalendarX,
+    label: "Subscription stopped",
+    color: "text-amber-400",
+    bgColor: "bg-amber-500",
+  },
   [NotificationType.PERMISSION_GRANTED]: {
     icon: ShieldCheck,
     label: "Access granted",

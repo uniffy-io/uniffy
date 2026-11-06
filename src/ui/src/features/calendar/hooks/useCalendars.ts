@@ -21,7 +21,7 @@ export function useWritableCalendars(): CalendarInfo[] {
   return useMemo(
     () =>
       calendars
-        .filter((calendar) => roleCanEdit(calendar.userRole))
+        .filter((calendar) => !calendar.isReadOnly && roleCanEdit(calendar.userRole))
         .sort((a, b) => Number(b.isDefault) - Number(a.isDefault)),
     [calendars],
   );
@@ -45,7 +45,12 @@ export function useConflictScope(): ConflictScope {
     () =>
       memberCommitments(
         userId,
-        new Set(calendars.filter((c) => c.ownerId === userId).map((c) => c.id)),
+        new Set(
+          calendars
+            // A followed feed is someone else's schedule unless its owner counts it as busy.
+            .filter((c) => c.ownerId === userId && (!c.isReadOnly || c.subscription?.countsAsBusy))
+            .map((c) => c.id),
+        ),
       ),
     [calendars, userId],
   );

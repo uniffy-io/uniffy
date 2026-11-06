@@ -1,4 +1,4 @@
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, Plus } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSectionCollapse } from "@/features/calendar/store";
 import type { SidebarSectionId } from "@/features/calendar/types";
@@ -42,5 +42,23 @@ export function SidebarSection({ id, title, children, action }: SidebarSectionPr
 
       {!isCollapsed && <div className="space-y-1">{children}</div>}
     </div>
+  );
+}
+
+/** The section header's add control; every section uses it so the icons line up. */
+export function SidebarSectionAdd({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="focus-ring min-w-11 min-h-11 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      title={label}
+      aria-label={label}
+    >
+      <Plus size={14} weight="bold" />
+    </button>
   );
 }

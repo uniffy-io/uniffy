@@ -46,4 +46,7 @@ export type {
   CalendarEventDisposition,
   CalendarPolicyAudience,
   CalendarPolicyInfo,
+  CalendarSubscriptionError,
+  CalendarSubscriptionInfo,
+  CalendarSubscriptionState,
 } from "@/features/calendar/types/calendarInfo";

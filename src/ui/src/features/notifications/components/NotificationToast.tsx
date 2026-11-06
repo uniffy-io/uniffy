@@ -44,6 +44,7 @@ const TYPE_ICON_MAP: Record<number, Icon> = {
   [NotificationType.CALENDAR_INVITE]: CalendarPlus,
   [NotificationType.CALENDAR_RESPONSE]: CalendarCheck,
   [NotificationType.CALENDAR_CANCELLED]: CalendarX,
+  [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: CalendarX,
   [NotificationType.PERMISSION_GRANTED]: ShieldCheck,
   [NotificationType.PERMISSION_REVOKED]: ShieldSlash,
   [NotificationType.SYSTEM_ANNOUNCEMENT]: Megaphone,
