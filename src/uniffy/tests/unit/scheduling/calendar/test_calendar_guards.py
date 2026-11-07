@@ -76,9 +76,7 @@ async def test_clearing_a_calendar_to_inherit_counts_as_opening_it() -> None:
             AsyncMock(return_value=(AccessMode.OWNER_ONLY, None)),
         ),
     ):
-        await guard_calendar_access_mode(
-            session, generate_id(), generate_id(), object(), None, None
-        )
+        await guard_calendar_access_mode(session, generate_id(), generate_id(), object(), None, None)
 
     gate.assert_awaited_once()
 

@@ -69,14 +69,24 @@ def _dates(
 def _series_cases() -> list[tuple[str, RecurrencePattern, dict, str]]:
     return [
         ("weekly", RecurrencePattern.WEEKLY, {"interval": 1, "days_of_week": [WEDNESDAY]}, "UTC"),
-        ("biweekly", RecurrencePattern.BIWEEKLY, {"interval": 1, "days_of_week": [WEDNESDAY]}, "UTC"),
+        (
+            "biweekly",
+            RecurrencePattern.BIWEEKLY,
+            {"interval": 1, "days_of_week": [WEDNESDAY]},
+            "UTC",
+        ),
         ("daily-interval", RecurrencePattern.DAILY, {"interval": 3}, "UTC"),
         ("monthly-plain", RecurrencePattern.MONTHLY, {"interval": 1, "day_of_month": 15}, "UTC"),
         ("monthly-clamped", RecurrencePattern.MONTHLY, {"interval": 1, "day_of_month": 30}, "UTC"),
         ("monthly-last", RecurrencePattern.MONTHLY, {"interval": 1, "day_of_month": 31}, "UTC"),
         ("yearly", RecurrencePattern.YEARLY, {"interval": 1}, "UTC"),
         ("counted", RecurrencePattern.DAILY, {"interval": 1, "max_occurrences": 12}, "UTC"),
-        ("zoned-weekly", RecurrencePattern.WEEKLY, {"interval": 1, "days_of_week": [WEDNESDAY]}, BERLIN),
+        (
+            "zoned-weekly",
+            RecurrencePattern.WEEKLY,
+            {"interval": 1, "days_of_week": [WEDNESDAY]},
+            BERLIN,
+        ),
     ]
 
 

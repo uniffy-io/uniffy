@@ -45,9 +45,7 @@ class TestAcceptance:
         assert event.recurrence_pattern is RecurrencePattern.NONE
 
     def test_a_missing_end_falls_back_to_duration(self) -> None:
-        parsed = parse_calendar(
-            _document(_vevent(dtend=b"", extra=b"DURATION:PT45M\r\n"))
-        )
+        parsed = parse_calendar(_document(_vevent(dtend=b"", extra=b"DURATION:PT45M\r\n")))
 
         event = parsed.events[0]
         assert (event.end_time - event.start_time).total_seconds() == 45 * 60
@@ -112,9 +110,7 @@ class TestReporting:
 
     def test_an_unsupported_rule_is_reported_with_its_reason(self) -> None:
         """A rule we cannot express is refused, never approximated."""
-        parsed = parse_calendar(
-            _document(_vevent(extra=b"RRULE:FREQ=MONTHLY;BYDAY=3TU\r\n"))
-        )
+        parsed = parse_calendar(_document(_vevent(extra=b"RRULE:FREQ=MONTHLY;BYDAY=3TU\r\n")))
 
         assert parsed.events == ()
         skipped = parsed.skipped[0]
@@ -158,12 +154,9 @@ class TestHostileInput:
     def test_too_many_entries_are_refused(self) -> None:
         from uniffy.domains.scheduling.calendar.ical.parse import MAX_IMPORT_EVENTS
 
-        crowd = _document(
-            *[
-                _vevent(uid=f"e{index}@example.com".encode())
-                for index in range(MAX_IMPORT_EVENTS + 1)
-            ]
-        )
+        crowd = _document(*[
+            _vevent(uid=f"e{index}@example.com".encode()) for index in range(MAX_IMPORT_EVENTS + 1)
+        ])
 
         with pytest.raises(ValidationError):
             parse_calendar(crowd)

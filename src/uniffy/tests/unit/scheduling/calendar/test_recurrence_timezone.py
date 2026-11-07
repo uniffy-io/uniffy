@@ -102,9 +102,7 @@ def test_end_bound_instant_resolves_in_the_event_zone() -> None:
 
 
 def test_end_bound_date_only_and_naive_values_are_verbatim() -> None:
-    assert recurrence_end_date({"end_date": "2026-03-09"}, "America/Los_Angeles") == date(
-        2026, 3, 9
-    )
+    assert recurrence_end_date({"end_date": "2026-03-09"}, "America/Los_Angeles") == date(2026, 3, 9)
     assert recurrence_end_date({"end_date": date(2026, 3, 9)}, "Asia/Karachi") == date(2026, 3, 9)
     assert recurrence_end_date({}, "UTC") is None
 
