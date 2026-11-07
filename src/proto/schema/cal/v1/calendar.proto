@@ -59,6 +59,8 @@ enum EventActivityAction {
   EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED = 12;
   EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED = 13;
   EVENT_ACTIVITY_ACTION_FIELD_UPDATED = 14;
+  // A synced edit lost to a newer one on the other side; the losing values are kept
+  EVENT_ACTIVITY_ACTION_SYNC_CONFLICT = 15;
 }
 
 // Attendee role in the event
@@ -116,6 +118,8 @@ enum CalendarType {
   CALENDAR_TYPE_SHARED = 4;
   // Mirrors an external iCalendar feed; its events change only through the feed
   CALENDAR_TYPE_SUBSCRIBED = 5;
+  // Mirrors a calendar of the owner's Google or Microsoft account
+  CALENDAR_TYPE_CONNECTED = 6;
 }
 
 // Where a calendar sits in the caller's calendar list
@@ -129,6 +133,65 @@ enum CalendarListSection {
   CALENDAR_LIST_SECTION_ORGANIZATION = 3;
   // External feeds the caller subscribes to
   CALENDAR_LIST_SECTION_SUBSCRIBED = 4;
+  // Calendars of the caller's connected Google or Microsoft accounts
+  CALENDAR_LIST_SECTION_CONNECTED = 5;
+}
+
+// A calendar service a member can connect
+enum CalendarProvider {
+  CALENDAR_PROVIDER_UNSPECIFIED = 0;
+  CALENDAR_PROVIDER_GOOGLE = 1;
+  CALENDAR_PROVIDER_MICROSOFT = 2;
+}
+
+// Which way changes flow between Uniffy and a connected calendar
+enum CalendarSyncDirection {
+  CALENDAR_SYNC_DIRECTION_UNSPECIFIED = 0;
+  // Provider changes arrive; the calendar is read-only in Uniffy
+  CALENDAR_SYNC_DIRECTION_INBOUND = 1;
+  // Changes flow both ways
+  CALENDAR_SYNC_DIRECTION_TWO_WAY = 2;
+}
+
+// Health of a connected calendar
+enum ConnectedCalendarState {
+  CONNECTED_CALENDAR_STATE_UNSPECIFIED = 0;
+  // Never synced yet
+  CONNECTED_CALENDAR_STATE_PENDING = 1;
+  CONNECTED_CALENDAR_STATE_HEALTHY = 2;
+  // One or two syncs in a row failed
+  CONNECTED_CALENDAR_STATE_FAILING = 3;
+  // Three or more syncs in a row failed
+  CONNECTED_CALENDAR_STATE_BROKEN = 4;
+  // The account is paused, or the organization turned sync off
+  CONNECTED_CALENDAR_STATE_PAUSED = 5;
+  // The account must be connected again before sync resumes
+  CONNECTED_CALENDAR_STATE_REAUTH_REQUIRED = 6;
+  // The account was disconnected; the calendar keeps its events
+  CONNECTED_CALENDAR_STATE_DETACHED = 7;
+}
+
+// Why a connected calendar's last sync or push failed
+enum CalendarSyncError {
+  CALENDAR_SYNC_ERROR_UNSPECIFIED = 0;
+  CALENDAR_SYNC_ERROR_UNREACHABLE = 1;
+  CALENDAR_SYNC_ERROR_RATE_LIMITED = 2;
+  CALENDAR_SYNC_ERROR_PROVIDER_ERROR = 3;
+  // The account may no longer change this calendar
+  CALENDAR_SYNC_ERROR_PERMISSION_DENIED = 4;
+  CALENDAR_SYNC_ERROR_NOT_FOUND = 5;
+  CALENDAR_SYNC_ERROR_REAUTH_REQUIRED = 6;
+  // Provider data could not be stored
+  CALENDAR_SYNC_ERROR_UNPROCESSABLE = 7;
+}
+
+// A guest's answer to an event invitation, as the provider reports it
+enum ParticipantResponse {
+  PARTICIPANT_RESPONSE_UNSPECIFIED = 0;
+  PARTICIPANT_RESPONSE_ACCEPTED = 1;
+  PARTICIPANT_RESPONSE_TENTATIVE = 2;
+  PARTICIPANT_RESPONSE_DECLINED = 3;
+  PARTICIPANT_RESPONSE_PENDING = 4;
 }
 
 // Health of a calendar's feed subscription
@@ -407,6 +470,12 @@ message CalendarEvent {
   // caller is not organizer/attendee/editor): title, description, location,
   // meeting, channel, category, and attendees are stripped.
   bool details_hidden = 42;
+  // Guests the provider lists, including people outside the organization
+  repeated EventParticipant participants = 43;
+  // Set when the event can only be changed in this provider's calendar
+  CalendarProvider provider_edit_hint = 44;
+  // One instance of a provider series that Uniffy shows occurrence by occurrence
+  bool is_mirrored_occurrence = 45;
 }
 
 // Event attendee
@@ -761,6 +830,32 @@ message Calendar {
   bool is_read_only = 17;
   // The feed behind a subscribed calendar; set for its owner only
   optional CalendarSubscription subscription = 18;
+  // The provider calendar behind a connected calendar; set for its owner only
+  optional ConnectedCalendarSummary connection = 19;
+}
+
+// The provider calendar a connected calendar mirrors
+message ConnectedCalendarSummary {
+  string connected_calendar_id = 1;
+  string connection_id = 2;
+  CalendarProvider provider = 3;
+  string account_email = 4;
+  CalendarSyncDirection direction = 5;
+  ConnectedCalendarState state = 6;
+  CalendarSyncError last_error = 7;
+  optional google.protobuf.Timestamp last_success_at = 8;
+  bool counts_as_busy = 9;
+}
+
+// Someone a provider lists on an event; people outside the organization appear only here
+message EventParticipant {
+  string email = 1;
+  string display_name = 2;
+  ParticipantResponse response = 3;
+  bool is_organizer = 4;
+  bool is_optional = 5;
+  // Set when the address belongs to a member of the organization
+  optional string user_id = 6;
 }
 
 // The external feed behind a subscribed calendar. The address itself is a
@@ -875,6 +970,18 @@ message CalendarPolicy {
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
   // Members may subscribe to external calendar feeds
   bool allow_external_subscriptions = 4;
+  // Who may connect Google or Microsoft accounts
+  ProviderSyncAudience provider_sync_audience = 5;
+  // Edits in Uniffy flow back to two-way connected calendars
+  bool allow_provider_writes = 6;
+}
+
+// Who may connect a Google or Microsoft account
+enum ProviderSyncAudience {
+  PROVIDER_SYNC_AUDIENCE_UNSPECIFIED = 0;
+  PROVIDER_SYNC_AUDIENCE_OFF = 1;
+  PROVIDER_SYNC_AUDIENCE_ADMINS = 2;
+  PROVIDER_SYNC_AUDIENCE_EVERYONE = 3;
 }
 
 message GetCalendarPolicyRequest {
@@ -886,6 +993,8 @@ message GetCalendarPolicyResponse {
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
   bool can_subscribe_external_calendars = 4;
+  // The deployment and the policy let the caller connect a provider account
+  bool can_connect_providers = 5;
 }
 
 message UpdateCalendarPolicyRequest {
@@ -894,6 +1003,10 @@ message UpdateCalendarPolicyRequest {
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
   // Unset keeps the stored value
   optional bool allow_external_subscriptions = 4;
+  // Unset keeps the stored value
+  optional ProviderSyncAudience provider_sync_audience = 5;
+  // Unset keeps the stored value
+  optional bool allow_provider_writes = 6;
 }
 
 message UpdateCalendarPolicyResponse {
@@ -901,6 +1014,7 @@ message UpdateCalendarPolicyResponse {
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
   bool can_subscribe_external_calendars = 4;
+  bool can_connect_providers = 5;
 }
 
 // Category Messages
