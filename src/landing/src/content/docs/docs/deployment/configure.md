@@ -195,6 +195,50 @@ A link a member types is a request your servers make on their behalf, so we refu
 
 If you route outbound traffic through `HTTPS_PROXY` or `HTTP_PROXY`, the proxy resolves names. It becomes the place that decides which networks are reachable, so give it the same rule.
 
+## Google Calendar and Microsoft 365 sync
+
+Members can connect a Google account (Workspace or personal Gmail) or a Microsoft account (work, school or personal Outlook) and keep its calendars in step with Uniffy. Changes made on either side show up on the other. Sync is off until you turn it on, and nothing calls Google or Microsoft before that.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `CALENDAR_PROVIDER_SYNC_ENABLED` | `false` | Lets members connect accounts and brings provider changes into Uniffy. |
+| `CALENDAR_PROVIDER_WRITES_ENABLED` | `false` | Also sends Uniffy edits back to calendars set to two way. With it off, every connected calendar is read only. |
+| `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` | empty | Your Google OAuth app. Leave empty to let each organization enter its own. |
+| `MICROSOFT_CALENDAR_CLIENT_ID`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | empty | Your Microsoft Entra app. |
+| `MICROSOFT_CALENDAR_TENANT` | `common` | `common` admits any Microsoft account. A tenant id limits sign in to one organization. |
+| `CALENDAR_PUSH_BASE_URL` | `UNIFFY_BASE_URL` | Public https address providers send change notices to. Without one, calendars are checked every five minutes. |
+
+Set the variables on the backend and on both workers, then restart them. An organization can also enter its own apps on `/admin/calendar`, which take precedence over yours. Changing an app signs every member out of that provider, because their access was granted to the old one.
+
+Register this redirect URI with both apps:
+
+```
+https://your-uniffy-host/calendar/connect/callback
+```
+
+### Google
+
+1. In the Google Cloud console, create a project and enable the Google Calendar API.
+2. Under Google Auth Platform, set the audience to External so personal Gmail accounts can connect. Add the scopes `openid`, `email`, `https://www.googleapis.com/auth/calendar.events` and `https://www.googleapis.com/auth/calendar.calendarlist.readonly`.
+3. While the app is in Testing, add each account that will connect under Test users. Google expires their access after seven days, so members see a reconnect notice weekly until you publish.
+4. Create an OAuth client of type Web application and add the redirect URI above.
+5. To publish, Google reviews the app because `calendar.events` is a sensitive scope. Plan for a privacy policy and a short demo video.
+
+### Microsoft
+
+1. In the Microsoft Entra admin center, register an app that accepts accounts in any organizational directory and personal Microsoft accounts.
+2. Add a Web redirect URI with the address above.
+3. Create a client secret and note when it expires. The longest is 24 months.
+4. Under API permissions, add the delegated Microsoft Graph permissions `openid`, `email`, `profile`, `offline_access`, `User.Read` and `Calendars.ReadWrite`. Members consent for themselves. Some organizations only let admins approve new apps, and their members are told to ask.
+
+### What syncs
+
+Title, description, time, all day, time zone, location, status, privacy, free or busy, repeat rules and guests sync both ways. Guests from outside your organization are shown on the event. A Uniffy meeting link is added to the description as a `Join:` line. Rooms, chat channels, tags, linked items and reminders stay in Uniffy.
+
+When the same event changes on both sides before a sync, the later edit wins and the provider wins a tie. The losing version is kept in the event activity and the person who made it is told. A repeat rule Uniffy cannot express is shown occurrence by occurrence and stays editable only in Google Calendar or Outlook.
+
+Disconnecting stops sync and keeps every event on both sides. Connecting the same account again picks up where it left off without duplicates.
+
 ## Video processing
 
 Media workers prepare completed MP4 copies for uploaded videos. Browsers try the original first and use the copy if original playback fails. Uploaded originals remain in storage; screen recordings replace their WebM source with the promised MP4 after conversion succeeds.
