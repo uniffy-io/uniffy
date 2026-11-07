@@ -64,6 +64,7 @@ const ACTIVITY_ACTION_FROM_PROTO: Record<number, EventActivityAction> = {
   [ProtoEventActivityAction.ATTENDEES_REMOVED]: "attendees_removed",
   [ProtoEventActivityAction.RESPONSE_CHANGED]: "response_changed",
   [ProtoEventActivityAction.FIELD_UPDATED]: "field_updated",
+  [ProtoEventActivityAction.SYNC_CONFLICT]: "sync_conflict",
 };
 
 function activityFromProto(proto: ProtoEventActivity): EventActivity {

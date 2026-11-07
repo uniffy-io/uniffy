@@ -18,6 +18,12 @@ import type {
   CalendarSubscriptionState,
 } from "@/features/calendar/types";
 import {
+  AUDIENCE_TO_PROTO as PROVIDER_AUDIENCE_TO_PROTO,
+  connectedSummaryFromProto,
+  providerSyncAudienceFromProto,
+} from "@/features/calendar/store/connectionConverters";
+import type { ProviderSyncAudience } from "@/features/calendar/types/connections";
+import {
   CalendarEventDisposition as ProtoCalendarEventDisposition,
   CalendarListSection as ProtoCalendarListSection,
   CalendarPolicyAudience as ProtoCalendarPolicyAudience,
@@ -37,20 +43,25 @@ const KIND_FROM_PROTO: Record<number, CalendarKind> = {
   [ProtoCalendarType.TEAM]: "team",
   [ProtoCalendarType.SHARED]: "shared",
   [ProtoCalendarType.SUBSCRIBED]: "subscribed",
+  [ProtoCalendarType.CONNECTED]: "connected",
 };
 
-const KIND_TO_PROTO: Record<Exclude<CalendarKind, "subscribed">, ProtoCalendarType> = {
+const KIND_TO_PROTO: Record<CreatableCalendarKind, ProtoCalendarType> = {
   personal: ProtoCalendarType.PERSONAL,
   work: ProtoCalendarType.WORK,
   team: ProtoCalendarType.TEAM,
   shared: ProtoCalendarType.SHARED,
 };
 
+/** Subscribed and connected calendars are made by their own flows, never by the create form. */
+type CreatableCalendarKind = Exclude<CalendarKind, "subscribed" | "connected">;
+
 const SECTION_FROM_PROTO: Record<number, CalendarSection> = {
   [ProtoCalendarListSection.MINE]: "mine",
   [ProtoCalendarListSection.SHARED]: "shared",
   [ProtoCalendarListSection.ORGANIZATION]: "organization",
   [ProtoCalendarListSection.SUBSCRIBED]: "subscribed",
+  [ProtoCalendarListSection.CONNECTED]: "connected",
 };
 
 const SUBSCRIPTION_STATE_FROM_PROTO: Record<number, CalendarSubscriptionState> = {
@@ -118,15 +129,17 @@ export const calendarFromProto = (proto: ProtoCalendar): CalendarInfo => ({
   section: SECTION_FROM_PROTO[proto.section] ?? "mine",
   isReadOnly: proto.isReadOnly,
   subscription: proto.subscription ? subscriptionFromProto(proto.subscription) : undefined,
+  connection: proto.connection ? connectedSummaryFromProto(proto.connection) : undefined,
   createdAt: timestampToIso(proto.createdAt),
   updatedAt: timestampToIso(proto.updatedAt),
 });
 
-const policyFromProto = (response: {
+export const policyFromProto = (response: {
   policy?: ProtoCalendarPolicy;
   canCreateTeamCalendars: boolean;
   canShareCalendarsOrgWide: boolean;
   canSubscribeExternalCalendars: boolean;
+  canConnectProviders: boolean;
 }): CalendarPolicyInfo => ({
   teamCalendarCreators:
     AUDIENCE_FROM_PROTO[response.policy?.teamCalendarCreators ?? 0] ?? "everyone",
@@ -136,6 +149,9 @@ const policyFromProto = (response: {
   canCreateTeamCalendars: response.canCreateTeamCalendars,
   canShareCalendarsOrgWide: response.canShareCalendarsOrgWide,
   canSubscribeExternalCalendars: response.canSubscribeExternalCalendars,
+  providerSyncAudience: providerSyncAudienceFromProto(response.policy?.providerSyncAudience ?? 0),
+  allowProviderWrites: response.policy?.allowProviderWrites ?? false,
+  canConnectProviders: response.canConnectProviders,
 });
 
 const message = (error: unknown, fallback: string) =>
@@ -168,7 +184,7 @@ export const createCalendar = createAsyncThunk<
     name: string;
     color: string;
     description?: string;
-    kind: Exclude<CalendarKind, "subscribed">;
+    kind: CreatableCalendarKind;
     adminUserIds?: string[];
     adminGroupIds?: string[];
   },
@@ -304,6 +320,8 @@ export const updateCalendarPolicy = createAsyncThunk<
     teamCalendarCreators: CalendarPolicyAudience;
     orgWideCalendarSharers: CalendarPolicyAudience;
     allowExternalSubscriptions?: boolean;
+    providerSyncAudience?: ProviderSyncAudience;
+    allowProviderWrites?: boolean;
   },
   { state: RootState; rejectValue: string }
 >("calendar/updateCalendarPolicy", async (params, { getState, rejectWithValue }) => {
@@ -314,6 +332,11 @@ export const updateCalendarPolicy = createAsyncThunk<
       teamCalendarCreators: AUDIENCE_TO_PROTO[params.teamCalendarCreators],
       orgWideCalendarSharers: AUDIENCE_TO_PROTO[params.orgWideCalendarSharers],
       allowExternalSubscriptions: params.allowExternalSubscriptions,
+      providerSyncAudience:
+        params.providerSyncAudience === undefined
+          ? undefined
+          : PROVIDER_AUDIENCE_TO_PROTO[params.providerSyncAudience],
+      allowProviderWrites: params.allowProviderWrites,
     });
     return policyFromProto(response);
   } catch (error) {

@@ -30,3 +30,24 @@ describe("notificationTargetPath for timesheets", () => {
     ).toBe("/projects/time");
   });
 });
+
+describe("notificationTargetPath for connected calendars", () => {
+  it("opens the account's connections when it must be reconnected", () => {
+    expect(
+      notificationTargetPath({
+        notificationType: NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT,
+        sourceUrn: "",
+        metadata: { connection_id: "c-1", provider: "google" },
+      }),
+    ).toBe("/calendar?connections=c-1");
+  });
+
+  it("opens the event a sync conflict replaced", () => {
+    const path = notificationTargetPath({
+      notificationType: NotificationType.CALENDAR_SYNC_CONFLICT,
+      sourceUrn: "urn:uniffy:content:CALENDAR_EVENT:0b6a3b52-7a43-4d55-8f0d-3f6a7c1b9d10",
+      metadata: {},
+    });
+    expect(path).toBe("/calendar/0b6a3b52-7a43-4d55-8f0d-3f6a7c1b9d10");
+  });
+});

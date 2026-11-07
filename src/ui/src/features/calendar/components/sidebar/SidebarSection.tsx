@@ -3,7 +3,7 @@ import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSectionCollapse } from "@/features/calendar/store";
 import type { SidebarSectionId } from "@/features/calendar/types";
 import { cn } from "@/shared/utils/cn";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 interface SidebarSectionProps {
   id: SidebarSectionId;
@@ -45,11 +45,21 @@ export function SidebarSection({ id, title, children, action }: SidebarSectionPr
   );
 }
 
+interface SidebarSectionAddProps {
+  label: string;
+  onClick: () => void;
+  /** Set when the control opens a menu rather than a dialog. */
+  menu?: { ref: Ref<HTMLButtonElement>; open: boolean };
+}
+
 /** The section header's add control; every section uses it so the icons line up. */
-export function SidebarSectionAdd({ label, onClick }: { label: string; onClick: () => void }) {
+export function SidebarSectionAdd({ label, onClick, menu }: SidebarSectionAddProps) {
   return (
     <button
+      ref={menu?.ref}
       type="button"
+      aria-haspopup={menu ? "menu" : undefined}
+      aria-expanded={menu ? menu.open : undefined}
       onClick={(event) => {
         event.stopPropagation();
         onClick();

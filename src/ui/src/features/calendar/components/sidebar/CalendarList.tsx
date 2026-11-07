@@ -3,8 +3,13 @@ import {
   ArrowsClockwise,
   DotsThreeVertical,
   DownloadSimple,
+  GearSix,
+  LinkBreak,
   LinkSimple,
+  Pause,
   PencilSimple,
+  Play,
+  PlugsConnected,
   Rss,
   ShareNetwork,
   Trash,
@@ -21,6 +26,18 @@ import { CalendarFormModal } from "@/features/calendar/components/calendars/Cale
 import { DeleteCalendarDialog } from "@/features/calendar/components/calendars/DeleteCalendarDialog";
 import { CalendarFeedPanel } from "@/features/calendar/components/interop/CalendarFeedPanel";
 import { ImportCalendarModal } from "@/features/calendar/components/interop/ImportCalendarModal";
+import { ConnectAccountMenu } from "@/features/calendar/components/connections/ConnectAccountMenu";
+import { ConnectionStatus } from "@/features/calendar/components/connections/ConnectionStatus";
+import { DisconnectAccountDialog } from "@/features/calendar/components/connections/DisconnectAccountDialog";
+import { ProviderMark } from "@/features/calendar/components/connections/ProviderMark";
+import { useConnectAccount } from "@/features/calendar/hooks/useConnectAccount";
+import { openConnectionsDialog } from "@/features/calendar/store/calendarConnectionsSlice";
+import {
+  pauseCalendarConnection,
+  resumeCalendarConnection,
+  syncCalendarConnectionNow,
+} from "@/features/calendar/store/calendarConnectionsThunks";
+import { needsAttention } from "@/features/calendar/utils/connectionCopy";
 import { SubscribeCalendarModal } from "@/features/calendar/components/subscriptions/SubscribeCalendarModal";
 import { SubscriptionStatus } from "@/features/calendar/components/subscriptions/SubscriptionStatus";
 import {
@@ -34,21 +51,22 @@ import {
   setCalendarVisibility,
 } from "@/features/calendar/store";
 import { exportCalendar } from "@/features/calendar/store/calendarThunks";
-import type { CalendarInfo, CalendarSection, SidebarSectionId } from "@/features/calendar/types";
+import type { CalendarInfo, CalendarSection } from "@/features/calendar/types";
+import { sidebarSections } from "@/features/calendar/utils/sidebarSections";
 import { roleCanDelete, roleCanEdit, roleCanManage } from "@/shared/utils/contentRoles";
 import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 
-type RowDialog = "edit" | "delete" | "import" | "feed-link" | "edit-feed" | "unsubscribe";
+type RowDialog =
+  | "edit"
+  | "delete"
+  | "import"
+  | "feed-link"
+  | "edit-feed"
+  | "unsubscribe"
+  | "disconnect";
 
 type Dialog = { kind: "create" | "follow-feed" } | { kind: RowDialog; calendar: CalendarInfo };
-
-const SECTIONS: { section: CalendarSection; id: SidebarSectionId; title: string }[] = [
-  { section: "mine", id: "calendars", title: "My calendars" },
-  { section: "subscribed", id: "subscribed_calendars", title: "Subscribed" },
-  { section: "shared", id: "shared_calendars", title: "Shared with me" },
-  { section: "organization", id: "organization", title: "Organization" },
-];
 
 export function CalendarList() {
   const dispatch = useAppDispatch();
@@ -72,31 +90,25 @@ export function CalendarList() {
         />
       );
     }
+    if (section === "connected" && policy?.canConnectProviders) {
+      return <ConnectAccountMenu />;
+    }
     return undefined;
   };
 
   return (
     <>
-      {SECTIONS.map(({ section, id, title }) => {
-        const rows = calendars.filter((calendar) => calendar.section === section);
-        // "Mine" always shows, so there is somewhere to create the first calendar, and
-        // "Subscribed" whenever the organization lets members follow a feed.
-        const alwaysShown =
-          section === "mine" ||
-          (section === "subscribed" && !!policy?.canSubscribeExternalCalendars);
-        if (rows.length === 0 && !alwaysShown) return null;
-        return (
-          <SidebarSection key={id} id={id} title={title} action={sectionAction(section)}>
-            {rows.map((calendar) => (
-              <CalendarRow
-                key={calendar.id}
-                calendar={calendar}
-                onOpen={(kind) => setDialog({ kind, calendar })}
-              />
-            ))}
-          </SidebarSection>
-        );
-      })}
+      {sidebarSections(calendars, policy).map(({ section, id, title, rows }) => (
+        <SidebarSection key={id} id={id} title={title} action={sectionAction(section)}>
+          {rows.map((calendar) => (
+            <CalendarRow
+              key={calendar.id}
+              calendar={calendar}
+              onOpen={(kind) => setDialog({ kind, calendar })}
+            />
+          ))}
+        </SidebarSection>
+      ))}
 
       {dialog?.kind === "create" && <CalendarFormModal onClose={close} />}
       {dialog?.kind === "follow-feed" && <SubscribeCalendarModal onClose={close} />}
@@ -117,6 +129,14 @@ export function CalendarList() {
             );
             if (deleteCalendar.fulfilled.match(outcome)) close();
           }}
+        />
+      )}
+      {dialog?.kind === "disconnect" && dialog.calendar.connection && (
+        <DisconnectAccountDialog
+          connectionId={dialog.calendar.connection.connectionId}
+          provider={dialog.calendar.connection.provider}
+          accountEmail={dialog.calendar.connection.accountEmail}
+          onClose={close}
         />
       )}
       {dialog?.kind === "edit" && <CalendarFormModal calendar={dialog.calendar} onClose={close} />}
@@ -186,7 +206,8 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
   };
 
   const feed = calendar.subscription;
-  const broken = feed?.state === "broken";
+  const connection = calendar.connection;
+  const broken = feed?.state === "broken" || (!!connection && needsAttention(connection.state));
 
   return (
     <div>
@@ -196,7 +217,13 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
           hidden ? "text-subtle-foreground" : "text-foreground",
           "hover:bg-muted",
         )}
-        data-testid={calendar.isReadOnly ? "subscribed-calendar-row" : undefined}
+        data-testid={
+          connection
+            ? "connected-calendar-row"
+            : calendar.isReadOnly
+              ? "subscribed-calendar-row"
+              : undefined
+        }
       >
         <button
           type="button"
@@ -212,14 +239,17 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
               borderColor: calendar.color,
             }}
           />
+          {connection && <ProviderMark provider={connection.provider} size={12} />}
           <span className="truncate">{label}</span>
           {broken && (
             <Warning
               size={14}
               weight="fill"
               className="shrink-0 text-yellow-800 dark:text-yellow-400"
-              aria-label="This calendar stopped updating"
-              data-testid="subscription-broken-badge"
+              aria-label={
+                connection ? "This calendar needs attention" : "This calendar stopped updating"
+              }
+              data-testid={connection ? "connection-broken-badge" : "subscription-broken-badge"}
             />
           )}
         </button>
@@ -245,7 +275,9 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
           label={`${label} options`}
           align="right"
         >
-          {calendar.isReadOnly ? (
+          {connection ? (
+            <ConnectedMenuItems calendar={calendar} pick={pick} onOpen={onOpen} />
+          ) : calendar.isReadOnly ? (
             <ReadOnlyMenuItems calendar={calendar} pick={pick} onOpen={onOpen} />
           ) : (
             <WritableMenuItems
@@ -261,6 +293,7 @@ function CalendarRow({ calendar, onOpen }: CalendarRowProps) {
         </ActionMenu>
       </div>
       <SubscriptionStatus calendar={calendar} />
+      <ConnectionStatus calendar={calendar} />
     </div>
   );
 }
@@ -312,6 +345,69 @@ function ReadOnlyMenuItems({ calendar, pick, onOpen }: MenuItemsProps) {
           </ActionMenuItem>
         </>
       )}
+    </>
+  );
+}
+
+function ConnectedMenuItems({ calendar, pick, onOpen }: MenuItemsProps) {
+  const dispatch = useAppDispatch();
+  const { connect } = useConnectAccount();
+  const connection = calendar.connection;
+  if (!connection) return null;
+  const provider = connection.provider;
+  const openSettings = () => dispatch(openConnectionsDialog(connection.connectionId));
+  return (
+    <>
+      <p className="px-3 pt-1 pb-2 text-xs text-subtle-foreground">
+        {connection.accountEmail}
+        {connection.lastSuccessAt && <> · synced {formatRelativeTime(connection.lastSuccessAt)}</>}
+      </p>
+      {connection.state === "reauth_required" && provider ? (
+        <ActionMenuItem onClick={pick(() => void connect(provider, connection.connectionId))}>
+          <PlugsConnected size={16} weight="duotone" />
+          Reconnect
+        </ActionMenuItem>
+      ) : (
+        <ActionMenuItem
+          disabled={connection.state === "paused"}
+          onClick={pick(() => void dispatch(syncCalendarConnectionNow(connection.connectionId)))}
+        >
+          <ArrowsClockwise size={16} weight="duotone" />
+          Sync now
+        </ActionMenuItem>
+      )}
+      <ActionMenuItem onClick={pick(openSettings)}>
+        <GearSix size={16} weight="duotone" />
+        Settings
+      </ActionMenuItem>
+      {connection.state === "paused" ? (
+        <ActionMenuItem
+          onClick={pick(() => void dispatch(resumeCalendarConnection(connection.connectionId)))}
+        >
+          <Play size={16} weight="duotone" />
+          Resume account sync
+        </ActionMenuItem>
+      ) : (
+        connection.state !== "reauth_required" && (
+          <ActionMenuItem
+            onClick={pick(() => void dispatch(pauseCalendarConnection(connection.connectionId)))}
+          >
+            <Pause size={16} weight="duotone" />
+            Pause account sync
+          </ActionMenuItem>
+        )
+      )}
+      <ActionMenuItem
+        onClick={pick(() => void dispatch(exportCalendar({ calendarId: calendar.id })))}
+      >
+        <DownloadSimple size={16} weight="duotone" />
+        Export as .ics
+      </ActionMenuItem>
+      <ActionMenuSeparator />
+      <ActionMenuItem destructive onClick={pick(() => onOpen("disconnect"))}>
+        <LinkBreak size={16} weight="duotone" />
+        Disconnect account
+      </ActionMenuItem>
     </>
   );
 }

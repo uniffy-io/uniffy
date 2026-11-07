@@ -1,4 +1,5 @@
 import type { Attendee } from "@/features/calendar/types/attendee";
+import type { CalendarProviderId, EventParticipant } from "@/features/calendar/types/connections";
 
 export type RecurrencePattern = "none" | "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 
@@ -91,6 +92,12 @@ export interface CalendarEvent {
   isOutOfOffice: boolean;
   /** Server redacted this payload (private event, viewer not privileged). */
   detailsHidden: boolean;
+  /** Guests the provider lists, including people outside the organization. */
+  participants?: EventParticipant[];
+  /** Set when the event can only be changed in this provider's calendar. */
+  providerEditHint?: CalendarProviderId;
+  /** One instance of a provider series shown occurrence by occurrence. */
+  isMirroredOccurrence?: boolean;
 }
 
 export type RecurrenceEditScope = "this_event" | "all_events" | "this_and_following";

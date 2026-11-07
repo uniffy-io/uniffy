@@ -50,3 +50,22 @@ export type {
   CalendarSubscriptionInfo,
   CalendarSubscriptionState,
 } from "@/features/calendar/types/calendarInfo";
+
+export type {
+  CalendarProviderId,
+  CalendarSyncDirection,
+  ConnectedCalendarState,
+  CalendarSyncError,
+  CalendarConnectionStatus,
+  ProviderCalendarAccess,
+  ProviderCredentialSource,
+  ProviderSyncAudience,
+  ParticipantResponse,
+  ConnectedCalendarSummary,
+  ProviderCalendarInfo,
+  CalendarConnectionInfo,
+  ProviderAvailabilityInfo,
+  ProviderAppSettingsInfo,
+  ProviderSettingsInfo,
+  EventParticipant,
+} from "@/features/calendar/types/connections";

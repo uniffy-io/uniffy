@@ -57,6 +57,10 @@ import type {
   EventActivity,
 } from "@/features/calendar/types";
 import { RecurrenceEditScope as ProtoRecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
+import {
+  participantFromProto,
+  providerFromProto,
+} from "@/features/calendar/store/connectionConverters";
 
 export const getOrganizationId = (state: RootState): string => {
   const orgId = state.auth.currentOrganizationId;
@@ -268,6 +272,11 @@ const eventFromProto = (proto: ProtoCalendarEvent): CalendarEvent => ({
   transparency: EVENT_TRANSPARENCY_FROM_PROTO[proto.transparency] || "opaque",
   isOutOfOffice: proto.isOutOfOffice,
   detailsHidden: proto.detailsHidden,
+  participants: proto.participants.length
+    ? proto.participants.map(participantFromProto)
+    : undefined,
+  providerEditHint: providerFromProto(proto.providerEditHint) ?? undefined,
+  isMirroredOccurrence: proto.isMirroredOccurrence || undefined,
 });
 
 /** Push hydrated tag rows into tags-slice cache so chips render without a follow-up RPC. */

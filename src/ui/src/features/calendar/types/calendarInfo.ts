@@ -1,7 +1,12 @@
-export type CalendarKind = "personal" | "work" | "team" | "shared" | "subscribed";
+import type {
+  ConnectedCalendarSummary,
+  ProviderSyncAudience,
+} from "@/features/calendar/types/connections";
+
+export type CalendarKind = "personal" | "work" | "team" | "shared" | "subscribed" | "connected";
 
 /** Where a calendar sits in the member's list; server-assigned. */
-export type CalendarSection = "mine" | "shared" | "organization" | "subscribed";
+export type CalendarSection = "mine" | "shared" | "organization" | "subscribed" | "connected";
 
 export type CalendarEventDisposition = "move" | "delete";
 
@@ -32,6 +37,8 @@ export interface CalendarInfo {
   isReadOnly: boolean;
   /** The feed behind a subscribed calendar; present for its owner only. */
   subscription?: CalendarSubscriptionInfo;
+  /** The provider calendar behind a connected calendar; present for its owner only. */
+  connection?: ConnectedCalendarSummary;
   createdAt: string;
   updatedAt: string;
 }
@@ -77,4 +84,9 @@ export interface CalendarPolicyInfo {
   canShareCalendarsOrgWide: boolean;
   allowExternalSubscriptions: boolean;
   canSubscribeExternalCalendars: boolean;
+  providerSyncAudience: ProviderSyncAudience;
+  /** Edits in Uniffy flow back to two-way connected calendars. */
+  allowProviderWrites: boolean;
+  /** The deployment and the policy let this member connect a Google or Microsoft account. */
+  canConnectProviders: boolean;
 }

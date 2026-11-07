@@ -37,6 +37,13 @@ export function useDefaultCalendar(): CalendarInfo | undefined {
   );
 }
 
+/** A followed feed or connected account is someone else's schedule unless its owner counts it as busy. */
+function countsAsOwnSchedule(calendar: CalendarInfo): boolean {
+  if (calendar.kind === "connected") return !!calendar.connection?.countsAsBusy;
+  if (calendar.kind === "subscribed") return !!calendar.subscription?.countsAsBusy;
+  return !calendar.isReadOnly;
+}
+
 /** Which events on the grid can double-book the member. */
 export function useConflictScope(): ConflictScope {
   const calendars = useCalendars();
@@ -46,10 +53,7 @@ export function useConflictScope(): ConflictScope {
       memberCommitments(
         userId,
         new Set(
-          calendars
-            // A followed feed is someone else's schedule unless its owner counts it as busy.
-            .filter((c) => c.ownerId === userId && (!c.isReadOnly || c.subscription?.countsAsBusy))
-            .map((c) => c.id),
+          calendars.filter((c) => c.ownerId === userId && countsAsOwnSchedule(c)).map((c) => c.id),
         ),
       ),
     [calendars, userId],

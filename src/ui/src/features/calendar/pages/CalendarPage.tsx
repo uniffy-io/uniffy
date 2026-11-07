@@ -9,6 +9,9 @@ import { CalendarLayout, LeftSidebar, MainContent } from "@/features/calendar/co
 import { QuickEventModal } from "@/features/calendar/components/modals/QuickEventModal";
 import { AddCategoryModal } from "@/features/calendar/components/modals/AddCategoryModal";
 import { CreateTemplateModal } from "@/features/calendar/components/modals/CreateTemplateModal";
+import { ConnectionsModal } from "@/features/calendar/components/connections/ConnectionsModal";
+import { openConnectionsDialog } from "@/features/calendar/store/calendarConnectionsSlice";
+import { CONNECTIONS_PARAM, focusedConnectionId } from "@/features/calendar/utils/connectionRoutes";
 import {
   closeEventModal,
   closeAddCategoryModal,
@@ -44,6 +47,7 @@ export function CalendarPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const eventId = pathEventId || searchParams.get("event");
   const linkedCalendarId = searchParams.get("calendar");
+  const linkedConnections = searchParams.get(CONNECTIONS_PARAM);
   const currentDate = useAppSelector((state) => state.calendarUi.currentDate);
   const currentOrganizationId = useAppSelector((state) => state.auth.currentOrganizationId);
 
@@ -100,6 +104,19 @@ export function CalendarPage() {
       { replace: true },
     );
   }, [dispatch, linkedCalendarId, linkedCalendar, calendarsSettled, setSearchParams]);
+
+  // /calendar?connections={id|all} comes from the connect callback and reconnect notices.
+  useEffect(() => {
+    if (linkedConnections === null) return;
+    dispatch(openConnectionsDialog(focusedConnectionId(linkedConnections)));
+    setSearchParams(
+      (params) => {
+        params.delete(CONNECTIONS_PARAM);
+        return params;
+      },
+      { replace: true },
+    );
+  }, [dispatch, linkedConnections, setSearchParams]);
 
   // Search previews use ?event= while direct mentions can use /calendar/:eventId.
   useEffect(() => {
@@ -204,6 +221,8 @@ export function CalendarPage() {
         isOpen={isAddCategoryModalOpen}
         onClose={() => dispatch(closeAddCategoryModal())}
       />
+
+      <ConnectionsModal />
 
       <CreateTemplateModal
         isOpen={isCreateTemplateModalOpen}

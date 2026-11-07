@@ -187,6 +187,10 @@ const RespondToInvitationPage = lazyImport(
   () => import("@/features/calendar/pages/RespondToInvitationPage"),
   "RespondToInvitationPage",
 );
+const ConnectCallbackPage = lazyImport(
+  () => import("@/features/calendar/pages/ConnectCallbackPage"),
+  "ConnectCallbackPage",
+);
 const FilesPage = lazyImport(loadFilesPage, "FilesPage");
 const FiltersPage = lazyImport(() => import("@/features/files/pages/FiltersPage"), "FiltersPage");
 const FilesTrashPage = lazyImport(
@@ -869,6 +873,17 @@ export function App() {
                       <LazyRoute>
                         <RespondToInvitationPage />
                       </LazyRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/calendar/connect/callback"
+                    element={
+                      <ProtectedRoute>
+                        <LazyRoute>
+                          <ConnectCallbackPage />
+                        </LazyRoute>
+                      </ProtectedRoute>
                     }
                   />
 
