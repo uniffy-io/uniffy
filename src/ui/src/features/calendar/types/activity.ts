@@ -12,7 +12,8 @@ export type EventActivityAction =
   | "attendees_added"
   | "attendees_removed"
   | "response_changed"
-  | "field_updated";
+  | "field_updated"
+  | "sync_conflict";
 
 export interface EventActivity {
   id: string;

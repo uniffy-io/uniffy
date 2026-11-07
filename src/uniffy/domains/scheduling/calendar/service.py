@@ -4,6 +4,7 @@ from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.scheduling.calendar.handlers import CalendarHandlers
+from uniffy.domains.scheduling.calendar.rpc.connections import ConnectionHandlers
 from uniffy.domains.scheduling.calendar.rpc.scheduling import SchedulingHandlers
 
 
@@ -17,3 +18,7 @@ class CalendarServiceImpl(CalendarHandlers, SchedulingHandlers):
         self.search_indexer = search_indexer
         self.call_lifecycle = call_lifecycle
         self.buffer = buffer
+
+
+class CalendarConnectionsServiceImpl(ConnectionHandlers):
+    """Members' Google and Microsoft accounts; separate from the calendar surface it feeds."""

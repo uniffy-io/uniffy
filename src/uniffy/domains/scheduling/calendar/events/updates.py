@@ -22,6 +22,7 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.realtime.live import TextMerge, stage_text_merge
 from uniffy.core.realtime.publisher import publish_content_replace, publish_perm_change
 from uniffy.core.realtime.storage import lock_document
@@ -44,6 +45,7 @@ from uniffy.domains.scheduling.calendar.calendars.search import (
     enqueue_calendar_search_acl_refresh,
     record_calendar_search_acl_refresh,
 )
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.events.notifications import (
     invitation_notifications,
     publish_event_change,
@@ -447,6 +449,13 @@ class EventUpdateOperations:
             await stage_inline_reconciliation(
                 self.events.session, ContentType.CALENDAR_EVENT, event.id, organization_id
             )
+        await stage_provider_push(
+            self.events.session,
+            organization_id=organization_id,
+            event_ids=[event.id],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await self.events.session.commit()
         if merge is not None:
             await merge.after_commit()

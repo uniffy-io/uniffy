@@ -15,6 +15,7 @@ from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.realtime.lifecycle import stage_hard_delete
 from uniffy.core.realtime.publisher import publish_perm_change
@@ -23,6 +24,7 @@ from uniffy.core.types import (
     ContentType,
     RecurrenceEditScope,
 )
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
     finish_following_overrides,
@@ -97,6 +99,13 @@ class EventDeleteOperations:
                     resource_id=master.id,
                     details={"occurrence_date": occurrence_date.isoformat(), "following": True},
                 )
+                await stage_provider_push(
+                    self.session,
+                    organization_id=organization_id,
+                    event_ids=[master.id],
+                    operation=PushOperation.UPSERT,
+                    actor_id=user_id,
+                )
                 await self.session.commit()
                 await publish_event_change(master, access_changed=True)
                 await finish_following_overrides(self.search_indexer, overrides)
@@ -160,6 +169,14 @@ class EventDeleteOperations:
                 item.is_deleted = True
                 item.deleted_at = datetime.now(UTC)
                 item.updated_at = item.deleted_at
+        # Staged while the rows and their provider links still exist.
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[event.id],
+            operation=PushOperation.DELETE,
+            actor_id=user_id,
+        )
         if permanent:
             await self.session.execute(delete(CalendarEvent).where(CalendarEvent.id.in_(event_ids)))
 

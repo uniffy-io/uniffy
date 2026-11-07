@@ -83,6 +83,12 @@ Adding a new domain:
   open ranges with `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`), pins the connection to the address it
   checked, re-checks every redirect, caps the body and never puts the URL in an error. Hosts an
   admin configures (an integration `base_url`, SMTP) are trusted configuration and stay outside it.
+- **Fixed provider APIs (Google Calendar, Microsoft Graph, their OAuth endpoints) go through
+  `core/outbound.ApiClient`.** It is bound to one https host, follows a paging link only on that
+  host, caps bodies, parses `Retry-After`, returns HTTP statuses for the caller to classify and
+  never puts a token in an error. In the API process it serves only the sign-in exchange and, after
+  the disconnect commits, the best-effort channel stop and token revoke; sync and pushes run on the
+  egress fleet.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.

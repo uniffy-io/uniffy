@@ -184,6 +184,13 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
         "browser": True,
         "email": True,
     },
+    # Email on: sync stops until the member signs in again, and nothing else shows it.
+    NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT: {
+        "in_app": True,
+        "browser": True,
+        "email": True,
+    },
+    NotificationType.CALENDAR_SYNC_CONFLICT: {"in_app": True, "browser": True, "email": False},
     NotificationType.PERMISSION_GRANTED: {"in_app": True, "browser": False, "email": True},
     NotificationType.PERMISSION_REVOKED: {"in_app": True, "browser": False, "email": True},
     NotificationType.SYSTEM_ANNOUNCEMENT: {"in_app": True, "browser": True, "email": True},

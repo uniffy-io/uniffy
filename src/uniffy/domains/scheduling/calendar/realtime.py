@@ -18,6 +18,7 @@ from uniffy.core.types import ContentRole, ContentType, RecurrencePattern
 from uniffy.domains.scheduling.calendar.calendars.access import (
     calendar_is_read_only,
     cap_read_only,
+    read_only_event_ids,
 )
 from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
 from uniffy.domains.scheduling.calendar.events.realtime import (
@@ -108,7 +109,10 @@ class EventRealtimeAdapter:
                 )
             ).scalars()
         )
-        read_only = await calendar_is_read_only(session, (master or event).calendar_id)
+        series = master or event
+        read_only = await calendar_is_read_only(session, series.calendar_id) or (
+            series.id in await read_only_event_ids(session, [series.id])
+        )
         for user_id, role in roles.items():
             is_attendee = user_id in attendees
             if (

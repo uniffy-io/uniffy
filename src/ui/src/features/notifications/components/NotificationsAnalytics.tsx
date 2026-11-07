@@ -30,6 +30,8 @@ const TYPE_LABELS: Record<number, string> = {
   [NotificationType.CALENDAR_RESPONSE]: "Response",
   [NotificationType.CALENDAR_CANCELLED]: "Cancelled",
   [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: "Subscription stopped",
+  [NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT]: "Reconnect needed",
+  [NotificationType.CALENDAR_SYNC_CONFLICT]: "Sync conflict",
   [NotificationType.PERMISSION_GRANTED]: "Access granted",
   [NotificationType.PERMISSION_REVOKED]: "Access revoked",
   [NotificationType.ACCESS_REQUESTED]: "Access requested",

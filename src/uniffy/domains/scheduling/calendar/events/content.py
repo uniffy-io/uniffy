@@ -27,9 +27,11 @@ from uniffy.domains.scheduling.calendar.calendars.access import (
     event_calendar_id,
     event_role_from_calendar,
     higher_role,
+    read_only_event_ids,
 )
 from uniffy.domains.scheduling.calendar.calendars.search import calendar_search_access
 from uniffy.domains.scheduling.calendar.events.state import _master_event_id
+from uniffy.domains.scheduling.calendar.occurrences import parse_occurrence_reference
 from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="scheduling.calendar.events.content")
@@ -123,7 +125,20 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         role = await self._granted_role(user_id, organization_id, content)
         if role is None:
             return None
-        return cap_read_only(role, await self._on_read_only_calendar(content))
+        read_only = await self._on_read_only_calendar(content) or await self._read_only_series(
+            content
+        )
+        return cap_read_only(role, read_only)
+
+    async def _read_only_series(self, content: CalendarEvent) -> bool:
+        series_id = content.recurrence_id or content.id
+        if not isinstance(series_id, UUID):
+            # An expanded occurrence carries its series id and date in one string.
+            reference = parse_occurrence_reference(str(series_id))
+            if reference is None:
+                return False
+            series_id = reference.event_id
+        return series_id in await read_only_event_ids(self.session, [series_id])
 
     async def _on_read_only_calendar(self, content: CalendarEvent) -> bool:
         calendar_id = await event_calendar_id(self.session, content)

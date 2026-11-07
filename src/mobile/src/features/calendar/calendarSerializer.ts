@@ -10,7 +10,9 @@ import {
   AttendeeRole,
   AttendeeStatus,
   CalendarListSection,
+  CalendarProvider,
   CalendarSubscriptionState,
+  ConnectedCalendarState,
   DayOfWeek,
   EventStatus,
   EventTransparency,
@@ -90,6 +92,8 @@ export interface SerializedEvent {
   attendees: SerializedAttendee[];
   recurrence?: SerializedRecurrence;
   isRecurring: boolean;
+  /** One occurrence of a provider series, stored on its own row. */
+  isMirroredOccurrence: boolean;
   /** For an expanded instance: the day it stands for (YYYY-MM-DD). */
   occurrenceDate?: string;
   linkedResources: SerializedLinkedResource[];
@@ -108,6 +112,8 @@ export interface SerializedEvent {
   isOutOfOffice: boolean;
   /** Server redacted this payload for the caller (private event, non-privileged viewer). */
   detailsHidden: boolean;
+  /** Set when the event can only be changed in this provider's own calendar. */
+  providerEditHint?: CalendarProviderValue;
 }
 
 export interface SerializedCategory {
@@ -117,7 +123,14 @@ export interface SerializedCategory {
   icon?: string;
 }
 
-export type CalendarSection = "mine" | "shared" | "organization" | "subscribed";
+export type CalendarSection = "mine" | "shared" | "organization" | "subscribed" | "connected";
+
+export type CalendarProviderValue = "google" | "microsoft";
+
+export interface SerializedConnection {
+  provider: CalendarProviderValue;
+  accountEmail: string;
+}
 
 export interface SerializedCalendar {
   id: string;
@@ -133,12 +146,16 @@ export interface SerializedCalendar {
   /** Hidden for the caller only; the server leaves its events out of range reads. */
   isHidden: boolean;
   section: CalendarSection;
-  /** Events come from an external feed and cannot be created or changed. */
+  /** Events come from an external feed or an inbound-only provider calendar and cannot be created or changed. */
   isReadOnly: boolean;
   /** The owner chose to count the feed's events as busy. */
   countsAsBusy: boolean;
-  /** Three or more refreshes in a row failed. */
+  /** Three or more refreshes or syncs in a row failed. */
   feedBroken: boolean;
+  /** The provider account behind a connected calendar must be connected again. */
+  needsReconnect: boolean;
+  /** The provider account behind a connected calendar; set for its owner only. */
+  connection?: SerializedConnection;
 }
 
 const CALENDAR_SECTION: Record<number, CalendarSection> = {
@@ -146,7 +163,22 @@ const CALENDAR_SECTION: Record<number, CalendarSection> = {
   [CalendarListSection.SHARED]: "shared",
   [CalendarListSection.ORGANIZATION]: "organization",
   [CalendarListSection.SUBSCRIBED]: "subscribed",
+  [CalendarListSection.CONNECTED]: "connected",
 };
+
+const CALENDAR_PROVIDER: Record<number, CalendarProviderValue> = {
+  [CalendarProvider.GOOGLE]: "google",
+  [CalendarProvider.MICROSOFT]: "microsoft",
+};
+
+function connectionToPlain(connection: Calendar["connection"]): SerializedConnection | undefined {
+  const provider = connection ? CALENDAR_PROVIDER[connection.provider] : undefined;
+  if (!connection || !provider) return undefined;
+  return {
+    provider,
+    accountEmail: connection.accountEmail,
+  };
+}
 
 export function calendarToPlain(calendar: Calendar): SerializedCalendar {
   return {
@@ -161,8 +193,12 @@ export function calendarToPlain(calendar: Calendar): SerializedCalendar {
     isHidden: calendar.isHidden,
     section: CALENDAR_SECTION[calendar.section] ?? "mine",
     isReadOnly: calendar.isReadOnly,
-    countsAsBusy: calendar.subscription?.countsAsBusy ?? false,
-    feedBroken: calendar.subscription?.state === CalendarSubscriptionState.BROKEN,
+    countsAsBusy: calendar.subscription?.countsAsBusy ?? calendar.connection?.countsAsBusy ?? false,
+    feedBroken:
+      calendar.subscription?.state === CalendarSubscriptionState.BROKEN ||
+      calendar.connection?.state === ConnectedCalendarState.BROKEN,
+    needsReconnect: calendar.connection?.state === ConnectedCalendarState.REAUTH_REQUIRED,
+    connection: connectionToPlain(calendar.connection),
   };
 }
 
@@ -314,6 +350,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     })),
     recurrence: recurrenceToPlain(event.recurrence),
     isRecurring: event.isRecurring,
+    isMirroredOccurrence: event.isMirroredOccurrence,
     occurrenceDate: event.occurrenceDate || undefined,
     linkedResources: event.linkedResources.map((r) => ({
       id: r.id,
@@ -333,6 +370,7 @@ export function eventToPlain(event: CalendarEvent): SerializedEvent {
     transparency: EVENT_TRANSPARENCY[event.transparency] ?? "opaque",
     isOutOfOffice: event.isOutOfOffice,
     detailsHidden: event.detailsHidden,
+    providerEditHint: CALENDAR_PROVIDER[event.providerEditHint],
   };
 }
 

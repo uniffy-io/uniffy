@@ -29,6 +29,7 @@ class CalendarSection(StrEnum):
     SHARED = "SHARED"
     ORGANIZATION = "ORGANIZATION"
     SUBSCRIBED = "SUBSCRIBED"
+    CONNECTED = "CONNECTED"
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,8 @@ class CalendarReader(BaseContentOperations[Calendar]):
         section = (
             CalendarSection.SUBSCRIBED
             if calendar.owner_id == user_id and calendar.calendar_type == CalendarType.SUBSCRIBED
+            else CalendarSection.CONNECTED
+            if calendar.owner_id == user_id and calendar.calendar_type == CalendarType.CONNECTED
             else CalendarSection.MINE
             if calendar.owner_id == user_id
             else CalendarSection.SHARED

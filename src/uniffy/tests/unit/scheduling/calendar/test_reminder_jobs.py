@@ -43,9 +43,7 @@ def _session(rows: list, *, with_exceptions: bool, attendees: list | None = None
     if with_exceptions:
         results.append(SimpleNamespace(all=list))
     resolved = attendees if attendees is not None else [None] * len(rows)
-    results.extend(
-        SimpleNamespace(scalar_one_or_none=lambda a=attendee: a) for attendee in resolved
-    )
+    results.extend(SimpleNamespace(scalar_one_or_none=lambda a=attendee: a) for attendee in resolved)
     session.execute.side_effect = results
     return session
 
@@ -57,7 +55,9 @@ async def test_fresh_recurring_reminder_emits_and_rolls_forward() -> None:
     reminder = _reminder(event, scheduled_at=target - timedelta(minutes=15))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         processed = await _process_due_reminders(session)
 
     assert processed == 1
@@ -74,7 +74,9 @@ async def test_stale_recurring_reminder_reanchors_without_emitting() -> None:
     reminder = _reminder(event, scheduled_at=stale_target - timedelta(minutes=15))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()
@@ -94,7 +96,9 @@ async def test_ended_series_closes_the_row() -> None:
     reminder = _reminder(event, scheduled_at=base - timedelta(days=2))
     session = _session([(reminder, event)], with_exceptions=True)
 
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()
@@ -111,7 +115,9 @@ async def test_non_recurring_reminder_emits_once_and_closes() -> None:
     reminder = _reminder(event, scheduled_at=base - timedelta(minutes=1))
     session = _session([(reminder, event)], with_exceptions=False)
 
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         await _process_due_reminders(session)
 
     emit.assert_awaited_once()
@@ -120,7 +126,9 @@ async def test_non_recurring_reminder_emits_once_and_closes() -> None:
 
 async def _emitted_event(event: CalendarEvent, reminder: EventReminder) -> object:
     session = _session([(reminder, event)], with_exceptions=False)
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         await _process_due_reminders(session)
     return emit.await_args.args[0]
 
@@ -184,7 +192,9 @@ async def test_declined_attendee_is_closed_without_emitting() -> None:
     declined = SimpleNamespace(status=AttendeeStatus.DECLINED)
     session = _session([(reminder, event)], with_exceptions=False, attendees=[declined])
 
-    with patch("uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()) as emit:
+    with patch(
+        "uniffy.domains.scheduling.calendar.jobs.jobs.emit_notification", AsyncMock()
+    ) as emit:
         await _process_due_reminders(session)
 
     emit.assert_not_awaited()

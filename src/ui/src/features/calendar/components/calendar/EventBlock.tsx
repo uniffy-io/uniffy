@@ -6,6 +6,7 @@ import { formatTimeRange } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { isRecurringEvent } from "@/features/calendar/utils/recurrence";
 import { cn } from "@/shared/utils/cn";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { Warning, Users, ArrowsClockwise, AirplaneTilt, EyeSlash } from "@phosphor-icons/react";
 import { SubjectAvatar, SUBJECT_TYPE } from "@/components/subject";
 import { selectActiveCallForChannel } from "@/features/calls/store/callsSlice";
@@ -129,15 +130,17 @@ export function EventBlock({ event, columnWidth }: EventBlockProps) {
     dispatch(endDrag());
   };
 
+  const canMove = roleCanEdit(event.userRole);
+
   return (
     <button
       onClick={handleClick}
-      draggable={true}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      draggable={canMove}
+      onDragStart={canMove ? handleDragStart : undefined}
+      onDragEnd={canMove ? handleDragEnd : undefined}
       className={cn(
-        "absolute overflow-hidden text-left transition-all",
-        "hover:shadow-md hover:z-10 cursor-grab active:cursor-grabbing",
+        "absolute overflow-hidden text-left transition-all hover:shadow-md hover:z-10",
+        canMove ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
         isSelected && "z-20",
       )}
       style={{

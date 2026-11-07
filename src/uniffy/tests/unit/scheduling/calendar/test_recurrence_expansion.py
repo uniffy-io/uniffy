@@ -61,9 +61,9 @@ def _reference_dates(
     if pattern in (RecurrencePattern.WEEKLY, RecurrencePattern.BIWEEKLY):
         weeks = interval * 2 if pattern == RecurrencePattern.BIWEEKLY else interval
         if days_of_week:
-            target_days = sorted(
-                {_DAY_OF_WEEK_TO_INT.get(d, event_start_date.weekday()) for d in days_of_week}
-            )
+            target_days = sorted({
+                _DAY_OF_WEEK_TO_INT.get(d, event_start_date.weekday()) for d in days_of_week
+            })
         else:
             target_days = [event_start_date.weekday()]
         results = []
@@ -160,46 +160,52 @@ def _scenarios() -> list[tuple]:
         for range_start, range_end in windows:
             for interval in (1, 2, 3, 7):
                 for days in day_sets:
-                    cases.append(
-                        (RecurrencePattern.DAILY, start, interval, days, None, range_start, range_end)
-                    )
-                    cases.append(
-                        (
-                            RecurrencePattern.WEEKLY,
-                            start,
-                            interval,
-                            days,
-                            None,
-                            range_start,
-                            range_end,
-                        )
-                    )
-                cases.append(
-                    (
-                        RecurrencePattern.BIWEEKLY,
+                    cases.append((
+                        RecurrencePattern.DAILY,
                         start,
                         interval,
-                        [MONDAY, FRIDAY],
+                        days,
                         None,
                         range_start,
                         range_end,
-                    )
-                )
+                    ))
+                    cases.append((
+                        RecurrencePattern.WEEKLY,
+                        start,
+                        interval,
+                        days,
+                        None,
+                        range_start,
+                        range_end,
+                    ))
+                cases.append((
+                    RecurrencePattern.BIWEEKLY,
+                    start,
+                    interval,
+                    [MONDAY, FRIDAY],
+                    None,
+                    range_start,
+                    range_end,
+                ))
                 for day_of_month in (None, 1, 15, 31):
-                    cases.append(
-                        (
-                            RecurrencePattern.MONTHLY,
-                            start,
-                            interval,
-                            None,
-                            day_of_month,
-                            range_start,
-                            range_end,
-                        )
-                    )
-                cases.append(
-                    (RecurrencePattern.YEARLY, start, interval, None, None, range_start, range_end)
-                )
+                    cases.append((
+                        RecurrencePattern.MONTHLY,
+                        start,
+                        interval,
+                        None,
+                        day_of_month,
+                        range_start,
+                        range_end,
+                    ))
+                cases.append((
+                    RecurrencePattern.YEARLY,
+                    start,
+                    interval,
+                    None,
+                    None,
+                    range_start,
+                    range_end,
+                ))
     return cases
 
 

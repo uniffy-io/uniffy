@@ -20,6 +20,7 @@ from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_view
+from uniffy.domains.scheduling.calendar.connections.crypto import register_connection_crypto
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import serialize_events
@@ -262,3 +263,4 @@ def register_calendar_crypto() -> None:
             set_ciphertext=_subscription_set_ciphertext,
         )
     )
+    register_connection_crypto()

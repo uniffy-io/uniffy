@@ -50,6 +50,7 @@ def _make_ops(
     ops._is_attendee = AsyncMock(return_value=is_attendee)
     ops._calendar_derived_role = AsyncMock(return_value=calendar_role)
     ops._on_read_only_calendar = AsyncMock(return_value=read_only)
+    ops._read_only_series = AsyncMock(return_value=False)
     return ops
 
 

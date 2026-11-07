@@ -956,8 +956,13 @@ export function CalendarScreen() {
   const countsAsConflict = useMemo(() => {
     const ownCalendarIds = new Set(
       (calendarsQuery.data ?? [])
-        // A followed feed is someone else's schedule unless its owner counts it as busy.
-        .filter((c) => c.section === "mine" || (c.section === "subscribed" && c.countsAsBusy))
+        // A followed feed or connected account is someone else's schedule unless
+        // its owner counts it as busy.
+        .filter(
+          (c) =>
+            c.section === "mine" ||
+            ((c.section === "subscribed" || c.section === "connected") && c.countsAsBusy),
+        )
         .map((c) => c.id),
     );
     const isMine = memberCommitments(user?.id, ownCalendarIds);

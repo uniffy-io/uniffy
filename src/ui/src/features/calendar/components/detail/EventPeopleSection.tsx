@@ -8,6 +8,7 @@ import { updateAttendeeStatus } from "@/features/calendar/store/calendarThunks";
 import { AttendeesSelector } from "@/features/calendar/components/modals/AttendeesSelector";
 import type { CalendarEvent, Attendee } from "@/features/calendar/types";
 import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
+import { AttendeeStatusLabel } from "@/features/calendar/components/detail/AttendeeStatusLabel";
 import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
 
 interface EventPeopleSectionProps {
@@ -208,32 +209,4 @@ export function EventPeopleSection({ event, canEdit, commit }: EventPeopleSectio
       </div>
     </div>
   );
-}
-
-function AttendeeStatusLabel({ status }: { status: Attendee["status"] }) {
-  switch (status) {
-    case "accepted":
-      return (
-        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-success)" }}>
-          <Check size={14} weight="bold" />
-          <span className="text-xs">Accepted</span>
-        </span>
-      );
-    case "declined":
-      return (
-        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-error)" }}>
-          <X size={14} weight="bold" />
-          <span className="text-xs">Declined</span>
-        </span>
-      );
-    case "tentative":
-      return (
-        <span className="inline-flex items-center gap-1" style={{ color: "var(--status-warning)" }}>
-          <Question size={14} weight="bold" />
-          <span className="text-xs">Maybe</span>
-        </span>
-      );
-    default:
-      return <span className="text-xs text-muted-foreground">Pending</span>;
-  }
 }

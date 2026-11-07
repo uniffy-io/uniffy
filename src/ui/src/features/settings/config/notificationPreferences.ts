@@ -142,6 +142,16 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         label: "Subscribed calendar stopped updating",
         defaults: { in_app: true, browser: true, email: true },
       },
+      {
+        type: "CALENDAR_CONNECTION_NEEDS_RECONNECT",
+        label: "Connected calendar needs reconnecting",
+        defaults: { in_app: true, browser: true, email: true },
+      },
+      {
+        type: "CALENDAR_SYNC_CONFLICT",
+        label: "Synced event change replaced",
+        defaults: { in_app: true, browser: true, email: false },
+      },
     ],
   },
   {

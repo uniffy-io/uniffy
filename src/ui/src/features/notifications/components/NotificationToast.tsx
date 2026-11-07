@@ -22,6 +22,8 @@ import {
   ArrowBendUpLeft,
   LockKeyOpen,
   Prohibit,
+  PlugsConnected,
+  GitDiff,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -45,6 +47,8 @@ const TYPE_ICON_MAP: Record<number, Icon> = {
   [NotificationType.CALENDAR_RESPONSE]: CalendarCheck,
   [NotificationType.CALENDAR_CANCELLED]: CalendarX,
   [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: CalendarX,
+  [NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT]: PlugsConnected,
+  [NotificationType.CALENDAR_SYNC_CONFLICT]: GitDiff,
   [NotificationType.PERMISSION_GRANTED]: ShieldCheck,
   [NotificationType.PERMISSION_REVOKED]: ShieldSlash,
   [NotificationType.SYSTEM_ANNOUNCEMENT]: Megaphone,

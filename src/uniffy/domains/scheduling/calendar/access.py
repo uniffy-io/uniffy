@@ -11,7 +11,7 @@ from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.permissions.content_member import ContentMember
-from uniffy.core.types import CalendarType, ContentRole, ContentType, SubjectType
+from uniffy.core.types import ContentRole, ContentType, SubjectType
 from uniffy.domains.permissions.access.standard import (
     StandardPolicyRow,
     resolve_direct,
@@ -24,9 +24,12 @@ from uniffy.domains.permissions.access.types import (
     ResourceRowState,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import (
+    PROVIDER_CALENDAR_TYPES,
     cap_read_only,
     event_role_from_calendar,
     higher_role,
+    read_only_calendar_ids,
+    read_only_event_ids,
 )
 
 
@@ -106,7 +109,20 @@ async def _resolve_granted_events(
             request_target=(parent.request_target if row_state == ResourceRowState.LIVE else None),
             target_policy=(parent.target_policy if row_state == ResourceRowState.LIVE else None),
         )
-    read_only = {row.id for row in rows if row.calendar_type == CalendarType.SUBSCRIBED}
+    read_only_calendars = await read_only_calendar_ids(
+        session,
+        {
+            row.calendar_id
+            for row in rows
+            if row.calendar_id is not None and row.calendar_type in PROVIDER_CALENDAR_TYPES
+        },
+    )
+    read_only_masters = await read_only_event_ids(session, {row.master_id for row in rows})
+    read_only = {
+        row.id
+        for row in rows
+        if row.calendar_id in read_only_calendars or row.master_id in read_only_masters
+    }
     if not subject.is_active_member:
         return decisions, read_only
 

@@ -44,6 +44,14 @@ async def _calendar_gate(session, user_id, organization_id, calendar_id):
 @pytest.fixture(autouse=True)
 def _calendar_role_gate(monkeypatch):
     monkeypatch.setattr(ingest_module, "require_calendar_edit", _calendar_gate)
+    staged: list[list] = []
+
+    async def _stage(_session, **kwargs):
+        staged.append(list(kwargs["event_ids"]))
+
+    # The provider outbox has its own tests; an import only has to hand it what it created.
+    monkeypatch.setattr(ingest_module, "stage_provider_push", _stage)
+    return staged
 
 
 class _Session:

@@ -7,17 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { fetchCalendarPolicy, updateCalendarPolicy } from "@/features/calendar/store";
-import type { CalendarPolicyAudience } from "@/features/calendar/types";
+import type { CalendarPolicyAudience, ProviderSyncAudience } from "@/features/calendar/types";
+import { CalendarProviderApps } from "@/features/admin/components/calendar/CalendarProviderApps";
 
 const AUDIENCE_OPTIONS: SelectOption<CalendarPolicyAudience>[] = [
   { value: "everyone", label: "Every member" },
   { value: "admins", label: "Org and calendar admins" },
 ];
 
+const PROVIDER_AUDIENCE_OPTIONS: SelectOption<ProviderSyncAudience>[] = [
+  { value: "off", label: "Off" },
+  { value: "admins", label: "Org admins only" },
+  { value: "everyone", label: "Every member" },
+];
+
 interface PolicyForm {
   teamCalendarCreators: CalendarPolicyAudience;
   orgWideCalendarSharers: CalendarPolicyAudience;
   allowExternalSubscriptions: boolean;
+  providerSyncAudience: ProviderSyncAudience;
+  allowProviderWrites: boolean;
 }
 
 export function CalendarPolicySection() {
@@ -39,6 +48,8 @@ export function CalendarPolicySection() {
           teamCalendarCreators: policy.teamCalendarCreators,
           orgWideCalendarSharers: policy.orgWideCalendarSharers,
           allowExternalSubscriptions: policy.allowExternalSubscriptions,
+          providerSyncAudience: policy.providerSyncAudience,
+          allowProviderWrites: policy.allowProviderWrites,
         }
       : null);
 
@@ -76,9 +87,9 @@ export function CalendarPolicySection() {
         </div>
         <p className="text-muted-foreground text-sm">
           Who may set up calendars for a team, who may open a calendar to the whole organization,
-          and whether members may follow external calendars. Calendar admins are granted on the
-          Domain Admins page. These rules decide who can make the change; they never give anyone
-          access to a calendar.
+          whether members may follow external calendars, and who may sync their Google or Microsoft
+          calendars. Calendar admins are granted on the Domain Admins page. These rules decide who
+          can make the change; they never give anyone access to a calendar.
         </p>
       </div>
 
@@ -133,6 +144,30 @@ export function CalendarPolicySection() {
               ariaLabel="Members can subscribe to external calendars"
             />
           </PolicyRow>
+          <PolicyRow
+            title="Who can connect Google and Microsoft calendars"
+            detail="Members sign in to their Google or Microsoft account and pick calendars to sync with Uniffy. Turning this off pauses every connected account."
+          >
+            <Select
+              value={form.providerSyncAudience}
+              onChange={(value) => setDraft({ ...form, providerSyncAudience: value })}
+              options={PROVIDER_AUDIENCE_OPTIONS}
+              disabled={disabled}
+              triggerClassName="w-full sm:w-64"
+              ariaLabel="Who can connect Google and Microsoft calendars"
+            />
+          </PolicyRow>
+          <PolicyRow
+            title="Allow edits to sync back to Google and Microsoft"
+            detail="When on, members can make a connected calendar two-way, so events they change in Uniffy update in Google Calendar or Outlook. When off, every connected calendar is read-only in Uniffy."
+          >
+            <ToggleSwitch
+              enabled={form.allowProviderWrites}
+              onChange={(value) => setDraft({ ...form, allowProviderWrites: value })}
+              disabled={disabled || form.providerSyncAudience === "off"}
+              ariaLabel="Allow edits to sync back to Google and Microsoft"
+            />
+          </PolicyRow>
         </div>
       )}
 
@@ -146,6 +181,8 @@ export function CalendarPolicySection() {
           </span>
         )}
       </div>
+
+      {isAdmin && organizationId && <CalendarProviderApps />}
     </div>
   );
 }

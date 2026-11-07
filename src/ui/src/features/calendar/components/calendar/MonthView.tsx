@@ -13,6 +13,7 @@ import { displayParts, instantFromDisplayParts } from "@/features/calendar/utils
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { LiveMeetingBadge } from "@/features/calendar/components/shared/LiveMeetingBadge";
 import { cn } from "@/shared/utils/cn";
+import { roleCanEdit } from "@/shared/utils/contentRoles";
 import { useBreakpoint } from "@/shared/hooks/useBreakpoint";
 import { resolveEventColor } from "@/features/calendar/utils/eventColor";
 
@@ -165,17 +166,19 @@ export function MonthView() {
                         ? activeCallsByChannel[event.channelId]
                         : undefined;
                       const showLive = !!activeCall && !display.cancelled && !display.detailsHidden;
+                      const canMove = roleCanEdit(event.userRole);
                       return (
                         <div
                           key={event.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, event.id)}
-                          onDragEnd={handleDragEnd}
+                          draggable={canMove}
+                          onDragStart={canMove ? (e) => handleDragStart(e, event.id) : undefined}
+                          onDragEnd={canMove ? handleDragEnd : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
                           className={cn(
-                            "text-[10px] px-1.5 py-0.5 rounded cursor-move hover:brightness-95 active:cursor-grabbing",
+                            "text-[10px] px-1.5 py-0.5 rounded hover:brightness-95",
+                            canMove ? "cursor-move active:cursor-grabbing" : "cursor-pointer",
                             "flex items-center gap-1",
                             (declined || display.cancelled) && "line-through",
                           )}

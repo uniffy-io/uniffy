@@ -21,6 +21,7 @@ import {
   Door,
   DotsThree,
   MapPin,
+  PencilSimpleSlash,
   Users,
   Video,
 } from "phosphor-react-native";
@@ -38,6 +39,7 @@ import { FONT } from "@theme/typography";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { AttendeeStatus, RecurrenceEditScope } from "@uniffy/proto/cal/v1/calendar_pb";
 import { RecurrenceScopeSheet } from "@features/calendar/components/RecurrenceScopeSheet";
+import { providerEditNote } from "@features/calendar/calendarList";
 import { useAuth } from "@core/providers/AuthContext";
 import { roleCanDelete, roleCanEdit } from "@shared/permissions/contentRoles";
 import { userFacingError } from "@shared/lib/userFacingError";
@@ -169,6 +171,7 @@ export function EventDetailScreen() {
   const ownAttendee = event.attendees.find((a) => a.id === user?.id);
 
   const display = eventDisplayState(event);
+  const editNote = providerEditNote(event, calendar);
   const hasMeetingUrl = !!event.meetingUrl;
   const hasChannel = !!event.channelId;
   const isRecurring = !!event.recurrence;
@@ -354,6 +357,13 @@ export function EventDetailScreen() {
             ))}
           </View>
         )}
+
+        {editNote ? (
+          <View style={styles.editNote}>
+            <PencilSimpleSlash size={14} color={T.textDim} weight="duotone" />
+            <Text style={[styles.editNoteText, { color: T.textDim }]}>{editNote}</Text>
+          </View>
+        ) : null}
 
         <View style={[styles.infoCard, { backgroundColor: T.surface, borderColor: T.border }]}>
           <View style={styles.infoRow}>
@@ -775,6 +785,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   recurringText: { fontSize: 11, fontFamily: FONT.regular },
+  editNote: { flexDirection: "row", alignItems: "center", gap: 8 },
+  editNoteText: { flex: 1, fontSize: 13, fontFamily: FONT.regular },
   infoCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
   infoIcon: {

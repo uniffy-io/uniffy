@@ -1119,6 +1119,57 @@ test feed, set `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` to its subnet and restart the
       button, a broken feed shows a warning icon, and the create-event calendar picker does not
       offer it.
 
+## Calendar: Google and Microsoft sync
+
+Members connect a Google or Microsoft account and its calendars sync both ways. Needs a member
+(A) with a test Google account and a test Outlook account, a second member (B), an org admin,
+`db shell`, the backend and egress worker logs, `CALENDAR_PROVIDER_SYNC_ENABLED=true` and
+`CALENDAR_PROVIDER_WRITES_ENABLED=true` on the backend and both workers, and provider apps in env
+or on `/admin/calendar`. Push needs a public https tunnel in `CALENDAR_PUSH_BASE_URL`; without it
+everything below still works on the five minute poll. (both products)
+
+- [ ] A clicks `+` on "Connected" -> Google -> signs in. The callback page returns to the
+      calendar, the account appears with its main calendar syncing, and its events show on the
+      grid within a minute. `calendar_connections` holds sealed tokens only, the attempt row is
+      consumed, and the `calendar.connection_created` audit row names the provider.
+- [ ] Reload the callback URL: it says the sign in expired and nothing changes.
+- [ ] Open the account settings: secondary calendars are off; holidays are read only. Turn one
+      on: a new calendar appears and fills. Turn it off: the calendar becomes a normal personal
+      calendar and keeps its events.
+- [ ] Create an event in Google Calendar: it appears in Uniffy (about a minute with push, five
+      without). Change its time and place, then cancel it: each change arrives.
+- [ ] A weekly series with one moved and one deleted occurrence arrives as one series with one
+      moved occurrence and one gap. A series with a rule Uniffy cannot express (for example
+      monthly on the first Monday and third Friday) appears occurrence by occurrence, read only,
+      with "Edit this series in Google Calendar".
+- [ ] Create, edit and delete an event in Uniffy on the connected calendar: each change shows in
+      Google Calendar within about a minute. The Uniffy meeting link appears as a `Join:` line in
+      the Google description and does not double after the next sync.
+- [ ] Edit the same event in Uniffy and then in Google before a sync: the Google version wins,
+      the Uniffy activity shows the replaced values, and A gets one "changed in Google Calendar"
+      notice. Repeat with Outlook, editing Outlook first and Uniffy second: the Uniffy version
+      wins and the activity keeps the Outlook values.
+- [ ] Invite B's address from Google: B is an attendee in Uniffy. Invite an outside address: it
+      shows under guests, read only. B connects Outlook holding the same meeting: still one
+      event, with two copies in `calendar_event_links`. B accepts in Uniffy: Outlook shows the
+      acceptance.
+- [ ] Mark an event private in Google: it is private in Uniffy and B sees only busy time.
+- [ ] Revoke Uniffy's access in the Google account settings, then wait for a sync: the account
+      shows "Reconnect", A gets exactly one notice, and Reconnect brings everything back without
+      duplicates.
+- [ ] Pause: nothing syncs and Uniffy edits wait. Resume: the waiting edits go out.
+- [ ] Disconnect -> confirm: the calendar stays as a personal calendar with every event, the
+      Google token is revoked, and Google keeps its events. Connect the same account again: the
+      calendar syncs again with no duplicates.
+- [ ] Org admin: set "Who can connect accounts" to Admins only, then Off: A's `+` disappears and
+      syncing pauses. Turn "Allow edits to sync back" off: connected calendars become read only.
+      Enter the organization's own Google app: everyone connected to Google must reconnect.
+- [ ] With `CALENDAR_PROVIDER_SYNC_ENABLED=false`: no `+` on "Connected", no provider host in the
+      egress log, and the rest of the calendar works as before.
+- [ ] B and the org admin see nothing of A's connected calendars or accounts.
+- [ ] Mobile: the "Connected" section shows the provider and account, a reconnect warning when
+      needed, and read only calendars are not offered when creating an event.
+
 ## Calendar: shared calendars
 
 Calendars are shareable content: a calendar's members reach every event filed on it, a

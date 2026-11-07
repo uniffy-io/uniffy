@@ -1,16 +1,21 @@
-"""The one way to fetch a URL a person typed: public addresses only, pinned, capped."""
+"""Outbound HTTP: typed URLs through ``fetch_public``, fixed provider hosts through ``ApiClient``."""
 
 from uniffy.core.outbound.addresses import (
     OutboundFailure,
     OutboundFetchError,
     normalize_public_url,
 )
+from uniffy.core.outbound.api import ApiClient, ApiError, ApiResponse, parse_retry_after
 from uniffy.core.outbound.fetch import FetchResult, fetch_public
 
 __all__ = [
+    "ApiClient",
+    "ApiError",
+    "ApiResponse",
     "FetchResult",
     "OutboundFailure",
     "OutboundFetchError",
     "fetch_public",
     "normalize_public_url",
+    "parse_retry_after",
 ]

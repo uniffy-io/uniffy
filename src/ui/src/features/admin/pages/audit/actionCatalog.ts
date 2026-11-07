@@ -181,6 +181,23 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     ],
   },
   {
+    domain: "calendar",
+    label: "Calendars",
+    badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
+    actions: [
+      { value: "calendar.created", label: "Created" },
+      { value: "calendar.updated", label: "Updated" },
+      { value: "calendar.deleted", label: "Deleted" },
+      { value: "calendar.policy_updated", label: "Policy updated" },
+      { value: "calendar.subscription_created", label: "Feed subscribed" },
+      { value: "calendar.subscription_updated", label: "Feed subscription updated" },
+      { value: "calendar.connection_created", label: "Account connected" },
+      { value: "calendar.connection_updated", label: "Connected account updated" },
+      { value: "calendar.connection_disconnected", label: "Account disconnected" },
+      { value: "calendar.provider_settings_updated", label: "Provider app updated" },
+    ],
+  },
+  {
     domain: "calendar_event",
     label: "Calendar",
     badgeClass: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
