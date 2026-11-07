@@ -81,6 +81,10 @@ class CalendarOperations(CalendarReader):
             raise ValidationError(
                 "calendar_type", "A subscribed calendar is created by subscribing to a feed."
             )
+        if calendar_type == CalendarType.CONNECTED:
+            raise ValidationError(
+                "calendar_type", "A connected calendar is created by connecting an account."
+            )
         name = validated_name(name)
         admin_user_ids = [uid for uid in admin_user_ids or [] if uid != user_id]
         admin_group_ids = list(admin_group_ids or [])
@@ -266,6 +270,12 @@ class CalendarOperations(CalendarReader):
         await self._require_no_blocked_series(user_id, organization_id, calendar_id)
 
         purged_event_ids: tuple[UUID, ...] = ()
+        if calendar.calendar_type == CalendarType.CONNECTED:
+            # Deleting its events here would delete them in the provider calendar too.
+            raise ValidationError(
+                "calendar_id",
+                "Turn off sync for this calendar in the account settings before deleting it.",
+            )
         if calendar.calendar_type == CalendarType.SUBSCRIBED:
             # Unsubscribing: the mirrored events go with the feed, never to another calendar.
             if target_calendar_id is not None:

@@ -72,6 +72,8 @@ def _make_event(
 
 # Nobody in these tests counts a subscribed feed as busy.
 _NO_FEEDS = MagicMock(all=MagicMock(return_value=[]))
+# Nor turns a connected calendar's busy time off.
+_NO_QUIET = MagicMock(all=MagicMock(return_value=[]))
 
 
 def _session_returning(rows: list, exception_rows: list | None = None) -> MagicMock:
@@ -85,7 +87,7 @@ def _session_returning(rows: list, exception_rows: list | None = None) -> MagicM
     exceptions.scalars = MagicMock(
         return_value=MagicMock(all=MagicMock(return_value=exception_rows or []))
     )
-    session.execute = AsyncMock(side_effect=[membership, events, _NO_FEEDS, exceptions])
+    session.execute = AsyncMock(side_effect=[membership, events, _NO_QUIET, _NO_FEEDS, exceptions])
     return session
 
 
@@ -109,6 +111,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(uid,) for uid in users])),
                 MagicMock(all=MagicMock(return_value=[])),
+                _NO_QUIET,
                 _NO_FEEDS,
             ]
         )
@@ -126,6 +129,7 @@ class TestGetBusyIntervals:
         session.execute.side_effect = [
             MagicMock(all=MagicMock(return_value=[(user,)])),
             MagicMock(all=MagicMock(return_value=[(early, user), (overlapping, user)])),
+            _NO_QUIET,
             _NO_FEEDS,
         ]
 
@@ -141,6 +145,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[(ooo, user)])),
+                _NO_QUIET,
                 _NO_FEEDS,
             ]
         )
@@ -161,6 +166,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[(master, user)])),
+                _NO_QUIET,
                 _NO_FEEDS,
                 MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))),
             ]
@@ -177,6 +183,7 @@ class TestGetBusyIntervals:
             side_effect=[
                 MagicMock(all=MagicMock(return_value=[(user,)])),
                 MagicMock(all=MagicMock(return_value=[])),
+                _NO_QUIET,
                 MagicMock(all=MagicMock(return_value=[(shift, user)])),
             ]
         )

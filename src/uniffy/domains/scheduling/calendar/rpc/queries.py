@@ -20,6 +20,7 @@ from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader
+from uniffy.domains.scheduling.calendar.connections.details import provider_details
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.state import event_details_hidden
@@ -61,6 +62,7 @@ class EventQueryHandlers:
                 room_info = await get_event_room_info(session, event_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event_id])
                 user_role = await operations._resolve_role(user_id, organization_id, event)
+                details = await provider_details(session, event)
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -76,6 +78,8 @@ class EventQueryHandlers:
                             user_role,
                             any(attendee.user_id == user_id for attendee, _ in attendees),
                         ),
+                        participants=details.participants,
+                        provider_edit_hint=details.edit_hint,
                         **room_info,
                     )
                 )

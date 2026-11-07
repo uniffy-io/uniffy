@@ -24,7 +24,7 @@ async def guard_calendar_access_mode(
 ) -> None:
     # A feed stays its subscriber's alone: OWNER_ONLY is also what refuses adding members.
     if _is_subscribed(content):
-        raise ValidationError("access_mode", "A subscribed calendar cannot be shared.")
+        raise ValidationError("access_mode", "A subscribed or connected calendar cannot be shared.")
     # Clearing the mode inherits the org default live, so it may open the calendar
     # now or whenever an admin later opens that default; both count as opening it.
     if new_access_mode is None:
@@ -48,7 +48,8 @@ async def guard_calendar_transfer(
 ) -> None:
     if _is_subscribed(content):
         raise ValidationError(
-            "content_id", "A subscribed calendar cannot be transferred to someone else."
+            "content_id",
+            "A subscribed or connected calendar cannot be transferred to someone else.",
         )
     # Everyone keeps exactly one default calendar, so it never changes hands.
     if isinstance(content, Calendar) and content.is_default:
@@ -73,4 +74,8 @@ async def guard_event_access_mode(
 
 
 def _is_subscribed(content: object) -> bool:
-    return isinstance(content, Calendar) and content.calendar_type == CalendarType.SUBSCRIBED
+    """Feeds and provider calendars stay their owner's alone; the source decides their content."""
+    return isinstance(content, Calendar) and content.calendar_type in (
+        CalendarType.SUBSCRIBED,
+        CalendarType.CONNECTED,
+    )
