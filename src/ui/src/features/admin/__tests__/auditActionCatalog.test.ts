@@ -75,3 +75,12 @@ describe("ACTION_GROUPS", () => {
     expect(new Set(values).size).toBe(values.length);
   });
 });
+
+describe("calendar actions", () => {
+  it("labels connected-account and provider-app actions", () => {
+    expect(actionLabel("calendar.connection_created")).toBe("Calendars: Account connected");
+    expect(actionLabel("calendar.provider_settings_updated")).toBe(
+      "Calendars: Provider app updated",
+    );
+  });
+});
