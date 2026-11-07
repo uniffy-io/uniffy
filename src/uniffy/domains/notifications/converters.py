@@ -22,6 +22,10 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.CALENDAR_SUBSCRIPTION_FAILED: (
         ProtoNotificationType.CALENDAR_SUBSCRIPTION_FAILED
     ),
+    NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT: (
+        ProtoNotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT
+    ),
+    NotificationType.CALENDAR_SYNC_CONFLICT: ProtoNotificationType.CALENDAR_SYNC_CONFLICT,
     NotificationType.PERMISSION_GRANTED: ProtoNotificationType.PERMISSION_GRANTED,
     NotificationType.PERMISSION_REVOKED: ProtoNotificationType.PERMISSION_REVOKED,
     NotificationType.SYSTEM_ANNOUNCEMENT: (ProtoNotificationType.SYSTEM_ANNOUNCEMENT),

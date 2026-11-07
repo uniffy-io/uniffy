@@ -1,4 +1,4 @@
-"""HTTP endpoints for the calendar: subscribe feeds, and responding to mail."""
+"""HTTP endpoints for the calendar: subscribe feeds, mail responses and provider notifications."""
 
 import hashlib
 from functools import partial
@@ -17,6 +17,14 @@ from uniffy.core.models.shared import AttendeeStatus
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
+from uniffy.domains.scheduling.calendar.connections.channels import (
+    GOOGLE_PUSH_PATH,
+    MICROSOFT_PUSH_PATH,
+)
+from uniffy.domains.scheduling.calendar.connections.ingress import (
+    receive_google,
+    receive_microsoft,
+)
 from uniffy.domains.scheduling.calendar.ical.feed import (
     FEED_SUFFIX,
     hash_token,
@@ -207,4 +215,7 @@ def create_calendar_router(search_indexer: SearchIndexer, buffer: UpdateBuffer) 
         response_model=RespondResponse,
     )
     router.add_api_route(FEED_PATH, serve_feed, methods=["GET"])
+    # Called by Google and Microsoft, so no session: the channel secret is the credential.
+    router.add_api_route(GOOGLE_PUSH_PATH, receive_google, methods=["POST"])
+    router.add_api_route(MICROSOFT_PUSH_PATH, receive_microsoft, methods=["POST"])
     return router

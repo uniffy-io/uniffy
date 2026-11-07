@@ -255,17 +255,30 @@ from uniffy.domains.projects.jobs.jobs import (
     refresh_project_search_acl,
     run_timesheet_periods,
 )
+from uniffy.domains.scheduling.calendar.jobs.connections import (
+    DISCOVERY_JOB_TIMEOUT_SECONDS,
+    PUSH_JOB_TIMEOUT_SECONDS,
+    SYNC_JOB_TIMEOUT_SECONDS,
+    discover_connection_calendars,
+    dispatch_calendar_connections,
+    push_calendar_change,
+    sync_connected_calendar,
+)
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_JOB_REFS,
     CALENDAR_SCHEDULED_JOB_REFS,
     CHECK_CALENDAR_FEED,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
+    DISCOVER_CONNECTION_CALENDARS,
+    DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
     DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
     FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
+    PUSH_CALENDAR_CHANGE,
     REFRESH_CALENDAR_SEARCH_ACL,
     REFRESH_CALENDAR_SUBSCRIPTION,
     SEND_EVENT_MAIL,
+    SYNC_CONNECTED_CALENDAR,
 )
 from uniffy.domains.scheduling.calendar.jobs.event_mail import (
     dispatch_calendar_event_mail,
@@ -432,6 +445,24 @@ EGRESS_JOB_REGISTRATIONS = (
         keep_result=CHECK_RESULT_SECONDS,
         max_tries=1,
     ),
+    _bind(
+        DISCOVER_CONNECTION_CALENDARS,
+        discover_connection_calendars,
+        timeout=DISCOVERY_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        SYNC_CONNECTED_CALENDAR,
+        sync_connected_calendar,
+        timeout=SYNC_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        PUSH_CALENDAR_CHANGE,
+        push_calendar_change,
+        timeout=PUSH_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
@@ -478,6 +509,11 @@ CORE_SCHEDULED_REGISTRATIONS = (
     _bind_schedule(
         DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
         dispatch_calendar_subscription_refreshes,
+    ),
+    _bind_schedule(
+        DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
+        dispatch_calendar_connections,
+        second=(30,),
     ),
     _bind_schedule(
         CHECK_TASK_DUE_DATES_SCHEDULE,

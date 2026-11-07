@@ -87,15 +87,66 @@ DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE = JobRef(
     ),
 )
 
+DISCOVER_CONNECTION_CALENDARS = JobRef(
+    name="discover_calendar_connection_calendars",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="calendar_connections.next_discovery_at past its dispatch lease",
+        trigger="every-minute core schedule",
+    ),
+)
+
+SYNC_CONNECTED_CALENDAR = JobRef(
+    name="sync_connected_calendar",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="calendar_connected_calendars.next_sync_at past its dispatch lease",
+        trigger="every-minute core schedule",
+    ),
+)
+
+PUSH_CALENDAR_CHANGE = JobRef(
+    name="push_calendar_change",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact="PENDING calendar_provider_pushes row past next_attempt_at",
+        trigger="every-minute core schedule",
+    ),
+)
+
+DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE = JobRef(
+    name="cron:dispatch_calendar_connections",
+    queue=QueueName.CORE,
+    workload=JobWorkload.CONTROL,
+    reliability=JobReliability.DURABLE,
+    recovery=JobRecovery(
+        fact=(
+            "due calendar_connections, calendar_connected_calendars "
+            "and calendar_provider_pushes rows"
+        ),
+        trigger="every-minute core schedule",
+    ),
+)
+
 CALENDAR_JOB_REFS = (
     SEND_EVENT_MAIL,
     REFRESH_CALENDAR_SEARCH_ACL,
     REFRESH_CALENDAR_SUBSCRIPTION,
     CHECK_CALENDAR_FEED,
+    DISCOVER_CONNECTION_CALENDARS,
+    SYNC_CONNECTED_CALENDAR,
+    PUSH_CALENDAR_CHANGE,
 )
 CALENDAR_SCHEDULED_JOB_REFS = (
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
     FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
     DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
+    DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
 )

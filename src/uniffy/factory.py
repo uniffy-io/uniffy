@@ -33,6 +33,7 @@ from uniffy_proto.auth.v1.auth_connect import AuthServiceASGIApplication
 from uniffy_proto.auth.v1.mfa_connect import MfaServiceASGIApplication
 from uniffy_proto.bookmarks.v1.bookmarks_connect import BookmarksServiceASGIApplication
 from uniffy_proto.cal.v1.calendar_connect import CalendarServiceASGIApplication
+from uniffy_proto.cal.v1.connections_connect import CalendarConnectionsServiceASGIApplication
 from uniffy_proto.calls.v1.calls_connect import CallServiceASGIApplication
 from uniffy_proto.chat.v1.chat_connect import ChatServiceASGIApplication
 from uniffy_proto.chat.v1.chat_stream_connect import ChatStreamServiceASGIApplication
@@ -171,7 +172,10 @@ from uniffy.domains.scheduling.calendar.events.registration import register_cale
 from uniffy.domains.scheduling.calendar.ical.feed import register_calendar_crypto
 from uniffy.domains.scheduling.calendar.realtime import register_event_realtime_adapter
 from uniffy.domains.scheduling.calendar.routes import create_calendar_router
-from uniffy.domains.scheduling.calendar.service import CalendarServiceImpl
+from uniffy.domains.scheduling.calendar.service import (
+    CalendarConnectionsServiceImpl,
+    CalendarServiceImpl,
+)
 from uniffy.domains.scheduling.rooms.service import RoomsServiceImpl
 from uniffy.domains.search.service import SearchServiceImpl
 from uniffy.domains.settings.handlers import SettingsHandlers
@@ -684,6 +688,11 @@ def _create_api_dispatcher(
         CalendarServiceASGIApplication,
         CalendarServiceImpl(search_indexer, call_lifecycle, buffer),
         read_max_bytes=CALENDAR_RPC_READ_MAX_BYTES,
+    )
+    add_rpc(
+        "/cal.v1.CalendarConnectionsService",
+        CalendarConnectionsServiceASGIApplication,
+        CalendarConnectionsServiceImpl(),
     )
     add_rpc(
         "/files.v1.FilesService",
