@@ -145,7 +145,7 @@ def _build_event(
         _add_times(component, event, tz)
 
     if event.description and not export.details_hidden:
-        component.add("description", _plain_text(event.description))
+        component.add("description", plain_text(event.description))
     if event.location and not export.details_hidden:
         component.add("location", event.location)
     if event.meeting_url and not export.details_hidden:
@@ -288,7 +288,7 @@ def event_uid(event: CalendarEvent, uid_domain: str = DEFAULT_UID_DOMAIN) -> str
     return event.ical_uid or f"{event.id}@{uid_domain}"
 
 
-def _plain_text(markdown: str) -> str:
+def plain_text(markdown: str) -> str:
     """Mentions render as their label; no external client speaks our markup."""
     return MENTION_PATTERN.sub(lambda match: match.group(1), markdown)
 

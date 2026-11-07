@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.types import ContentType
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.ical.parse import (
     ParsedEvent,
     SkippedEntry,
@@ -118,6 +120,13 @@ async def apply_import(
                     )
                 )
 
+        await stage_provider_push(
+            session,
+            organization_id=organization_id,
+            event_ids=[event.id for event in created],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await session.commit()
     except Exception:
         await session.rollback()

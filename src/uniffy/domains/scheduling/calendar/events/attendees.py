@@ -19,6 +19,7 @@ from uniffy.core.events import (
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.login.organization import Organization
@@ -37,6 +38,7 @@ from uniffy.core.types import (
 )
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.chat.rooms import RoomMembership, StagedRoomMembershipSync
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.events.notifications import invitation_notifications
 from uniffy.domains.scheduling.calendar.mail.outbox import (
     CalendarMailKind,
@@ -127,6 +129,13 @@ class AttendeeOperations:
             actor_user_id=user_id,
         )
 
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[event_id],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -187,6 +196,13 @@ class AttendeeOperations:
                 previous_value=f"{target_user_id}:{previous.value}",
                 new_value=f"{target_user_id}:{role.value}",
             )
+            await stage_provider_push(
+                self.session,
+                organization_id=organization_id,
+                event_ids=[event_id],
+                operation=PushOperation.UPSERT,
+                actor_id=user_id,
+            )
             await self.session.commit()
             await self.session.refresh(event)
 
@@ -246,6 +262,13 @@ class AttendeeOperations:
         # A message not yet sent must not reach somebody just uninvited.
         await retire_pending_event_mail(self.session, event_id, removed_ids, datetime.now(UTC))
 
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[event_id],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await self.session.commit()
         await self.session.refresh(event)
 
@@ -318,6 +341,13 @@ class AttendeeOperations:
                 new_value=status.value,
             )
 
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[event_id],
+            operation=PushOperation.RSVP,
+            actor_id=user_id,
+        )
         await self.session.commit()
 
         if event.organizer_id != user_id:
