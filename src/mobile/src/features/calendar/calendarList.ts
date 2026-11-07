@@ -1,14 +1,21 @@
 import { roleCanEdit } from "@shared/permissions/contentRoles";
 import type {
+  CalendarProviderValue,
   CalendarSection,
   SerializedCalendar,
   SerializedCategory,
   SerializedEvent,
 } from "@features/calendar/calendarSerializer";
 
+export const PROVIDER_LABEL: Record<CalendarProviderValue, string> = {
+  google: "Google Calendar",
+  microsoft: "Outlook",
+};
+
 export const CALENDAR_SECTIONS: { section: CalendarSection; title: string }[] = [
   { section: "mine", title: "My calendars" },
   { section: "subscribed", title: "Subscribed" },
+  { section: "connected", title: "Connected" },
   { section: "shared", title: "Shared with me" },
   { section: "organization", title: "Organization" },
 ];
@@ -44,9 +51,37 @@ export function writableCalendars(calendars: readonly SerializedCalendar[]): Ser
 /** Short context for a picker row: whose calendar it is, when it is not simply one of the member's. */
 export function calendarHint(calendar: SerializedCalendar): string | undefined {
   if (isOwnDefault(calendar)) return "Default";
+  if (calendar.section === "connected") return connectionHint(calendar) ?? "Connected";
   if (calendar.section === "subscribed") return "Subscribed";
   if (calendar.section === "shared") return "Shared with you";
   if (calendar.section === "organization") return "Open to the organization";
+  return undefined;
+}
+
+/** Which provider account a connected calendar mirrors, e.g. "Google Calendar · ada@example.com". */
+export function connectionHint(calendar: SerializedCalendar): string | undefined {
+  if (!calendar.connection) return undefined;
+  const provider = PROVIDER_LABEL[calendar.connection.provider];
+  const email = calendar.connection.accountEmail;
+  return email ? `${provider} · ${email}` : provider;
+}
+
+/** Why an event cannot be changed here, when its calendar mirrors an outside source. */
+export function providerEditNote(
+  event: Pick<
+    SerializedEvent,
+    "providerEditHint" | "isRecurring" | "recurrenceId" | "isMirroredOccurrence"
+  >,
+  calendar?: Pick<SerializedCalendar, "isReadOnly" | "section">,
+): string | undefined {
+  if (event.providerEditHint) {
+    const series = event.isRecurring || !!event.recurrenceId || event.isMirroredOccurrence;
+    return `Edit this ${series ? "series" : "event"} in ${PROVIDER_LABEL[event.providerEditHint]}.`;
+  }
+  if (calendar?.isReadOnly && calendar.section === "connected") {
+    return "From a read-only connected calendar. Changes come from its source.";
+  }
+  if (calendar?.isReadOnly) return "From a subscribed calendar. Changes come from its source.";
   return undefined;
 }
 
