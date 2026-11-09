@@ -5,6 +5,7 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
@@ -18,8 +19,12 @@ from uniffy.core.crypto.org_cipher import OrgCipher
 from uniffy.core.errors import (
     MembershipRequiredError,
     NotFoundError,
+    PermissionDeniedError,
+    UnavailableError,
     ValidationError,
 )
+from uniffy.core.jobs import run_job_and_wait
+from uniffy.core.json_codec import dumps_str
 from uniffy.core.models.audit.event import AuditResourceType
 from uniffy.core.models.calendar.connection import (
     CalendarConnection,
@@ -42,6 +47,10 @@ from uniffy.domains.scheduling.calendar.connections.providers.base import (
 )
 from uniffy.domains.scheduling.calendar.connections.reattach import reattach_calendar
 from uniffy.domains.scheduling.calendar.connections.tokens import seal_grant
+from uniffy.domains.scheduling.calendar.jobs.contracts import (
+    COMPLETE_CALENDAR_CONNECTION,
+    CONNECT_JOB_TIMEOUT_SECONDS,
+)
 from uniffy.domains.scheduling.calendar.policy import require_can_connect
 from uniffy.infrastructure.outbound import ApiError
 
@@ -59,6 +68,14 @@ _CALENDAR_SCOPES = {
 # Tenants that limit user consent answer with one of these instead of a code.
 _ADMIN_APPROVAL_MARKERS = ("AADSTS65001", "AADSTS90094", "consent_required", "interaction_required")
 _EXPIRED = "This sign-in expired. Start connecting the account again."
+_UNAVAILABLE = "Sign-in could not finish. Check your connected accounts before trying again."
+
+
+class CompletionFailure(StrEnum):
+    INVALID = "invalid"
+    MEMBERSHIP = "membership"
+    DENIED = "denied"
+    UNAVAILABLE = "unavailable"
 
 
 def _digest(value: str) -> str:
@@ -162,6 +179,81 @@ async def complete_connection(
     error: str,
     error_description: str,
 ) -> CompletedConnection:
+    if await get_active_membership(session, user_id, organization_id) is None:
+        raise MembershipRequiredError("Requires organization membership")
+    await require_can_connect(session, user_id, organization_id)
+    attempt_id = await session.scalar(
+        select(CalendarConnectionAttempt.id).where(
+            CalendarConnectionAttempt.state_digest == _digest(state or ""),
+            CalendarConnectionAttempt.user_id == user_id,
+            CalendarConnectionAttempt.organization_id == organization_id,
+            CalendarConnectionAttempt.consumed_at.is_(None),
+            CalendarConnectionAttempt.expires_at > datetime.now(UTC),
+        )
+    )
+    if attempt_id is None:
+        await session.rollback()
+        raise ValidationError("state", _EXPIRED)
+    sealed = await OrgCipher(session).encrypt(
+        organization_id,
+        dumps_str({
+            "code": code,
+            "state": state,
+            "error": error,
+            "error_description": error_description,
+            "deadline": (
+                datetime.now(UTC) + timedelta(seconds=CONNECT_JOB_TIMEOUT_SECONDS)
+            ).isoformat(),
+        }),
+    )
+    # Queue waits must not pin a database connection or an authorization snapshot.
+    await session.rollback()
+    try:
+        result = await run_job_and_wait(
+            COMPLETE_CALENDAR_CONNECTION,
+            str(user_id),
+            str(organization_id),
+            sealed,
+            timeout=CONNECT_JOB_TIMEOUT_SECONDS + 5,
+            _expires=CONNECT_JOB_TIMEOUT_SECONDS,
+        )
+    except Exception as exc:
+        logger.warning("Calendar sign-in worker unavailable", error_type=type(exc).__name__)
+        raise UnavailableError(_UNAVAILABLE) from None
+    if not isinstance(result, dict):
+        raise UnavailableError(_UNAVAILABLE)
+    failure = result.get("failure")
+    if failure == CompletionFailure.MEMBERSHIP:
+        raise MembershipRequiredError("Requires organization membership")
+    if failure == CompletionFailure.DENIED:
+        raise PermissionDeniedError("connect", "calendar account")
+    if failure == CompletionFailure.INVALID:
+        raise ValidationError(result["field"], result["message"])
+    if failure is not None:
+        raise UnavailableError(_UNAVAILABLE)
+    try:
+        return CompletedConnection(
+            UUID(result["connection_id"]),
+            safe_return_path(result["return_path"]),
+            bool(result["reconnected"]),
+        )
+    except KeyError, TypeError, ValueError:
+        raise UnavailableError(_UNAVAILABLE) from None
+
+
+async def exchange_connection(
+    session: AsyncSession,
+    user_id: UUID,
+    organization_id: UUID,
+    *,
+    code: str,
+    state: str,
+    error: str,
+    error_description: str,
+    deadline: datetime,
+) -> CompletedConnection:
+    if deadline <= datetime.now(UTC):
+        raise ValidationError("state", _EXPIRED)
     attempt = await session.scalar(
         select(CalendarConnectionAttempt)
         .where(CalendarConnectionAttempt.state_digest == _digest(state or ""))
@@ -198,6 +290,7 @@ async def complete_connection(
     await require_can_connect(session, user_id, organization_id)
     credentials = await require_credentials(session, organization_id, provider)
     client = client_for(credentials)
+    await session.rollback()
     try:
         grant = await client.exchange_code(code, verifier, redirect_uri())
         identity = await client.identity(grant)
@@ -216,7 +309,14 @@ async def complete_connection(
             "Calendar sign-in exchange unreachable", provider=provider.value, reason=exc.reason
         )
         raise ValidationError("code", "The calendar service did not answer. Try again.") from exc
-    await session.rollback()
+    if deadline <= datetime.now(UTC):
+        raise ValidationError("state", _EXPIRED)
+    if await get_active_membership(session, user_id, organization_id) is None:
+        raise MembershipRequiredError("Requires organization membership")
+    await require_can_connect(session, user_id, organization_id)
+    current = await require_credentials(session, organization_id, provider)
+    if current.fingerprint != credentials.fingerprint:
+        raise ValidationError("provider", "Calendar credentials changed. Start connecting again.")
     if not grant.refresh_token:
         raise ValidationError("code", "The account did not allow offline access. Try again.")
     granted = grant.scope.lower().split()
@@ -304,6 +404,8 @@ async def complete_connection(
         },
     )
     connection_id = connection.id
+    if deadline <= datetime.now(UTC):
+        raise ValidationError("state", _EXPIRED)
     await session.commit()
     return CompletedConnection(connection_id, return_path, reconnected)
 

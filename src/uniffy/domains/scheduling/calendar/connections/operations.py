@@ -4,14 +4,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from loguru import logger
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.audit import write_audit_event
 from uniffy.core.audit.actions import Action
 from uniffy.core.auth.membership import get_active_membership
-from uniffy.core.crypto.org_cipher import OrgCipher
 from uniffy.core.errors import (
     MembershipRequiredError,
     NotFoundError,
@@ -30,11 +28,7 @@ from uniffy.core.models.calendar.connection import (
 from uniffy.core.models.calendar.provider_push import CalendarProviderPush, PushState
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.types import CalendarType
-from uniffy.domains.scheduling.calendar.connections.channels import ChannelRef, stop_channels
-from uniffy.domains.scheduling.calendar.connections.clients import client_for
-from uniffy.domains.scheduling.calendar.connections.credentials import (
-    resolve_provider_credentials,
-)
+from uniffy.domains.scheduling.calendar.connections.cleanup import enqueue_cleanup, seal_cleanup
 from uniffy.domains.scheduling.calendar.connections.reattach import reattach_calendar
 from uniffy.domains.scheduling.calendar.policy import (
     ResolvedCalendarPolicy,
@@ -42,8 +36,6 @@ from uniffy.domains.scheduling.calendar.policy import (
     policy_admits_sync,
     resolve_calendar_policy,
 )
-
-logger = logger.bind(component="scheduling.calendar.connections.operations")
 
 _SYNC_NOW_LIMIT = 1
 _SYNC_NOW_WINDOW_SECONDS = 60
@@ -326,20 +318,7 @@ async def disconnect(
             )
         ).scalars()
     )
-    credentials = await resolve_provider_credentials(session, organization_id, connection.provider)
-    refresh_token = None
-    access_token = None
-    if credentials is not None and credentials.fingerprint == connection.client_fingerprint:
-        cipher = OrgCipher(session)
-        if connection.refresh_token_encrypted:
-            refresh_token = await cipher.decrypt(organization_id, connection.refresh_token_encrypted)
-        if (
-            connection.access_token_encrypted
-            and connection.access_token_expires_at
-            and (connection.access_token_expires_at > datetime.now(UTC))
-        ):
-            access_token = await cipher.decrypt(organization_id, connection.access_token_encrypted)
-    channels = [ChannelRef.of(row) for row in rows if row.push_channel_id]
+    sealed = await seal_cleanup(session, connection, rows)
 
     await detach_calendars(
         session, [row for row in rows if row.state == ConnectedCalendarState.ACTIVE]
@@ -368,20 +347,9 @@ async def disconnect(
         resource_id=connection.id,
         details={"provider": connection.provider.value},
     )
-    provider = connection.provider
+    generation = connection.generation
     await session.commit()
-
-    if credentials is None:
-        return
-    client = client_for(credentials)
-    # After the commit: the account is disconnected even if the provider never hears of it.
-    if access_token is not None and channels:
-        await stop_channels(client, access_token, channels)
-    if refresh_token is not None:
-        try:
-            await client.revoke(refresh_token)
-        except Exception:
-            logger.warning("Calendar token revoke failed", provider=provider.value)
+    await enqueue_cleanup(connection_id, organization_id, generation, sealed)
 
 
 async def owned_connections(

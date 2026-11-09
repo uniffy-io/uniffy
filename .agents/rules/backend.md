@@ -86,9 +86,10 @@ Adding a new domain:
 - **Fixed provider APIs (Google Calendar, Microsoft Graph, their OAuth endpoints) go through
   `infrastructure/outbound.ApiClient`.** It is bound to one https host, follows a paging link only on that
   host, caps bodies, parses `Retry-After`, returns HTTP statuses for the caller to classify and
-  never puts a token in an error. In the API process it serves only the sign-in exchange and, after
-  the disconnect commits, the best-effort channel stop and token revoke; sync and pushes run on the
-  egress fleet.
+  never puts a token in an error. Every provider HTTP call runs on the egress fleet, including
+  sign-in exchange and account lookup. The API waits for a bounded sign-in job with sealed inputs.
+  Disconnect commits locally before queueing best-effort channel stop and token revoke; cleanup
+  skips accounts whose generation changed after disconnect.
 - **Content we ship is a file, not a literal.** Prompts, templates, catalogs and the like go in `src/uniffy/data/` (see "Shipped content"), never in a triple-quoted string or a hand-written python catalog.
 - **File size:** target 300-400 lines, soft cap 500; split into sub-modules past that.
 - **Type hints** on all functions; docstring discipline per `comment-discipline.md`.

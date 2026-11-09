@@ -269,6 +269,11 @@ from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_SCHEDULED_JOB_REFS,
     CHECK_CALENDAR_FEED,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
+    CLEANUP_CALENDAR_CONNECTION,
+    CLEANUP_JOB_TIMEOUT_SECONDS,
+    COMPLETE_CALENDAR_CONNECTION,
+    CONNECT_JOB_TIMEOUT_SECONDS,
+    CONNECT_RESULT_SECONDS,
     DISCOVER_CONNECTION_CALENDARS,
     DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
     DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
@@ -285,6 +290,10 @@ from uniffy.domains.scheduling.calendar.jobs.event_mail import (
     send_calendar_event_mail,
 )
 from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminders
+from uniffy.domains.scheduling.calendar.jobs.lifecycle import (
+    cleanup_calendar_connection,
+    complete_calendar_connection,
+)
 from uniffy.domains.scheduling.calendar.jobs.search import (
     flush_calendar_search_acl_refreshes,
     refresh_calendar_search_acl,
@@ -443,6 +452,20 @@ EGRESS_JOB_REGISTRATIONS = (
         check_calendar_feed,
         timeout=CHECK_JOB_TIMEOUT_SECONDS,
         keep_result=CHECK_RESULT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        COMPLETE_CALENDAR_CONNECTION,
+        complete_calendar_connection,
+        timeout=CONNECT_JOB_TIMEOUT_SECONDS + 5,
+        keep_result=CONNECT_RESULT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        CLEANUP_CALENDAR_CONNECTION,
+        cleanup_calendar_connection,
+        timeout=CLEANUP_JOB_TIMEOUT_SECONDS + 5,
+        keep_result=0,
         max_tries=1,
     ),
     _bind(

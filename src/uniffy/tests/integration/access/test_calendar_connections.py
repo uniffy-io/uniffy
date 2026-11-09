@@ -10,8 +10,18 @@ import pytest
 from sqlalchemy import select, update
 
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import PermissionDeniedError, ValidationError
+from uniffy.core.crypto.org_cipher import OrgCipher
+from uniffy.core.errors import (
+    MembershipRequiredError,
+    PermissionDeniedError,
+    UnavailableError,
+    ValidationError,
+)
 from uniffy.core.events.bus import event_from_json
+from uniffy.core.jobs import JobEnqueueOutcome, JobEnqueueResult, QueueName
+from uniffy.core.jobs import run_job_and_wait as actual_run_job_and_wait
+from uniffy.core.jobs.codec import deserialize_job_payload, serialize_job_payload
+from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -49,11 +59,14 @@ from uniffy.core.types import (
 from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar import search as calendar_search
 from uniffy.domains.scheduling.calendar.calendars import search as calendars_search
+from uniffy.domains.scheduling.calendar.connections import cleanup as cleanup_module
 from uniffy.domains.scheduling.calendar.connections import ingress
+from uniffy.domains.scheduling.calendar.connections import oauth as oauth_module
 from uniffy.domains.scheduling.calendar.connections import operations as connection_ops
 from uniffy.domains.scheduling.calendar.connections import outbox as outbox_module
 from uniffy.domains.scheduling.calendar.connections import run as run_module
 from uniffy.domains.scheduling.calendar.connections.channels import secret_digest
+from uniffy.domains.scheduling.calendar.connections.cleanup import CleanupStatus
 from uniffy.domains.scheduling.calendar.connections.details import provider_details
 from uniffy.domains.scheduling.calendar.connections.discovery import run_discovery
 from uniffy.domains.scheduling.calendar.connections.normalize import (
@@ -66,6 +79,7 @@ from uniffy.domains.scheduling.calendar.connections.oauth import (
     start_connection,
 )
 from uniffy.domains.scheduling.calendar.connections.providers import base as provider_base
+from uniffy.domains.scheduling.calendar.connections.providers.google import GoogleCalendarClient
 from uniffy.domains.scheduling.calendar.connections.push import run_push
 from uniffy.domains.scheduling.calendar.connections.push_state import claim_push
 from uniffy.domains.scheduling.calendar.connections.run import SyncStatus, run_sync
@@ -73,11 +87,19 @@ from uniffy.domains.scheduling.calendar.connections.sync import SyncTargetRow, s
 from uniffy.domains.scheduling.calendar.connections.tokens import access_token_for
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
+from uniffy.domains.scheduling.calendar.jobs import lifecycle as lifecycle_jobs
+from uniffy.domains.scheduling.calendar.jobs.contracts import (
+    CLEANUP_CALENDAR_CONNECTION,
+    COMPLETE_CALENDAR_CONNECTION,
+)
 from uniffy.domains.scheduling.calendar.mail.compose import build_message_document, load_bundle
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.valkey.queue import get_queue
 from uniffy.tests.fakes.calendar_providers import FakeProviders
 from uniffy.tests.integration.access.recording_search import RecordingSearchEngine, recording_indexer
+from uniffy.vendor.arq.worker import Worker
+from uniffy.workers.registry import EGRESS_JOBS
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -149,6 +171,22 @@ def _quiet_effects():
         ),
     ):
         yield
+
+
+@pytest.fixture(autouse=True)
+def lifecycle_queue(monkeypatch):
+    async def complete(ref, *args, **kwargs):
+        assert ref == COMPLETE_CALENDAR_CONNECTION
+        return await lifecycle_jobs.complete_calendar_connection({}, *args)
+
+    async def cleanup(ref, *args, **kwargs):
+        assert ref == CLEANUP_CALENDAR_CONNECTION
+        await lifecycle_jobs.cleanup_calendar_connection({}, *args)
+        return JobEnqueueResult(job=None, outcome=JobEnqueueOutcome.ENQUEUED)
+
+    monkeypatch.setattr(oauth_module, "run_job_and_wait", complete)
+    monkeypatch.setattr(cleanup_module, "enqueue_job_reconnecting", cleanup)
+    monkeypatch.setattr(lifecycle_jobs, "enqueue_job_reconnecting", AsyncMock())
 
 
 def _indexer() -> AsyncMock:
@@ -1626,3 +1664,286 @@ class TestSyncGuards:
         assert set(outcome.removed_ids) == {events[key].id for key in removed}
         for key in events.keys() - removed:
             assert not (await _fresh(session, CalendarEvent, events[key].id)).is_deleted
+
+
+class TestEgressLifecycle:
+    @pytest.mark.parametrize("provider", [CalendarProvider.GOOGLE, CalendarProvider.MICROSOFT])
+    async def test_oauth_uses_a_sealed_egress_job_without_holding_the_api_transaction(
+        self, session, access, providers, monkeypatch, provider
+    ):
+        code = "secret-authorization-code"
+        seen = []
+
+        async def complete(ref, user_id, org_id, sealed, **kwargs):
+            assert ref == COMPLETE_CALENDAR_CONNECTION
+            assert ref.queue == QueueName.EGRESS
+            assert code not in sealed
+            assert not session.in_transaction()
+            assert not providers.google.tokens.refresh_tokens
+            assert not providers.graph.tokens.refresh_tokens
+            result = await lifecycle_jobs.complete_calendar_connection({}, user_id, org_id, sealed)
+            assert "access_token" not in repr(result)
+            assert "refresh_token" not in repr(result)
+            seen.append(result)
+            return result
+
+        monkeypatch.setattr(oauth_module, "run_job_and_wait", complete)
+        connection, _ = await _connect(session, access, providers, provider, code=code)
+        assert connection.status == ConnectionStatus.ACTIVE
+        assert len(seen) == 1
+
+    async def test_queue_failure_does_not_exchange_or_consume_the_callback(
+        self, session, access, providers, monkeypatch
+    ):
+        monkeypatch.setattr(
+            oauth_module, "run_job_and_wait", AsyncMock(side_effect=RuntimeError("secret-code"))
+        )
+        with pytest.raises(UnavailableError) as error:
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert "secret-code" not in str(error.value)
+        assert not providers.google.tokens.refresh_tokens
+        assert (
+            await session.scalar(
+                select(CalendarConnection.id).where(
+                    CalendarConnection.organization_id == access.org_id,
+                )
+            )
+            is None
+        )
+        attempt = await session.scalar(
+            select(CalendarConnectionAttempt).where(
+                CalendarConnectionAttempt.organization_id == access.org_id,
+            )
+        )
+        assert attempt.consumed_at is None
+
+    async def test_worker_rechecks_membership_after_queue_delay(
+        self, session, access, providers, monkeypatch
+    ):
+        async def delayed(ref, user_id, org_id, sealed, **kwargs):
+            async with open_session() as worker_session:
+                await worker_session.execute(
+                    update(OrganizationMember)
+                    .where(
+                        OrganizationMember.organization_id == access.org_id,
+                        OrganizationMember.user_id == access.member_id,
+                    )
+                    .values(is_active=False)
+                )
+                await worker_session.commit()
+            return await lifecycle_jobs.complete_calendar_connection({}, user_id, org_id, sealed)
+
+        monkeypatch.setattr(oauth_module, "run_job_and_wait", delayed)
+        with pytest.raises(MembershipRequiredError):
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert not providers.google.tokens.refresh_tokens
+
+    async def test_worker_rechecks_membership_after_provider_response(
+        self, session, access, providers, monkeypatch
+    ):
+        original = GoogleCalendarClient.identity
+
+        async def identity(client, grant):
+            result = await original(client, grant)
+            async with open_session() as worker_session:
+                await worker_session.execute(
+                    update(OrganizationMember)
+                    .where(
+                        OrganizationMember.organization_id == access.org_id,
+                        OrganizationMember.user_id == access.member_id,
+                    )
+                    .values(is_active=False)
+                )
+                await worker_session.commit()
+            return result
+
+        monkeypatch.setattr(GoogleCalendarClient, "identity", identity)
+        with pytest.raises(MembershipRequiredError):
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert providers.google.tokens.refresh_tokens
+        assert (
+            await session.scalar(
+                select(CalendarConnection.id).where(
+                    CalendarConnection.organization_id == access.org_id,
+                )
+            )
+            is None
+        )
+
+    async def test_expired_queued_callback_never_contacts_provider(
+        self, session, access, providers, monkeypatch
+    ):
+        async def expired(ref, user_id, org_id, sealed, **kwargs):
+            async with open_session() as worker_session:
+                cipher = OrgCipher(worker_session)
+                payload = loads(await cipher.decrypt(access.org_id, sealed))
+                payload["deadline"] = (datetime.now(UTC) - timedelta(seconds=1)).isoformat()
+                sealed = await cipher.encrypt(access.org_id, dumps_str(payload))
+            return await lifecycle_jobs.complete_calendar_connection({}, user_id, org_id, sealed)
+
+        monkeypatch.setattr(oauth_module, "run_job_and_wait", expired)
+        with pytest.raises(ValidationError, match="expired"):
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert not providers.google.tokens.refresh_tokens
+
+    @pytest.mark.parametrize("reconnect", [False, True])
+    async def test_disconnect_commits_before_sealed_cleanup_and_skips_reconnected_accounts(
+        self, session, access, providers, monkeypatch, reconnect
+    ):
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        token = next(iter(providers.google.tokens.refresh_tokens))
+        queued = []
+
+        async def enqueue(ref, *args, **kwargs):
+            assert ref == CLEANUP_CALENDAR_CONNECTION
+            assert ref.queue == QueueName.EGRESS
+            assert token not in repr(args)
+            assert not session.in_transaction()
+            async with open_session() as worker_session:
+                saved = await worker_session.get(CalendarConnection, connection.id)
+                assert saved.status == ConnectionStatus.DISCONNECTED
+                assert saved.refresh_token_encrypted is None
+            queued.append(args)
+            return JobEnqueueResult(job=None, outcome=JobEnqueueOutcome.ENQUEUED)
+
+        monkeypatch.setattr(cleanup_module, "enqueue_job_reconnecting", enqueue)
+        await connection_ops.disconnect(session, access.member_id, access.org_id, connection.id)
+        assert not providers.google.tokens.revoked
+        assert len(queued) == 1
+        if reconnect:
+            await _connect(session, access, providers, CalendarProvider.GOOGLE, code="reconnect")
+        result = await lifecycle_jobs.cleanup_calendar_connection({}, *queued[0])
+        assert result["status"] == (CleanupStatus.SKIPPED if reconnect else CleanupStatus.DONE)
+        assert bool(providers.google.tokens.revoked) is not reconnect
+
+    async def test_unavailable_cleanup_queue_keeps_local_disconnect(
+        self, session, access, providers, monkeypatch
+    ):
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        monkeypatch.setattr(
+            cleanup_module,
+            "enqueue_job_reconnecting",
+            AsyncMock(side_effect=RuntimeError("queue down")),
+        )
+        await connection_ops.disconnect(session, access.member_id, access.org_id, connection.id)
+        saved = await _fresh(session, CalendarConnection, connection.id)
+        assert saved.status == ConnectionStatus.DISCONNECTED
+        assert saved.refresh_token_encrypted is None
+        assert not providers.google.tokens.revoked
+
+    async def test_worker_exception_returns_no_sensitive_details(
+        self, session, access, providers, monkeypatch
+    ):
+        monkeypatch.setattr(
+            lifecycle_jobs,
+            "exchange_connection",
+            AsyncMock(side_effect=RuntimeError("secret-code-and-token")),
+        )
+        with pytest.raises(UnavailableError) as error:
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert "secret-code-and-token" not in str(error.value)
+        assert not providers.google.tokens.refresh_tokens
+
+    async def test_callback_round_trip_through_real_valkey_and_egress_registration(
+        self, session, access, providers, monkeypatch
+    ):
+        queue_name = f"test:calendar-egress:{generate_id()}"
+        job_id = f"{queue_name}:connect"
+        pool = get_queue(QueueName.EGRESS)
+
+        async def complete(ref, *args, **kwargs):
+            pending = asyncio.create_task(
+                actual_run_job_and_wait(
+                    ref,
+                    *args,
+                    **kwargs,
+                    _queue_name=queue_name,
+                    _job_id=job_id,
+                )
+            )
+            try:
+                async with asyncio.timeout(5):
+                    while not await pool.zcard(queue_name):
+                        await asyncio.sleep(0.01)
+                worker = Worker(
+                    EGRESS_JOBS,
+                    queue_name=queue_name,
+                    valkey_pool=pool,
+                    job_serializer=serialize_job_payload,
+                    job_deserializer=deserialize_job_payload,
+                    burst=True,
+                    handle_signals=False,
+                    poll_delay=0.01,
+                )
+                await asyncio.wait_for(worker.main(), timeout=10)
+                return await pending
+            finally:
+                if not pending.done():
+                    pending.cancel()
+                    await asyncio.gather(pending, return_exceptions=True)
+                await pool.delete(
+                    queue_name,
+                    f"arq:job:{job_id}",
+                    f"arq:result:{job_id}",
+                    f"{queue_name}:health-check",
+                )
+
+        monkeypatch.setattr(oauth_module, "run_job_and_wait", complete)
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert connection.status == ConnectionStatus.ACTIVE
+        assert providers.google.tokens.refresh_tokens
+
+    @pytest.mark.parametrize("provider", [CalendarProvider.GOOGLE, CalendarProvider.MICROSOFT])
+    async def test_channel_stop_runs_only_when_cleanup_job_executes(
+        self, session, access, providers, monkeypatch, provider
+    ):
+        monkeypatch.setenv("CALENDAR_PUSH_BASE_URL", "https://calendar.example.com")
+        connection, _ = await _connect(session, access, providers, provider)
+        await _sync(session, connection)
+        connected = await _primary(session, connection)
+        assert connected.push_channel_id
+        channels = (
+            providers.google.channels
+            if provider == CalendarProvider.GOOGLE
+            else providers.graph.subscriptions
+        )
+        assert connected.push_channel_id in channels
+        enqueue = AsyncMock(
+            return_value=JobEnqueueResult(job=None, outcome=JobEnqueueOutcome.ENQUEUED)
+        )
+        monkeypatch.setattr(cleanup_module, "enqueue_job_reconnecting", enqueue)
+        await connection_ops.disconnect(session, access.member_id, access.org_id, connection.id)
+        assert connected.push_channel_id in channels
+        ref, *args = enqueue.await_args.args
+        assert ref == CLEANUP_CALENDAR_CONNECTION
+        result = await lifecycle_jobs.cleanup_calendar_connection({}, *args)
+        assert result["status"] == CleanupStatus.DONE
+        assert connected.push_channel_id not in channels
+
+    async def test_provider_response_after_callback_deadline_is_not_committed(
+        self, session, access, providers, monkeypatch
+    ):
+        original = GoogleCalendarClient.identity
+
+        class LateClock(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return datetime.now(tz) + timedelta(minutes=5)
+
+        async def identity(client, grant):
+            result = await original(client, grant)
+            monkeypatch.setattr(oauth_module, "datetime", LateClock)
+            return result
+
+        monkeypatch.setattr(GoogleCalendarClient, "identity", identity)
+        with pytest.raises(ValidationError, match="expired"):
+            await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        assert providers.google.tokens.refresh_tokens
+        assert (
+            await session.scalar(
+                select(CalendarConnection.id).where(
+                    CalendarConnection.organization_id == access.org_id,
+                )
+            )
+            is None
+        )

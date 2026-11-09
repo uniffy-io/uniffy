@@ -199,6 +199,8 @@ If you route outbound traffic through `HTTPS_PROXY` or `HTTP_PROXY`, the proxy r
 
 Members can connect a Google account (Workspace or personal Gmail) or a Microsoft account (work, school or personal Outlook) and keep its calendars in step with Uniffy. Changes made on either side show up on the other. Sync is off until you turn it on, and nothing calls Google or Microsoft before that.
 
+All calendar provider requests run on the egress worker, including OAuth token exchange, account lookup and disconnect cleanup. Connecting an account needs a running egress worker; the API waits up to 65 seconds for its response. Callback codes travel encrypted through the queue. Disconnect takes effect locally before provider cleanup is queued. Remote cleanup is best effort and skips an account reconnected before the job starts.
+
 | Variable | Default | Purpose |
 |---|---|---|
 | `CALENDAR_PROVIDER_SYNC_ENABLED` | `false` | Lets members connect accounts and brings provider changes into Uniffy. |

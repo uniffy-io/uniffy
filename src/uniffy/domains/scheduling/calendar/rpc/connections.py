@@ -54,7 +54,6 @@ from uniffy.domains.scheduling.calendar.connections.oauth import (
 )
 from uniffy.domains.scheduling.calendar.jobs.connections import wake
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
-    DISCOVER_CONNECTION_CALENDARS,
     SYNC_CONNECTED_CALENDAR,
 )
 from uniffy.domains.scheduling.calendar.rpc.support import map_domain_error, parse_uuid
@@ -162,12 +161,10 @@ class ConnectionHandlers:
                 view = await connections.get_view(
                     session, user_id, organization_id, completed.connection_id
                 )
-                generation = view.connection.generation
         except ConnectError:
             raise
         except Exception as exc:
             raise map_domain_error("complete_calendar_connection", exc) from exc
-        await wake(DISCOVER_CONNECTION_CALENDARS, completed.connection_id, generation)
         return CompleteCalendarConnectionResponse(
             connection=connection_to_proto(view), return_path=completed.return_path
         )

@@ -2,6 +2,24 @@
 
 from uniffy.core.jobs import JobRecovery, JobRef, JobReliability, JobWorkload, QueueName
 
+CONNECT_JOB_TIMEOUT_SECONDS = 60
+CONNECT_RESULT_SECONDS = 120
+CLEANUP_JOB_TIMEOUT_SECONDS = 120
+
+COMPLETE_CALENDAR_CONNECTION = JobRef(
+    name="complete_calendar_connection",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.BEST_EFFORT,
+)
+
+CLEANUP_CALENDAR_CONNECTION = JobRef(
+    name="cleanup_calendar_connection",
+    queue=QueueName.EGRESS,
+    workload=JobWorkload.INTEGRATION,
+    reliability=JobReliability.BEST_EFFORT,
+)
+
 CHECK_CALENDAR_REMINDERS_SCHEDULE = JobRef(
     name="cron:check_calendar_reminders",
     queue=QueueName.CORE,
@@ -135,6 +153,8 @@ DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE = JobRef(
 )
 
 CALENDAR_JOB_REFS = (
+    COMPLETE_CALENDAR_CONNECTION,
+    CLEANUP_CALENDAR_CONNECTION,
     SEND_EVENT_MAIL,
     REFRESH_CALENDAR_SEARCH_ACL,
     REFRESH_CALENDAR_SUBSCRIPTION,
