@@ -20,7 +20,7 @@ import { connectionStatusCopy, providerName } from "@/features/calendar/utils/co
 import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 
-const FIRST_SYNC_POLL_MS = 3000;
+const CONNECTION_REFRESH_MS = 10000;
 
 /** The member's connected Google and Microsoft accounts and how each calendar syncs. */
 export function ConnectionsModal() {
@@ -38,15 +38,15 @@ export function ConnectionsModal() {
     if (open) void dispatch(fetchCalendarConnections());
   }, [dispatch, open]);
 
-  // A first sync finishes in the background; nothing else tells the open modal it is done.
-  const firstSyncRunning = connections.some((connection) =>
-    connection.calendars.some((calendar) => calendar.syncEnabled && calendar.state === "pending"),
-  );
+  // Discovery can still be running before an account has any calendar rows.
   useEffect(() => {
-    if (!open || !firstSyncRunning) return;
-    const timer = setInterval(() => void dispatch(fetchCalendarConnections()), FIRST_SYNC_POLL_MS);
+    if (!open) return;
+    const timer = setInterval(
+      () => void dispatch(fetchCalendarConnections()),
+      CONNECTION_REFRESH_MS,
+    );
     return () => clearInterval(timer);
-  }, [dispatch, open, firstSyncRunning]);
+  }, [dispatch, open]);
 
   useEffect(() => {
     if (loaded && focusConnectionId) focusRef.current?.scrollIntoView({ block: "nearest" });

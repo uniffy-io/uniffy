@@ -22,6 +22,7 @@ from uniffy.domains.scheduling.calendar.ical.emit import (
     IcalAttendee,
     IcalPerson,
 )
+from uniffy.domains.scheduling.calendar.queries import attendee_visibility
 
 
 async def build_exports(
@@ -43,7 +44,7 @@ async def build_exports(
     overrides = await _overrides_for(session, series_ids)
 
     hydrated = list(masters) + [row for rows in overrides.values() for row in rows]
-    attendees, rosters = await _attendees_for(session, [event.id for event in hydrated])
+    attendees, rosters = await _attendees_for(session, [event.id for event in hydrated], viewer_id)
     people = await _people_for(session, {event.organizer_id for event in hydrated})
     hidden = await _hidden_from(
         session,
@@ -172,7 +173,7 @@ async def _overrides_for(
 
 
 async def _attendees_for(
-    session: AsyncSession, event_ids: Sequence[UUID]
+    session: AsyncSession, event_ids: Sequence[UUID], viewer_id: UUID
 ) -> tuple[dict[UUID, list[IcalAttendee]], dict[UUID, set[UUID]]]:
     """The roster twice over: as addresses to emit, and as ids to authorize by."""
     if not event_ids:
@@ -181,7 +182,8 @@ async def _attendees_for(
         await session.execute(
             select(EventAttendee, User)
             .join(User, EventAttendee.user_id == User.id)
-            .where(EventAttendee.event_id.in_(event_ids))
+            .join(CalendarEvent, CalendarEvent.id == EventAttendee.event_id)
+            .where(EventAttendee.event_id.in_(event_ids), attendee_visibility(viewer_id))
         )
     ).all()
 

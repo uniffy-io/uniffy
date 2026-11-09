@@ -8,7 +8,7 @@ from enum import StrEnum
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.realtime import publish_content_changed
@@ -24,7 +24,6 @@ from uniffy.core.models.calendar.connection import (
 )
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.link import CalendarEventLink
-from uniffy.core.outbound import ApiError
 from uniffy.core.search.indexer import SearchIndexer
 from uniffy.core.types import CalendarType, ContentType
 from uniffy.domains.scheduling.calendar.calendars.search import remove_event_documents
@@ -67,6 +66,7 @@ from uniffy.domains.scheduling.calendar.search import (
     FeedEventProjection,
     refresh_event_search_projection,
 )
+from uniffy.infrastructure.outbound import ApiError
 
 logger = logger.bind(component="scheduling.calendar.connections.run")
 
@@ -164,6 +164,7 @@ async def run_sync(
     if row is None:
         return SyncReport(SyncStatus.SKIPPED)
     scan_id = uuid.uuid4() if batch.full_scan else None
+    rebuild_search = row.search_stale
     try:
         outcome = await stage_provider_changes(
             session,
@@ -177,6 +178,9 @@ async def run_sync(
             members=members,
             scan_id=scan_id,
             window_start=source.target.window_start,
+            window_end=(
+                source.target.window_end if source.provider == CalendarProvider.MICROSOFT else None
+            ),
         )
         _record_success(row, source, batch, outcome, scan_id)
         await _record_totals(session, row, source.connection_id, outcome)
@@ -191,7 +195,7 @@ async def run_sync(
         return await _record_failure(session, source, ProviderError(SyncFailure.UNPROCESSABLE))
 
     if outcome.changed or row.search_stale:
-        await _project(session, search_indexer, source, outcome)
+        await _project(session, search_indexer, source, outcome, rebuild=rebuild_search)
     if outcome.changed:
         await publish_calendar_changed(source.calendar_id, source.organization_id)
     try:
@@ -428,12 +432,37 @@ async def _record_totals(
 
 
 async def _project(
-    session: AsyncSession, search_indexer: SearchIndexer, source: _Source, outcome: SyncOutcome
+    session: AsyncSession,
+    search_indexer: SearchIndexer,
+    source: _Source,
+    outcome: SyncOutcome,
+    *,
+    rebuild: bool = False,
 ) -> None:
     try:
         if outcome.removed_ids:
             await remove_event_documents(search_indexer, source.organization_id, outcome.removed_ids)
         written = list(dict.fromkeys(outcome.written_ids))
+        if rebuild:
+            written = list(
+                (
+                    await session.execute(
+                        select(CalendarEvent.id).where(
+                            CalendarEvent.is_deleted.is_(False),
+                            CalendarEvent.organization_id == source.organization_id,
+                            or_(
+                                CalendarEvent.calendar_id == source.calendar_id,
+                                CalendarEvent.id.in_(
+                                    select(CalendarEventLink.event_id).where(
+                                        CalendarEventLink.connected_calendar_id
+                                        == source.connected_calendar_id
+                                    )
+                                ),
+                            ),
+                        )
+                    )
+                ).scalars()
+            )
         if written:
             await FeedEventProjection(session, search_indexer).index_events(written)
             # Events with member guests need their grants in the document, one by one.

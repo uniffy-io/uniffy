@@ -5,12 +5,13 @@ import pytest
 
 from uniffy.core.errors import UnavailableError
 from uniffy.core.models.calendar.subscription import SubscriptionFailure
-from uniffy.core.outbound import FetchResult
 from uniffy.domains.scheduling.calendar.subscriptions import refresh, verify
 from uniffy.domains.scheduling.calendar.subscriptions.refresh import check_feed
 from uniffy.domains.scheduling.calendar.subscriptions.verify import FeedCheckFailed, verify_address
+from uniffy.infrastructure.outbound import FetchResult
 
 URL = "https://calendar.example.org/secret-path/basic.ics"
+SEALED_URL = "sealed"
 
 
 def _session() -> AsyncMock:
@@ -19,7 +20,7 @@ def _session() -> AsyncMock:
 
 async def _verify(answer) -> None:
     cipher = MagicMock()
-    cipher.return_value.encrypt = AsyncMock(return_value="sealed")
+    cipher.return_value.encrypt = AsyncMock(return_value=SEALED_URL)
     with (
         patch.object(verify, "OrgCipher", cipher),
         patch.object(verify, "run_job_and_wait", answer),
@@ -36,7 +37,7 @@ async def test_the_worker_gets_the_sealed_address_never_the_plain_one() -> None:
     await _verify(answer)
 
     assert URL not in answer.await_args.args
-    assert "sealed" in answer.await_args.args
+    assert SEALED_URL in answer.await_args.args
 
 
 @pytest.mark.parametrize(

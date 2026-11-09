@@ -3,7 +3,7 @@
 import hashlib
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -33,6 +33,7 @@ from uniffy.domains.scheduling.calendar.connections.normalize import (
 )
 from uniffy.domains.scheduling.calendar.connections.people import PeopleSync, own_status
 from uniffy.domains.scheduling.calendar.connections.recurrence import series_rule
+from uniffy.domains.scheduling.calendar.recurrence import expand_recurrence, resolve_event_zone
 
 logger = logger.bind(component="scheduling.calendar.connections.sync")
 
@@ -56,6 +57,7 @@ _MUTABLE_COLUMNS = (
     "transparency",
     "is_out_of_office",
     "is_focus_time",
+    "guest_list_hidden",
     "recurrence_pattern",
     "recurrence_config",
 )
@@ -84,13 +86,45 @@ class SyncOutcome:
 
     @property
     def changed(self) -> bool:
-        return bool(self.created or self.updated or self.deleted)
+        return bool(self.created or self.updated or self.deleted or self.written_ids)
 
 
 def fingerprint(item: ProviderEvent) -> str:
     """What the item would store; the etag and update stamp move on echoes and are left out."""
     stable = replace(item, etag=None, updated_at=None, sequence=None)
     return hashlib.sha256(dumps_bytes(stable, option=OPTION_SORT_KEYS)).hexdigest()
+
+
+def _covered_by_snapshot(
+    event: CalendarEvent,
+    start: datetime,
+    end: datetime | None,
+    exceptions: set[date],
+) -> bool:
+    if (
+        (end is None or event.start_time < end)
+        and event.end_time > start
+        and event.start_time.astimezone(resolve_event_zone(event.timezone)).date() not in exceptions
+    ):
+        return True
+    if end is None:
+        # Probe two annual cycles per interval. Retain the series if no visible instance
+        # is found, since an empty bounded probe cannot prove its absence from the provider.
+        interval = max(1, (event.recurrence_config or {}).get("interval", 1))
+        remaining = (datetime.max.replace(tzinfo=UTC) - start).days
+        end = start + timedelta(days=min(732 * interval, remaining))
+    return bool(
+        expand_recurrence(
+            event.start_time,
+            event.end_time,
+            event.recurrence_pattern,
+            event.recurrence_config,
+            start,
+            end,
+            exception_dates=exceptions,
+            timezone=event.timezone,
+        )
+    )
 
 
 class _Round:
@@ -160,7 +194,8 @@ class _Round:
         link = self.links.get(item.provider_event_id)
         if link is not None:
             if not link.is_owner_link:
-                await self.people.respond_as_attendee(link.event_id, item)
+                if await self.people.respond_as_attendee(link.event_id, item):
+                    self.outcome.written_ids.append(link.event_id)
                 self._touch(link, item, digest)
                 return
             if link.content_fingerprint == digest:
@@ -400,6 +435,7 @@ class _Round:
             "transparency": item.transparency,
             "is_out_of_office": item.is_out_of_office,
             "is_focus_time": item.is_focus_time,
+            "guest_list_hidden": item.guest_list_hidden,
             "recurrence_pattern": pattern,
             "recurrence_config": config,
         }
@@ -619,9 +655,7 @@ class _Round:
             self.outcome.unknown_removals += 1
             return
         if not link.is_owner_link:
-            await self.people.ensure_attendee(
-                link.event_id, self.target.owner_id, AttendeeStatus.DECLINED
-            )
+            await self.people.update_response(link.event_id, AttendeeStatus.DECLINED)
             await self.session.delete(link)
             self.outcome.written_ids.append(link.event_id)
             return
@@ -699,16 +733,16 @@ class _Round:
         )
         self.outcome.removed_ids.extend(ids)
 
-    async def sweep(self, window_start: datetime) -> None:
-        """After a full snapshot: every owner link it did not mention is gone from the provider."""
+    async def sweep(self, window_start: datetime, window_end: datetime | None) -> None:
+        """Only absence inside the provider's snapshot coverage proves removal."""
         stale = [link for link in list(self.links.values()) if link.last_scan_id != self.scan_id]
         if not stale:
             return
         # The snapshot only reaches back to the window; older events are not evidence of removal.
-        in_window = set(
+        candidates = list(
             (
                 await self.session.execute(
-                    select(CalendarEvent.id).where(
+                    select(CalendarEvent).where(
                         CalendarEvent.id.in_([link.event_id for link in stale]),
                         (CalendarEvent.end_time >= window_start)
                         | (CalendarEvent.recurrence_pattern != RecurrencePattern.NONE),
@@ -716,6 +750,20 @@ class _Round:
                 )
             ).scalars()
         )
+        exceptions: dict[UUID, set[date]] = {}
+        for event_id, occurrence_date in (
+            await self.session.execute(
+                select(RecurrenceException.event_id, RecurrenceException.original_date).where(
+                    RecurrenceException.event_id.in_([event.id for event in candidates])
+                )
+            )
+        ).all():
+            exceptions.setdefault(event_id, set()).add(occurrence_date)
+        in_window = {
+            event.id
+            for event in candidates
+            if _covered_by_snapshot(event, window_start, window_end, exceptions.get(event.id, set()))
+        }
         for link in stale:
             if link.event_id in in_window:
                 await self._remove(link.provider_event_id)
@@ -729,12 +777,13 @@ async def stage_provider_changes(
     members: dict[str, UUID],
     scan_id: UUID | None,
     window_start: datetime,
+    window_end: datetime | None = None,
 ) -> SyncOutcome:
     """Write one round; the caller holds the connected calendar's lock and commits."""
     sync_round = _Round(session, target, members, scan_id if batch.full_scan else None)
     await sync_round.load_links()
     await sync_round.apply(batch)
     if batch.full_scan:
-        await sync_round.sweep(window_start)
+        await sync_round.sweep(window_start, window_end)
     await session.flush()
     return sync_round.outcome

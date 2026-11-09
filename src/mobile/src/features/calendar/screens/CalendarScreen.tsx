@@ -965,7 +965,12 @@ export function CalendarScreen() {
         )
         .map((c) => c.id),
     );
-    const isMine = memberCommitments(user?.id, ownCalendarIds);
+    const excludedCalendarIds = new Set(
+      (calendarsQuery.data ?? [])
+        .filter((c) => (c.section === "subscribed" || c.section === "connected") && !c.countsAsBusy)
+        .map((c) => c.id),
+    );
+    const isMine = memberCommitments(user?.id, ownCalendarIds, excludedCalendarIds);
     return (event: SerializedEvent) => blocksTime(event) && isMine(event);
   }, [calendarsQuery.data, user?.id]);
   const colorOf = useCallback(

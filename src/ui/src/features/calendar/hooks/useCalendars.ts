@@ -55,6 +55,13 @@ export function useConflictScope(): ConflictScope {
         new Set(
           calendars.filter((c) => c.ownerId === userId && countsAsOwnSchedule(c)).map((c) => c.id),
         ),
+        new Set(
+          calendars
+            .filter(
+              (c) => (c.kind === "subscribed" || c.kind === "connected") && !countsAsOwnSchedule(c),
+            )
+            .map((c) => c.id),
+        ),
       ),
     [calendars, userId],
   );

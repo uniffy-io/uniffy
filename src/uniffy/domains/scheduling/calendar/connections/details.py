@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.calendar.connection import (
@@ -26,14 +26,22 @@ class ProviderDetails:
     edit_hint: CalendarProvider | None
 
 
-async def provider_details(session: AsyncSession, event: CalendarEvent) -> ProviderDetails:
+async def provider_details(
+    session: AsyncSession, event: CalendarEvent, viewer_id: UUID
+) -> ProviderDetails:
     series_id: UUID = event.recurrence_id or event.id
+    statement = select(CalendarEventParticipant).where(CalendarEventParticipant.event_id == event.id)
+    if event.guest_list_hidden and viewer_id != event.organizer_id:
+        statement = statement.where(
+            or_(
+                CalendarEventParticipant.is_organizer.is_(True),
+                CalendarEventParticipant.user_id == viewer_id,
+            )
+        )
     participants = list(
         (
             await session.execute(
-                select(CalendarEventParticipant)
-                .where(CalendarEventParticipant.event_id == event.id)
-                .order_by(
+                statement.order_by(
                     CalendarEventParticipant.is_organizer.desc(), CalendarEventParticipant.email
                 )
             )

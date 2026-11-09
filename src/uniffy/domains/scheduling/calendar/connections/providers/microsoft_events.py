@@ -147,6 +147,7 @@ def parse_graph_event(
         organizer_name=organizer[1],
         is_organizer=item.get("isOrganizer") is not False,
         guests_hidden=item.get("hideAttendees") is True and item.get("isOrganizer") is False,
+        guest_list_hidden=item.get("hideAttendees") is True,
         is_out_of_office=show_as == "oof",  # noqa: PLR2004 - Graph showAs value
     )
 

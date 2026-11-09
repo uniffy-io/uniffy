@@ -28,7 +28,6 @@ from uniffy.core.models.calendar.provider_push import (
 )
 from uniffy.core.models.login.user import User
 from uniffy.core.models.shared import AttendeeRole, AttendeeStatus
-from uniffy.core.outbound import ApiError
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import ContentType
 from uniffy.domains.scheduling.calendar.connections.clients import ProviderClient, client_for
@@ -77,6 +76,7 @@ from uniffy.domains.scheduling.calendar.connections.tokens import (
     access_token_for,
 )
 from uniffy.domains.scheduling.calendar.search import refresh_event_search_projection
+from uniffy.infrastructure.outbound import ApiError
 
 logger = logger.bind(component="scheduling.calendar.connections.push")
 

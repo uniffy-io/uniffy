@@ -5,7 +5,6 @@ from typing import Any
 from urllib.parse import quote, urlencode
 
 from uniffy.core.models.calendar.connection import CalendarProvider, ProviderAccessRole, SyncFailure
-from uniffy.core.outbound import ApiResponse
 from uniffy.domains.scheduling.calendar.connections.normalize import (
     ChangeBatch,
     ItemKind,
@@ -30,6 +29,7 @@ from uniffy.domains.scheduling.calendar.connections.providers.base import (
 from uniffy.domains.scheduling.calendar.connections.providers.google_events import (
     parse_google_event,
 )
+from uniffy.infrastructure.outbound import ApiResponse
 
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 SCOPES = (
@@ -343,8 +343,11 @@ class GoogleCalendarClient:
         response = await self._api.request(
             "PATCH",
             _event_path(provider_calendar_id, event_id),
-            params={"sendUpdates": "all", "attendeesOmitted": True},
-            json_body={"attendees": [{"email": self_email, "responseStatus": response_status}]},
+            params={"sendUpdates": "all"},
+            json_body={
+                "attendeesOmitted": True,
+                "attendees": [{"email": self_email, "responseStatus": response_status}],
+            },
             headers=_bearer(token),
         )
         if not response.ok:

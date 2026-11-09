@@ -299,5 +299,5 @@ class EventQueryOperations:
     ) -> tuple[CalendarEvent, list[tuple[EventAttendee, dict]]]:
         """Get an event and its attendees (view-access required)."""
         event = await self.events.get_by_id(user_id, organization_id, event_id)
-        attendees = await queries.get_event_attendees(self.session, event_id)
+        attendees = await queries.get_event_attendees(self.session, event_id, viewer_id=user_id)
         return event, attendees

@@ -1,12 +1,12 @@
 """Outbound HTTP: typed URLs through ``fetch_public``, fixed provider hosts through ``ApiClient``."""
 
-from uniffy.core.outbound.addresses import (
+from uniffy.infrastructure.outbound.addresses import (
     OutboundFailure,
     OutboundFetchError,
     normalize_public_url,
 )
-from uniffy.core.outbound.api import ApiClient, ApiError, ApiResponse, parse_retry_after
-from uniffy.core.outbound.fetch import FetchResult, fetch_public
+from uniffy.infrastructure.outbound.api import ApiClient, ApiError, ApiResponse, parse_retry_after
+from uniffy.infrastructure.outbound.fetch import FetchResult, fetch_public
 
 __all__ = [
     "ApiClient",

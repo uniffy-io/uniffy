@@ -7,7 +7,7 @@ import pytest
 from pyqwest.testing import ASGITransport
 
 from uniffy.core.json_codec import dumps_bytes, loads
-from uniffy.core.outbound import ApiClient, ApiError, parse_retry_after
+from uniffy.infrastructure.outbound import ApiClient, ApiError, parse_retry_after
 
 BASE = "https://api.example.com/v1"
 

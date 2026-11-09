@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from uniffy.core.models.calendar.connection import ProviderAccessRole, SyncFailure
-from uniffy.core.outbound import ApiClient, ApiResponse
+from uniffy.infrastructure.outbound import ApiClient, ApiResponse
 
 # Tests swap in an in-memory provider; production leaves it None for the real network.
 TRANSPORT_FACTORY: Callable[[], Any] | None = None

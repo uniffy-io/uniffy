@@ -8,14 +8,14 @@ from urllib.parse import urljoin, urlsplit
 
 from pyqwest import Client, HTTPTransport, ReadError, RemoteProtocolError, StreamError, WriteError
 
-from uniffy.core.outbound.addresses import (
+from uniffy.infrastructure.outbound.addresses import (
     OutboundFailure,
     OutboundFetchError,
     Resolver,
     normalize_public_url,
     resolve_public,
 )
-from uniffy.core.outbound.metrics import OUTBOUND_FETCH_TOTAL
+from uniffy.infrastructure.outbound.metrics import OUTBOUND_FETCH_TOTAL
 
 MAX_REDIRECTS = 5
 CONNECT_TIMEOUT_SECONDS = 10.0

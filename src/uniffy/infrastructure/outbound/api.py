@@ -12,7 +12,7 @@ from urllib.parse import urlencode, urlsplit
 from pyqwest import Client, HTTPTransport, ReadError, RemoteProtocolError, StreamError, WriteError
 
 from uniffy.core.json_codec import JSONDecodeError, dumps_bytes, loads
-from uniffy.core.outbound.metrics import OUTBOUND_API_DURATION, OUTBOUND_API_TOTAL
+from uniffy.infrastructure.outbound.metrics import OUTBOUND_API_DURATION, OUTBOUND_API_TOTAL
 
 API_TIMEOUT_SECONDS = 20.0
 API_MAX_BYTES = 8 * 1024 * 1024

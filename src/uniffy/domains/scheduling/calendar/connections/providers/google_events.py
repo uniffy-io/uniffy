@@ -131,6 +131,7 @@ def parse_google_event(
         is_organizer=_is_organizer(organizer, self_email),
         guests_hidden=item.get("guestsCanSeeOtherGuests") is False
         and not _is_organizer(organizer, self_email),
+        guest_list_hidden=item.get("guestsCanSeeOtherGuests") is False,
         is_out_of_office=event_type == "outOfOffice",  # noqa: PLR2004 - Google eventType
         is_focus_time=event_type == "focusTime",  # noqa: PLR2004 - Google eventType
         **common,

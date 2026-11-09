@@ -192,7 +192,7 @@ class FakeGoogle:
             if expected and expected != event["etag"]:
                 return JSONResponse({"error": {"code": 412}}, status_code=412)
             body = loads(await request.body())
-            if request.query_params.get("attendeesOmitted") == "true":
+            if body.get("attendeesOmitted") is True:
                 for attendee in event.get("attendees", []):
                     for change in body.get("attendees", []):
                         if attendee.get("email") == change.get("email"):

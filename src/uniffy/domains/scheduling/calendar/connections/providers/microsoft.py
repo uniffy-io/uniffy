@@ -7,7 +7,6 @@ from urllib.parse import quote, urlencode
 
 from uniffy.core.json_codec import JSONDecodeError, loads
 from uniffy.core.models.calendar.connection import CalendarProvider, ProviderAccessRole, SyncFailure
-from uniffy.core.outbound import ApiResponse
 from uniffy.domains.scheduling.calendar.connections.normalize import (
     ChangeBatch,
     ItemKind,
@@ -35,6 +34,7 @@ from uniffy.domains.scheduling.calendar.connections.recurrence import (
     reconcile_instances,
     series_rule,
 )
+from uniffy.infrastructure.outbound import ApiResponse
 
 LOGIN_BASE = "https://login.microsoftonline.com"
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"

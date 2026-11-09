@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -64,6 +64,25 @@ class PushTarget:
 
 
 async def claim_push(session: AsyncSession, push_id: UUID, generation: int) -> PushClaim | None:
+    identity = (
+        await session.execute(
+            select(CalendarProviderPush.event_id, CalendarProviderPush.connected_calendar_id).where(
+                CalendarProviderPush.id == push_id
+            )
+        )
+    ).first()
+    if identity is None:
+        await session.rollback()
+        return None
+    await session.execute(
+        select(
+            func.pg_advisory_xact_lock(
+                func.hashtextextended(
+                    f"calendar-push:{identity.event_id}:{identity.connected_calendar_id}", 0
+                )
+            )
+        )
+    )
     # One write per event and calendar at a time: a second one would read a stale etag and
     # mistake the first for a provider edit, and a delete must wait for the create it undoes.
     other = aliased(CalendarProviderPush)

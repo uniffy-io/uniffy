@@ -162,6 +162,7 @@ async def update_connected_calendar(
     direction: SyncDirection | None,
     counts_as_busy: bool | None,
 ) -> UUID:
+    await require_member(session, user_id, organization_id)
     row = await session.scalar(
         select(ConnectedCalendar)
         .join(CalendarConnection, CalendarConnection.id == ConnectedCalendar.connection_id)
@@ -176,7 +177,6 @@ async def update_connected_calendar(
         .with_for_update(of=ConnectedCalendar)
     )
     if row is None:
-        await require_member(session, user_id, organization_id)
         raise NotFoundError("Connected calendar", str(connected_calendar_id))
     policy = await resolve_calendar_policy(session, organization_id)
     changes: dict[str, object] = {}

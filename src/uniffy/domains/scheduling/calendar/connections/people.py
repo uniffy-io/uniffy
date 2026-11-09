@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.calendar.attendee import EventAttendee
@@ -42,8 +42,25 @@ class PeopleSync:
         self.owner_id = owner_id
         self.members = members
 
-    async def respond_as_attendee(self, event_id: UUID, item: ProviderEvent) -> None:
-        await self.ensure_attendee(event_id, self.owner_id, own_status(item))
+    async def respond_as_attendee(self, event_id: UUID, item: ProviderEvent) -> bool:
+        status = own_status(item)
+        if status == AttendeeStatus.PENDING:
+            return False
+        return await self.update_response(event_id, status)
+
+    async def update_response(self, event_id: UUID, status: AttendeeStatus) -> bool:
+        # An attendee copy cannot restore access removed by the organizer.
+        result = await self.session.execute(
+            update(EventAttendee)
+            .where(
+                EventAttendee.event_id == event_id,
+                EventAttendee.user_id == self.owner_id,
+                EventAttendee.status != status,
+            )
+            .values(status=status, responded_at=datetime.now(UTC))
+            .returning(EventAttendee.id)
+        )
+        return result.scalar_one_or_none() is not None
 
     async def ensure_attendee(
         self,

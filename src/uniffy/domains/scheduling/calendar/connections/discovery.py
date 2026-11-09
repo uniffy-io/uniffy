@@ -15,7 +15,6 @@ from uniffy.core.models.calendar.connection import (
     ConnectionStatus,
     SyncDirection,
 )
-from uniffy.core.outbound import ApiError
 from uniffy.domains.scheduling.calendar.calendars.subscribed import stage_connected_calendar
 from uniffy.domains.scheduling.calendar.connections.clients import client_for
 from uniffy.domains.scheduling.calendar.connections.credentials import (
@@ -36,6 +35,7 @@ from uniffy.domains.scheduling.calendar.connections.tokens import (
     require_reauth,
 )
 from uniffy.domains.scheduling.calendar.policy import resolve_calendar_policy
+from uniffy.infrastructure.outbound import ApiError
 
 logger = logger.bind(component="scheduling.calendar.connections.discovery")
 

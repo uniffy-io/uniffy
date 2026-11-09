@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import select, update
 
 from uniffy.core.audit.actions import Action
-from uniffy.core.errors import ValidationError
+from uniffy.core.errors import PermissionDeniedError, ValidationError
 from uniffy.core.events.bus import event_from_json
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.calendar.activity import EventActivity
@@ -33,11 +33,20 @@ from uniffy.core.models.calendar.provider_push import (
     PushOperation,
     PushState,
 )
+from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.core.models.notifications.outbox import NotificationOutbox
 from uniffy.core.models.shared import AttendeeStatus
 from uniffy.core.search import SearchIndexer
-from uniffy.core.types import AccessMode, CalendarType, ContentRole, NotificationType
+from uniffy.core.types import (
+    AccessMode,
+    CalendarType,
+    ContentRole,
+    ContentType,
+    NotificationType,
+    generate_id,
+)
+from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar import search as calendar_search
 from uniffy.domains.scheduling.calendar.calendars import search as calendars_search
 from uniffy.domains.scheduling.calendar.connections import ingress
@@ -45,18 +54,30 @@ from uniffy.domains.scheduling.calendar.connections import operations as connect
 from uniffy.domains.scheduling.calendar.connections import outbox as outbox_module
 from uniffy.domains.scheduling.calendar.connections import run as run_module
 from uniffy.domains.scheduling.calendar.connections.channels import secret_digest
+from uniffy.domains.scheduling.calendar.connections.details import provider_details
 from uniffy.domains.scheduling.calendar.connections.discovery import run_discovery
+from uniffy.domains.scheduling.calendar.connections.normalize import (
+    ChangeBatch,
+    ItemKind,
+    ProviderEvent,
+)
 from uniffy.domains.scheduling.calendar.connections.oauth import (
     complete_connection,
     start_connection,
 )
 from uniffy.domains.scheduling.calendar.connections.providers import base as provider_base
 from uniffy.domains.scheduling.calendar.connections.push import run_push
+from uniffy.domains.scheduling.calendar.connections.push_state import claim_push
 from uniffy.domains.scheduling.calendar.connections.run import SyncStatus, run_sync
+from uniffy.domains.scheduling.calendar.connections.sync import SyncTargetRow, stage_provider_changes
 from uniffy.domains.scheduling.calendar.connections.tokens import access_token_for
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
+from uniffy.domains.scheduling.calendar.mail.compose import build_message_document, load_bundle
+from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
 from uniffy.infrastructure.database import open_session
 from uniffy.tests.fakes.calendar_providers import FakeProviders
+from uniffy.tests.integration.access.recording_search import RecordingSearchEngine, recording_indexer
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -1257,3 +1278,351 @@ class TestPushIngress:
         assert enqueue.await_count == 1
         woken = await _primary(session, connection)
         assert woken.next_sync_at < later
+
+
+class TestSyncGuards:
+    @pytest.mark.parametrize("removal", [False, True])
+    async def test_attendee_copy_cannot_restore_a_revoked_invitation(
+        self, session, access, providers, removal
+    ):
+        uid = "revoked-invite@example.com"
+        organizer = _google_event(
+            "owner-copy",
+            "Private meeting",
+            iCalUID=uid,
+            attendees=[{"email": providers.graph.email, "responseStatus": "accepted"}],
+        )
+        guest = _graph_event(
+            "guest-copy",
+            "Private meeting",
+            iCalUId=uid,
+            isOrganizer=False,
+            organizer={"emailAddress": {"address": providers.google.email}},
+            attendees=[
+                {
+                    "emailAddress": {"address": providers.graph.email},
+                    "type": "required",
+                    "status": {"response": "accepted"},
+                }
+            ],
+        )
+        providers.google.put_event(providers.google.email, organizer)
+        providers.graph.put_event(guest)
+        owner, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        peer, _ = await _connect(
+            session,
+            access,
+            providers,
+            CalendarProvider.MICROSOFT,
+            user_id=access.peer_id,
+            code="peer-connect",
+        )
+        await _sync(session, owner)
+        await _sync(session, peer)
+        connected = await _primary(session, owner)
+        event_id = (await _linked_events(session, connected.id))["owner-copy"].id
+        organizer["attendees"] = []
+        providers.google.put_event(providers.google.email, organizer)
+        await _sync(session, owner)
+        if removal:
+            providers.graph.remove_event("guest-copy")
+        else:
+            guest["responseStatus"] = {"response": "tentativelyAccepted"}
+            providers.graph.put_event(guest)
+        await _sync(session, peer)
+        assert (
+            await session.scalar(
+                select(EventAttendee.id).where(
+                    EventAttendee.event_id == event_id,
+                    EventAttendee.user_id == access.peer_id,
+                )
+            )
+            is None
+        )
+        event = await _fresh(session, CalendarEvent, event_id)
+        assert (
+            await CalendarEventOperations(session, _indexer(), None)._resolve_role(
+                access.peer_id, access.org_id, event
+            )
+            is None
+        )
+
+    async def test_deactivated_owner_cannot_change_calendar_settings(
+        self, session, access, providers
+    ):
+
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        await _sync(session, connection)
+        connected = await _primary(session, connection)
+        await session.execute(
+            update(OrganizationMember)
+            .where(
+                OrganizationMember.organization_id == access.org_id,
+                OrganizationMember.user_id == access.member_id,
+            )
+            .values(is_active=False)
+        )
+        await session.commit()
+        with pytest.raises(PermissionDeniedError):
+            await connection_ops.update_connected_calendar(
+                session,
+                access.member_id,
+                access.org_id,
+                connected.id,
+                sync_enabled=False,
+                direction=None,
+                counts_as_busy=not connected.counts_as_busy,
+            )
+        await session.rollback()
+        saved = await _primary(session, connection)
+        assert saved.sync_enabled == connected.sync_enabled
+        assert saved.counts_as_busy == connected.counts_as_busy
+
+    async def test_empty_sync_rebuilds_search_after_an_outage(self, session, access, providers):
+
+        peer_email = await _email(session, access.peer_id)
+        providers.google.put_event(
+            providers.google.email,
+            _google_event(
+                "search-recovery",
+                "Recover searchable meeting",
+                attendees=[{"email": peer_email, "responseStatus": "accepted"}],
+            ),
+        )
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        engine = RecordingSearchEngine()
+        engine.available = False
+        indexer = recording_indexer(engine)
+        await _sync(session, connection, indexer)
+        connected = await _primary(session, connection)
+        event_id = (await _linked_events(session, connected.id))["search-recovery"].id
+        assert connected.search_stale
+        assert engine.indexed(ContentType.CALENDAR_EVENT, event_id) is None
+        engine.available = True
+        report = await _sync(session, connection, indexer)
+        assert report.status == SyncStatus.UNCHANGED
+        document = engine.indexed(ContentType.CALENDAR_EVENT, event_id)
+        assert document is not None
+        assert str(access.peer_id) in document["attendee_user_ids"]
+        assert not (await _primary(session, connection)).search_stale
+
+    async def test_push_claims_serialize_across_operations(self, session, access, providers):
+
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        connected = await _primary(session, connection)
+        event_id = generate_id()
+        pushes = [
+            CalendarProviderPush(
+                organization_id=access.org_id,
+                event_id=event_id,
+                connected_calendar_id=connected.id,
+                actor_id=access.member_id,
+                generation=connection.generation,
+                operation=operation,
+            )
+            for operation in (PushOperation.UPSERT, PushOperation.DELETE)
+        ]
+        session.add_all(pushes)
+        await session.commit()
+        first_id, second_id = [row.id for row in pushes]
+        first_claimed = asyncio.Event()
+        release_first = asyncio.Event()
+        second_started = asyncio.Event()
+        async with open_session() as first, open_session() as second:
+            commit = first.commit
+
+            async def hold_claim():
+                first_claimed.set()
+                await release_first.wait()
+                await commit()
+
+            async def second_claim():
+                second_started.set()
+                return await claim_push(second, second_id, connection.generation)
+
+            with patch.object(first, "commit", hold_claim):
+                task = asyncio.create_task(claim_push(first, first_id, connection.generation))
+                await asyncio.wait_for(first_claimed.wait(), timeout=5)
+                other = asyncio.create_task(second_claim())
+                await second_started.wait()
+                # The second transaction reaches PostgreSQL while the first holds the claim.
+                done, _ = await asyncio.wait({other}, timeout=0.2)
+                release_first.set()
+                claims = await asyncio.wait_for(asyncio.gather(task, other), timeout=5)
+        assert not done
+        assert claims[0] is not None
+        assert claims[1] is None
+        rows = await _pending_pushes(session, event_id)
+        assert sorted(row.state for row in rows) == sorted([PushState.IN_FLIGHT, PushState.PENDING])
+
+    @pytest.mark.parametrize("provider", [CalendarProvider.GOOGLE, CalendarProvider.MICROSOFT])
+    async def test_hidden_guest_list_is_filtered_for_every_viewer(
+        self, session, access, providers, provider
+    ):
+
+        peer_email = await _email(session, access.peer_id)
+        admin_email = await _email(session, access.admin_id)
+        if provider == CalendarProvider.GOOGLE:
+            providers.google.put_event(
+                providers.google.email,
+                _google_event(
+                    "private-roster",
+                    "Private roster",
+                    guestsCanSeeOtherGuests=False,
+                    attendees=[
+                        {"email": email, "responseStatus": "accepted"}
+                        for email in (
+                            peer_email,
+                            admin_email,
+                            OUTSIDE_GUEST,
+                        )
+                    ],
+                ),
+            )
+        else:
+            providers.graph.put_event(
+                _graph_event(
+                    "private-roster",
+                    "Private roster",
+                    hideAttendees=True,
+                    attendees=[
+                        {
+                            "emailAddress": {"address": email},
+                            "type": "required",
+                            "status": {"response": "accepted"},
+                        }
+                        for email in (peer_email, admin_email, OUTSIDE_GUEST)
+                    ],
+                )
+            )
+        connection, _ = await _connect(session, access, providers, provider)
+        await _sync(session, connection)
+        connected = await _primary(session, connection)
+        event_id = (await _linked_events(session, connected.id))["private-roster"].id
+        event = await _fresh(session, CalendarEvent, event_id)
+        assert event.guest_list_hidden
+        owner_view = await provider_details(session, event, access.member_id)
+        assert {p.email for p in owner_view.participants} >= {peer_email, admin_email, OUTSIDE_GUEST}
+        peer_view = await provider_details(session, event, access.peer_id)
+        assert {p.email for p in peer_view.participants if not p.is_organizer} == {peer_email}
+        attendees = await queries.get_attendees_for_events(
+            session, [event_id], viewer_id=access.peer_id
+        )
+        assert {a.user_id for a, _ in attendees[event_id]} == {access.peer_id, access.member_id}
+        _, agent_attendees = await CalendarEventOperations(
+            session, _indexer(), None
+        ).get_event_with_attendees(
+            access.peer_id,
+            access.org_id,
+            event_id,
+        )
+        assert {a.user_id for a, _ in agent_attendees} == {access.peer_id, access.member_id}
+        exports = await build_exports(
+            session, [event], viewer_id=access.peer_id, organization_id=access.org_id
+        )
+        assert admin_email not in {a.person.email for e in exports for a in e.attendees}
+        bundle = await load_bundle(session, event_id)
+        assert bundle is not None
+        request = EventMailRequest(
+            delivery_id=generate_id(),
+            organization_id=access.org_id,
+            recipient_id=access.peer_id,
+            event_id=event_id,
+            kind=CalendarMailKind.INVITATION,
+            occurrence_date=None,
+            changes=(),
+        )
+        document = build_message_document(bundle, request, recipient_email=peer_email).decode()
+        assert peer_email in document
+        assert admin_email not in document
+        assert OUTSIDE_GUEST not in document
+
+    async def test_google_rsvp_keeps_other_guests(self, session, access, providers):
+        providers.google.put_event(
+            providers.google.email,
+            _google_event(
+                "rsvp-copy",
+                "Invitation",
+                organizer={"email": OUTSIDE_GUEST},
+                attendees=[
+                    {"email": providers.google.email, "self": True, "responseStatus": "needsAction"},
+                    {"email": "another@example.com", "responseStatus": "tentative"},
+                ],
+            ),
+        )
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        await _sync(session, connection)
+        connected = await _primary(session, connection)
+        event_id = (await _linked_events(session, connected.id))["rsvp-copy"].id
+        await CalendarEventOperations(session, _indexer(), None).update_attendee_status(
+            access.member_id,
+            access.org_id,
+            event_id,
+            AttendeeStatus.ACCEPTED,
+        )
+        (push,) = await _pending_pushes(session, event_id)
+        await run_push(session, push.id, push.generation, _indexer())
+        guests = providers.google.events[providers.google.email]["rsvp-copy"]["attendees"]
+        assert {g["email"]: g["responseStatus"] for g in guests} == {
+            providers.google.email: "accepted",
+            "another@example.com": "tentative",
+        }
+
+    @pytest.mark.parametrize("bounded", [False, True])
+    async def test_snapshot_sweep_respects_both_window_bounds_and_recurrence(
+        self, session, access, providers, bounded
+    ):
+
+        connection, _ = await _connect(session, access, providers, CalendarProvider.MICROSOFT)
+        connected = await _primary(session, connection)
+        target = SyncTargetRow(
+            connected_calendar_id=connected.id,
+            organization_id=access.org_id,
+            owner_id=access.member_id,
+            calendar_id=connected.calendar_id,
+        )
+        end = START + timedelta(days=10)
+        items = tuple(
+            ProviderEvent(
+                provider_event_id=key,
+                kind=ItemKind.MASTER if rule else ItemKind.SINGLE,
+                title=key,
+                start_time=start,
+                end_time=start + timedelta(hours=1),
+                recurrence=rule,
+            )
+            for key, start, rule in (
+                ("inside", START + timedelta(days=1), ()),
+                ("future", end + timedelta(days=1), ()),
+                ("past", START - timedelta(days=20), ()),
+                ("future-series", end + timedelta(days=1), ("RRULE:FREQ=DAILY;COUNT=3",)),
+                ("ended-series", START - timedelta(days=20), ("RRULE:FREQ=DAILY;COUNT=3",)),
+                ("inside-series", START - timedelta(days=20), ("RRULE:FREQ=DAILY",)),
+            )
+        )
+        await stage_provider_changes(
+            session,
+            target,
+            ChangeBatch(items=items),
+            members={},
+            scan_id=None,
+            window_start=START,
+        )
+        await session.commit()
+        events = await _linked_events(session, connected.id)
+        outcome = await stage_provider_changes(
+            session,
+            target,
+            ChangeBatch(items=(), full_scan=True),
+            members={},
+            scan_id=generate_id(),
+            window_start=START,
+            window_end=end if bounded else None,
+        )
+        await session.commit()
+        removed = {"inside", "inside-series"}
+        if not bounded:
+            removed |= {"future", "future-series"}
+        assert set(outcome.removed_ids) == {events[key].id for key in removed}
+        for key in events.keys() - removed:
+            assert not (await _fresh(session, CalendarEvent, events[key].id)).is_deleted

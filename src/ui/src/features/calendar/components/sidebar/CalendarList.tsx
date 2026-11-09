@@ -19,6 +19,7 @@ import {
 import { AccessMode, ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { ActionMenu, ActionMenuItem, ActionMenuSeparator } from "@/components/ui/action-menu";
+import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { useAccessPolicyDialog } from "@/features/permissions";
@@ -109,6 +110,16 @@ export function CalendarList() {
           ))}
         </SidebarSection>
       ))}
+
+      <Button
+        type="button"
+        variant="ghost"
+        className="w-full justify-start"
+        onClick={() => dispatch(openConnectionsDialog())}
+      >
+        <PlugsConnected size={16} />
+        Manage connected accounts
+      </Button>
 
       {dialog?.kind === "create" && <CalendarFormModal onClose={close} />}
       {dialog?.kind === "follow-feed" && <SubscribeCalendarModal onClose={close} />}

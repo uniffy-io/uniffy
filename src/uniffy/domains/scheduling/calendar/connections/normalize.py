@@ -72,6 +72,7 @@ class ProviderEvent:
     is_organizer: bool = True
     # The organizer keeps the guest list from guests, so this copy cannot say who left.
     guests_hidden: bool = False
+    guest_list_hidden: bool = False
     is_out_of_office: bool = False
     is_focus_time: bool = False
 

@@ -30,7 +30,6 @@ from uniffy.core.models.calendar.connection import (
     ConnectionStatus,
 )
 from uniffy.core.models.calendar.provider_push import CalendarProviderPush, PushState
-from uniffy.core.outbound import ApiError
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.domains.scheduling.calendar.connections.clients import (
     client_for,
@@ -44,6 +43,7 @@ from uniffy.domains.scheduling.calendar.connections.providers.base import (
 from uniffy.domains.scheduling.calendar.connections.reattach import reattach_calendar
 from uniffy.domains.scheduling.calendar.connections.tokens import seal_grant
 from uniffy.domains.scheduling.calendar.policy import require_can_connect
+from uniffy.infrastructure.outbound import ApiError
 
 logger = logger.bind(component="scheduling.calendar.connections.oauth")
 

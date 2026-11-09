@@ -78,13 +78,13 @@ Adding a new domain:
   suppressions disabled, so inline and file-level `noqa` directives cannot waive these boundaries.
   When an external process is unavoidable, use `asyncio.create_subprocess_exec` with a fixed
   executable and separate arguments; never construct a shell command.
-- **A URL a person typed is fetched only through `core/outbound.fetch_public`, on a worker, never
+- **A URL a person typed is fetched only through `infrastructure/outbound.fetch_public`, on a worker, never
   in the API process.** It refuses private, loopback, link-local and metadata addresses (operators
   open ranges with `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`), pins the connection to the address it
   checked, re-checks every redirect, caps the body and never puts the URL in an error. Hosts an
   admin configures (an integration `base_url`, SMTP) are trusted configuration and stay outside it.
 - **Fixed provider APIs (Google Calendar, Microsoft Graph, their OAuth endpoints) go through
-  `core/outbound.ApiClient`.** It is bound to one https host, follows a paging link only on that
+  `infrastructure/outbound.ApiClient`.** It is bound to one https host, follows a paging link only on that
   host, caps bodies, parses `Retry-After`, returns HTTP statuses for the caller to classify and
   never puts a token in an error. In the API process it serves only the sign-in exchange and, after
   the disconnect commits, the best-effort channel stop and token revoke; sync and pushes run on the

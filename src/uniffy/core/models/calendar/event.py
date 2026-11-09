@@ -58,6 +58,7 @@ class CalendarEvent(SQLModel, table=True):
     )
     end_time: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
     is_all_day: bool = Field(default=False, nullable=False)
+    guest_list_hidden: bool = Field(default=False, nullable=False)
     timezone: str = Field(max_length=100, default="UTC", nullable=False)
     location: str = Field(default="", max_length=500, nullable=False)
     meeting_url: str | None = Field(default=None, max_length=2000)

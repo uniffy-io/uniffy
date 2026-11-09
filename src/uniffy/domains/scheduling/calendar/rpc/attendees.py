@@ -86,7 +86,7 @@ class AttendeeHandlers:
                     target_user_id=target_user_id,
                     role=attendee_role_from_proto(request.role),
                 )
-                attendees = await queries.get_event_attendees(session, event.id)
+                attendees = await queries.get_event_attendees(session, event.id, viewer_id=user_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return UpdateAttendeeRoleResponse(
                     event=event_to_proto(
@@ -123,7 +123,7 @@ class AttendeeHandlers:
                     role=attendee_role_from_proto(request.role),
                     call_lifecycle=self.call_lifecycle,
                 )
-                attendees = await queries.get_event_attendees(session, event.id)
+                attendees = await queries.get_event_attendees(session, event.id, viewer_id=user_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return AddAttendeesResponse(
                     event=event_to_proto(
@@ -159,7 +159,7 @@ class AttendeeHandlers:
                     attendee_ids=[parse_uuid(value, "user_id") for value in request.user_ids],
                     call_lifecycle=self.call_lifecycle,
                 )
-                attendees = await queries.get_event_attendees(session, event.id)
+                attendees = await queries.get_event_attendees(session, event.id, viewer_id=user_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return RemoveAttendeesResponse(
                     event=event_to_proto(

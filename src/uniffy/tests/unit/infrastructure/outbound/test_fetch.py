@@ -6,11 +6,12 @@ from collections.abc import Sequence
 import pytest
 from pyqwest.testing import ASGITransport
 
-from uniffy.core.outbound import OutboundFailure, OutboundFetchError, fetch_public
+from uniffy.infrastructure.outbound import OutboundFailure, OutboundFetchError, fetch_public
 
 SECRET_URL = "https://feeds.example.com/private-abc123/basic.ics"
 _SECRET = "private-abc123"
 _PUBLIC = "93.184.215.14"
+_ETAG = '"v1"'
 
 
 def _resolver(table: dict[str, str]):
@@ -56,7 +57,7 @@ async def test_a_body_comes_back_with_its_validators() -> None:
     hosts: list = []
     result = await _fetch(SECRET_URL, app, hosts=hosts)
     assert result.body == b"BEGIN:VCALENDAR"
-    assert result.etag == '"v1"'
+    assert result.etag == _ETAG
     assert hosts == [("feeds.example.com", (_PUBLIC,))]
 
 
