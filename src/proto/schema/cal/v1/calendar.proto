@@ -59,6 +59,8 @@ enum EventActivityAction {
   EVENT_ACTIVITY_ACTION_ATTENDEES_REMOVED = 12;
   EVENT_ACTIVITY_ACTION_RESPONSE_CHANGED = 13;
   EVENT_ACTIVITY_ACTION_FIELD_UPDATED = 14;
+  // A synced edit lost to a newer one on the other side; the losing values are kept
+  EVENT_ACTIVITY_ACTION_SYNC_CONFLICT = 15;
 }
 
 // Attendee role in the event
@@ -114,6 +116,10 @@ enum CalendarType {
   CALENDAR_TYPE_WORK = 2;
   CALENDAR_TYPE_TEAM = 3;
   CALENDAR_TYPE_SHARED = 4;
+  // Mirrors an external iCalendar feed; its events change only through the feed
+  CALENDAR_TYPE_SUBSCRIBED = 5;
+  // Mirrors a calendar of the owner's Google or Microsoft account
+  CALENDAR_TYPE_CONNECTED = 6;
 }
 
 // Where a calendar sits in the caller's calendar list
@@ -125,6 +131,102 @@ enum CalendarListSection {
   CALENDAR_LIST_SECTION_SHARED = 2;
   // Calendars the caller reaches only because they are open to the organization
   CALENDAR_LIST_SECTION_ORGANIZATION = 3;
+  // External feeds the caller subscribes to
+  CALENDAR_LIST_SECTION_SUBSCRIBED = 4;
+  // Calendars of the caller's connected Google or Microsoft accounts
+  CALENDAR_LIST_SECTION_CONNECTED = 5;
+}
+
+// A calendar service a member can connect
+enum CalendarProvider {
+  CALENDAR_PROVIDER_UNSPECIFIED = 0;
+  CALENDAR_PROVIDER_GOOGLE = 1;
+  CALENDAR_PROVIDER_MICROSOFT = 2;
+}
+
+// Which way changes flow between Uniffy and a connected calendar
+enum CalendarSyncDirection {
+  CALENDAR_SYNC_DIRECTION_UNSPECIFIED = 0;
+  // Provider changes arrive; the calendar is read-only in Uniffy
+  CALENDAR_SYNC_DIRECTION_INBOUND = 1;
+  // Changes flow both ways
+  CALENDAR_SYNC_DIRECTION_TWO_WAY = 2;
+}
+
+// Health of a connected calendar
+enum ConnectedCalendarState {
+  CONNECTED_CALENDAR_STATE_UNSPECIFIED = 0;
+  // Never synced yet
+  CONNECTED_CALENDAR_STATE_PENDING = 1;
+  CONNECTED_CALENDAR_STATE_HEALTHY = 2;
+  // One or two syncs in a row failed
+  CONNECTED_CALENDAR_STATE_FAILING = 3;
+  // Three or more syncs in a row failed
+  CONNECTED_CALENDAR_STATE_BROKEN = 4;
+  // The account is paused, or the organization turned sync off
+  CONNECTED_CALENDAR_STATE_PAUSED = 5;
+  // The account must be connected again before sync resumes
+  CONNECTED_CALENDAR_STATE_REAUTH_REQUIRED = 6;
+  // The account was disconnected; the calendar keeps its events
+  CONNECTED_CALENDAR_STATE_DETACHED = 7;
+}
+
+// Why a connected calendar's last sync or push failed
+enum CalendarSyncError {
+  CALENDAR_SYNC_ERROR_UNSPECIFIED = 0;
+  CALENDAR_SYNC_ERROR_UNREACHABLE = 1;
+  CALENDAR_SYNC_ERROR_RATE_LIMITED = 2;
+  CALENDAR_SYNC_ERROR_PROVIDER_ERROR = 3;
+  // The account may no longer change this calendar
+  CALENDAR_SYNC_ERROR_PERMISSION_DENIED = 4;
+  CALENDAR_SYNC_ERROR_NOT_FOUND = 5;
+  CALENDAR_SYNC_ERROR_REAUTH_REQUIRED = 6;
+  // Provider data could not be stored
+  CALENDAR_SYNC_ERROR_UNPROCESSABLE = 7;
+}
+
+// A guest's answer to an event invitation, as the provider reports it
+enum ParticipantResponse {
+  PARTICIPANT_RESPONSE_UNSPECIFIED = 0;
+  PARTICIPANT_RESPONSE_ACCEPTED = 1;
+  PARTICIPANT_RESPONSE_TENTATIVE = 2;
+  PARTICIPANT_RESPONSE_DECLINED = 3;
+  PARTICIPANT_RESPONSE_PENDING = 4;
+}
+
+// Health of a calendar's feed subscription
+enum CalendarSubscriptionState {
+  CALENDAR_SUBSCRIPTION_STATE_UNSPECIFIED = 0;
+  // Never synced yet
+  CALENDAR_SUBSCRIPTION_STATE_PENDING = 1;
+  CALENDAR_SUBSCRIPTION_STATE_HEALTHY = 2;
+  // One or two refreshes in a row failed
+  CALENDAR_SUBSCRIPTION_STATE_FAILING = 3;
+  // Three or more refreshes in a row failed; the owner was notified
+  CALENDAR_SUBSCRIPTION_STATE_BROKEN = 4;
+  // The organization turned external subscriptions off
+  CALENDAR_SUBSCRIPTION_STATE_PAUSED = 5;
+}
+
+// Why a feed subscription's last refresh failed
+enum CalendarSubscriptionError {
+  CALENDAR_SUBSCRIPTION_ERROR_UNSPECIFIED = 0;
+  CALENDAR_SUBSCRIPTION_ERROR_INVALID_URL = 1;
+  CALENDAR_SUBSCRIPTION_ERROR_UNRESOLVABLE = 2;
+  // The address points to a network the deployment does not allow
+  CALENDAR_SUBSCRIPTION_ERROR_BLOCKED_ADDRESS = 3;
+  CALENDAR_SUBSCRIPTION_ERROR_UNREACHABLE = 4;
+  CALENDAR_SUBSCRIPTION_ERROR_TIMEOUT = 5;
+  // The server answered with an error status; see last_error_status
+  CALENDAR_SUBSCRIPTION_ERROR_HTTP_STATUS = 6;
+  CALENDAR_SUBSCRIPTION_ERROR_TOO_LARGE = 7;
+  CALENDAR_SUBSCRIPTION_ERROR_REDIRECT_REFUSED = 8;
+  CALENDAR_SUBSCRIPTION_ERROR_TOO_MANY_REDIRECTS = 9;
+  CALENDAR_SUBSCRIPTION_ERROR_NOT_A_CALENDAR = 10;
+  CALENDAR_SUBSCRIPTION_ERROR_TOO_MANY_EVENTS = 11;
+  CALENDAR_SUBSCRIPTION_ERROR_POLICY_DISABLED = 12;
+  // The feed was read but could not be stored
+  CALENDAR_SUBSCRIPTION_ERROR_UNPROCESSABLE = 13;
 }
 
 // What happens to a deleted calendar's events
@@ -208,6 +310,16 @@ service CalendarService {
 
   // Stop the caller's subscribe URL for a calendar
   rpc RevokeCalendarFeed(RevokeCalendarFeedRequest) returns (RevokeCalendarFeedResponse) {}
+
+  // Subscribe to an external iCalendar feed as a new read-only calendar.
+  // Unsubscribing is DeleteCalendar.
+  rpc CreateCalendarSubscription(CreateCalendarSubscriptionRequest) returns (CreateCalendarSubscriptionResponse) {}
+
+  // Replace a subscription's address or change its refresh interval or busy setting
+  rpc UpdateCalendarSubscription(UpdateCalendarSubscriptionRequest) returns (UpdateCalendarSubscriptionResponse) {}
+
+  // Refresh a subscription now instead of waiting for its schedule
+  rpc RefreshCalendarSubscription(RefreshCalendarSubscriptionRequest) returns (RefreshCalendarSubscriptionResponse) {}
 
   // === Category Operations ===
 
@@ -358,6 +470,12 @@ message CalendarEvent {
   // caller is not organizer/attendee/editor): title, description, location,
   // meeting, channel, category, and attendees are stripped.
   bool details_hidden = 42;
+  // Guests the provider lists, including people outside the organization
+  repeated EventParticipant participants = 43;
+  // Set when the event can only be changed in this provider's calendar
+  CalendarProvider provider_edit_hint = 44;
+  // One instance of a provider series that Uniffy shows occurrence by occurrence
+  bool is_mirrored_occurrence = 45;
 }
 
 // Event attendee
@@ -708,6 +826,56 @@ message Calendar {
   // The owner's display name; every default calendar is named alike, so
   // clients label a colleague's default by whose it is
   string owner_name = 16;
+  // Events on it cannot be created or changed (a subscribed feed)
+  bool is_read_only = 17;
+  // The feed behind a subscribed calendar; set for its owner only
+  optional CalendarSubscription subscription = 18;
+  // The provider calendar behind a connected calendar; set for its owner only
+  optional ConnectedCalendarSummary connection = 19;
+}
+
+// The provider calendar a connected calendar mirrors
+message ConnectedCalendarSummary {
+  string connected_calendar_id = 1;
+  string connection_id = 2;
+  CalendarProvider provider = 3;
+  string account_email = 4;
+  CalendarSyncDirection direction = 5;
+  ConnectedCalendarState state = 6;
+  CalendarSyncError last_error = 7;
+  optional google.protobuf.Timestamp last_success_at = 8;
+  bool counts_as_busy = 9;
+}
+
+// Someone a provider lists on an event; people outside the organization appear only here
+message EventParticipant {
+  string email = 1;
+  string display_name = 2;
+  ParticipantResponse response = 3;
+  bool is_organizer = 4;
+  bool is_optional = 5;
+  // Set when the address belongs to a member of the organization
+  optional string user_id = 6;
+}
+
+// The external feed behind a subscribed calendar. The address itself is a
+// secret and never leaves the server; only its host does.
+message CalendarSubscription {
+  string url_host = 1;
+  int32 refresh_interval_minutes = 2;
+  // Its events count as busy in the owner's free/busy
+  bool counts_as_busy = 3;
+  CalendarSubscriptionState state = 4;
+  optional google.protobuf.Timestamp last_success_at = 5;
+  optional google.protobuf.Timestamp last_attempt_at = 6;
+  google.protobuf.Timestamp next_refresh_at = 7;
+  int32 consecutive_failures = 8;
+  CalendarSubscriptionError last_error = 9;
+  // The HTTP status behind CALENDAR_SUBSCRIPTION_ERROR_HTTP_STATUS
+  int32 last_error_status = 10;
+  int32 event_count = 11;
+  // Entries the feed holds that could not be shown (unsupported repeat rules and similar)
+  int32 skipped_count = 12;
 }
 
 message ListCalendarsRequest {
@@ -800,6 +968,20 @@ message CalendarPolicy {
   CalendarPolicyAudience team_calendar_creators = 2;
   // Who may open a calendar to the whole organization
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
+  // Members may subscribe to external calendar feeds
+  bool allow_external_subscriptions = 4;
+  // Who may connect Google or Microsoft accounts
+  ProviderSyncAudience provider_sync_audience = 5;
+  // Edits in Uniffy flow back to two-way connected calendars
+  bool allow_provider_writes = 6;
+}
+
+// Who may connect a Google or Microsoft account
+enum ProviderSyncAudience {
+  PROVIDER_SYNC_AUDIENCE_UNSPECIFIED = 0;
+  PROVIDER_SYNC_AUDIENCE_OFF = 1;
+  PROVIDER_SYNC_AUDIENCE_ADMINS = 2;
+  PROVIDER_SYNC_AUDIENCE_EVERYONE = 3;
 }
 
 message GetCalendarPolicyRequest {
@@ -810,18 +992,29 @@ message GetCalendarPolicyResponse {
   CalendarPolicy policy = 1;
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
+  bool can_subscribe_external_calendars = 4;
+  // Organization policy lets the caller connect a provider account
+  bool can_connect_providers = 5;
 }
 
 message UpdateCalendarPolicyRequest {
   string organization_id = 1;
   CalendarPolicyAudience team_calendar_creators = 2;
   CalendarPolicyAudience org_wide_calendar_sharers = 3;
+  // Unset keeps the stored value
+  optional bool allow_external_subscriptions = 4;
+  // Unset keeps the stored value
+  optional ProviderSyncAudience provider_sync_audience = 5;
+  // Unset keeps the stored value
+  optional bool allow_provider_writes = 6;
 }
 
 message UpdateCalendarPolicyResponse {
   CalendarPolicy policy = 1;
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
+  bool can_subscribe_external_calendars = 4;
+  bool can_connect_providers = 5;
 }
 
 // Category Messages
@@ -1306,4 +1499,52 @@ message RevokeCalendarFeedRequest {
 message RevokeCalendarFeedResponse {
   // False when the caller had no feed for this calendar
   bool revoked = 1;
+}
+
+message CreateCalendarSubscriptionRequest {
+  string organization_id = 1;
+  // An http(s) or webcal(s) address; treated as a secret once saved
+  string url = 2;
+  string name = 3;
+  string color = 4;
+  // One of the offered intervals in minutes (15, 30, 60, 180, 360, 720, 1440); 0 means the default
+  int32 refresh_interval_minutes = 5;
+  bool counts_as_busy = 6;
+}
+
+message CreateCalendarSubscriptionResponse {
+  // Unset when the address could not be read; nothing was saved
+  Calendar calendar = 1;
+  // Why the address could not be read
+  CalendarSubscriptionError check_error = 2;
+  // The HTTP status behind CALENDAR_SUBSCRIPTION_ERROR_HTTP_STATUS
+  int32 check_error_status = 3;
+}
+
+message UpdateCalendarSubscriptionRequest {
+  string organization_id = 1;
+  string calendar_id = 2;
+  // Replaces the address and forces a full refresh
+  optional string url = 3;
+  optional int32 refresh_interval_minutes = 4;
+  optional bool counts_as_busy = 5;
+}
+
+message UpdateCalendarSubscriptionResponse {
+  // Unchanged when the new address could not be read; nothing was saved
+  Calendar calendar = 1;
+  // Why the new address could not be read
+  CalendarSubscriptionError check_error = 2;
+  // The HTTP status behind CALENDAR_SUBSCRIPTION_ERROR_HTTP_STATUS
+  int32 check_error_status = 3;
+}
+
+message RefreshCalendarSubscriptionRequest {
+  string organization_id = 1;
+  string calendar_id = 2;
+}
+
+// Answers once the refresh finished, or after a bounded wait while it continues
+message RefreshCalendarSubscriptionResponse {
+  Calendar calendar = 1;
 }

@@ -14,6 +14,7 @@ from uniffy_proto.cal.v1.calendar_pb import (
 from uniffy_proto.cal.v1.calendar_pb import (
     CalendarEvent as ProtoCalendarEvent,
 )
+from uniffy_proto.cal.v1.calendar_pb import CalendarProvider as ProtoCalendarProvider
 from uniffy_proto.cal.v1.calendar_pb import (
     Category as ProtoCategory,
 )
@@ -26,6 +27,7 @@ from uniffy_proto.cal.v1.calendar_pb import (
 from uniffy_proto.cal.v1.calendar_pb import (
     EventActivityAction as ProtoEventActivityAction,
 )
+from uniffy_proto.cal.v1.calendar_pb import EventParticipant as ProtoEventParticipant
 from uniffy_proto.cal.v1.calendar_pb import (
     EventStatus as ProtoEventStatus,
 )
@@ -41,6 +43,7 @@ from uniffy_proto.cal.v1.calendar_pb import (
 from uniffy_proto.cal.v1.calendar_pb import (
     LinkedResource as ProtoLinkedResource,
 )
+from uniffy_proto.cal.v1.calendar_pb import ParticipantResponse as ProtoParticipantResponse
 from uniffy_proto.cal.v1.calendar_pb import (
     RecurrenceConfig as ProtoRecurrenceConfig,
 )
@@ -62,7 +65,9 @@ from uniffy.core.converters.proto import datetime_to_timestamp, timestamp_to_dat
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.category import Category
+from uniffy.core.models.calendar.connection import CalendarProvider
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.participant import CalendarEventParticipant, ParticipantResponse
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import (
@@ -195,6 +200,7 @@ ACTIVITY_ACTION_TO_PROTO = {
     "attendees_removed": ProtoEventActivityAction.ATTENDEES_REMOVED,
     "response_changed": ProtoEventActivityAction.RESPONSE_CHANGED,
     "field_updated": ProtoEventActivityAction.FIELD_UPDATED,
+    "sync_conflict": ProtoEventActivityAction.SYNC_CONFLICT,
 }
 
 RECURRENCE_EDIT_SCOPE_FROM_PROTO = {
@@ -263,6 +269,31 @@ def activity_to_proto(activity: EventActivity) -> ProtoEventActivity:
     return proto
 
 
+PROVIDER_HINT_TO_PROTO = {
+    CalendarProvider.GOOGLE: ProtoCalendarProvider.GOOGLE,
+    CalendarProvider.MICROSOFT: ProtoCalendarProvider.MICROSOFT,
+}
+_PARTICIPANT_RESPONSE_TO_PROTO = {
+    ParticipantResponse.ACCEPTED: ProtoParticipantResponse.ACCEPTED,
+    ParticipantResponse.TENTATIVE: ProtoParticipantResponse.TENTATIVE,
+    ParticipantResponse.DECLINED: ProtoParticipantResponse.DECLINED,
+    ParticipantResponse.PENDING: ProtoParticipantResponse.PENDING,
+}
+
+
+def participant_to_proto(participant: CalendarEventParticipant) -> ProtoEventParticipant:
+    message = ProtoEventParticipant(
+        email=participant.email,
+        display_name=participant.display_name or "",
+        response=_PARTICIPANT_RESPONSE_TO_PROTO[participant.response],
+        is_organizer=participant.is_organizer,
+        is_optional=participant.is_optional,
+    )
+    if participant.user_id is not None:
+        message.user_id = str(participant.user_id)
+    return message
+
+
 def event_to_proto(
     event: CalendarEvent,
     attendees: list[tuple[EventAttendee, dict]] | None = None,
@@ -275,6 +306,8 @@ def event_to_proto(
     room_amenities: list[str] | None = None,
     user_role: ContentRole | None = None,
     details_hidden: bool = False,
+    participants: list[CalendarEventParticipant] | None = None,
+    provider_edit_hint: CalendarProvider | None = None,
 ) -> ProtoCalendarEvent:
     """Convert a ``CalendarEvent`` row to its proto representation.
 
@@ -321,7 +354,12 @@ def event_to_proto(
         ),
         is_out_of_office=event.is_out_of_office,
         details_hidden=details_hidden,
+        is_mirrored_occurrence=event.is_mirrored_occurrence,
     )
+    if participants and not details_hidden:
+        proto_event.participants.extend(participant_to_proto(p) for p in participants)
+    if provider_edit_hint is not None:
+        proto_event.provider_edit_hint = PROVIDER_HINT_TO_PROTO[provider_edit_hint]
 
     if user_role is not None:
         proto_event.user_role = content_role_to_proto(user_role)

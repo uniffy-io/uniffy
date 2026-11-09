@@ -29,9 +29,10 @@ from uniffy.core.errors import ValidationError
 from uniffy.core.models.login.user import User
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
-from uniffy.core.types import ContentType
+from uniffy.core.types import CalendarType, ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
+from uniffy.domains.scheduling.calendar.calendars.access import read_only_calendar_ids
 from uniffy.domains.scheduling.calendar.calendars.converters import (
     calendar_to_proto,
     calendar_type_from_proto,
@@ -41,8 +42,14 @@ from uniffy.domains.scheduling.calendar.calendars.reader import (
     MAX_LISTED_CALENDARS,
     CalendarListing,
     CalendarReader,
+    CalendarSection,
 )
+from uniffy.domains.scheduling.calendar.connections.converters import summary_to_proto
+from uniffy.domains.scheduling.calendar.connections.operations import owned_connections
+from uniffy.domains.scheduling.calendar.policy import policy_admits_sync, resolve_calendar_policy
 from uniffy.domains.scheduling.calendar.rpc.support import map_domain_error, parse_uuid
+from uniffy.domains.scheduling.calendar.subscriptions.converters import subscription_to_proto
+from uniffy.domains.scheduling.calendar.subscriptions.operations import owned_subscriptions
 from uniffy.infrastructure.database import open_session
 
 
@@ -67,7 +74,9 @@ class CalendarManagementHandlers:
                     user_id, organization_id, after=after, limit=size + 1
                 )
                 next_token = str(listings[size - 1].calendar.id) if len(listings) > size else ""
-                calendars = await _to_proto(session, user_id, organization_id, listings[:size])
+                calendars = await listings_to_proto(
+                    session, user_id, organization_id, listings[:size]
+                )
         except ConnectError:
             raise
         except Exception as exc:
@@ -87,7 +96,7 @@ class CalendarManagementHandlers:
                 listing = await CalendarReader(session).get_listing(
                     user_id, organization_id, calendar_id
                 )
-                (calendar,) = await _to_proto(session, user_id, organization_id, [listing])
+                (calendar,) = await listings_to_proto(session, user_id, organization_id, [listing])
                 count = await CalendarReader(session).count_event_series(
                     user_id, organization_id, calendar_id
                 )
@@ -130,7 +139,7 @@ class CalendarManagementHandlers:
                     admin_group_ids=admin_group_ids,
                 )
                 listing = await operations.get_listing(user_id, organization_id, calendar.id)
-                (message,) = await _to_proto(session, user_id, organization_id, [listing])
+                (message,) = await listings_to_proto(session, user_id, organization_id, [listing])
         except ConnectError:
             raise
         except Exception as exc:
@@ -157,7 +166,7 @@ class CalendarManagementHandlers:
                     color=request.color if request.has_field("color") else None,
                 )
                 listing = await operations.get_listing(user_id, organization_id, calendar_id)
-                (message,) = await _to_proto(session, user_id, organization_id, [listing])
+                (message,) = await listings_to_proto(session, user_id, organization_id, [listing])
         except ConnectError:
             raise
         except Exception as exc:
@@ -215,7 +224,7 @@ class CalendarManagementHandlers:
                 listing = await CalendarOperations(session, self.search_indexer).set_visibility(
                     user_id, organization_id, calendar_id, request.hidden
                 )
-                (message,) = await _to_proto(session, user_id, organization_id, [listing])
+                (message,) = await listings_to_proto(session, user_id, organization_id, [listing])
         except ConnectError:
             raise
         except Exception as exc:
@@ -223,7 +232,7 @@ class CalendarManagementHandlers:
         return SetCalendarVisibilityResponse(calendar=message)
 
 
-async def _to_proto(
+async def listings_to_proto(
     session: AsyncSession,
     user_id,
     organization_id,
@@ -244,7 +253,53 @@ async def _to_proto(
             )
         ).all()
     }
+    subscriptions = await owned_subscriptions(
+        session,
+        user_id,
+        organization_id,
+        [
+            listing.calendar.id
+            for listing in listings
+            if listing.section == CalendarSection.SUBSCRIBED
+        ],
+    )
+    policy = await resolve_calendar_policy(session, organization_id)
+    policy_allows = policy.allow_external_subscriptions
+    connected = await owned_connections(
+        session,
+        user_id,
+        organization_id,
+        [
+            listing.calendar.id
+            for listing in listings
+            if listing.section == CalendarSection.CONNECTED
+        ],
+    )
+    sync_allowed = await policy_admits_sync(session, policy, user_id) if connected else True
+    read_only = await read_only_calendar_ids(
+        session,
+        [
+            listing.calendar.id
+            for listing in listings
+            if listing.calendar.calendar_type in (CalendarType.SUBSCRIBED, CalendarType.CONNECTED)
+        ],
+    )
     return [
-        calendar_to_proto(listing, decisions[key].role, owners.get(listing.calendar.owner_id, ""))
+        calendar_to_proto(
+            listing,
+            decisions[key].role,
+            owners.get(listing.calendar.owner_id, ""),
+            (
+                subscription_to_proto(row, policy_allows=policy_allows)
+                if (row := subscriptions.get(listing.calendar.id)) is not None
+                else None
+            ),
+            read_only=listing.calendar.id in read_only,
+            connection=(
+                summary_to_proto(pair[0], pair[1], policy_allows=sync_allowed)
+                if (pair := connected.get(listing.calendar.id)) is not None
+                else None
+            ),
+        )
         for listing, key in zip(listings, keys, strict=True)
     ]

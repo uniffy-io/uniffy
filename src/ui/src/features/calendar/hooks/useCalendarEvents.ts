@@ -11,7 +11,8 @@ import type { CalendarEvent, EventModalPrefill, PositionedEvent } from "@/featur
 import {
   getPositionedEventsForDay,
   getPositionedEventsForWeek,
-  areSameDay,
+  displayDayKey,
+  eventDayKey,
   matchesQuickAccess,
 } from "@/features/calendar/utils";
 import { GRID } from "@/features/calendar/constants";
@@ -78,7 +79,8 @@ export function useCalendarEvents() {
 
   const getEventsForDate = useCallback(
     (date: Date | string) => {
-      return visibleEvents.filter((event) => areSameDay(event.startTime, date));
+      const dayKey = displayDayKey(date);
+      return visibleEvents.filter((event) => eventDayKey(event) === dayKey);
     },
     [visibleEvents],
   );

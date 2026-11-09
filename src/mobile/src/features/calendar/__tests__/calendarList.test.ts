@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { ContentRole } from "@uniffy/proto/common/v1/common_pb";
 import {
+  CALENDAR_SECTIONS,
   calendarHint,
   calendarLabel,
+  connectionHint,
   defaultCalendarFor,
   memberCommitments,
+  providerEditNote,
   resolveEventColor,
   writableCalendars,
 } from "@features/calendar/calendarList";
@@ -23,6 +26,10 @@ function calendar(overrides: Partial<SerializedCalendar> & { id: string }): Seri
     userRole: ContentRole.OWNER,
     isHidden: false,
     section: "mine",
+    isReadOnly: false,
+    countsAsBusy: false,
+    feedBroken: false,
+    needsReconnect: false,
     ...overrides,
   };
 }
@@ -119,6 +126,13 @@ describe("what can double-book the member", () => {
     expect(mine(base)).toBe(false);
     expect(mine({ ...base, attendees: [attendee("declined")] })).toBe(false);
   });
+
+  it("excludes opted-out feeds before checking organizer or attendance", () => {
+    const scope = memberCommitments(ME, new Set(["my-calendar"]), new Set(["feed"]));
+    expect(scope({ ...base, calendarId: "feed", organizerId: ME })).toBe(false);
+    expect(scope({ ...base, calendarId: "feed", attendees: [attendee("accepted")] })).toBe(false);
+    expect(scope({ ...base, attendees: [attendee("accepted")] })).toBe(true);
+  });
 });
 
 describe("calendar labels", () => {
@@ -136,5 +150,98 @@ describe("calendar labels", () => {
   it("keeps the stored name for the owner and for other calendars", () => {
     expect(calendarLabel(theirs, "user-lead")).toBe(theirs.name);
     expect(calendarLabel({ ...theirs, isDefault: false }, ME)).toBe(theirs.name);
+  });
+});
+
+describe("calendar sections", () => {
+  it("follow the web sidebar order", () => {
+    expect(CALENDAR_SECTIONS.map((entry) => entry.section)).toEqual([
+      "mine",
+      "subscribed",
+      "connected",
+      "shared",
+      "organization",
+    ]);
+  });
+});
+
+describe("subscribed calendars", () => {
+  const FEED = calendar({ id: "holidays", section: "subscribed", isReadOnly: true });
+
+  it("are never a place to file an event, though the member owns them", () => {
+    expect(writableCalendars([FEED, calendar({ id: "work" })]).map((c) => c.id)).toEqual(["work"]);
+  });
+
+  it("read as subscribed in a picker hint", () => {
+    expect(calendarHint(FEED)).toBe("Subscribed");
+  });
+});
+
+describe("connected calendars", () => {
+  const WORK = calendar({
+    id: "work-google",
+    section: "connected",
+    connection: { provider: "google", accountEmail: "ada@example.com" },
+  });
+  const MIRROR = calendar({
+    id: "outlook-mirror",
+    section: "connected",
+    isReadOnly: true,
+    connection: { provider: "microsoft", accountEmail: "ada@corp.example" },
+  });
+
+  it("take events when two-way, never when the provider owns them", () => {
+    expect(writableCalendars([WORK, MIRROR]).map((c) => c.id)).toEqual(["work-google"]);
+  });
+
+  it("name the provider account they mirror", () => {
+    expect(connectionHint(WORK)).toBe("Google Calendar · ada@example.com");
+    expect(calendarHint(MIRROR)).toBe("Outlook · ada@corp.example");
+    expect(connectionHint(calendar({ id: "side" }))).toBeUndefined();
+  });
+
+  it("fall back to a plain label when a shared viewer cannot see the account", () => {
+    expect(calendarHint(calendar({ id: "theirs", section: "connected" }))).toBe("Connected");
+  });
+
+  it("point a read-only event at the provider it must be edited in", () => {
+    const single = { isRecurring: false, isMirroredOccurrence: false };
+    expect(providerEditNote({ ...single, providerEditHint: "google" })).toBe(
+      "Edit this event in Google Calendar.",
+    );
+    expect(providerEditNote({ ...single, providerEditHint: "microsoft" })).toBe(
+      "Edit this event in Outlook.",
+    );
+    expect(providerEditNote(single)).toBeUndefined();
+  });
+
+  it("name the series for a recurring or mirrored occurrence", () => {
+    const hint = { providerEditHint: "google" as const };
+    const expected = "Edit this series in Google Calendar.";
+    expect(providerEditNote({ ...hint, isRecurring: true, isMirroredOccurrence: false })).toBe(
+      expected,
+    );
+    expect(providerEditNote({ ...hint, isRecurring: false, isMirroredOccurrence: true })).toBe(
+      expected,
+    );
+    expect(
+      providerEditNote({
+        ...hint,
+        isRecurring: false,
+        isMirroredOccurrence: false,
+        recurrenceId: "series",
+      }),
+    ).toBe(expected);
+  });
+
+  it("explain a read-only calendar when the event carries no provider hint", () => {
+    const single = { isRecurring: false, isMirroredOccurrence: false };
+    expect(providerEditNote(single, { isReadOnly: true, section: "connected" })).toBe(
+      "From a read-only connected calendar. Changes come from its source.",
+    );
+    expect(providerEditNote(single, { isReadOnly: true, section: "subscribed" })).toBe(
+      "From a subscribed calendar. Changes come from its source.",
+    );
+    expect(providerEditNote(single, { isReadOnly: false, section: "connected" })).toBeUndefined();
   });
 });

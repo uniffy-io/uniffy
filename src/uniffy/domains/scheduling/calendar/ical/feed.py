@@ -15,10 +15,12 @@ from uniffy.core.crypto.org_cipher import OrgCipher
 from uniffy.core.errors import NotFoundError
 from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.feed_token import CalendarFeedToken
+from uniffy.core.models.calendar.subscription import CalendarSubscription
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_view
+from uniffy.domains.scheduling.calendar.connections.crypto import register_connection_crypto
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.ical.assemble import build_exports
 from uniffy.domains.scheduling.calendar.ical.emit import serialize_events
@@ -227,6 +229,19 @@ def _feed_token_set_ciphertext(row: CalendarFeedToken, ciphertext: str) -> None:
     row.token_encrypted = ciphertext
 
 
+async def _list_subscriptions_for_org(session: AsyncSession, organization_id: UUID):
+    """Yield every external feed address an organization holds, for DEK rotation."""
+    result = await session.execute(
+        select(CalendarSubscription).where(CalendarSubscription.organization_id == organization_id)
+    )
+    for row in result.scalars():
+        yield row
+
+
+def _subscription_set_ciphertext(row: CalendarSubscription, ciphertext: str) -> None:
+    row.url_encrypted = ciphertext
+
+
 # Without this the rotation sweep reports success while these secrets stay
 # sealed under the retired key, and every subscription breaks on its removal.
 def register_calendar_crypto() -> None:
@@ -239,3 +254,13 @@ def register_calendar_crypto() -> None:
             set_ciphertext=_feed_token_set_ciphertext,
         )
     )
+    register_consumer(
+        ReEncryptingConsumer(
+            name="calendar_subscriptions",
+            table_name="calendar_subscriptions",
+            list_rows=_list_subscriptions_for_org,
+            get_ciphertext=lambda row: row.url_encrypted,
+            set_ciphertext=_subscription_set_ciphertext,
+        )
+    )
+    register_connection_crypto()

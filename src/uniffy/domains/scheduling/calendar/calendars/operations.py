@@ -26,13 +26,20 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import AccessMode, CalendarType, ContentRole, ContentType, SubjectType
 from uniffy.domains.permissions.members import ContentMembersOperations
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.calendars.fields import (
+    validated_color,
+    validated_description,
+    validated_name,
+)
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarListing, CalendarReader
 from uniffy.domains.scheduling.calendar.calendars.relocation import stage_ical_uid_release
 from uniffy.domains.scheduling.calendar.calendars.search import (
     enqueue_calendar_search_acl_refresh,
     record_calendar_search_acl_refresh,
+    remove_event_documents,
 )
 from uniffy.domains.scheduling.calendar.events.operations import CalendarEventOperations
+from uniffy.domains.scheduling.calendar.ical.sync import stage_feed_purge
 from uniffy.domains.scheduling.calendar.policy import (
     require_can_create_team_calendar,
     require_can_open_calendar_to_org,
@@ -40,9 +47,6 @@ from uniffy.domains.scheduling.calendar.policy import (
 
 logger = logger.bind(component="scheduling.calendar.calendars.operations")
 
-NAME_LIMIT = 200
-COLOR_LIMIT = 50
-DESCRIPTION_LIMIT = 2000
 # Deleting a calendar's events runs the ordinary per-series delete, mail and
 # all, on the request; past this the caller moves them instead.
 MAX_DELETED_SERIES = 200
@@ -73,7 +77,15 @@ class CalendarOperations(CalendarReader):
     ) -> Calendar:
         if await get_active_membership(self.session, user_id, organization_id) is None:
             raise PermissionDeniedError("create", ContentType.CALENDAR.value)
-        name = _validated_name(name)
+        if calendar_type == CalendarType.SUBSCRIBED:
+            raise ValidationError(
+                "calendar_type", "A subscribed calendar is created by subscribing to a feed."
+            )
+        if calendar_type == CalendarType.CONNECTED:
+            raise ValidationError(
+                "calendar_type", "A connected calendar is created by connecting an account."
+            )
+        name = validated_name(name)
         admin_user_ids = [uid for uid in admin_user_ids or [] if uid != user_id]
         admin_group_ids = list(admin_group_ids or [])
         # Co-admins need a mode that admits members; asking for them is that choice.
@@ -90,8 +102,8 @@ class CalendarOperations(CalendarReader):
             organization_id=organization_id,
             owner_id=user_id,
             name=name,
-            description=_validated_description(description),
-            color=_validated_color(color),
+            description=validated_description(description),
+            color=validated_color(color),
             calendar_type=calendar_type,
             is_default=False,
             access_mode=access_mode,
@@ -149,6 +161,13 @@ class CalendarOperations(CalendarReader):
             logger.opt(exception=True).warning(f"Failed to index calendar {calendar.id}")
         return calendar
 
+    async def finish_subscribed_calendar(self, calendar: Calendar) -> None:
+        await enqueue_calendar_search_acl_refresh(calendar.id)
+        try:
+            await self._index_for_search(calendar, skip_member_lookup=True)
+        except Exception:
+            logger.opt(exception=True).warning(f"Failed to index calendar {calendar.id}")
+
     async def update_calendar(
         self,
         user_id: UUID,
@@ -161,14 +180,14 @@ class CalendarOperations(CalendarReader):
         # Access-policy changes go through permissions.v1.MembersService, not this method.
         calendar = await self.get_for_edit(user_id, organization_id, calendar_id)
         changed: list[str] = []
-        if name is not None and _validated_name(name) != calendar.name:
-            calendar.name = _validated_name(name)
+        if name is not None and validated_name(name) != calendar.name:
+            calendar.name = validated_name(name)
             changed.append("name")
-        if description is not None and _validated_description(description) != calendar.description:
-            calendar.description = _validated_description(description)
+        if description is not None and validated_description(description) != calendar.description:
+            calendar.description = validated_description(description)
             changed.append("description")
-        if color is not None and _validated_color(color) != calendar.color:
-            calendar.color = _validated_color(color)
+        if color is not None and validated_color(color) != calendar.color:
+            calendar.color = validated_color(color)
             changed.append("color")
         if not changed:
             return calendar
@@ -250,7 +269,25 @@ class CalendarOperations(CalendarReader):
             raise ValidationError("calendar_id", "A default calendar cannot be deleted.")
         await self._require_no_blocked_series(user_id, organization_id, calendar_id)
 
-        if target_calendar_id is not None:
+        purged_event_ids: tuple[UUID, ...] = ()
+        if calendar.calendar_type == CalendarType.CONNECTED:
+            # Deleting its events here would delete them in the provider calendar too.
+            raise ValidationError(
+                "calendar_id",
+                "Turn off sync for this calendar in the account settings before deleting it.",
+            )
+        if calendar.calendar_type == CalendarType.SUBSCRIBED:
+            # Unsubscribing: the mirrored events go with the feed, never to another calendar.
+            if target_calendar_id is not None:
+                raise ValidationError(
+                    "target_calendar_id",
+                    "Events from a subscribed calendar cannot be moved; unsubscribing removes them.",
+                )
+            moved = 0
+            purge = await stage_feed_purge(self.session, calendar_id)
+            deleted = purge.series
+            purged_event_ids = purge.removed_ids
+        elif target_calendar_id is not None:
             moved = await self._move_all_events(
                 user_id, organization_id, calendar_id, target_calendar_id
             )
@@ -287,6 +324,15 @@ class CalendarOperations(CalendarReader):
         await self.session.commit()
         if target_calendar_id is not None:
             await enqueue_calendar_search_acl_refresh(target_calendar_id)
+        if purged_event_ids:
+            try:
+                await remove_event_documents(
+                    self.search_indexer, organization_id, purged_event_ids, tombstone=False
+                )
+            except Exception:
+                logger.opt(exception=True).warning(
+                    f"Failed to remove subscribed calendar {calendar_id} events from search"
+                )
 
         urn = build_content_urn(self.content_type, calendar_id)
         try:
@@ -435,27 +481,3 @@ class CalendarOperations(CalendarReader):
         for event_id in event_ids:
             await events.delete(user_id, organization_id, event_id)
         return len(event_ids)
-
-
-def _validated_name(name: str) -> str:
-    cleaned = name.strip()
-    if not cleaned:
-        raise ValidationError("name", "A calendar needs a name.")
-    if len(cleaned) > NAME_LIMIT:
-        raise ValidationError("name", f"Calendar names are limited to {NAME_LIMIT} characters.")
-    return cleaned
-
-
-def _validated_color(color: str) -> str:
-    cleaned = color.strip()
-    if not cleaned or len(cleaned) > COLOR_LIMIT:
-        raise ValidationError("color", "Choose a calendar colour.")
-    return cleaned
-
-
-def _validated_description(description: str) -> str:
-    if len(description) > DESCRIPTION_LIMIT:
-        raise ValidationError(
-            "description", f"Descriptions are limited to {DESCRIPTION_LIMIT} characters."
-        )
-    return description

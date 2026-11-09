@@ -7,17 +7,19 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from uniffy.core.content.references import extract_all_outgoing_references
 from uniffy.core.events.realtime import publish_content_changed
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
-from uniffy.core.types import AccessMode, ContentType, EventTransparency
+from uniffy.core.models.calendar.provider_push import PushOperation
+from uniffy.core.types import ContentType
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.ical.parse import (
     ParsedEvent,
     SkippedEntry,
     parse_calendar,
 )
+from uniffy.domains.scheduling.calendar.ical.rows import build_event
 from uniffy.domains.scheduling.calendar.search import CalendarEventProjection
 
 logger = logger.bind(component="scheduling.calendar.ical.ingest")
@@ -118,6 +120,13 @@ async def apply_import(
                     )
                 )
 
+        await stage_provider_push(
+            session,
+            organization_id=organization_id,
+            event_ids=[event.id for event in created],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await session.commit()
     except Exception:
         await session.rollback()
@@ -147,31 +156,14 @@ def _stage_event(
     recurrence_id: UUID | None = None,
     ical_uid: str | None = "",
 ) -> CalendarEvent:
-    event = CalendarEvent(
+    event = build_event(
+        parsed,
         organization_id=organization_id,
         organizer_id=user_id,
         calendar_id=calendar_id,
-        title=parsed.title,
-        description=parsed.description,
-        start_time=parsed.start_time,
-        end_time=parsed.end_time,
-        is_all_day=parsed.is_all_day,
-        timezone=parsed.timezone,
-        location=parsed.location,
-        meeting_url=parsed.meeting_url,
-        access_mode=AccessMode.OWNER_ONLY,
-        status=parsed.status,
-        visibility=parsed.visibility,
-        transparency=(EventTransparency.TRANSPARENT if parsed.is_all_day else parsed.transparency),
-        recurrence_pattern=parsed.recurrence_pattern,
-        recurrence_config=parsed.recurrence_config,
         recurrence_id=recurrence_id,
         ical_uid=parsed.ical_uid if ical_uid == "" else ical_uid,
-        outgoing_references=(
-            extract_all_outgoing_references(parsed.description, organization_id)
-            if parsed.description
-            else None
-        ),
+        with_references=True,
     )
     session.add(event)
     return event

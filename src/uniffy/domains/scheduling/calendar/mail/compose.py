@@ -73,8 +73,6 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
         organizer_name=_display_name(organizer),
         attendee_ids={user_id for user_id, _, _, _ in roster},
         attendee_names=[full or username or email for _, full, username, email in roster],
-        # The document describes the meeting as its organizer sees it,
-        # which is what everyone on the roster was invited to.
         exports=await build_exports(
             session,
             [event],
@@ -84,10 +82,15 @@ async def load_bundle(session: AsyncSession, event_id: UUID) -> EventMailBundle 
     )
 
 
-def build_message_document(bundle: EventMailBundle, request: EventMailRequest) -> bytes:
+def build_message_document(
+    bundle: EventMailBundle, request: EventMailRequest, *, recipient_email: str | None = None
+) -> bytes:
     """Occurrence cancellations retain the original recurrence identity."""
     method = _METHODS[request.kind]
-    series = bundle.exports[0] if bundle.exports else None
+    visible_exports = bundle.exports
+    if bundle.event.guest_list_hidden and request.recipient_id != bundle.event.organizer_id:
+        visible_exports = [_recipient_export(export, recipient_email) for export in visible_exports]
+    series = visible_exports[0] if visible_exports else None
     if request.occurrence_date is not None:
         # A withdrawal names the organizer and everyone it affects, or the
         # receiving client has nothing to match against its own copy.
@@ -112,9 +115,20 @@ def build_message_document(bundle: EventMailBundle, request: EventMailRequest) -
             ),
             sequence=bundle.event.ical_sequence,
         )
-        for export in bundle.exports
+        for export in visible_exports
     ] or [EventExport(event=bundle.event, sequence=bundle.event.ical_sequence)]
     return serialize_events(exports, method=method.value)
+
+
+def _recipient_export(export: EventExport, recipient_email: str | None) -> EventExport:
+    visible_emails = {recipient_email}
+    if export.organizer:
+        visible_emails.add(export.organizer.email)
+    return replace(
+        export,
+        attendees=tuple(a for a in export.attendees if a.person.email in visible_emails),
+        overrides=tuple(_recipient_export(item, recipient_email) for item in export.overrides),
+    )
 
 
 async def send_event_mail(
@@ -125,13 +139,17 @@ async def send_event_mail(
     sender: MailSender,
 ) -> MailResult:
     """Send one message; the caller owns what its outcome does to the row."""
-    document = build_message_document(bundle, request)
+    document = build_message_document(bundle, request, recipient_email=recipient.user.email)
     context = build_context(
         bundle.event,
         organization_name=recipient.organization.name,
         organizer_name=bundle.organizer_name,
         recipient_timezone=str(resolve_timezone(recipient.timezone)),
-        attendee_names=bundle.attendee_names,
+        attendee_names=(
+            []
+            if bundle.event.guest_list_hidden and request.recipient_id != bundle.event.organizer_id
+            else bundle.attendee_names
+        ),
         respond=_respond_links_for(request),
         changes=describe_changes(request.changes),
         occurrence_date=request.occurrence_date,

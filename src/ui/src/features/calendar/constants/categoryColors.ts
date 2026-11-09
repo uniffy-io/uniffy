@@ -48,6 +48,10 @@ export const CATEGORY_COLORS: CategoryColorOption[] = [
   },
 ];
 
+export const DEFAULT_CALENDAR_COLOR = CATEGORY_COLORS[0].value;
+/** Green, so a followed feed stands apart from the member's own blue calendars. */
+export const SUBSCRIBED_CALENDAR_COLOR = CATEGORY_COLORS[2].value;
+
 export const DEFAULT_CATEGORIES: Omit<Category, "organizationId" | "createdAt" | "updatedAt">[] = [
   {
     id: "meetings",

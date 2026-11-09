@@ -40,6 +40,7 @@ def _make_ops(
     is_attendee: bool = False,
     is_blocked: bool = False,
     calendar_role: ContentRole | None = None,
+    read_only: bool = False,
 ) -> CalendarEventOperations:
     ops = CalendarEventOperations.__new__(CalendarEventOperations)
     ops.session = MagicMock()
@@ -48,6 +49,8 @@ def _make_ops(
     ops.permission_checker.is_blocked = AsyncMock(return_value=is_blocked)
     ops._is_attendee = AsyncMock(return_value=is_attendee)
     ops._calendar_derived_role = AsyncMock(return_value=calendar_role)
+    ops._on_read_only_calendar = AsyncMock(return_value=read_only)
+    ops._read_only_series = AsyncMock(return_value=False)
     return ops
 
 
@@ -58,6 +61,25 @@ def _walk_filter(expression: SearchFilter) -> Iterator[SearchFilter]:
     elif isinstance(expression, SearchAll | SearchAny):
         for nested in expression.expressions:
             yield from _walk_filter(nested)
+
+
+class TestResolveRoleOnSubscribedCalendar:
+    async def test_the_organizer_of_a_feed_event_only_views_it(self) -> None:
+        ops = _make_ops(effective_role=ContentRole.OWNER, read_only=True)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.VIEWER
+
+    async def test_a_calendar_editor_only_views_a_feed_event(self) -> None:
+        ops = _make_ops(
+            effective_role=ContentRole.VIEWER, calendar_role=ContentRole.EDITOR, read_only=True
+        )
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role == ContentRole.VIEWER
+
+    async def test_no_access_stays_no_access(self) -> None:
+        ops = _make_ops(read_only=True)
+        role = await ops._resolve_role(generate_id(), generate_id(), _make_event())
+        assert role is None
 
 
 class TestResolveRoleAttendeeFloor:

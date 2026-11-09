@@ -1,21 +1,32 @@
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { CalendarBlank } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { Button } from "@/components/ui/button";
 import { Select, type SelectOption } from "@/components/ui/select";
+import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { fetchCalendarPolicy, updateCalendarPolicy } from "@/features/calendar/store";
-import type { CalendarPolicyAudience } from "@/features/calendar/types";
+import type { CalendarPolicyAudience, ProviderSyncAudience } from "@/features/calendar/types";
+import { CalendarProviderApps } from "@/features/admin/components/calendar/CalendarProviderApps";
 
 const AUDIENCE_OPTIONS: SelectOption<CalendarPolicyAudience>[] = [
   { value: "everyone", label: "Every member" },
   { value: "admins", label: "Org and calendar admins" },
 ];
 
+const PROVIDER_AUDIENCE_OPTIONS: SelectOption<ProviderSyncAudience>[] = [
+  { value: "off", label: "Off" },
+  { value: "admins", label: "Org admins only" },
+  { value: "everyone", label: "Every member" },
+];
+
 interface PolicyForm {
   teamCalendarCreators: CalendarPolicyAudience;
   orgWideCalendarSharers: CalendarPolicyAudience;
+  allowExternalSubscriptions: boolean;
+  providerSyncAudience: ProviderSyncAudience;
+  allowProviderWrites: boolean;
 }
 
 export function CalendarPolicySection() {
@@ -36,6 +47,9 @@ export function CalendarPolicySection() {
       ? {
           teamCalendarCreators: policy.teamCalendarCreators,
           orgWideCalendarSharers: policy.orgWideCalendarSharers,
+          allowExternalSubscriptions: policy.allowExternalSubscriptions,
+          providerSyncAudience: policy.providerSyncAudience,
+          allowProviderWrites: policy.allowProviderWrites,
         }
       : null);
 
@@ -72,9 +86,10 @@ export function CalendarPolicySection() {
           <h1 className="text-xl md:text-2xl font-bold">Calendar</h1>
         </div>
         <p className="text-muted-foreground text-sm">
-          Who may set up calendars for a team, and who may open a calendar to the whole
-          organization. Calendar admins are granted on the Domain Admins page. These rules decide
-          who can make the change; they never give anyone access to a calendar.
+          Who may set up calendars for a team, who may open a calendar to the whole organization,
+          whether members may follow external calendars, and who may sync their Google or Microsoft
+          calendars. Calendar admins are granted on the Domain Admins page. These rules decide who
+          can make the change; they never give anyone access to a calendar.
         </p>
       </div>
 
@@ -99,17 +114,60 @@ export function CalendarPolicySection() {
           <PolicyRow
             title="Who can create additional calendars"
             detail="Every member keeps their default calendar. This controls who can add calendars. Add co-admins through sharing."
-            value={form.teamCalendarCreators}
-            onChange={(value) => setDraft({ ...form, teamCalendarCreators: value })}
-            disabled={disabled}
-          />
+          >
+            <AudienceSelect
+              title="Who can create additional calendars"
+              value={form.teamCalendarCreators}
+              onChange={(value) => setDraft({ ...form, teamCalendarCreators: value })}
+              disabled={disabled}
+            />
+          </PolicyRow>
           <PolicyRow
             title="Who can share a calendar with the whole organization"
             detail="Sharing with specific people and groups stays open to every calendar admin."
-            value={form.orgWideCalendarSharers}
-            onChange={(value) => setDraft({ ...form, orgWideCalendarSharers: value })}
-            disabled={disabled}
-          />
+          >
+            <AudienceSelect
+              title="Who can share a calendar with the whole organization"
+              value={form.orgWideCalendarSharers}
+              onChange={(value) => setDraft({ ...form, orgWideCalendarSharers: value })}
+              disabled={disabled}
+            />
+          </PolicyRow>
+          <PolicyRow
+            title="Members can subscribe to external calendars"
+            detail="Members can follow a Google, Outlook or any other iCalendar link as a read-only calendar. Uniffy fetches each address on a schedule from your servers. Turning this off pauses existing subscriptions."
+          >
+            <ToggleSwitch
+              enabled={form.allowExternalSubscriptions}
+              onChange={(value) => setDraft({ ...form, allowExternalSubscriptions: value })}
+              disabled={disabled}
+              ariaLabel="Members can subscribe to external calendars"
+            />
+          </PolicyRow>
+          <PolicyRow
+            title="Who can connect Google and Microsoft calendars"
+            detail="Members sign in to their Google or Microsoft account and pick calendars to sync with Uniffy. Turning this off pauses every connected account."
+          >
+            <Select
+              value={form.providerSyncAudience}
+              onChange={(value) => setDraft({ ...form, providerSyncAudience: value })}
+              options={PROVIDER_AUDIENCE_OPTIONS}
+              disabled={disabled}
+              triggerClassName="w-full sm:w-64"
+              ariaLabel="Who can connect Google and Microsoft calendars"
+            />
+          </PolicyRow>
+          <PolicyRow
+            title="Allow edits to sync back to Google and Microsoft"
+            detail="When on, members can make a connected calendar two-way, so events they change in Uniffy update in Google Calendar or Outlook. When off, every connected calendar is read-only in Uniffy."
+          >
+            <ToggleSwitch
+              enabled={form.allowProviderWrites}
+              onChange={(value) => setDraft({ ...form, allowProviderWrites: value })}
+              disabled={disabled || form.providerSyncAudience === "off"}
+              ariaLabel="Allow edits to sync back to Google and Microsoft"
+            />
+          </PolicyRow>
         </div>
       )}
 
@@ -123,6 +181,8 @@ export function CalendarPolicySection() {
           </span>
         )}
       </div>
+
+      {isAdmin && organizationId && <CalendarProviderApps />}
     </div>
   );
 }
@@ -130,28 +190,37 @@ export function CalendarPolicySection() {
 interface PolicyRowProps {
   title: string;
   detail: string;
-  value: CalendarPolicyAudience;
-  onChange: (value: CalendarPolicyAudience) => void;
-  disabled: boolean;
+  children: ReactNode;
 }
 
-function PolicyRow({ title, detail, value, onChange, disabled }: PolicyRowProps) {
+function PolicyRow({ title, detail, children }: PolicyRowProps) {
   return (
     <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:gap-4">
       <div className="flex-1 min-w-0">
         <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{detail}</p>
       </div>
-      <div className="shrink-0">
-        <Select
-          value={value}
-          onChange={onChange}
-          options={AUDIENCE_OPTIONS}
-          disabled={disabled}
-          triggerClassName="w-full sm:w-64"
-          ariaLabel={title}
-        />
-      </div>
+      <div className="shrink-0">{children}</div>
     </div>
+  );
+}
+
+interface AudienceSelectProps {
+  title: string;
+  value: CalendarPolicyAudience;
+  onChange: (value: CalendarPolicyAudience) => void;
+  disabled: boolean;
+}
+
+function AudienceSelect({ title, value, onChange, disabled }: AudienceSelectProps) {
+  return (
+    <Select
+      value={value}
+      onChange={onChange}
+      options={AUDIENCE_OPTIONS}
+      disabled={disabled}
+      triggerClassName="w-full sm:w-64"
+      ariaLabel={title}
+    />
   );
 }

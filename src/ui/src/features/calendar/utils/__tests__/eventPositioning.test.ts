@@ -28,6 +28,18 @@ function event(id: string, overrides: Partial<CalendarEvent> = {}): CalendarEven
 const mine = memberCommitments("me", new Set(["my-calendar"]));
 
 describe("conflicts on a grid that shows shared calendars", () => {
+  it("ignores opted-out calendars even when member organizes or attends", () => {
+    const scope = memberCommitments("me", new Set(["my-calendar"]), new Set(["feed"]));
+    const feed = event("feed", { calendarId: "feed", organizerId: "me" });
+    const invitedFeed = event("invited-feed", {
+      calendarId: "feed",
+      attendees: [attendee("me", "accepted")],
+    });
+    const own = event("own", { calendarId: "my-calendar" });
+    expect(findConflicts(own, [own, feed, invitedFeed], scope)).toEqual([]);
+    expect(scope(event("shared", { attendees: [attendee("me", "accepted")] }))).toBe(true);
+  });
+
   const organized = event("organized", { organizerId: "me" });
   const invited = event("invited", { attendees: [attendee("me", "accepted")] });
   const declined = event("declined", { attendees: [attendee("me", "declined")] });

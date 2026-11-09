@@ -9,9 +9,8 @@ import {
   revokeCalendarFeed,
 } from "@/features/calendar/store/calendarThunks";
 import type { CalendarFeed } from "@/features/calendar/types/interop";
+import { useCopyToClipboard } from "@/shared/hooks/useCopyToClipboard";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
-
-const COPIED_FEEDBACK_MS = 2000;
 
 /**
  * The subscribe link for this calendar: show it, replace it, or stop it.
@@ -31,7 +30,7 @@ export function CalendarFeedPanel({ calendarId }: CalendarFeedPanelProps) {
   const [feed, setFeed] = useState<CalendarFeed | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyToClipboard();
   const [confirming, setConfirming] = useState<"regenerate" | "revoke" | null>(null);
 
   useEffect(() => {
@@ -47,10 +46,7 @@ export function CalendarFeedPanel({ calendarId }: CalendarFeedPanelProps) {
   }, [dispatch, calendarId]);
 
   const handleCopy = () => {
-    if (!feed?.url) return;
-    navigator.clipboard.writeText(feed.url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
+    if (feed?.url) void copy(feed.url);
   };
 
   const handleRegenerate = async () => {

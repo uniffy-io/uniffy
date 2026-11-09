@@ -42,6 +42,8 @@ import { InlineTextField } from "@/features/calendar/components/detail/InlineTex
 import { EventScheduleSection } from "@/features/calendar/components/detail/EventScheduleSection";
 import { EventPlaceSection } from "@/features/calendar/components/detail/EventPlaceSection";
 import { EventPeopleSection } from "@/features/calendar/components/detail/EventPeopleSection";
+import { EventParticipantsSection } from "@/features/calendar/components/detail/EventParticipantsSection";
+import { externalParticipants } from "@/features/calendar/utils/eventParticipants";
 import { EventMetaSection } from "@/features/calendar/components/detail/EventMetaSection";
 import { EventStateSection } from "@/features/calendar/components/detail/EventStateSection";
 import { EventSchedulingSection } from "@/features/calendar/components/detail/EventSchedulingSection";
@@ -89,6 +91,10 @@ export function EventDetailModal() {
     if (!selectedEvent) return [];
     return findConflicts(selectedEvent, visibleEvents, conflictScope);
   }, [selectedEvent, visibleEvents, conflictScope]);
+  const guests = useMemo(
+    () => (selectedEvent ? externalParticipants(selectedEvent) : []),
+    [selectedEvent],
+  );
 
   const categoryColor = selectedEvent
     ? resolveEventColor(selectedEvent, categories, calendars)
@@ -298,6 +304,12 @@ export function EventDetailModal() {
               {selectedEvent.attendees.length > 0 && (
                 <div className="px-6 py-3 border-b border-border">
                   <EventPeopleSection event={selectedEvent} canEdit={canEdit} commit={commit} />
+                </div>
+              )}
+
+              {guests.length > 0 && (
+                <div className="px-6 py-3 border-b border-border">
+                  <EventParticipantsSection participants={guests} />
                 </div>
               )}
 

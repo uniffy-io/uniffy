@@ -26,6 +26,9 @@ export {
   countCalendarEvents,
   fetchCalendarPolicy,
   updateCalendarPolicy,
+  createCalendarSubscription,
+  updateCalendarSubscription,
+  refreshCalendarSubscription,
 } from "@/features/calendar/store/calendarsThunks";
 
 export {
@@ -68,3 +71,22 @@ export {
   closeCreateTemplateModal,
   resetCalendarUiState,
 } from "@/features/calendar/store/calendarUiSlice";
+
+export {
+  calendarConnectionsReducer,
+  openConnectionsDialog,
+  closeConnectionsDialog,
+} from "@/features/calendar/store/calendarConnectionsSlice";
+
+export {
+  fetchCalendarConnections,
+  startCalendarConnection,
+  completeCalendarConnection,
+  updateConnectedCalendar,
+  pauseCalendarConnection,
+  resumeCalendarConnection,
+  syncCalendarConnectionNow,
+  disconnectCalendarConnection,
+  fetchCalendarProviderSettings,
+  updateCalendarProviderSettings,
+} from "@/features/calendar/store/calendarConnectionsThunks";

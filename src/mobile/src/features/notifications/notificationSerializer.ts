@@ -53,6 +53,9 @@ const TYPE_META: Record<number, TypeMeta> = {
   [NotificationType.CALENDAR_INVITE]: { kind: "calendar" },
   [NotificationType.CALENDAR_RESPONSE]: { kind: "calendar" },
   [NotificationType.CALENDAR_CANCELLED]: { kind: "calendar", tone: "danger" },
+  [NotificationType.CALENDAR_SUBSCRIPTION_FAILED]: { kind: "calendar", tone: "warning" },
+  [NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT]: { kind: "calendar", tone: "warning" },
+  [NotificationType.CALENDAR_SYNC_CONFLICT]: { kind: "calendar", tone: "warning" },
   [NotificationType.PERMISSION_GRANTED]: { kind: "permission" },
   [NotificationType.PERMISSION_REVOKED]: { kind: "permission", tone: "danger" },
   [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", tone: "warning" },
@@ -72,6 +75,7 @@ const TYPE_META: Record<number, TypeMeta> = {
 };
 
 const CONTENT_TYPE_ROUTE: Record<string, (id: string) => string> = {
+  CALENDAR: (id) => `/calendar?calendar=${id}`,
   NOTE: (id) => `/notes/${id}`,
   FILE: (id) => `/files/${id}`,
   CHAT: (id) => `/chat/${id}`,
@@ -108,6 +112,11 @@ function routeForNotification(proto: ProtoNotification): string | null {
     if (channelId) {
       return `/chat/${channelId}?${JOIN_CALL_PARAM}=${JOIN_CALL_VALUE}`;
     }
+  }
+  // The account behind it is reconnected on the web; the calendar list is where
+  // mobile shows which calendars stopped syncing.
+  if (proto.notificationType === NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT) {
+    return "/calendar";
   }
   return routeFromUrn(proto.sourceUrn);
 }

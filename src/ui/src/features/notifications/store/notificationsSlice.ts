@@ -354,6 +354,9 @@ const FILTER_TYPE_MAP: Record<string, number[]> = {
     NotificationType.CALENDAR_INVITE,
     NotificationType.CALENDAR_RESPONSE,
     NotificationType.CALENDAR_CANCELLED,
+    NotificationType.CALENDAR_SUBSCRIPTION_FAILED,
+    NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT,
+    NotificationType.CALENDAR_SYNC_CONFLICT,
   ],
   permissions: [
     NotificationType.PERMISSION_GRANTED,

@@ -15,6 +15,7 @@ import {
   CheckCircle,
   Clock,
   ClockCountdown,
+  GitDiff,
   Envelope,
   EnvelopeOpen,
   Funnel,
@@ -23,6 +24,7 @@ import {
   Megaphone,
   PaperPlaneTilt,
   PencilSimple,
+  PlugsConnected,
   Prohibit,
   ShareNetwork,
   ShieldCheck,
@@ -79,6 +81,21 @@ const TYPE_CATEGORIES: TypeCategory[] = [
       { value: NotificationType.CALENDAR_INVITE, label: "Invite", icon: CalendarPlus },
       { value: NotificationType.CALENDAR_RESPONSE, label: "Response", icon: CalendarCheck },
       { value: NotificationType.CALENDAR_CANCELLED, label: "Cancelled", icon: CalendarX },
+      {
+        value: NotificationType.CALENDAR_SUBSCRIPTION_FAILED,
+        label: "Subscription stopped",
+        icon: CalendarX,
+      },
+      {
+        value: NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT,
+        label: "Reconnect needed",
+        icon: PlugsConnected,
+      },
+      {
+        value: NotificationType.CALENDAR_SYNC_CONFLICT,
+        label: "Sync conflict",
+        icon: GitDiff,
+      },
     ],
   },
   {

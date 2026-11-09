@@ -20,6 +20,7 @@ from uniffy.core.types import ContentType
 from uniffy.domains.permissions.access import ResourceAccessResolver, ResourceKey
 from uniffy.domains.scheduling.calendar import queries
 from uniffy.domains.scheduling.calendar.calendars.reader import CalendarReader
+from uniffy.domains.scheduling.calendar.connections.details import provider_details
 from uniffy.domains.scheduling.calendar.converters import event_to_proto
 from uniffy.domains.scheduling.calendar.events.reader import CalendarEventReader
 from uniffy.domains.scheduling.calendar.events.state import event_details_hidden
@@ -61,6 +62,7 @@ class EventQueryHandlers:
                 room_info = await get_event_room_info(session, event_id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event_id])
                 user_role = await operations._resolve_role(user_id, organization_id, event)
+                details = await provider_details(session, event, user_id)
                 return GetEventResponse(
                     event=event_to_proto(
                         event,
@@ -76,6 +78,8 @@ class EventQueryHandlers:
                             user_role,
                             any(attendee.user_id == user_id for attendee, _ in attendees),
                         ),
+                        participants=details.participants,
+                        provider_edit_hint=details.edit_hint,
                         **room_info,
                     )
                 )
@@ -173,7 +177,9 @@ class EventQueryHandlers:
                         ResourceKey(ContentType.CALENDAR_EVENT, event_id) for event_id in event_ids
                     ],
                 )
-                attendees_by_event = await queries.get_attendees_for_events(session, event_ids)
+                attendees_by_event = await queries.get_attendees_for_events(
+                    session, event_ids, viewer_id=user_id
+                )
                 room_info_by_event = await get_room_info_for_events(session, event_ids)
 
                 proto_events = []
@@ -271,7 +277,9 @@ class EventQueryHandlers:
                         ResourceKey(ContentType.CALENDAR_EVENT, event_id) for event_id in master_ids
                     ],
                 )
-                attendees_by_event = await queries.get_attendees_for_events(session, master_ids)
+                attendees_by_event = await queries.get_attendees_for_events(
+                    session, master_ids, viewer_id=user_id
+                )
                 room_info_by_event = await get_room_info_for_events(session, master_ids)
 
                 proto_events = []

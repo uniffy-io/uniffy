@@ -1,8 +1,4 @@
-"""Per-org calendar policy backed by the generic ``org_settings`` KV store.
-
-Stored as one JSON blob under ``namespace='calendar'``, ``key='policy'``. An absent
-row means every field takes its built-in default.
-"""
+"""Organization calendar policy stored in the shared settings store."""
 
 from dataclasses import dataclass
 from enum import StrEnum
@@ -28,8 +24,22 @@ class CalendarPolicyAudience(StrEnum):
     ADMINS = "admins"
 
 
+class ProviderSyncAudience(StrEnum):
+    """Who may connect a Google or Microsoft account."""
+
+    OFF = "off"
+    ADMINS = "admins"
+    EVERYONE = "everyone"
+
+
 DEFAULT_TEAM_CALENDAR_CREATORS = CalendarPolicyAudience.EVERYONE
 DEFAULT_ORG_WIDE_CALENDAR_SHARERS = CalendarPolicyAudience.EVERYONE
+
+DEFAULT_ALLOW_EXTERNAL_SUBSCRIPTIONS = True
+_EXTERNAL_SUBSCRIPTIONS_KEY = "allow_external_subscriptions"
+_PROVIDER_SYNC_AUDIENCE_KEY = "provider_sync_audience"
+_PROVIDER_WRITES_KEY = "allow_provider_writes"
+DEFAULT_PROVIDER_SYNC_AUDIENCE = ProviderSyncAudience.EVERYONE
 
 
 @dataclass(frozen=True)
@@ -39,6 +49,12 @@ class ResolvedCalendarPolicy:
     organization_id: UUID
     team_calendar_creators: CalendarPolicyAudience = DEFAULT_TEAM_CALENDAR_CREATORS
     org_wide_calendar_sharers: CalendarPolicyAudience = DEFAULT_ORG_WIDE_CALENDAR_SHARERS
+    allow_external_subscriptions: bool = DEFAULT_ALLOW_EXTERNAL_SUBSCRIPTIONS
+    provider_sync_audience: ProviderSyncAudience = DEFAULT_PROVIDER_SYNC_AUDIENCE
+    allow_provider_writes: bool = True
+
+    def provider_writes_enabled(self) -> bool:
+        return self.allow_provider_writes and self.provider_sync_audience != ProviderSyncAudience.OFF
 
 
 @dataclass(frozen=True)
@@ -48,6 +64,8 @@ class CalendarPolicyView:
     policy: ResolvedCalendarPolicy
     can_create_team_calendars: bool
     can_share_calendars_org_wide: bool
+    can_subscribe_external_calendars: bool
+    can_connect_providers: bool = False
 
 
 def _audience(blob: dict, key: str, default: CalendarPolicyAudience) -> CalendarPolicyAudience:
@@ -73,7 +91,26 @@ async def resolve_calendar_policy(
         org_wide_calendar_sharers=_audience(
             row.value, "org_wide_calendar_sharers", DEFAULT_ORG_WIDE_CALENDAR_SHARERS
         ),
+        allow_external_subscriptions=_flag(
+            row.value, _EXTERNAL_SUBSCRIPTIONS_KEY, DEFAULT_ALLOW_EXTERNAL_SUBSCRIPTIONS
+        ),
+        provider_sync_audience=_sync_audience(row.value),
+        allow_provider_writes=_flag(row.value, _PROVIDER_WRITES_KEY, True),
     )
+
+
+def _sync_audience(blob: dict) -> ProviderSyncAudience:
+    try:
+        return ProviderSyncAudience(
+            blob.get(_PROVIDER_SYNC_AUDIENCE_KEY, DEFAULT_PROVIDER_SYNC_AUDIENCE)
+        )
+    except ValueError:
+        return DEFAULT_PROVIDER_SYNC_AUDIENCE
+
+
+def _flag(blob: dict, key: str, default: bool) -> bool:
+    value = blob.get(key, default)
+    return value if isinstance(value, bool) else default
 
 
 async def is_calendar_admin(session: AsyncSession, user_id: UUID, organization_id: UUID) -> bool:
@@ -115,6 +152,32 @@ async def require_can_open_calendar_to_org(
         )
 
 
+async def require_can_subscribe(session: AsyncSession, organization_id: UUID) -> None:
+    policy = await resolve_calendar_policy(session, organization_id)
+    if not policy.allow_external_subscriptions:
+        raise PermissionDeniedError(
+            "subscribe", "external calendar - your organization has turned this off"
+        )
+
+
+async def policy_admits_sync(
+    session: AsyncSession, policy: ResolvedCalendarPolicy, user_id: UUID
+) -> bool:
+    if policy.provider_sync_audience == ProviderSyncAudience.OFF:
+        return False
+    if policy.provider_sync_audience == ProviderSyncAudience.EVERYONE:
+        return True
+    return await is_calendar_admin(session, user_id, policy.organization_id)
+
+
+async def require_can_connect(session: AsyncSession, user_id: UUID, organization_id: UUID) -> None:
+    policy = await resolve_calendar_policy(session, organization_id)
+    if not await policy_admits_sync(session, policy, user_id):
+        raise PermissionDeniedError(
+            "connect", "calendar account - your organization has not turned this on"
+        )
+
+
 async def get_calendar_policy_view(
     session: AsyncSession, user_id: UUID, organization_id: UUID
 ) -> CalendarPolicyView:
@@ -129,6 +192,8 @@ async def get_calendar_policy_view(
         can_share_calendars_org_wide=await _admits(
             session, policy.org_wide_calendar_sharers, user_id, organization_id
         ),
+        can_subscribe_external_calendars=policy.allow_external_subscriptions,
+        can_connect_providers=await policy_admits_sync(session, policy, user_id),
     )
 
 
@@ -139,6 +204,9 @@ async def update_calendar_policy(
     *,
     team_calendar_creators: CalendarPolicyAudience,
     org_wide_calendar_sharers: CalendarPolicyAudience,
+    allow_external_subscriptions: bool | None = None,
+    provider_sync_audience: ProviderSyncAudience | None = None,
+    allow_provider_writes: bool | None = None,
 ) -> CalendarPolicyView:
     if not await PermissionChecker(session).is_org_admin(user_id, organization_id):
         raise PermissionDeniedError("update", "calendar policy")
@@ -147,6 +215,21 @@ async def update_calendar_policy(
         organization_id=organization_id,
         team_calendar_creators=team_calendar_creators,
         org_wide_calendar_sharers=org_wide_calendar_sharers,
+        allow_external_subscriptions=(
+            previous.allow_external_subscriptions
+            if allow_external_subscriptions is None
+            else allow_external_subscriptions
+        ),
+        provider_sync_audience=(
+            previous.provider_sync_audience
+            if provider_sync_audience is None
+            else provider_sync_audience
+        ),
+        allow_provider_writes=(
+            previous.allow_provider_writes
+            if allow_provider_writes is None
+            else allow_provider_writes
+        ),
     )
     await OrgSettingsOperations(session).set(
         organization_id=organization_id,
@@ -155,6 +238,9 @@ async def update_calendar_policy(
         value={
             "team_calendar_creators": policy.team_calendar_creators.value,
             "org_wide_calendar_sharers": policy.org_wide_calendar_sharers.value,
+            _EXTERNAL_SUBSCRIPTIONS_KEY: policy.allow_external_subscriptions,
+            _PROVIDER_SYNC_AUDIENCE_KEY: policy.provider_sync_audience.value,
+            _PROVIDER_WRITES_KEY: policy.allow_provider_writes,
         },
         updated_by_user_id=user_id,
     )
@@ -170,10 +256,20 @@ async def update_calendar_policy(
             "org_wide_calendar_sharers": policy.org_wide_calendar_sharers.value,
             "previous_team_calendar_creators": previous.team_calendar_creators.value,
             "previous_org_wide_calendar_sharers": previous.org_wide_calendar_sharers.value,
+            _EXTERNAL_SUBSCRIPTIONS_KEY: policy.allow_external_subscriptions,
+            f"previous_{_EXTERNAL_SUBSCRIPTIONS_KEY}": previous.allow_external_subscriptions,
+            _PROVIDER_SYNC_AUDIENCE_KEY: policy.provider_sync_audience.value,
+            f"previous_{_PROVIDER_SYNC_AUDIENCE_KEY}": previous.provider_sync_audience.value,
+            _PROVIDER_WRITES_KEY: policy.allow_provider_writes,
+            f"previous_{_PROVIDER_WRITES_KEY}": previous.allow_provider_writes,
         },
     )
     await session.commit()
     # The updater is an org admin, whom both audiences admit.
     return CalendarPolicyView(
-        policy=policy, can_create_team_calendars=True, can_share_calendars_org_wide=True
+        policy=policy,
+        can_create_team_calendars=True,
+        can_share_calendars_org_wide=True,
+        can_subscribe_external_calendars=policy.allow_external_subscriptions,
+        can_connect_providers=policy.provider_sync_audience != ProviderSyncAudience.OFF,
     )

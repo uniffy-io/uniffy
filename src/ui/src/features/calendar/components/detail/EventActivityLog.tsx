@@ -14,6 +14,7 @@ import {
   X,
   Question,
   ClockCounterClockwise,
+  GitDiff,
 } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { fetchEventActivities } from "@/features/calendar/store/calendarThunks";
@@ -23,6 +24,7 @@ import type { Subject } from "@/components/subject/types";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
 import type { EventActivity } from "@/features/calendar/types";
+import { parseSyncConflict, replacedEntries } from "@/features/calendar/utils/syncConflict";
 
 const INITIAL_VISIBLE = 6;
 
@@ -172,6 +174,8 @@ function ActivityIcon({ activity }: { activity: EventActivity }) {
       return <UserPlus size={size} />;
     case "attendees_removed":
       return <UserMinus size={size} />;
+    case "sync_conflict":
+      return <GitDiff size={size} />;
     case "response_changed":
       return <ResponseIcon status={activity.newValue} size={size} />;
     default:
@@ -252,6 +256,9 @@ function describeActivity(activity: EventActivity, subjectMap: Record<string, Su
     case "response_changed":
       return describeResponse(activity.newValue);
 
+    case "sync_conflict":
+      return describeSyncConflict(activity);
+
     default:
       return activity.fieldId ? (
         <span>
@@ -313,6 +320,35 @@ function describeRecurrenceChange(activity: EventActivity): ReactNode {
     default:
       return "changed the recurrence";
   }
+}
+
+function describeSyncConflict(activity: EventActivity): ReactNode {
+  const conflict = parseSyncConflict(activity);
+  const { summary, winner, fields } = conflict;
+  return (
+    <span>
+      {winner === "provider"
+        ? "had a change replaced during sync"
+        : winner === "uniffy"
+          ? "kept their change over a conflicting provider edit"
+          : "had a sync conflict resolved"}
+      {fields.length > 0 && (
+        <>
+          {" "}
+          (<Strong>{fields.map(humanizeField).join(", ")}</Strong>)
+        </>
+      )}
+      {summary && <span className="block text-subtle-foreground">{summary}.</span>}
+      {replacedEntries(conflict).map(([field, value]) => (
+        <span key={field} className="block break-words text-subtle-foreground">
+          Replaced {humanizeField(field)}:{" "}
+          <Strong>
+            {field === "start_time" || field === "end_time" ? formatDateTimeValue(value) : value}
+          </Strong>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function describeResponse(status?: string): ReactNode {

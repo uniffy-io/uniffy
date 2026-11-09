@@ -3,7 +3,7 @@ import { CalendarBlank, MapPin, Clock, Users, ArrowsClockwise } from "@phosphor-
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { selectEvent } from "@/features/calendar/store/calendarUiSlice";
 import { useCalendarEvents } from "@/features/calendar/hooks";
-import { formatTimeRange } from "@/features/calendar/utils";
+import { eventDayKey, formatTimeRange, instantDayKey } from "@/features/calendar/utils";
 import { eventDisplayState } from "@/features/calendar/utils/eventDisplay";
 import { formatDateWithWeekday } from "@/shared/utils/dateFormatting";
 import { cn } from "@/shared/utils/cn";
@@ -26,14 +26,6 @@ function getDateLabel(dateStr: string): string {
     return `Tomorrow, ${formatDateWithWeekday(dateStr)}`;
   }
   return formatDateWithWeekday(dateStr);
-}
-
-function toLocalDateString(isoString: string): string {
-  const d = new Date(isoString);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function isToday(dateStr: string): boolean {
@@ -69,13 +61,11 @@ export function AgendaView() {
   const selectedEventId = useAppSelector((state) => state.calendarUi.selectedEventId);
 
   const dateGroups = useMemo(() => {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const todayStr = toLocalDateString(now.toISOString());
+    const todayStr = instantDayKey(new Date());
 
     const upcoming = [...visibleEvents]
       .filter((e) => {
-        const eventDate = toLocalDateString(e.startTime);
+        const eventDate = eventDayKey(e);
         return eventDate >= todayStr;
       })
       .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
@@ -83,7 +73,7 @@ export function AgendaView() {
     const groups = new Map<string, DateGroup>();
 
     for (const event of upcoming) {
-      const dateStr = toLocalDateString(event.startTime);
+      const dateStr = eventDayKey(event);
       if (!groups.has(dateStr)) {
         groups.set(dateStr, {
           date: dateStr,

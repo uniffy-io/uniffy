@@ -1,6 +1,8 @@
 from uniffy_proto.cal.v1.calendar_pb import Calendar as ProtoCalendar
 from uniffy_proto.cal.v1.calendar_pb import CalendarListSection as ProtoCalendarListSection
+from uniffy_proto.cal.v1.calendar_pb import CalendarSubscription as ProtoCalendarSubscription
 from uniffy_proto.cal.v1.calendar_pb import CalendarType as ProtoCalendarType
+from uniffy_proto.cal.v1.calendar_pb import ConnectedCalendarSummary
 
 from uniffy.core.converters.common_proto import access_mode_to_proto, content_role_to_proto
 from uniffy.core.converters.proto import datetime_to_timestamp
@@ -12,6 +14,8 @@ CALENDAR_TYPE_TO_PROTO: dict[CalendarType, ProtoCalendarType] = {
     CalendarType.WORK: ProtoCalendarType.WORK,
     CalendarType.TEAM: ProtoCalendarType.TEAM,
     CalendarType.SHARED: ProtoCalendarType.SHARED,
+    CalendarType.SUBSCRIBED: ProtoCalendarType.SUBSCRIBED,
+    CalendarType.CONNECTED: ProtoCalendarType.CONNECTED,
 }
 CALENDAR_TYPE_FROM_PROTO = {v: k for k, v in CALENDAR_TYPE_TO_PROTO.items()}
 
@@ -19,6 +23,8 @@ _SECTION_TO_PROTO: dict[CalendarSection, ProtoCalendarListSection] = {
     CalendarSection.MINE: ProtoCalendarListSection.MINE,
     CalendarSection.SHARED: ProtoCalendarListSection.SHARED,
     CalendarSection.ORGANIZATION: ProtoCalendarListSection.ORGANIZATION,
+    CalendarSection.SUBSCRIBED: ProtoCalendarListSection.SUBSCRIBED,
+    CalendarSection.CONNECTED: ProtoCalendarListSection.CONNECTED,
 }
 
 
@@ -27,7 +33,13 @@ def calendar_type_from_proto(value: ProtoCalendarType) -> CalendarType:
 
 
 def calendar_to_proto(
-    listing: CalendarListing, user_role: ContentRole | None, owner_name: str = ""
+    listing: CalendarListing,
+    user_role: ContentRole | None,
+    owner_name: str = "",
+    subscription: ProtoCalendarSubscription | None = None,
+    *,
+    read_only: bool | None = None,
+    connection: ConnectedCalendarSummary | None = None,
 ) -> ProtoCalendar:
     calendar = listing.calendar
     message = ProtoCalendar(
@@ -43,6 +55,9 @@ def calendar_to_proto(
         access_mode=access_mode_to_proto(calendar.access_mode or AccessMode.OWNER_ONLY),
         is_hidden=listing.is_hidden,
         section=_SECTION_TO_PROTO[listing.section],
+        is_read_only=(
+            calendar.calendar_type == CalendarType.SUBSCRIBED if read_only is None else read_only
+        ),
         created_at=datetime_to_timestamp(calendar.created_at),
         updated_at=datetime_to_timestamp(calendar.updated_at),
     )
@@ -50,4 +65,8 @@ def calendar_to_proto(
         message.baseline_role = content_role_to_proto(calendar.baseline_role)
     if user_role is not None:
         message.user_role = content_role_to_proto(user_role)
+    if subscription is not None:
+        message.subscription = subscription
+    if connection is not None:
+        message.connection = connection
     return message

@@ -37,6 +37,13 @@ class CalendarEvent(SQLModel, table=True):
             "id",
             postgresql_where=text("NOT is_deleted"),
         ),
+        # One meeting held by several members' connected accounts resolves to one event.
+        Index(
+            "ix_calendar_events_org_ical_uid",
+            "organization_id",
+            "ical_uid",
+            postgresql_where=text("ical_uid IS NOT NULL AND recurrence_id IS NULL"),
+        ),
     )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
@@ -51,6 +58,7 @@ class CalendarEvent(SQLModel, table=True):
     )
     end_time: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
     is_all_day: bool = Field(default=False, nullable=False)
+    guest_list_hidden: bool = Field(default=False, nullable=False)
     timezone: str = Field(max_length=100, default="UTC", nullable=False)
     location: str = Field(default="", max_length=500, nullable=False)
     meeting_url: str | None = Field(default=None, max_length=2000)
@@ -142,9 +150,13 @@ class CalendarEvent(SQLModel, table=True):
     # Identity carried in from an imported file; re-importing it must not
     # duplicate the event. Rows created in the product leave this NULL.
     ical_uid: str | None = Field(default=None, max_length=500)
+    # Digest of the source entry a feed sync last wrote; an unchanged entry is skipped.
+    ical_fingerprint: str | None = Field(default=None, max_length=64)
     # RFC 5545 revision counter. Clients ignore an update whose sequence has
     # not moved, so every change mail has to advance it.
     ical_sequence: int = Field(default=0, nullable=False)
+    # One instance of a provider series Uniffy cannot express; it is edited on the provider.
+    is_mirrored_occurrence: bool = Field(default=False, nullable=False)
     recurrence_config: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),

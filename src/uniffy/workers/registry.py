@@ -255,23 +255,56 @@ from uniffy.domains.projects.jobs.jobs import (
     refresh_project_search_acl,
     run_timesheet_periods,
 )
+from uniffy.domains.scheduling.calendar.jobs.connections import (
+    DISCOVERY_JOB_TIMEOUT_SECONDS,
+    PUSH_JOB_TIMEOUT_SECONDS,
+    SYNC_JOB_TIMEOUT_SECONDS,
+    discover_connection_calendars,
+    dispatch_calendar_connections,
+    push_calendar_change,
+    sync_connected_calendar,
+)
 from uniffy.domains.scheduling.calendar.jobs.contracts import (
     CALENDAR_JOB_REFS,
     CALENDAR_SCHEDULED_JOB_REFS,
+    CHECK_CALENDAR_FEED,
     CHECK_CALENDAR_REMINDERS_SCHEDULE,
+    CLEANUP_CALENDAR_CONNECTION,
+    CLEANUP_JOB_TIMEOUT_SECONDS,
+    COMPLETE_CALENDAR_CONNECTION,
+    CONNECT_JOB_TIMEOUT_SECONDS,
+    CONNECT_RESULT_SECONDS,
+    DISCOVER_CONNECTION_CALENDARS,
+    DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
+    DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
     DISPATCH_EVENT_MAIL_SCHEDULE,
     FLUSH_CALENDAR_SEARCH_ACL_REFRESHES_SCHEDULE,
+    PUSH_CALENDAR_CHANGE,
     REFRESH_CALENDAR_SEARCH_ACL,
+    REFRESH_CALENDAR_SUBSCRIPTION,
     SEND_EVENT_MAIL,
+    SYNC_CONNECTED_CALENDAR,
 )
 from uniffy.domains.scheduling.calendar.jobs.event_mail import (
     dispatch_calendar_event_mail,
     send_calendar_event_mail,
 )
 from uniffy.domains.scheduling.calendar.jobs.jobs import check_calendar_reminders
+from uniffy.domains.scheduling.calendar.jobs.lifecycle import (
+    cleanup_calendar_connection,
+    complete_calendar_connection,
+)
 from uniffy.domains.scheduling.calendar.jobs.search import (
     flush_calendar_search_acl_refreshes,
     refresh_calendar_search_acl,
+)
+from uniffy.domains.scheduling.calendar.jobs.subscriptions import (
+    CHECK_JOB_TIMEOUT_SECONDS,
+    CHECK_RESULT_SECONDS,
+    REFRESH_JOB_TIMEOUT_SECONDS,
+    check_calendar_feed,
+    dispatch_calendar_subscription_refreshes,
+    refresh_calendar_subscription,
 )
 from uniffy.domains.search.jobs.contracts import (
     FLUSH_SEARCH_REMOVALS,
@@ -408,6 +441,51 @@ EGRESS_JOB_REGISTRATIONS = (
         sync_identity_source,
         timeout=SYNC_IDENTITY_SOURCE_JOB_TIMEOUT_SECONDS,
     ),
+    _bind(
+        REFRESH_CALENDAR_SUBSCRIPTION,
+        refresh_calendar_subscription,
+        timeout=REFRESH_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        CHECK_CALENDAR_FEED,
+        check_calendar_feed,
+        timeout=CHECK_JOB_TIMEOUT_SECONDS,
+        keep_result=CHECK_RESULT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        COMPLETE_CALENDAR_CONNECTION,
+        complete_calendar_connection,
+        timeout=CONNECT_JOB_TIMEOUT_SECONDS + 5,
+        keep_result=CONNECT_RESULT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        CLEANUP_CALENDAR_CONNECTION,
+        cleanup_calendar_connection,
+        timeout=CLEANUP_JOB_TIMEOUT_SECONDS + 5,
+        keep_result=0,
+        max_tries=1,
+    ),
+    _bind(
+        DISCOVER_CONNECTION_CALENDARS,
+        discover_connection_calendars,
+        timeout=DISCOVERY_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        SYNC_CONNECTED_CALENDAR,
+        sync_connected_calendar,
+        timeout=SYNC_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
+        PUSH_CALENDAR_CHANGE,
+        push_calendar_change,
+        timeout=PUSH_JOB_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
 )
 
 CORE_SCHEDULED_REGISTRATIONS = (
@@ -450,6 +528,15 @@ CORE_SCHEDULED_REGISTRATIONS = (
     _bind_schedule(
         DISPATCH_EVENT_MAIL_SCHEDULE,
         dispatch_calendar_event_mail,
+    ),
+    _bind_schedule(
+        DISPATCH_CALENDAR_SUBSCRIPTIONS_SCHEDULE,
+        dispatch_calendar_subscription_refreshes,
+    ),
+    _bind_schedule(
+        DISPATCH_CALENDAR_CONNECTIONS_SCHEDULE,
+        dispatch_calendar_connections,
+        second=(30,),
     ),
     _bind_schedule(
         CHECK_TASK_DUE_DATES_SCHEDULE,

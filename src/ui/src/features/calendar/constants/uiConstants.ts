@@ -27,6 +27,7 @@ export const SIDEBAR_SECTIONS = {
   quick_access: true,
   mini_calendar: true,
   calendars: true,
+  subscribed_calendars: true,
   shared_calendars: true,
   organization: true,
   categories: false,

@@ -1,5 +1,6 @@
 import { NotificationType } from "@uniffy/proto/notifications/v1/notifications_pb";
 import { JOIN_CALL_PARAM, JOIN_CALL_VALUE } from "@/features/chat/hooks/useJoinCallParam";
+import { connectionsPath } from "@/features/calendar/utils/connectionRoutes";
 import { urnToPath } from "@/shared/utils/urn";
 
 interface NotificationTarget {
@@ -58,6 +59,13 @@ export function notificationHref(notification: NotificationTarget): string | nul
 export function notificationTargetPath(notification: NotificationTarget): string | null {
   if (TIMESHEET_TYPES.includes(notification.notificationType)) {
     return timesheetPath(notification);
+  }
+  // A broken feed shows on its calendar row in the sidebar; there is no page per calendar.
+  if (notification.notificationType === NotificationType.CALENDAR_SUBSCRIPTION_FAILED) {
+    return "/calendar";
+  }
+  if (notification.notificationType === NotificationType.CALENDAR_CONNECTION_NEEDS_RECONNECT) {
+    return connectionsPath(notification.metadata?.connection_id);
   }
   if (CHAT_MESSAGE_TYPES.includes(notification.notificationType)) {
     const channelId = notification.metadata?.channel_id;

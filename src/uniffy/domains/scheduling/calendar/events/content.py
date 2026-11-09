@@ -21,13 +21,17 @@ from uniffy.core.types import (
 )
 from uniffy.domains.scheduling.calendar.calendars.access import (
     accessible_calendar_ids,
+    calendar_is_read_only,
     calendar_role,
+    cap_read_only,
     event_calendar_id,
     event_role_from_calendar,
     higher_role,
+    read_only_event_ids,
 )
 from uniffy.domains.scheduling.calendar.calendars.search import calendar_search_access
 from uniffy.domains.scheduling.calendar.events.state import _master_event_id
+from uniffy.domains.scheduling.calendar.occurrences import parse_occurrence_reference
 from uniffy.domains.tags.reader import TagReader
 
 logger = logger.bind(component="scheduling.calendar.events.content")
@@ -51,6 +55,7 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
         # read once per operation. The hints are candidates only, and a sharing
         # change refreshes them durably.
         self._container_access: dict[tuple[UUID, UUID], SearchContainerAccess] = {}
+        self._read_only_calendars: dict[UUID, bool] = {}
 
     def _build_search_keywords(self, model: CalendarEvent) -> str:
         # Tag slugs land in the dedicated `tags` array via
@@ -114,8 +119,41 @@ class EventContentOperations(BaseContentOperations[CalendarEvent]):
     ) -> ContentRole | None:
         """The event's own grants, its calendar's grants, then the attendee floor.
 
-        An explicit BLOCKED on the event beats both the calendar and the invitation.
+        An explicit BLOCKED on the event beats both the calendar and the invitation,
+        and an event mirrored from a feed is capped at VIEWER for everyone.
         """
+        role = await self._granted_role(user_id, organization_id, content)
+        if role is None:
+            return None
+        read_only = await self._on_read_only_calendar(content) or await self._read_only_series(
+            content
+        )
+        return cap_read_only(role, read_only)
+
+    async def _read_only_series(self, content: CalendarEvent) -> bool:
+        series_id = content.recurrence_id or content.id
+        if not isinstance(series_id, UUID):
+            # An expanded occurrence carries its series id and date in one string.
+            reference = parse_occurrence_reference(str(series_id))
+            if reference is None:
+                return False
+            series_id = reference.event_id
+        return series_id in await read_only_event_ids(self.session, [series_id])
+
+    async def _on_read_only_calendar(self, content: CalendarEvent) -> bool:
+        calendar_id = await event_calendar_id(self.session, content)
+        cached = self._read_only_calendars.get(calendar_id)
+        if cached is None:
+            cached = await calendar_is_read_only(self.session, calendar_id)
+            self._read_only_calendars[calendar_id] = cached
+        return cached
+
+    async def _granted_role(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        content: CalendarEvent,
+    ) -> ContentRole | None:
         # Expanded occurrences carry a synthetic string id; permissions live on
         # the master row, so every lookup below resolves to the master UUID.
         master_id = _master_event_id(content)

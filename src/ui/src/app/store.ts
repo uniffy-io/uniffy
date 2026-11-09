@@ -37,6 +37,7 @@ import { setStoreRef } from "@/app/storeRef";
 import { retainedCalendarUi, retainedChatUi, withSessionScope } from "@/app/sessionScope";
 import { sessionScopeMiddleware } from "@/app/sessionScopeMiddleware";
 import { calendarReducer, calendarUiReducer } from "@/features/calendar/store";
+import { calendarConnectionsReducer } from "@/features/calendar/store/calendarConnectionsSlice";
 import { zenModeReducer } from "@/app/zenModeSlice";
 import { filesReducer } from "@/features/files/store/filesSlice";
 import { filesTreeReducer } from "@/features/files/store/filesTreeSlice";
@@ -193,6 +194,7 @@ const rootReducer = combineReducers({
   agentRuntimeSettings: agentRuntimeSettingsReducer,
   calendar: calendarReducer,
   calendarUi: calendarUiReducer,
+  calendarConnections: calendarConnectionsReducer,
   projects: projectsReducer,
   projectsUi: projectsUiReducer,
   agentsUi: agentsUiReducer,

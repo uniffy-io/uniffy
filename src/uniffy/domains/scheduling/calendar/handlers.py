@@ -7,6 +7,7 @@ from uniffy.domains.scheduling.calendar.rpc.events import EventMutationHandlers
 from uniffy.domains.scheduling.calendar.rpc.interop import InteropHandlers
 from uniffy.domains.scheduling.calendar.rpc.policy import CalendarPolicyHandlers
 from uniffy.domains.scheduling.calendar.rpc.queries import EventQueryHandlers
+from uniffy.domains.scheduling.calendar.rpc.subscriptions import SubscriptionHandlers
 from uniffy.domains.scheduling.calendar.rpc.templates import TemplateHandlers
 
 
@@ -16,6 +17,7 @@ class CalendarHandlers(
     EventMutationHandlers,
     EventQueryHandlers,
     InteropHandlers,
+    SubscriptionHandlers,
     CategoryHandlers,
     AttendeeHandlers,
     TemplateHandlers,

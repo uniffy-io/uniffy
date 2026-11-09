@@ -23,7 +23,9 @@ from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.activity import EventActivity
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.calendar import Calendar
+from uniffy.core.models.calendar.connection import CalendarConnection, CalendarConnectionAttempt
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.reminder import EventReminder
 from uniffy.core.models.calendar.template import EventTemplate
 from uniffy.core.models.chat.agent_folder import ChatAgentFolder
@@ -425,6 +427,15 @@ async def _delete_organizations(
     for child in (FieldDefinition, ViewConfig, Sprint, ProjectSearchAclRefresh):
         await db_session.execute(delete(child).where(child.project_id.in_(project_ids)))
     await db_session.execute(delete(Project).where(Project.organization_id.in_(org_ids)))
+    # Connected accounts cascade to their calendars, links and queued pushes.
+    await db_session.execute(
+        delete(CalendarConnectionAttempt).where(
+            CalendarConnectionAttempt.organization_id.in_(org_ids)
+        )
+    )
+    await db_session.execute(
+        delete(CalendarConnection).where(CalendarConnection.organization_id.in_(org_ids))
+    )
     event_ids = (
         (
             await db_session.execute(
@@ -438,6 +449,9 @@ async def _delete_organizations(
         await db_session.execute(delete(EventActivity).where(EventActivity.event_id.in_(event_ids)))
         await db_session.execute(delete(EventReminder).where(EventReminder.event_id.in_(event_ids)))
         await db_session.execute(delete(EventAttendee).where(EventAttendee.event_id.in_(event_ids)))
+        await db_session.execute(
+            delete(RecurrenceException).where(RecurrenceException.event_id.in_(event_ids))
+        )
         await db_session.execute(delete(CalendarEvent).where(CalendarEvent.id.in_(event_ids)))
     await db_session.execute(delete(EventTemplate).where(EventTemplate.organization_id.in_(org_ids)))
     await db_session.execute(delete(Calendar).where(Calendar.organization_id.in_(org_ids)))

@@ -42,9 +42,6 @@ def _session(attendee_ids: list) -> MagicMock:
     return session
 
 
-
-
-
 class TestWhatWarrantsAMessage:
     @pytest.mark.parametrize(
         "action",
@@ -92,9 +89,7 @@ class TestDescribingChanges:
         assert moved_twice == ["The time has changed"]
 
     def test_untracked_actions_are_ignored(self) -> None:
-        assert describe_changes({"title_changed", "schedule_changed"}) == [
-            "The time has changed"
-        ]
+        assert describe_changes({"title_changed", "schedule_changed"}) == ["The time has changed"]
 
     def test_every_triggering_action_has_a_label(self) -> None:
         assert set(CHANGE_LABELS) == set(MAIL_TRIGGERING_ACTIONS)

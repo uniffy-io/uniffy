@@ -1,9 +1,9 @@
-import { CaretDown } from "@phosphor-icons/react";
+import { CaretDown, Plus } from "@phosphor-icons/react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { toggleSectionCollapse } from "@/features/calendar/store";
 import type { SidebarSectionId } from "@/features/calendar/types";
 import { cn } from "@/shared/utils/cn";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 interface SidebarSectionProps {
   id: SidebarSectionId;
@@ -42,5 +42,33 @@ export function SidebarSection({ id, title, children, action }: SidebarSectionPr
 
       {!isCollapsed && <div className="space-y-1">{children}</div>}
     </div>
+  );
+}
+
+interface SidebarSectionAddProps {
+  label: string;
+  onClick: () => void;
+  /** Set when the control opens a menu rather than a dialog. */
+  menu?: { ref: Ref<HTMLButtonElement>; open: boolean };
+}
+
+/** The section header's add control; every section uses it so the icons line up. */
+export function SidebarSectionAdd({ label, onClick, menu }: SidebarSectionAddProps) {
+  return (
+    <button
+      ref={menu?.ref}
+      type="button"
+      aria-haspopup={menu ? "menu" : undefined}
+      aria-expanded={menu ? menu.open : undefined}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className="focus-ring min-w-11 min-h-11 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      title={label}
+      aria-label={label}
+    >
+      <Plus size={14} weight="bold" />
+    </button>
   );
 }

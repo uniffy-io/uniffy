@@ -15,6 +15,11 @@ from uniffy.core.realtime.markdown import markdown_text, seed_markdown
 from uniffy.core.realtime.state import DocKey
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import ContentRole, ContentType, RecurrencePattern
+from uniffy.domains.scheduling.calendar.calendars.access import (
+    calendar_is_read_only,
+    cap_read_only,
+    read_only_event_ids,
+)
 from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
 from uniffy.domains.scheduling.calendar.events.realtime import (
     EventRealtimePersistence,
@@ -104,6 +109,10 @@ class EventRealtimeAdapter:
                 )
             ).scalars()
         )
+        series = master or event
+        read_only = await calendar_is_read_only(session, series.calendar_id) or (
+            series.id in await read_only_event_ids(session, [series.id])
+        )
         for user_id, role in roles.items():
             is_attendee = user_id in attendees
             if (
@@ -121,7 +130,7 @@ class EventRealtimeAdapter:
                 master is not None and event_details_hidden(master, user_id, role, is_attendee)
             ):
                 role = None
-            roles[user_id] = role
+            roles[user_id] = cap_read_only(role, read_only)
         return roles
 
     async def policy_key(

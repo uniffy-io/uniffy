@@ -5,7 +5,8 @@ import { cn } from "@/shared/utils/cn";
 import { TagChip, TagPicker } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { SectionLabel } from "@/features/calendar/components/detail/SectionLabel";
-import type { CalendarEvent } from "@/features/calendar/types";
+import type { CalendarEvent, CalendarInfo } from "@/features/calendar/types";
+import { providerEditHintCopy } from "@/features/calendar/utils/connectionCopy";
 import type { EventPatch } from "@/features/calendar/hooks/useEventCommit";
 import { useCalendarLabel, useWritableCalendars } from "@/features/calendar/hooks/useCalendars";
 import { CalendarSelect } from "@/features/calendar/components/calendars/CalendarSelect";
@@ -35,7 +36,8 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
   );
 
   if (!canEdit) {
-    return eventCalendar || eventTags.length > 0 ? (
+    const readOnlyNote = readOnlyNoteFor(event, eventCalendar);
+    return eventCalendar || eventTags.length > 0 || readOnlyNote ? (
       <div className="flex flex-wrap items-center gap-2">
         {eventCalendar && (
           <CalendarBadge name={labelOf(eventCalendar)} color={eventCalendar.color} />
@@ -43,6 +45,11 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
         {eventTags.map((tag) => (
           <TagChip key={tag.id} tag={tag} />
         ))}
+        {readOnlyNote && (
+          <p className="w-full text-xs text-subtle-foreground" data-testid="event-read-only-note">
+            {readOnlyNote}
+          </p>
+        )}
       </div>
     ) : null;
   }
@@ -98,6 +105,19 @@ export function EventMetaSection({ event, canEdit, commit }: EventMetaSectionPro
       </button>
     </div>
   );
+}
+
+/** Why the event cannot be changed here, when its calendar mirrors an outside source. */
+function readOnlyNoteFor(event: CalendarEvent, calendar: CalendarInfo | undefined): string | null {
+  if (event.providerEditHint) {
+    const series = !!event.isRecurring || !!event.recurrenceId || !!event.isMirroredOccurrence;
+    return `${providerEditHintCopy(event.providerEditHint, series)}.`;
+  }
+  if (calendar?.isReadOnly && calendar.kind === "connected") {
+    return "From a read-only connected calendar. Changes come from its source.";
+  }
+  if (calendar?.isReadOnly) return "From a subscribed calendar. Changes come from its source.";
+  return null;
 }
 
 function CalendarBadge({ name, color }: { name: string; color: string }) {

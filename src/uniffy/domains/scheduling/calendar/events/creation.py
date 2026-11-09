@@ -15,6 +15,7 @@ from uniffy.core.events import (
 from uniffy.core.events.realtime import ContentAccessAction
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
@@ -27,6 +28,7 @@ from uniffy.core.types import (
     RecurrencePattern,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import require_calendar_edit
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.events.notifications import (
     invitation_notifications,
     publish_event_change,
@@ -225,6 +227,13 @@ class EventCreateOperations:
                     event_id=event.id,
                 )
 
+            await stage_provider_push(
+                self.session,
+                organization_id=organization_id,
+                event_ids=[event.id],
+                operation=PushOperation.UPSERT,
+                actor_id=user_id,
+            )
             await self.session.commit()
         except Exception:
             await self.session.rollback()

@@ -1,4 +1,5 @@
 from collections.abc import Collection
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.calendar import Calendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.types import ContentRole, ContentType, SubjectType
@@ -22,8 +24,12 @@ from uniffy.domains.permissions.access.types import (
     ResourceRowState,
 )
 from uniffy.domains.scheduling.calendar.calendars.access import (
+    PROVIDER_CALENDAR_TYPES,
+    cap_read_only,
     event_role_from_calendar,
     higher_role,
+    read_only_calendar_ids,
+    read_only_event_ids,
 )
 
 
@@ -32,8 +38,23 @@ async def resolve_calendar_events(
     subject: AccessSubject,
     content_ids: Collection[UUID],
 ) -> dict[ResourceKey, ResourceAccessDecision]:
+    decisions, read_only = await _resolve_granted_events(session, subject, content_ids)
+    for event_id in read_only:
+        key = ResourceKey(ContentType.CALENDAR_EVENT, event_id)
+        decision = decisions.get(key)
+        if decision is not None and decision.role is not None:
+            decisions[key] = replace(decision, role=cap_read_only(decision.role, True))
+    return decisions
+
+
+async def _resolve_granted_events(
+    session: AsyncSession,
+    subject: AccessSubject,
+    content_ids: Collection[UUID],
+) -> tuple[dict[ResourceKey, ResourceAccessDecision], set[UUID]]:
+    """Decisions before the read-only cap, and the events whose series sits on a feed calendar."""
     if not content_ids:
-        return {}
+        return {}, set()
     master = aliased(CalendarEvent)
     rows = (
         await session.execute(
@@ -46,11 +67,13 @@ async def resolve_calendar_events(
                 master.access_mode,
                 master.baseline_role,
                 master.is_deleted.label("master_deleted"),
+                Calendar.calendar_type,
             )
             .join(
                 master,
                 master.id == func.coalesce(CalendarEvent.recurrence_id, CalendarEvent.id),
             )
+            .outerjoin(Calendar, Calendar.id == master.calendar_id)
             .where(
                 CalendarEvent.organization_id == subject.organization_id,
                 master.organization_id == subject.organization_id,
@@ -86,8 +109,22 @@ async def resolve_calendar_events(
             request_target=(parent.request_target if row_state == ResourceRowState.LIVE else None),
             target_policy=(parent.target_policy if row_state == ResourceRowState.LIVE else None),
         )
+    read_only_calendars = await read_only_calendar_ids(
+        session,
+        {
+            row.calendar_id
+            for row in rows
+            if row.calendar_id is not None and row.calendar_type in PROVIDER_CALENDAR_TYPES
+        },
+    )
+    read_only_masters = await read_only_event_ids(session, {row.master_id for row in rows})
+    read_only = {
+        row.id
+        for row in rows
+        if row.calendar_id in read_only_calendars or row.master_id in read_only_masters
+    }
     if not subject.is_active_member:
-        return decisions
+        return decisions, read_only
 
     master_calendars = {row.master_id: row.calendar_id for row in rows}
     calendar_roles = await resolve_calendar_roles(session, subject, set(master_calendars.values()))
@@ -141,7 +178,7 @@ async def resolve_calendar_events(
             request_target=decision.request_target,
             target_policy=decision.target_policy,
         )
-    return decisions
+    return decisions, read_only
 
 
 async def _blocked_event_ids(

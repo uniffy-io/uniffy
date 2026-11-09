@@ -955,9 +955,22 @@ export function CalendarScreen() {
   const { user } = useAuth();
   const countsAsConflict = useMemo(() => {
     const ownCalendarIds = new Set(
-      (calendarsQuery.data ?? []).filter((c) => c.section === "mine").map((c) => c.id),
+      (calendarsQuery.data ?? [])
+        // A followed feed or connected account is someone else's schedule unless
+        // its owner counts it as busy.
+        .filter(
+          (c) =>
+            c.section === "mine" ||
+            ((c.section === "subscribed" || c.section === "connected") && c.countsAsBusy),
+        )
+        .map((c) => c.id),
     );
-    const isMine = memberCommitments(user?.id, ownCalendarIds);
+    const excludedCalendarIds = new Set(
+      (calendarsQuery.data ?? [])
+        .filter((c) => (c.section === "subscribed" || c.section === "connected") && !c.countsAsBusy)
+        .map((c) => c.id),
+    );
+    const isMine = memberCommitments(user?.id, ownCalendarIds, excludedCalendarIds);
     return (event: SerializedEvent) => blocksTime(event) && isMine(event);
   }, [calendarsQuery.data, user?.id]);
   const colorOf = useCallback(

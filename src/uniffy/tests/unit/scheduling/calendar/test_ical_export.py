@@ -76,7 +76,9 @@ def _override_of(master: CalendarEvent, when: datetime) -> CalendarEvent:
     return moved
 
 
-def _exception(event_id, original: date, *, cancelled: bool, override_id=None) -> RecurrenceException:
+def _exception(
+    event_id, original: date, *, cancelled: bool, override_id=None
+) -> RecurrenceException:
     return RecurrenceException(
         event_id=event_id,
         original_date=original,
@@ -102,9 +104,7 @@ def _session(*, exceptions=(), overrides=(), attendees=(), users=()) -> MagicMoc
 class TestAssembly:
     async def test_a_cancelled_occurrence_becomes_an_exdate(self) -> None:
         master = _series()
-        session = _session(
-            exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)]
-        )
+        session = _session(exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)])
 
         exports = await build_exports(
             session,
@@ -206,19 +206,20 @@ class TestAssembly:
         session = MagicMock()
         session.execute = AsyncMock()
 
-        assert await build_exports(
-            session,
-            [],
-            viewer_id=VIEWER,
-            organization_id=ORG,
-        ) == []
+        assert (
+            await build_exports(
+                session,
+                [],
+                viewer_id=VIEWER,
+                organization_id=ORG,
+            )
+            == []
+        )
         session.execute.assert_not_awaited()
 
     async def test_assembled_series_serializes_with_its_exclusions(self) -> None:
         master = _series()
-        session = _session(
-            exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)]
-        )
+        session = _session(exceptions=[_exception(master.id, date(2026, 3, 25), cancelled=True)])
 
         exports = await build_exports(
             session,
@@ -240,9 +241,7 @@ class TestPrivateEvents:
     def _resolver(role: ContentRole | None):
         resolved = MagicMock()
         resolved.resolve_page = AsyncMock(
-            side_effect=lambda **kwargs: {
-                key: MagicMock(role=role) for key in kwargs["keys"]
-            }
+            side_effect=lambda **kwargs: {key: MagicMock(role=role) for key in kwargs["keys"]}
         )
         return patch(
             "uniffy.domains.scheduling.calendar.ical.assemble.ResourceAccessResolver",

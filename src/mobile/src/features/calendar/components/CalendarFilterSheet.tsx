@@ -1,11 +1,19 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { Check, Crosshair, Eye, EyeSlash, Prohibit, ShareNetwork } from "phosphor-react-native";
+import {
+  Check,
+  Crosshair,
+  Eye,
+  EyeSlash,
+  Prohibit,
+  ShareNetwork,
+  Warning,
+} from "phosphor-react-native";
 import { BottomSheet } from "@shared/components/BottomSheet";
 import { SheetSearchBar } from "@shared/components/SheetSearchBar";
 import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
-import { CALENDAR_SECTIONS } from "@features/calendar/calendarList";
+import { CALENDAR_SECTIONS, connectionHint } from "@features/calendar/calendarList";
 import type { SerializedCalendar, SerializedCategory } from "@features/calendar/calendarSerializer";
 import { useSetCalendarVisibility } from "@features/calendar/useCalendarMutations";
 import { roleCanManage } from "@shared/permissions/contentRoles";
@@ -79,6 +87,12 @@ export function CalendarFilterSheet({
               {rows.map((calendar) => {
                 const shown = !calendar.isHidden;
                 const EyeIcon = shown ? Eye : EyeSlash;
+                const hint = connectionHint(calendar);
+                const warning = calendar.needsReconnect
+                  ? "Reconnect on the web to resume syncing"
+                  : calendar.feedBroken
+                    ? "Stopped updating"
+                    : undefined;
                 return (
                   <TouchableOpacity
                     key={calendar.id}
@@ -93,7 +107,9 @@ export function CalendarFilterSheet({
                     activeOpacity={0.7}
                     accessibilityRole="switch"
                     accessibilityState={{ checked: shown }}
-                    accessibilityLabel={`Show ${calendar.label}`}
+                    accessibilityLabel={[`Show ${calendar.label}`, hint, warning]
+                      .filter(Boolean)
+                      .join(", ")}
                   >
                     <View
                       style={[
@@ -105,29 +121,43 @@ export function CalendarFilterSheet({
                         },
                       ]}
                     />
-                    <Text
-                      style={[styles.name, { color: shown ? T.textBright : T.textDim }]}
-                      numberOfLines={1}
-                    >
-                      {calendar.label}
-                    </Text>
+                    <View style={styles.nameColumn}>
+                      <Text
+                        style={[styles.nameText, { color: shown ? T.textBright : T.textDim }]}
+                        numberOfLines={1}
+                      >
+                        {calendar.label}
+                      </Text>
+                      {calendar.needsReconnect ? (
+                        <Text style={[styles.hint, { color: T.yellow }]} numberOfLines={1}>
+                          {warning}
+                        </Text>
+                      ) : hint ? (
+                        <Text style={[styles.hint, { color: T.textDim }]} numberOfLines={1}>
+                          {hint}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {warning ? <Warning size={16} color={T.yellow} weight="fill" /> : null}
                     <EyeIcon
                       size={16}
                       color={shown ? calendar.color : T.textDim}
                       weight="duotone"
                     />
-                    <TouchableOpacity
-                      onPress={() => onShareCalendar(calendar)}
-                      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={
-                        roleCanManage(calendar.userRole)
-                          ? `Share ${calendar.label}`
-                          : `Who has access to ${calendar.label}`
-                      }
-                    >
-                      <ShareNetwork size={16} color={T.textDim} weight="duotone" />
-                    </TouchableOpacity>
+                    {calendar.isReadOnly ? null : (
+                      <TouchableOpacity
+                        onPress={() => onShareCalendar(calendar)}
+                        hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          roleCanManage(calendar.userRole)
+                            ? `Share ${calendar.label}`
+                            : `Who has access to ${calendar.label}`
+                        }
+                      >
+                        <ShareNetwork size={16} color={T.textDim} weight="duotone" />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -287,6 +317,9 @@ const styles = StyleSheet.create({
   dot: { width: 12, height: 12, borderRadius: 6 },
   calendarDot: { borderWidth: 2 },
   name: { flex: 1, fontSize: 15, fontFamily: FONT.medium },
+  nameColumn: { flex: 1, gap: 2 },
+  nameText: { fontSize: 15, fontFamily: FONT.medium },
+  hint: { fontSize: 12, fontFamily: FONT.regular },
   empty: {
     fontSize: 14,
     fontFamily: FONT.regular,

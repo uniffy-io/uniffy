@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.calendar.attendee import EventAttendee
+from uniffy.core.models.calendar.connection import CalendarConnection, ConnectedCalendar
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.calendar.subscription import CalendarSubscription
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
@@ -71,6 +73,40 @@ async def _require_active_members(
         )
 
 
+async def _subscribed_busy_rows(
+    session: AsyncSession,
+    organization_id: UUID,
+    user_ids: list[UUID],
+    blocking,
+) -> list[tuple[CalendarEvent, UUID]]:
+    """Events on feeds whose owner chose to count them as busy; feeds carry no attendee rows."""
+    result = await session.execute(
+        select(CalendarEvent, CalendarSubscription.owner_id)
+        .join(CalendarSubscription, CalendarSubscription.calendar_id == CalendarEvent.calendar_id)
+        .where(
+            blocking,
+            CalendarSubscription.organization_id == organization_id,
+            CalendarSubscription.owner_id.in_(user_ids),
+            CalendarSubscription.counts_as_busy.is_(True),
+        )
+    )
+    return [(event, owner_id) for event, owner_id in result.all()]
+
+
+async def _quiet_calendars(session: AsyncSession, user_ids: list[UUID]) -> set[tuple[UUID, UUID]]:
+    """Connected calendars whose owner chose not to count them as busy, per owner."""
+    rows = await session.execute(
+        select(ConnectedCalendar.calendar_id, CalendarConnection.owner_id)
+        .join(CalendarConnection, CalendarConnection.id == ConnectedCalendar.connection_id)
+        .where(
+            CalendarConnection.owner_id.in_(user_ids),
+            ConnectedCalendar.counts_as_busy.is_(False),
+            ConnectedCalendar.calendar_id.is_not(None),
+        )
+    )
+    return {(row[0], row[1]) for row in rows.all()}
+
+
 async def get_busy_intervals(
     session: AsyncSession,
     organization_id: UUID,
@@ -101,26 +137,35 @@ async def get_busy_intervals(
         CalendarEvent.recurrence_pattern != RecurrencePattern.NONE,
         CalendarEvent.recurrence_id.is_(None),
     )
+    blocking = and_(
+        CalendarEvent.organization_id == organization_id,
+        CalendarEvent.is_deleted == False,  # noqa: E712
+        CalendarEvent.transparency == EventTransparency.OPAQUE,
+        CalendarEvent.status != EventStatus.CANCELLED,
+        or_(
+            and_(
+                CalendarEvent.start_time < range_end,
+                CalendarEvent.end_time > range_start,
+            ),
+            and_(is_master, CalendarEvent.start_time < range_end),
+        ),
+    )
     result = await session.execute(
         select(CalendarEvent, EventAttendee.user_id)
         .join(EventAttendee, EventAttendee.event_id == CalendarEvent.id)
         .where(
-            CalendarEvent.organization_id == organization_id,
-            CalendarEvent.is_deleted == False,  # noqa: E712
-            CalendarEvent.transparency == EventTransparency.OPAQUE,
-            CalendarEvent.status != EventStatus.CANCELLED,
+            blocking,
             EventAttendee.user_id.in_(user_ids),
             EventAttendee.status != AttendeeStatus.DECLINED,
-            or_(
-                and_(
-                    CalendarEvent.start_time < range_end,
-                    CalendarEvent.end_time > range_start,
-                ),
-                and_(is_master, CalendarEvent.start_time < range_end),
-            ),
         )
     )
-    rows = list(result.all())
+    quiet = await _quiet_calendars(session, user_ids)
+    rows = [
+        (event, user_id)
+        for event, user_id in result.all()
+        if (event.calendar_id, user_id) not in quiet
+    ]
+    rows.extend(await _subscribed_busy_rows(session, organization_id, user_ids, blocking))
 
     master_ids = {
         event.id

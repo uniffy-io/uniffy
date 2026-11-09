@@ -5,6 +5,7 @@ import orjson
 
 JSONDecodeError = orjson.JSONDecodeError
 OPTION_INDENT_2 = orjson.OPT_INDENT_2
+OPTION_SORT_KEYS = orjson.OPT_SORT_KEYS
 
 type JsonDefault = Callable[[Any], Any]
 type JsonInput = str | bytes | bytearray | memoryview

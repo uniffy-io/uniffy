@@ -22,6 +22,9 @@ import {
   ExportCalendarRequestSchema,
   ExportEventRequestSchema,
   GetCalendarFeedUrlRequestSchema,
+  CreateCalendarSubscriptionRequestSchema,
+  RefreshCalendarSubscriptionRequestSchema,
+  UpdateCalendarSubscriptionRequestSchema,
   EventActivityAction as ProtoEventActivityAction,
   GetEventRequestSchema,
   GetEventTemplateRequestSchema,
@@ -61,6 +64,7 @@ const ACTIVITY_ACTION_FROM_PROTO: Record<number, EventActivityAction> = {
   [ProtoEventActivityAction.ATTENDEES_REMOVED]: "attendees_removed",
   [ProtoEventActivityAction.RESPONSE_CHANGED]: "response_changed",
   [ProtoEventActivityAction.FIELD_UPDATED]: "field_updated",
+  [ProtoEventActivityAction.SYNC_CONFLICT]: "sync_conflict",
 };
 
 function activityFromProto(proto: ProtoEventActivity): EventActivity {
@@ -249,5 +253,23 @@ export const calendarApi = {
 
   revokeCalendarFeed: async (request: MessageInitShape<typeof RevokeCalendarFeedRequestSchema>) => {
     return calendarClient.revokeCalendarFeed(request);
+  },
+
+  createCalendarSubscription: async (
+    request: MessageInitShape<typeof CreateCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.createCalendarSubscription(request);
+  },
+
+  updateCalendarSubscription: async (
+    request: MessageInitShape<typeof UpdateCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.updateCalendarSubscription(request);
+  },
+
+  refreshCalendarSubscription: async (
+    request: MessageInitShape<typeof RefreshCalendarSubscriptionRequestSchema>,
+  ) => {
+    return calendarClient.refreshCalendarSubscription(request);
   },
 };

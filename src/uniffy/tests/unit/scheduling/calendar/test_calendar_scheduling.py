@@ -86,9 +86,7 @@ class TestWorkingWindows:
         assert widened == [(_dt(8, 9), _dt(8, 18))]
 
     def test_custom_workdays(self) -> None:
-        windows = working_windows(
-            _ctx(workdays=("saturday",)), _dt(3, 0), _dt(9, 23)
-        )
+        windows = working_windows(_ctx(workdays=("saturday",)), _dt(3, 0), _dt(9, 23))
         assert windows == [(_dt(8, 9), _dt(8, 18))]
 
     def test_hour_override_replaces_stored_hours(self) -> None:

@@ -10,6 +10,7 @@ import { DayHeader } from "@/features/calendar/components/calendar/DayHeader";
 import { GridLines } from "@/features/calendar/components/calendar/GridLines";
 import { DayCurrentTimeIndicator } from "@/features/calendar/components/calendar/CurrentTimeIndicator";
 import { EventBlock } from "@/features/calendar/components/calendar/EventBlock";
+import { AllDayLane } from "@/features/calendar/components/calendar/AllDayLane";
 import { GRID, LAYOUT } from "@/features/calendar/constants";
 import { parseISO, format, instantFromDisplayParts } from "@/features/calendar/utils";
 
@@ -19,7 +20,7 @@ export function DayView() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const { currentDate } = useCalendarNavigation();
-  const { getPositionedEvents } = useCalendarEvents();
+  const { getPositionedEvents, visibleEvents } = useCalendarEvents();
 
   const [selectedSlot, setSelectedSlot] = useState<{ hour: number; isHalf: boolean } | null>(null);
   const [dropPreview, setDropPreview] = useState<{ hour: number; isHalf: boolean } | null>(null);
@@ -40,6 +41,7 @@ export function DayView() {
     }),
     [currentDateObj, currentDate],
   );
+  const dayColumns = useMemo(() => [dayColumn], [dayColumn]);
 
   const positionedEvents = useMemo(
     () => getPositionedEvents(currentDate),
@@ -209,6 +211,8 @@ export function DayView() {
             <DayHeader day={dayColumn} />
           </div>
         </div>
+
+        <AllDayLane events={visibleEvents} columns={dayColumns} />
 
         <div ref={scrollRef} className="flex-1 overflow-auto">
           <div className="flex">

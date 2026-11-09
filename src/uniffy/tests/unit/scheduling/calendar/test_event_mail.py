@@ -3,7 +3,7 @@ each kind carries, and what the job does with the row once it sends."""
 
 from contextlib import asynccontextmanager
 from datetime import UTC, date, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from icalendar import Calendar
@@ -400,6 +400,34 @@ class TestReadingTheRow:
 
 
 class TestSending:
+    @pytest.mark.parametrize("hidden", [False, True])
+    async def test_hidden_rosters_stay_out_of_mail_and_attachments(self, hidden: bool) -> None:
+        event = _event(guest_list_hidden=hidden)
+        row = _row(event, CalendarMailKind.INVITATION)
+        recipient = _recipient(row)
+        other_email = "other@example.com"
+        other_name = "Other guest"
+        export = EventExport(
+            event=event,
+            organizer=IcalPerson("ada@example.com", "Ada"),
+            attendees=(
+                IcalAttendee(IcalPerson(recipient.user.email, "Grace")),
+                IcalAttendee(IcalPerson(other_email, other_name)),
+            ),
+        )
+        sender = AsyncMock()
+        await send_event_mail(
+            _request(event, CalendarMailKind.INVITATION, recipient_id=row.user_id),
+            _bundle(event, attendee_names=["Grace", other_name], exports=[export]),
+            recipient,
+            sender=sender,
+        )
+        call = sender.send.await_args.kwargs
+        assert (other_name in call["context"]["attendee_summary"]) is not hidden
+        for document in (call["calendar_part"].document, call["attachments"][0].content):
+            assert recipient.user.email.encode() in document
+            assert (other_email.encode() in document) is not hidden
+
     async def _send(self, *, kind=CalendarMailKind.INVITATION):
         event = _event()
         row = _row(event, kind)

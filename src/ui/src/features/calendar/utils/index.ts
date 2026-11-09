@@ -11,6 +11,8 @@ export {
   areSameDay,
   displayDayKey,
   instantDayKey,
+  allDayDayKeys,
+  eventDayKey,
   isDateToday,
   getDurationMinutes,
   formatDuration,

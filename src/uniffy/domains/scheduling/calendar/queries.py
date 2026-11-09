@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import ColumnElement, and_, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,9 +66,20 @@ def _attendee_user_info(user: User) -> dict:
     }
 
 
+def attendee_visibility(viewer_id: UUID | None) -> ColumnElement[bool]:
+    return or_(
+        CalendarEvent.guest_list_hidden.is_(False),
+        CalendarEvent.organizer_id == viewer_id,
+        EventAttendee.user_id == viewer_id,
+        EventAttendee.user_id == CalendarEvent.organizer_id,
+    )
+
+
 async def get_attendees_for_events(
     session: AsyncSession,
     event_ids: Sequence[UUID],
+    *,
+    viewer_id: UUID | None = None,
 ) -> dict[UUID, list[tuple[EventAttendee, dict]]]:
     if not event_ids:
         return {}
@@ -76,7 +87,8 @@ async def get_attendees_for_events(
     result = await session.execute(
         select(EventAttendee, User)
         .join(User, EventAttendee.user_id == User.id)
-        .where(EventAttendee.event_id.in_(event_ids))
+        .join(CalendarEvent, CalendarEvent.id == EventAttendee.event_id)
+        .where(EventAttendee.event_id.in_(event_ids), attendee_visibility(viewer_id))
     )
 
     by_event: dict[UUID, list[tuple[EventAttendee, dict]]] = {}
@@ -88,9 +100,13 @@ async def get_attendees_for_events(
 async def get_event_attendees(
     session: AsyncSession,
     event_id: UUID,
+    *,
+    viewer_id: UUID | None = None,
 ) -> list[tuple[EventAttendee, dict]]:
     """Attendees for an event with their user information."""
-    return (await get_attendees_for_events(session, [event_id])).get(event_id, [])
+    return (await get_attendees_for_events(session, [event_id], viewer_id=viewer_id)).get(
+        event_id, []
+    )
 
 
 def _get_initials(name: str) -> str:

@@ -1054,6 +1054,121 @@ creating. Needs an organizer (A), an attendee (B), a third member (C), an org ad
       selected. On mobile, editing an event now allows removing the last reminder too.
 - [ ] Creating a template no longer logs a Redux serializability error in the console.
 
+## Calendar: external feed subscriptions
+
+A member follows an external iCalendar link as a read-only calendar that the egress worker
+refreshes on a schedule. Needs a member (A), a second member (B), an org admin, `db shell`, the
+egress worker logs, and a small static file server reachable from the stack. For a private-network
+test feed, set `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` to its subnet and restart the egress worker.
+(both products)
+
+- [ ] A clicks `+` on "Subscribed" -> pastes a public holiday feed (`webcal://` or `https://`),
+      picks a colour and subscribes. The row shows "Syncing..." and, within a few seconds, the
+      holidays appear on the grid in that colour. `calendar_subscriptions.url_encrypted` holds an
+      envelope, not the address, and the `calendar.subscription_created` audit row names only
+      the host.
+- [ ] Paste a Google or Outlook secret address. Its events appear. Change an event at the
+      provider, then row menu -> Refresh now: the change appears on the grid.
+- [ ] Open a feed event: the detail shows "From a subscribed calendar" and no edit, delete,
+      move, attendee or reminder controls. Dragging it on the grid does nothing. The quick
+      create calendar picker and the delete-calendar move target never offer the subscribed
+      calendar. `UpdateEvent` on a feed event id as A returns permission denied.
+- [ ] Spotlight search as A for a feed event's title: the event is a hit and opens on the
+      calendar. `@` mention it in a note: the chip resolves. Change the title at the provider
+      and refresh: the open chip and the next search show the new title. A row removed at the
+      provider drops out of search after the next refresh.
+- [ ] B sees neither the calendar nor its events: grid, sidebar, spotlight search for the same
+      title, a deep link to one of its event ids (not found), A's mention chip (restricted).
+      The org admin sees nothing either.
+- [ ] Unsubscribe, then search the same title as A: no hit.
+- [ ] Open the scheduling assistant for A: the feed's events are free. Row menu -> Edit
+      subscription -> tick "Count these events as busy": the same times now show as busy.
+- [ ] Subscribe to an address that returns 404, to a page that is not a calendar, and to an
+      unreachable host: the dialog stays open, the Subscribe button reads "Checking...", and
+      the reason appears under the address. No row appears in the sidebar and
+      `calendar_subscriptions` gains no row. Editing the address clears the message. Replacing
+      a working subscription's address with a broken one shows the same message and keeps the
+      old address.
+- [ ] Subscribe to a working feed, then make the file server answer 404 (or stop it) and press
+      Refresh now three times: the row shows the error with a Retry action after the first
+      failure, a warning badge after the third, and A gets exactly one "stopped updating"
+      notification. A fourth failure sends no second notification. Retry spins until the
+      refresh has finished and cannot be pressed again meanwhile; pressing it again right after
+      raises no "too many requests" toast. Fix the feed and Retry: the error and badge clear.
+- [ ] Subscribe to `http://127.0.0.1:8000/x.ics` and to a name that resolves to `10.x`: the
+      dialog reports a private network that this deployment does not allow, nothing is saved,
+      and the egress log shows no connection attempt. With the subnet in
+      `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` the same feed syncs.
+- [ ] Stop the egress worker and subscribe: the dialog says addresses cannot be checked right
+      now and nothing is saved.
+- [ ] With the Google holiday feed: in week view a November week shows no December holidays,
+      Christmas Eve sits in the 24 December column only, and day view on a holiday shows it in
+      the all-day lane. Repeat with the display timezone set to Europe/Sofia and to
+      America/New_York: each holiday stays on its own date. Spotlight search for "Нова година"
+      lists one hit per year, each with its date.
+- [ ] Serve a feed with an `ETag`. A second refresh logs a 304 and writes nothing:
+      `updated_at` on its events does not move.
+- [ ] Serve a 10,000 event feed. It syncs in under a minute, and an agent chat on the same
+      egress worker keeps streaming meanwhile.
+- [ ] The org admin turns "Members can subscribe to external calendars" off on
+      `/admin/calendar`: the `+` on "Subscribed" is gone, existing rows say "Paused by your
+      organization", and nothing is fetched. Turning it back on resumes them.
+- [ ] Row menu -> Unsubscribe -> confirm: the calendar and every one of its events disappear,
+      and `calendar_subscriptions` has no row for it.
+- [ ] Mobile: the "Subscribed" section lists the calendar in the filter sheet with no share
+      button, a broken feed shows a warning icon, and the create-event calendar picker does not
+      offer it.
+
+## Calendar: Google and Microsoft sync
+
+Members connect a Google or Microsoft account and its calendars sync both ways. Needs a member
+(A) with a test Google account and a test Outlook account, a second member (B), an org admin,
+`db shell`, the backend and egress worker logs, and provider apps in env or on `/admin/calendar`.
+Organization policy must allow the member to connect and allow edits to sync back. Push needs a public https tunnel in `CALENDAR_PUSH_BASE_URL`; without it
+everything below still works on the five minute poll. (both products)
+
+- [ ] A clicks `+` on "Connected" -> Google -> signs in. The callback page returns to the
+      calendar, the account appears with its main calendar syncing, and its events show on the
+      grid within a minute. `calendar_connections` holds sealed tokens only, the attempt row is
+      consumed, and the `calendar.connection_created` audit row names the provider.
+- [ ] Reload the callback URL: it says the sign in expired and nothing changes.
+- [ ] Open the account settings: secondary calendars are off; holidays are read only. Turn one
+      on: a new calendar appears and fills. Turn it off: the calendar becomes a normal personal
+      calendar and keeps its events.
+- [ ] Create an event in Google Calendar: it appears in Uniffy (about a minute with push, five
+      without). Change its time and place, then cancel it: each change arrives.
+- [ ] A weekly series with one moved and one deleted occurrence arrives as one series with one
+      moved occurrence and one gap. A series with a rule Uniffy cannot express (for example
+      monthly on the first Monday and third Friday) appears occurrence by occurrence, read only,
+      with "Edit this series in Google Calendar".
+- [ ] Create, edit and delete an event in Uniffy on the connected calendar: each change shows in
+      Google Calendar within about a minute. The Uniffy meeting link appears as a `Join:` line in
+      the Google description and does not double after the next sync.
+- [ ] Edit the same event in Uniffy and then in Google before a sync: the Google version wins,
+      the Uniffy activity shows the replaced values, and A gets one "changed in Google Calendar"
+      notice. Repeat with Outlook, editing Outlook first and Uniffy second: the Uniffy version
+      wins and the activity keeps the Outlook values.
+- [ ] Invite B's address from Google: B is an attendee in Uniffy. Invite an outside address: it
+      shows under guests, read only. B connects Outlook holding the same meeting: still one
+      event, with two copies in `calendar_event_links`. B accepts in Uniffy: Outlook shows the
+      acceptance.
+- [ ] Mark an event private in Google: it is private in Uniffy and B sees only busy time.
+- [ ] Revoke Uniffy's access in the Google account settings, then wait for a sync: the account
+      shows "Reconnect", A gets exactly one notice, and Reconnect brings everything back without
+      duplicates.
+- [ ] Pause: nothing syncs and Uniffy edits wait. Resume: the waiting edits go out.
+- [ ] Disconnect -> confirm: the calendar stays as a personal calendar with every event, the
+      Google token is revoked, and Google keeps its events. Connect the same account again: the
+      calendar syncs again with no duplicates.
+- [ ] Org admin: set "Who can connect accounts" to Admins only, then Off: A's `+` disappears and
+      syncing pauses. Turn "Allow edits to sync back" off: connected calendars become read only.
+      Enter the organization's own Google app: everyone connected to Google must reconnect.
+- [ ] With the organization's provider policy Off: queued discovery and sync jobs make no
+      provider requests. Another organization with sync allowed keeps working.
+- [ ] B and the org admin see nothing of A's connected calendars or accounts.
+- [ ] Mobile: the "Connected" section shows the provider and account, a reconnect warning when
+      needed, and read only calendars are not offered when creating an event.
+
 ## Calendar: shared calendars
 
 Calendars are shareable content: a calendar's members reach every event filed on it, a

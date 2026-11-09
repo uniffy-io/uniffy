@@ -16,7 +16,7 @@ from uniffy.core.models.login.group import Group
 from uniffy.core.models.login.group_member import GroupMember
 from uniffy.core.models.permissions.content_member import ContentMember
 from uniffy.core.search import SearchIndexer
-from uniffy.core.types import ContentRole, ContentType, SubjectType
+from uniffy.core.types import CalendarType, ContentRole, ContentType, SubjectType
 from uniffy.domains.scheduling.calendar.events.content import EventContentOperations
 from uniffy.domains.scheduling.calendar.events.registration import register_calendar_content
 
@@ -28,6 +28,8 @@ class CalendarSection(StrEnum):
     MINE = "MINE"
     SHARED = "SHARED"
     ORGANIZATION = "ORGANIZATION"
+    SUBSCRIBED = "SUBSCRIBED"
+    CONNECTED = "CONNECTED"
 
 
 @dataclass(frozen=True)
@@ -87,7 +89,11 @@ class CalendarReader(BaseContentOperations[Calendar]):
         user_id: UUID, calendar: Calendar, is_hidden: bool | None, shared: bool
     ) -> CalendarListing:
         section = (
-            CalendarSection.MINE
+            CalendarSection.SUBSCRIBED
+            if calendar.owner_id == user_id and calendar.calendar_type == CalendarType.SUBSCRIBED
+            else CalendarSection.CONNECTED
+            if calendar.owner_id == user_id and calendar.calendar_type == CalendarType.CONNECTED
+            else CalendarSection.MINE
             if calendar.owner_id == user_id
             else CalendarSection.SHARED
             if shared

@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.auth.membership import is_active_member
+from uniffy.core.content.external_text import strip_controls
 from uniffy.core.errors import (
     MembershipRequiredError,
     NotFoundError,
@@ -18,7 +19,7 @@ from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.memory import AgentMemory, MemoryCategory, MemoryScope, MemorySource
 from uniffy.core.models.agents.session import AgentSession, AgentSessionKind
 from uniffy.domains.agents.cache import invalidate_memory_index
-from uniffy.domains.agents.memories.sanitize import escape_like, strip_control_chars
+from uniffy.domains.agents.memories.sanitize import escape_like
 from uniffy.domains.agents.memories.scope import (
     MemoryScopeRef,
     scope_filters,
@@ -41,17 +42,17 @@ def _validate_entry_fields(
     category: str,
     importance: float,
 ) -> tuple[str, str, str]:
-    key = strip_control_chars(key).strip()
+    key = strip_controls(key, keep_newlines=False).strip()
     if not key:
         raise ValidationError("key", "Key is required")
     if len(key) > 255:
         raise ValidationError("key", "Key must be 255 characters or fewer")
-    description = strip_control_chars(description).strip()
+    description = strip_controls(description, keep_newlines=False).strip()
     if not description:
         raise ValidationError("description", "Description is required")
     if len(description) > 255:
         raise ValidationError("description", "Description must be 255 characters or fewer")
-    content = strip_control_chars(content, keep_newlines=True).strip()
+    content = strip_controls(content).strip()
     if not content:
         raise ValidationError("content", "Content is required")
     if len(content) > MAX_CONTENT_CHARS:
@@ -437,12 +438,12 @@ class MemoryOperations:
         await self._require_mutate(user_id=user_id, organization_id=organization_id, memory=memory)
 
         if description is not None:
-            description = strip_control_chars(description).strip()
+            description = strip_controls(description, keep_newlines=False).strip()
             if not description or len(description) > 255:
                 raise ValidationError("description", "Description must be 1-255 characters")
             memory.description = description
         if content is not None:
-            content = strip_control_chars(content, keep_newlines=True).strip()
+            content = strip_controls(content).strip()
             if not content or len(content) > MAX_CONTENT_CHARS:
                 raise ValidationError("content", f"Content must be 1-{MAX_CONTENT_CHARS} characters")
             memory.content = content

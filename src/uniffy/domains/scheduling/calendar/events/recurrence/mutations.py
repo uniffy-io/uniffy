@@ -13,6 +13,7 @@ from uniffy.core.errors import (
 from uniffy.core.models.calendar.attendee import EventAttendee
 from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
+from uniffy.core.models.calendar.provider_push import PushOperation
 from uniffy.core.realtime.limits import validate_document_size
 from uniffy.core.realtime.live import load_live_document
 from uniffy.core.realtime.merge import merge_plain_text
@@ -23,6 +24,7 @@ from uniffy.core.types import (
     EventStatus,
     RecurrencePattern,
 )
+from uniffy.domains.scheduling.calendar.connections.outbox import stage_provider_push
 from uniffy.domains.scheduling.calendar.events.notifications import publish_event_change
 from uniffy.domains.scheduling.calendar.events.recurrence.withdrawal import (
     finish_following_overrides,
@@ -108,6 +110,14 @@ class RecurrenceMutationOperations:
             self.session, event, actor_id=user_id, occurrence_date=occurrence_date
         )
 
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[event_id],
+            operation=PushOperation.DELETE_OCCURRENCE,
+            actor_id=user_id,
+            occurrence_date=occurrence_date,
+        )
         await self.session.commit()
         await publish_event_change(event)
 
@@ -159,6 +169,7 @@ class RecurrenceMutationOperations:
             start_time=occ_start,
             end_time=occ_end,
             is_all_day=master.is_all_day,
+            guest_list_hidden=master.guest_list_hidden,
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
@@ -253,6 +264,14 @@ class RecurrenceMutationOperations:
                 actor_id=user_id,
                 actions=changed_actions,
             )
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[master.id],
+            operation=PushOperation.UPSERT_OCCURRENCE,
+            actor_id=user_id,
+            occurrence_date=occurrence_date,
+        )
         await self.session.commit()
         await publish_event_change(master)
 
@@ -346,6 +365,7 @@ class RecurrenceMutationOperations:
             start_time=new_start,
             end_time=new_end,
             is_all_day=master.is_all_day,
+            guest_list_hidden=master.guest_list_hidden,
             timezone=master.timezone,
             location=master.location,
             meeting_url=master.meeting_url,
@@ -446,6 +466,13 @@ class RecurrenceMutationOperations:
                 kind=CalendarMailKind.INVITATION,
                 actor_user_id=user_id,
             )
+        await stage_provider_push(
+            self.session,
+            organization_id=organization_id,
+            event_ids=[master.id, new_event.id],
+            operation=PushOperation.UPSERT,
+            actor_id=user_id,
+        )
         await self.session.commit()
         await publish_event_change(master, access_changed=True)
 

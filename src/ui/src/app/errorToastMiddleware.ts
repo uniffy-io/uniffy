@@ -13,6 +13,8 @@ const PAGE_OWNED_NOT_FOUND = new Set([
 const NOT_FOUND_CODE = /\[not_found\]/i;
 // The task panel and the full task page show their own restricted, deleted or missing state.
 const PAGE_OWNED_TASK_LOAD = "projects/fetchTask/rejected";
+// The connect callback page shows why the sign-in failed in place of a progress state.
+const PAGE_OWNED_FAILURES = new Set(["calendarConnections/complete/rejected"]);
 const TASK_LOAD_CODE = /\[(not_found|permission_denied)\]/i;
 
 /** Catches rejected thunks, translates raw payloads/errors via `friendlyErrorMessage`, suppresses aborts. */
@@ -30,7 +32,8 @@ export const errorToastMiddleware: Middleware = () => (next) => (action) => {
   if (
     raw &&
     isAction(action) &&
-    ((PAGE_OWNED_NOT_FOUND.has(action.type) && NOT_FOUND_CODE.test(raw)) ||
+    (PAGE_OWNED_FAILURES.has(action.type) ||
+      (PAGE_OWNED_NOT_FOUND.has(action.type) && NOT_FOUND_CODE.test(raw)) ||
       (action.type === PAGE_OWNED_TASK_LOAD && TASK_LOAD_CODE.test(raw)))
   ) {
     return result;

@@ -149,7 +149,7 @@ class EventMutationHandlers:
                     is_out_of_office=request.is_out_of_office,
                 )
 
-                attendees = await queries.get_event_attendees(session, event.id)
+                attendees = await queries.get_event_attendees(session, event.id, viewer_id=user_id)
                 room_info = await get_event_room_info(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return CreateEventResponse(
@@ -250,7 +250,7 @@ class EventMutationHandlers:
                     **kwargs,
                     call_lifecycle=self.call_lifecycle,
                 )
-                attendees = await queries.get_event_attendees(session, event.id)
+                attendees = await queries.get_event_attendees(session, event.id, viewer_id=user_id)
                 room_info = await get_event_room_info(session, event.id)
                 tags_by_urn = await hydrate_event_tags(session, organization_id, [event.id])
                 return UpdateEventResponse(
