@@ -1123,9 +1123,8 @@ test feed, set `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` to its subnet and restart the
 
 Members connect a Google or Microsoft account and its calendars sync both ways. Needs a member
 (A) with a test Google account and a test Outlook account, a second member (B), an org admin,
-`db shell`, the backend and egress worker logs, `CALENDAR_PROVIDER_SYNC_ENABLED=true` and
-`CALENDAR_PROVIDER_WRITES_ENABLED=true` on the backend and both workers, and provider apps in env
-or on `/admin/calendar`. Push needs a public https tunnel in `CALENDAR_PUSH_BASE_URL`; without it
+`db shell`, the backend and egress worker logs, and provider apps in env or on `/admin/calendar`.
+Organization policy must allow the member to connect and allow edits to sync back. Push needs a public https tunnel in `CALENDAR_PUSH_BASE_URL`; without it
 everything below still works on the five minute poll. (both products)
 
 - [ ] A clicks `+` on "Connected" -> Google -> signs in. The callback page returns to the
@@ -1164,8 +1163,8 @@ everything below still works on the five minute poll. (both products)
 - [ ] Org admin: set "Who can connect accounts" to Admins only, then Off: A's `+` disappears and
       syncing pauses. Turn "Allow edits to sync back" off: connected calendars become read only.
       Enter the organization's own Google app: everyone connected to Google must reconnect.
-- [ ] With `CALENDAR_PROVIDER_SYNC_ENABLED=false`: no `+` on "Connected", no provider host in the
-      egress log, and the rest of the calendar works as before.
+- [ ] With the organization's provider policy Off: queued discovery and sync jobs make no
+      provider requests. Another organization with sync allowed keeps working.
 - [ ] B and the org admin see nothing of A's connected calendars or accounts.
 - [ ] Mobile: the "Connected" section shows the provider and account, a reconnect warning when
       needed, and read only calendars are not offered when creating an event.

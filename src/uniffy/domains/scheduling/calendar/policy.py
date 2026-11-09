@@ -1,10 +1,5 @@
-"""Per-org calendar policy backed by the generic ``org_settings`` KV store.
+"""Organization calendar policy stored in the shared settings store."""
 
-Stored as one JSON blob under ``namespace='calendar'``, ``key='policy'``. An absent
-row means every field takes its built-in default.
-"""
-
-import os
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID
@@ -40,53 +35,11 @@ class ProviderSyncAudience(StrEnum):
 DEFAULT_TEAM_CALENDAR_CREATORS = CalendarPolicyAudience.EVERYONE
 DEFAULT_ORG_WIDE_CALENDAR_SHARERS = CalendarPolicyAudience.EVERYONE
 
-EXTERNAL_SUBSCRIPTIONS_ENV = "CALENDAR_EXTERNAL_SUBSCRIPTIONS_ENABLED"
+DEFAULT_ALLOW_EXTERNAL_SUBSCRIPTIONS = True
 _EXTERNAL_SUBSCRIPTIONS_KEY = "allow_external_subscriptions"
-_TRUE_WORDS = frozenset({"1", "true", "yes"})
-_FALSE_WORDS = frozenset({"0", "false", "no"})
-
-
-def _env_flag(name: str, default: bool) -> bool:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return default
-    value = raw.strip().lower()
-    if value in _TRUE_WORDS:
-        return True
-    if value in _FALSE_WORDS:
-        return False
-    raise ValueError(f"{name} must be true or false, got {raw!r}")
-
-
-# Parsed once so a typo fails the process at startup, not at the first subscription.
-DEFAULT_ALLOW_EXTERNAL_SUBSCRIPTIONS = _env_flag(EXTERNAL_SUBSCRIPTIONS_ENV, default=True)
-
-PROVIDER_SYNC_ENV = "CALENDAR_PROVIDER_SYNC_ENABLED"
-PROVIDER_WRITES_ENV = "CALENDAR_PROVIDER_WRITES_ENABLED"
 _PROVIDER_SYNC_AUDIENCE_KEY = "provider_sync_audience"
 _PROVIDER_WRITES_KEY = "allow_provider_writes"
 DEFAULT_PROVIDER_SYNC_AUDIENCE = ProviderSyncAudience.EVERYONE
-
-
-@dataclass(frozen=True)
-class ProviderDeployment:
-    """The deployment's switches, above every organization's policy."""
-
-    sync_enabled: bool
-    writes_enabled: bool
-
-
-def provider_deployment() -> ProviderDeployment:
-    """Read per call so tests and a restarted worker see the current environment."""
-    sync = _env_flag(PROVIDER_SYNC_ENV, default=False)
-    return ProviderDeployment(
-        sync_enabled=sync,
-        writes_enabled=sync and _env_flag(PROVIDER_WRITES_ENV, default=False),
-    )
-
-
-# Validated at import so a typo fails the process at startup.
-provider_deployment()
 
 
 @dataclass(frozen=True)
@@ -101,12 +54,7 @@ class ResolvedCalendarPolicy:
     allow_provider_writes: bool = True
 
     def provider_writes_enabled(self) -> bool:
-        """Edits flow back to providers only when both the deployment and the org allow it."""
-        return (
-            provider_deployment().writes_enabled
-            and self.allow_provider_writes
-            and self.provider_sync_audience != ProviderSyncAudience.OFF
-        )
+        return self.allow_provider_writes and self.provider_sync_audience != ProviderSyncAudience.OFF
 
 
 @dataclass(frozen=True)
@@ -212,17 +160,6 @@ async def require_can_subscribe(session: AsyncSession, organization_id: UUID) ->
         )
 
 
-async def may_connect_providers(
-    session: AsyncSession,
-    policy: ResolvedCalendarPolicy,
-    user_id: UUID,
-) -> bool:
-    """Whether the deployment and the org's audience admit this member to provider sync."""
-    if not provider_deployment().sync_enabled:
-        return False
-    return await policy_admits_sync(session, policy, user_id)
-
-
 async def policy_admits_sync(
     session: AsyncSession, policy: ResolvedCalendarPolicy, user_id: UUID
 ) -> bool:
@@ -235,7 +172,7 @@ async def policy_admits_sync(
 
 async def require_can_connect(session: AsyncSession, user_id: UUID, organization_id: UUID) -> None:
     policy = await resolve_calendar_policy(session, organization_id)
-    if not await may_connect_providers(session, policy, user_id):
+    if not await policy_admits_sync(session, policy, user_id):
         raise PermissionDeniedError(
             "connect", "calendar account - your organization has not turned this on"
         )
@@ -256,7 +193,7 @@ async def get_calendar_policy_view(
             session, policy.org_wide_calendar_sharers, user_id, organization_id
         ),
         can_subscribe_external_calendars=policy.allow_external_subscriptions,
-        can_connect_providers=await may_connect_providers(session, policy, user_id),
+        can_connect_providers=await policy_admits_sync(session, policy, user_id),
     )
 
 
@@ -334,8 +271,5 @@ async def update_calendar_policy(
         can_create_team_calendars=True,
         can_share_calendars_org_wide=True,
         can_subscribe_external_calendars=policy.allow_external_subscriptions,
-        can_connect_providers=(
-            provider_deployment().sync_enabled
-            and policy.provider_sync_audience != ProviderSyncAudience.OFF
-        ),
+        can_connect_providers=policy.provider_sync_audience != ProviderSyncAudience.OFF,
     )

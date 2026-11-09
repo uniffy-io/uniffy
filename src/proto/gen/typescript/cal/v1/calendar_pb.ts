@@ -2184,7 +2184,7 @@ export type GetCalendarPolicyResponse = Message<"cal.v1.GetCalendarPolicyRespons
   canSubscribeExternalCalendars: boolean;
 
   /**
-   * The deployment and the policy let the caller connect a provider account
+   * Organization policy lets the caller connect a provider account
    *
    * @generated from field: bool can_connect_providers = 5;
    */

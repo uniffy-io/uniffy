@@ -5011,7 +5011,7 @@ type GetCalendarPolicyResponse struct {
 	CanCreateTeamCalendars        bool                   `protobuf:"varint,2,opt,name=can_create_team_calendars,json=canCreateTeamCalendars,proto3" json:"can_create_team_calendars,omitempty"`
 	CanShareCalendarsOrgWide      bool                   `protobuf:"varint,3,opt,name=can_share_calendars_org_wide,json=canShareCalendarsOrgWide,proto3" json:"can_share_calendars_org_wide,omitempty"`
 	CanSubscribeExternalCalendars bool                   `protobuf:"varint,4,opt,name=can_subscribe_external_calendars,json=canSubscribeExternalCalendars,proto3" json:"can_subscribe_external_calendars,omitempty"`
-	// The deployment and the policy let the caller connect a provider account
+	// Organization policy lets the caller connect a provider account
 	CanConnectProviders bool `protobuf:"varint,5,opt,name=can_connect_providers,json=canConnectProviders,proto3" json:"can_connect_providers,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache

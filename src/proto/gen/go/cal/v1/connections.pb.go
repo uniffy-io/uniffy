@@ -204,7 +204,7 @@ type ProviderCalendar struct {
 	IsSystem    bool                  `protobuf:"varint,6,opt,name=is_system,json=isSystem,proto3" json:"is_system,omitempty"`
 	SyncEnabled bool                  `protobuf:"varint,7,opt,name=sync_enabled,json=syncEnabled,proto3" json:"sync_enabled,omitempty"`
 	Direction   CalendarSyncDirection `protobuf:"varint,8,opt,name=direction,proto3,enum=cal.v1.CalendarSyncDirection" json:"direction,omitempty"`
-	// Two-way is possible: the account may write and the deployment and organization allow it
+	// Two-way is possible: the account may write and organization policy allows it
 	CanWrite     bool `protobuf:"varint,9,opt,name=can_write,json=canWrite,proto3" json:"can_write,omitempty"`
 	CountsAsBusy bool `protobuf:"varint,10,opt,name=counts_as_busy,json=countsAsBusy,proto3" json:"counts_as_busy,omitempty"`
 	// The Uniffy calendar it syncs into, once enabled
@@ -459,7 +459,7 @@ type ProviderAvailability struct {
 	Provider         CalendarProvider         `protobuf:"varint,1,opt,name=provider,proto3,enum=cal.v1.CalendarProvider" json:"provider,omitempty"`
 	Configured       bool                     `protobuf:"varint,2,opt,name=configured,proto3" json:"configured,omitempty"`
 	CredentialSource ProviderCredentialSource `protobuf:"varint,3,opt,name=credential_source,json=credentialSource,proto3,enum=cal.v1.ProviderCredentialSource" json:"credential_source,omitempty"`
-	// Two-way sync is allowed by the deployment and the organization
+	// Two-way sync is allowed by organization policy
 	WritesEnabled bool `protobuf:"varint,4,opt,name=writes_enabled,json=writesEnabled,proto3" json:"writes_enabled,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

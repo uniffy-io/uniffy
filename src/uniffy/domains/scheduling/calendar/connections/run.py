@@ -59,7 +59,6 @@ from uniffy.domains.scheduling.calendar.connections.tokens import (
 )
 from uniffy.domains.scheduling.calendar.policy import (
     policy_admits_sync,
-    provider_deployment,
     resolve_calendar_policy,
 )
 from uniffy.domains.scheduling.calendar.search import (
@@ -250,9 +249,7 @@ async def _load(
         return SyncReport(SyncStatus.SKIPPED)
     connected, connection = row
     policy = await resolve_calendar_policy(session, connection.organization_id)
-    if not provider_deployment().sync_enabled or not await policy_admits_sync(
-        session, policy, connection.owner_id
-    ):
+    if not await policy_admits_sync(session, policy, connection.owner_id):
         await session.execute(
             update(ConnectedCalendar)
             .where(ConnectedCalendar.id == connected.id)

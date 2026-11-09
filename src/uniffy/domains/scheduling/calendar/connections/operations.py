@@ -32,7 +32,6 @@ from uniffy.domains.scheduling.calendar.connections.cleanup import enqueue_clean
 from uniffy.domains.scheduling.calendar.connections.reattach import reattach_calendar
 from uniffy.domains.scheduling.calendar.policy import (
     ResolvedCalendarPolicy,
-    may_connect_providers,
     policy_admits_sync,
     resolve_calendar_policy,
 )
@@ -78,7 +77,7 @@ async def list_connections(
     writes = policy.provider_writes_enabled()
     allowed = await policy_admits_sync(session, policy, user_id)
     views = [ConnectionView(row, calendars.get(row.id, []), writes, allowed) for row in connections]
-    return views, policy, await may_connect_providers(session, policy, user_id)
+    return views, policy, allowed
 
 
 async def _calendars_of(

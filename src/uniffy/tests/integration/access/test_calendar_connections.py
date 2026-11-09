@@ -94,6 +94,12 @@ from uniffy.domains.scheduling.calendar.jobs.contracts import (
 )
 from uniffy.domains.scheduling.calendar.mail.compose import build_message_document, load_bundle
 from uniffy.domains.scheduling.calendar.mail.outbox import CalendarMailKind, EventMailRequest
+from uniffy.domains.scheduling.calendar.policy import (
+    CalendarPolicyAudience,
+    ProviderSyncAudience,
+    get_calendar_policy_view,
+    update_calendar_policy,
+)
 from uniffy.infrastructure.database import open_session
 from uniffy.infrastructure.valkey.queue import get_queue
 from uniffy.tests.fakes.calendar_providers import FakeProviders
@@ -147,8 +153,6 @@ def providers(monkeypatch):
         "MICROSOFT_CALENDAR_CLIENT_ID": "microsoft-client",
         "MICROSOFT_CALENDAR_CLIENT_SECRET": "microsoft-secret",
         "MICROSOFT_CALENDAR_TENANT": "common",
-        "CALENDAR_PROVIDER_SYNC_ENABLED": "true",
-        "CALENDAR_PROVIDER_WRITES_ENABLED": "true",
         "CALENDAR_PUSH_BASE_URL": "",
         "UNIFFY_BASE_URL": "http://localhost:5173",
     }.items():
@@ -195,6 +199,18 @@ def _indexer() -> AsyncMock:
 
 async def _email(session, user_id) -> str:
     return (await session.scalar(select(User.email).where(User.id == user_id))).lower()
+
+
+async def _set_policy(session, access, *, audience=ProviderSyncAudience.EVERYONE, writes=True):
+    return await update_calendar_policy(
+        session,
+        access.owner_id,
+        access.org_id,
+        team_calendar_creators=CalendarPolicyAudience.EVERYONE,
+        org_wide_calendar_sharers=CalendarPolicyAudience.EVERYONE,
+        provider_sync_audience=audience,
+        allow_provider_writes=writes,
+    )
 
 
 async def _connect(session, access, fakes, provider, user_id=None, code="code-1"):
@@ -385,11 +401,11 @@ class TestConnect:
         )
         assert attempt.return_path == "/calendar"
 
-    async def test_sync_switched_off_for_the_deployment_refuses_to_start(
-        self, session, access, providers, monkeypatch
+    async def test_sync_switched_off_for_the_organization_refuses_to_start(
+        self, session, access, providers
     ):
-        monkeypatch.setenv("CALENDAR_PROVIDER_SYNC_ENABLED", "false")
-        with pytest.raises(Exception, match="not turned this on"):
+        await _set_policy(session, access, audience=ProviderSyncAudience.OFF)
+        with pytest.raises(PermissionDeniedError, match="not turned this on"):
             await start_connection(
                 session,
                 access.member_id,
@@ -398,6 +414,59 @@ class TestConnect:
                 reconnect_connection_id=None,
                 return_path="/calendar",
             )
+
+
+class TestOrganizationPolicy:
+    async def test_defaults_allow_connecting_feeds_and_writes(self, session, access):
+        view = await get_calendar_policy_view(session, access.member_id, access.org_id)
+        assert view.can_connect_providers
+        assert view.can_subscribe_external_calendars
+        assert view.policy.provider_writes_enabled()
+
+    async def test_disabling_writes_drops_queued_provider_edits(
+        self, session, access, providers, buffer
+    ):
+        connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
+        connected = await _primary(session, connection)
+        event = _snapshot(await _create_on(session, access, connected.calendar_id, buffer))
+        (push,) = await _pending_pushes(session, event.id)
+        await _set_policy(session, access, writes=False)
+        providers.google.calls.log.clear()
+
+        result = await run_push(session, push.id, push.generation, _indexer())
+
+        assert result["status"] == "dropped"
+        assert providers.google.calls.log == []
+
+    @pytest.mark.parametrize("provider", list(CalendarProvider))
+    @pytest.mark.parametrize("audience", [ProviderSyncAudience.OFF, ProviderSyncAudience.ADMINS])
+    async def test_disallowed_member_jobs_pause_before_provider_calls(
+        self, session, access, providers, provider, audience
+    ):
+        connection, _ = await _connect(session, access, providers, provider)
+        await _set_policy(session, access, audience=audience)
+        fake = providers.google if provider == CalendarProvider.GOOGLE else providers.graph
+        fake.calls.log.clear()
+
+        view = await get_calendar_policy_view(session, access.member_id, access.org_id)
+        assert not view.can_connect_providers
+        assert (await run_discovery(session, connection.id, connection.generation))[
+            "status"
+        ] == "paused"
+        assert (await _sync(session, connection)).status == SyncStatus.PAUSED
+        assert fake.calls.log == []
+
+        await _set_policy(session, access)
+        assert (await run_discovery(session, connection.id, connection.generation))["status"] == "ok"
+        assert fake.calls.log
+
+    async def test_admin_only_policy_admits_admin_but_not_member(self, session, access, providers):
+        await _set_policy(session, access, audience=ProviderSyncAudience.ADMINS)
+        admin = await get_calendar_policy_view(session, access.owner_id, access.org_id)
+        member = await get_calendar_policy_view(session, access.member_id, access.org_id)
+        assert admin.can_connect_providers
+        assert not member.can_connect_providers
+        await _connect(session, access, providers, CalendarProvider.GOOGLE, user_id=access.owner_id)
 
 
 class TestInboundGoogle:
@@ -1132,11 +1201,11 @@ class TestOutbound:
         )
 
     async def test_with_writes_off_the_calendar_is_read_only_and_nothing_queues(
-        self, session, access, providers, buffer, monkeypatch
+        self, session, access, providers, buffer
     ):
         connection, _ = await _connect(session, access, providers, CalendarProvider.GOOGLE)
         connected = await _primary(session, connection)
-        monkeypatch.setenv("CALENDAR_PROVIDER_WRITES_ENABLED", "false")
+        await _set_policy(session, access, writes=False)
         with pytest.raises(ValidationError):
             await _create_on(session, access, connected.calendar_id, buffer)
 

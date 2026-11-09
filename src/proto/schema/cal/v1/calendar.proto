@@ -993,7 +993,7 @@ message GetCalendarPolicyResponse {
   bool can_create_team_calendars = 2;
   bool can_share_calendars_org_wide = 3;
   bool can_subscribe_external_calendars = 4;
-  // The deployment and the policy let the caller connect a provider account
+  // Organization policy lets the caller connect a provider account
   bool can_connect_providers = 5;
 }
 

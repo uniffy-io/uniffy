@@ -28,13 +28,17 @@ from uniffy.domains.scheduling.calendar.connections.providers.base import (
 )
 from uniffy.domains.scheduling.calendar.connections.reattach import DEFAULT_COLOR
 from uniffy.domains.scheduling.calendar.connections.run import publish_calendar_changed
-from uniffy.domains.scheduling.calendar.connections.state import DISCOVERY_INTERVAL
+from uniffy.domains.scheduling.calendar.connections.state import (
+    DISCOVERY_INTERVAL,
+    PAUSED_RECHECK,
+    owned_by_live_member,
+)
 from uniffy.domains.scheduling.calendar.connections.tokens import (
     ConnectionGone,
     access_token_for,
     require_reauth,
 )
-from uniffy.domains.scheduling.calendar.policy import resolve_calendar_policy
+from uniffy.domains.scheduling.calendar.policy import policy_admits_sync, resolve_calendar_policy
 from uniffy.infrastructure.outbound import ApiError
 
 logger = logger.bind(component="scheduling.calendar.connections.discovery")
@@ -46,6 +50,21 @@ async def run_discovery(
     session: AsyncSession, connection_id: UUID, generation: int
 ) -> dict[str, object]:
     """Returns the connected-calendar ids that start syncing now."""
+    connection = await session.scalar(
+        owned_by_live_member(select(CalendarConnection)).where(
+            CalendarConnection.id == connection_id,
+            CalendarConnection.generation == generation,
+        )
+    )
+    if connection is None:
+        await session.rollback()
+        return {"status": "skipped"}
+    policy = await resolve_calendar_policy(session, connection.organization_id)
+    if not await policy_admits_sync(session, policy, connection.owner_id):
+        connection.next_discovery_at = datetime.now(UTC) + PAUSED_RECHECK
+        await session.commit()
+        return {"status": "paused"}
+    await session.rollback()
     try:
         access = await access_token_for(session, connection_id, generation)
     except ConnectionGone:

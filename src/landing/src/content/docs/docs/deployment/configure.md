@@ -184,11 +184,10 @@ Stores original uploads, attachments, file versions, thumbnails, and completed v
 
 ## External calendar feeds
 
-Members can follow an external calendar link, such as a Google or Outlook secret address or a holiday feed, as a read only calendar. The egress worker fetches each link on a schedule. The API process never does.
+Members can follow an external calendar link, such as a Google or Outlook secret address or a holiday feed, as a read only calendar. The egress worker fetches each link on a schedule. The API process never does. Feed subscriptions are enabled by default; organization admins can disable them on `/admin/calendar`.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CALENDAR_EXTERNAL_SUBSCRIPTIONS_ENABLED` | `true` | Whether members can subscribe, for every organization that has not set it on its calendar admin page. Set `false` to keep it off until an org admin turns it on. |
 | `OUTBOUND_ALLOWED_PRIVATE_NETWORKS` | empty | CIDRs a member typed link may reach. Empty means the public internet only. |
 
 A link a member types is a request your servers make on their behalf, so we refuse anything that resolves to a private, loopback, link local or cloud metadata address. We check every address a name resolves to, pin the connection to the address we checked, and check again after every redirect. If your team publishes a calendar from a server on your own network, list its range in `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`, for example `10.20.0.0/16`. Nobody can change that from inside an organization.
@@ -197,14 +196,12 @@ If you route outbound traffic through `HTTPS_PROXY` or `HTTP_PROXY`, the proxy r
 
 ## Google Calendar and Microsoft 365 sync
 
-Members can connect a Google account (Workspace or personal Gmail) or a Microsoft account (work, school or personal Outlook) and keep its calendars in step with Uniffy. Changes made on either side show up on the other. Sync is off until you turn it on, and nothing calls Google or Microsoft before that.
+Members can connect a Google account (Workspace or personal Gmail) or a Microsoft account (work, school or personal Outlook) and keep its calendars in step with Uniffy. Changes made on either side show up on the other. Organization admins control who can connect accounts and whether edits sync back on `/admin/calendar`. By default, all members may connect and sync edits back. Connecting requires a configured OAuth app and the member completing sign-in.
 
 All calendar provider requests run on the egress worker, including OAuth token exchange, account lookup and disconnect cleanup. Connecting an account needs a running egress worker; the API waits up to 65 seconds for its response. Callback codes travel encrypted through the queue. Disconnect takes effect locally before provider cleanup is queued. Remote cleanup is best effort and skips an account reconnected before the job starts.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `CALENDAR_PROVIDER_SYNC_ENABLED` | `false` | Lets members connect accounts and brings provider changes into Uniffy. |
-| `CALENDAR_PROVIDER_WRITES_ENABLED` | `false` | Also sends Uniffy edits back to calendars set to two way. With it off, every connected calendar is read only. |
 | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` | empty | Your Google OAuth app. Leave empty to let each organization enter its own. |
 | `MICROSOFT_CALENDAR_CLIENT_ID`, `MICROSOFT_CALENDAR_CLIENT_SECRET` | empty | Your Microsoft Entra app. |
 | `MICROSOFT_CALENDAR_TENANT` | `common` | `common` admits any Microsoft account. A tenant id limits sign in to one organization. |

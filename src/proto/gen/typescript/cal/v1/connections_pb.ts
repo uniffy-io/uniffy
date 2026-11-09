@@ -67,7 +67,7 @@ export type ProviderCalendar = Message<"cal.v1.ProviderCalendar"> & {
   direction: CalendarSyncDirection;
 
   /**
-   * Two-way is possible: the account may write and the deployment and organization allow it
+   * Two-way is possible: the account may write and organization policy allows it
    *
    * @generated from field: bool can_write = 9;
    */
@@ -189,7 +189,7 @@ export type ProviderAvailability = Message<"cal.v1.ProviderAvailability"> & {
   credentialSource: ProviderCredentialSource;
 
   /**
-   * Two-way sync is allowed by the deployment and the organization
+   * Two-way sync is allowed by organization policy
    *
    * @generated from field: bool writes_enabled = 4;
    */

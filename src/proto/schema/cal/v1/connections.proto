@@ -70,7 +70,7 @@ message ProviderCalendar {
   bool is_system = 6;
   bool sync_enabled = 7;
   CalendarSyncDirection direction = 8;
-  // Two-way is possible: the account may write and the deployment and organization allow it
+  // Two-way is possible: the account may write and organization policy allows it
   bool can_write = 9;
   bool counts_as_busy = 10;
   // The Uniffy calendar it syncs into, once enabled
@@ -98,7 +98,7 @@ message ProviderAvailability {
   CalendarProvider provider = 1;
   bool configured = 2;
   ProviderCredentialSource credential_source = 3;
-  // Two-way sync is allowed by the deployment and the organization
+  // Two-way sync is allowed by organization policy
   bool writes_enabled = 4;
 }
 

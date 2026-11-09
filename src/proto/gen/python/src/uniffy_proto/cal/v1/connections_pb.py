@@ -72,7 +72,7 @@ class ProviderCalendar(Message[_ProviderCalendarFields]):
             cal.v1.CalendarSyncDirection direction = 8;
             ```
         can_write:
-            Two-way is possible: the account may write and the deployment and organization allow it
+            Two-way is possible: the account may write and organization policy allows it
 
             ```proto
             bool can_write = 9;
@@ -242,7 +242,7 @@ class ProviderAvailability(Message[_ProviderAvailabilityFields]):
             cal.v1.ProviderCredentialSource credential_source = 3;
             ```
         writes_enabled:
-            Two-way sync is allowed by the deployment and the organization
+            Two-way sync is allowed by organization policy
 
             ```proto
             bool writes_enabled = 4;

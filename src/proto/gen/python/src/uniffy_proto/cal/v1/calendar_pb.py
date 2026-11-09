@@ -2845,7 +2845,7 @@ class GetCalendarPolicyResponse(Message[_GetCalendarPolicyResponseFields]):
             bool can_subscribe_external_calendars = 4;
             ```
         can_connect_providers:
-            The deployment and the policy let the caller connect a provider account
+            Organization policy lets the caller connect a provider account
 
             ```proto
             bool can_connect_providers = 5;

@@ -38,7 +38,6 @@ from uniffy.domains.scheduling.calendar.jobs.contracts import (
 )
 from uniffy.domains.scheduling.calendar.policy import (
     policy_admits_sync,
-    provider_deployment,
     resolve_calendar_policy,
 )
 from uniffy.infrastructure.database import open_session
@@ -79,8 +78,6 @@ async def _admitted(session: AsyncSession, rows: list[Any]) -> tuple[list[Any], 
 
 
 async def dispatch_calendar_connections(ctx: dict[str, Any]) -> dict[str, int]:
-    if not provider_deployment().sync_enabled:
-        return {"discoveries": 0, "syncs": 0, "pushes": 0}
     now = datetime.now(UTC)
     async with open_session() as session:
         discoveries = await _lease_discoveries(session, now)
