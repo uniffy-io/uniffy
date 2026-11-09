@@ -122,6 +122,13 @@ describe("what can double-book the member", () => {
     expect(mine(base)).toBe(false);
     expect(mine({ ...base, attendees: [attendee("declined")] })).toBe(false);
   });
+
+  it("excludes opted-out feeds before checking organizer or attendance", () => {
+    const scope = memberCommitments(ME, new Set(["my-calendar"]), new Set(["feed"]));
+    expect(scope({ ...base, calendarId: "feed", organizerId: ME })).toBe(false);
+    expect(scope({ ...base, calendarId: "feed", attendees: [attendee("accepted")] })).toBe(false);
+    expect(scope({ ...base, attendees: [attendee("accepted")] })).toBe(true);
+  });
 });
 
 describe("calendar labels", () => {

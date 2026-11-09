@@ -23,7 +23,6 @@ from uniffy.core.models.calendar.subscription import (
     DEFAULT_REFRESH_INTERVAL_MINUTES,
     CalendarSubscription,
 )
-from uniffy.core.outbound import OutboundFetchError, normalize_public_url
 from uniffy.core.rate_limit import check_rate_limit
 from uniffy.core.search import SearchIndexer
 from uniffy.core.types import CalendarType, ContentType
@@ -35,6 +34,7 @@ from uniffy.domains.scheduling.calendar.policy import require_can_subscribe
 from uniffy.domains.scheduling.calendar.subscriptions.refresh import publish_subscription_changed
 from uniffy.domains.scheduling.calendar.subscriptions.state import REFRESH_INTERVALS_MINUTES
 from uniffy.domains.scheduling.calendar.subscriptions.verify import verify_address
+from uniffy.infrastructure.outbound import OutboundFetchError, normalize_public_url
 
 logger = logger.bind(component="scheduling.calendar.subscriptions.operations")
 

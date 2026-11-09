@@ -22,7 +22,6 @@ from uniffy.core.models.calendar.subscription import CalendarSubscription, Subsc
 from uniffy.core.models.login.organization import Organization
 from uniffy.core.models.login.organization_member import OrganizationMember
 from uniffy.core.models.login.user import User
-from uniffy.core.outbound import OutboundFailure, OutboundFetchError, fetch_public
 from uniffy.core.search.indexer import SearchIndexer, build_content_urn
 from uniffy.core.types import CalendarType, ContentType, NotificationType
 from uniffy.domains.notifications.jobs.contracts import (
@@ -46,6 +45,7 @@ from uniffy.domains.scheduling.calendar.subscriptions.state import (
     next_after_failure,
     next_after_success,
 )
+from uniffy.infrastructure.outbound import OutboundFailure, OutboundFetchError, fetch_public
 
 logger = logger.bind(component="scheduling.calendar.subscriptions.refresh")
 

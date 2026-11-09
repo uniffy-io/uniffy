@@ -1,11 +1,11 @@
 """The one way to fetch a URL a person typed: public addresses only, pinned, capped."""
 
-from uniffy.core.outbound.addresses import (
+from uniffy.infrastructure.outbound.addresses import (
     OutboundFailure,
     OutboundFetchError,
     normalize_public_url,
 )
-from uniffy.core.outbound.fetch import FetchResult, fetch_public
+from uniffy.infrastructure.outbound.fetch import FetchResult, fetch_public
 
 __all__ = [
     "FetchResult",

@@ -186,12 +186,14 @@ const EVERY_EVENT: ConflictScope = () => true;
 export function memberCommitments(
   userId: string | undefined,
   ownCalendarIds: ReadonlySet<string>,
+  excludedCalendarIds?: ReadonlySet<string>,
 ): ConflictScope {
   return (event) =>
-    ownCalendarIds.has(event.calendarId) ||
-    (!!userId &&
-      (event.organizerId === userId ||
-        event.attendees.some((a) => a.id === userId && a.status !== "declined")));
+    !excludedCalendarIds?.has(event.calendarId) &&
+    (ownCalendarIds.has(event.calendarId) ||
+      (!!userId &&
+        (event.organizerId === userId ||
+          event.attendees.some((a) => a.id === userId && a.status !== "declined"))));
 }
 
 export function findConflicts(

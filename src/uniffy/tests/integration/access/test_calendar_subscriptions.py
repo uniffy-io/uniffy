@@ -18,7 +18,6 @@ from uniffy.core.models.calendar.event import CalendarEvent
 from uniffy.core.models.calendar.exception import RecurrenceException
 from uniffy.core.models.calendar.subscription import CalendarSubscription, SubscriptionFailure
 from uniffy.core.models.notifications.outbox import NotificationOutbox
-from uniffy.core.outbound import FetchResult, OutboundFailure, OutboundFetchError
 from uniffy.core.search import SearchIndexer
 from uniffy.core.search.engine import SearchAll, SearchAny, SearchFilter, SearchTerm
 from uniffy.core.search.indexer import build_content_urn
@@ -48,6 +47,7 @@ from uniffy.domains.scheduling.calendar.subscriptions.operations import (
 from uniffy.domains.scheduling.calendar.subscriptions.refresh import RefreshStatus, run_refresh
 from uniffy.domains.scheduling.calendar.subscriptions.verify import FeedCheckFailed
 from uniffy.infrastructure.database import open_session
+from uniffy.infrastructure.outbound import FetchResult, OutboundFailure, OutboundFetchError
 
 pytestmark = pytest.mark.asyncio(loop_scope="session")
 
@@ -55,6 +55,7 @@ SECRET_URL = "webcal://calendar.example.com/private-5f2c9e/basic.ics"
 SECRET = "private-5f2c9e"
 SECRET_HOST = "calendar.example.com"
 PLAIN_HOST = "example.org"
+SUBSCRIPTION_NAME = "Team rota"
 ANA_SHIFT = "rota-1"
 RENAMED = "On call: Boris"
 DEFANGED_TITLE = "Hi CEO"
@@ -160,7 +161,7 @@ async def _subscribe(session, access, *, url: str = SECRET_URL, busy: bool = Fal
         access.member_id,
         access.org_id,
         url=url,
-        name="Team rota",
+        name=SUBSCRIPTION_NAME,
         color="#22c55e",
         refresh_interval_minutes=60,
         counts_as_busy=busy,
@@ -456,7 +457,7 @@ class TestSubscribe:
         assert not await session.scalar(
             select(func.count())
             .select_from(Calendar)
-            .where(Calendar.owner_id == access.member_id, Calendar.name == "Team rota")
+            .where(Calendar.owner_id == access.member_id, Calendar.name == SUBSCRIPTION_NAME)
             .where(Calendar.is_deleted.is_(False))
         )
 
@@ -680,7 +681,7 @@ class TestRefresh:
             subscription_id=row.id,
             organization_id=row.organization_id,
             calendar_id=row.calendar_id,
-            calendar_name="Team rota",
+            calendar_name=SUBSCRIPTION_NAME,
             url="https://example.org/race.ics",
             url_digest=row.url_digest,
             etag=None,

@@ -78,7 +78,7 @@ Adding a new domain:
   suppressions disabled, so inline and file-level `noqa` directives cannot waive these boundaries.
   When an external process is unavoidable, use `asyncio.create_subprocess_exec` with a fixed
   executable and separate arguments; never construct a shell command.
-- **A URL a person typed is fetched only through `core/outbound.fetch_public`, on a worker, never
+- **A URL a person typed is fetched only through `infrastructure/outbound.fetch_public`, on a worker, never
   in the API process.** It refuses private, loopback, link-local and metadata addresses (operators
   open ranges with `OUTBOUND_ALLOWED_PRIVATE_NETWORKS`), pins the connection to the address it
   checked, re-checks every redirect, caps the body and never puts the URL in an error. Hosts an

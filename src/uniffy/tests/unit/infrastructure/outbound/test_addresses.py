@@ -4,8 +4,8 @@ import ipaddress
 
 import pytest
 
-from uniffy.core.outbound import addresses
-from uniffy.core.outbound.addresses import (
+from uniffy.infrastructure.outbound import addresses
+from uniffy.infrastructure.outbound.addresses import (
     OutboundFailure,
     OutboundFetchError,
     is_allowed_address,
