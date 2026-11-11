@@ -24,6 +24,7 @@ class OutputRepair(StrEnum):
     BARE_URN = "bare_urn"
     DIRECTIVE = "directive"
     SELF_PREFIX = "self_prefix"
+    TABLE_MENTION_PIPE = "table_mention_pipe"
 
 
 _UUID = r"[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}"
@@ -46,6 +47,10 @@ _FENCE = re.compile(
 )
 _DIRECTIVE = re.compile(r"^:::[ \t]*\w*[ \t]*(?:\r?\n)?$")
 _BACKTICKS = re.compile(r"`+")
+_CELL_SEPARATOR = "|"
+_TABLE_DELIMITER = re.compile(r"[ \t]{0,3}\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*")
+# The label group excludes `\`, so an already escaped `[[[label\|urn]]]` is left alone.
+_BARE_MENTION_PIPE = re.compile(r"(\[\[\[[^\[\]|\\\r\n]+?)\|(urn:[^\]\r\n]+?\]\]\])")
 _MARKDOWN_INFO = frozenset({"md", "markdown"})
 
 
@@ -108,6 +113,39 @@ def _repair_mentions(text: str, repairs: set[OutputRepair]) -> str:
         offset = match.end()
     parts.append(text[offset:])
     return "".join(parts)
+
+
+def _escape_table_mentions(text: str, repairs: set[OutputRepair]) -> str:
+    # A bare `|` inside a table row ends the cell and splits the mention in two;
+    # Markdown readers turn the escaped `\|` back into `|` inside the cell.
+    lines = text.splitlines(keepends=True)
+    in_table = False
+
+    def escape(index: int) -> None:
+        escaped, count = _BARE_MENTION_PIPE.subn(r"\1\\|\2", lines[index])
+        if count:
+            lines[index] = escaped
+            repairs.add(OutputRepair.TABLE_MENTION_PIPE)
+
+    for index, line in enumerate(lines):
+        if not line.strip():
+            in_table = False
+        elif in_table:
+            escape(index)
+        elif (
+            index
+            and _CELL_SEPARATOR in line
+            and _CELL_SEPARATOR in lines[index - 1]
+            and lines[index - 1].strip()
+            and _TABLE_DELIMITER.fullmatch(line.rstrip("\r\n"))
+        ):
+            in_table = True
+            escape(index - 1)
+    return "".join(lines)
+
+
+def _repair_prose(text: str, repairs: set[OutputRepair]) -> str:
+    return _escape_table_mentions(_repair_mentions(text, repairs), repairs)
 
 
 def _fence_ends(lines: list[str], prefix: re.Pattern[str] | None) -> dict[tuple[int, bool], int]:
@@ -212,9 +250,9 @@ def normalize_model_markdown(
         if fence is None:
             prose.append(line)
         else:
-            parts.append(_repair_mentions("".join(prose), repairs))
+            parts.append(_repair_prose("".join(prose), repairs))
             prose.clear()
             parts.append(line)
             parts.extend(lines[start + 1 : stop])
-    parts.append(_repair_mentions("".join(prose), repairs))
+    parts.append(_repair_prose("".join(prose), repairs))
     return "".join(parts), [kind.value for kind in OutputRepair if kind in repairs]
