@@ -49,9 +49,15 @@ export function Drawer({
   const isLeft = side === "left";
 
   // Portaled so a drawer opened from inside a pane is not trapped under the app header's
-  // stacking context.
+  // stacking context. It shares the modal layer, so whichever opened last sits on top: a drawer
+  // opened from a dialog covers it, and a dialog opened from a drawer covers the drawer.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={ariaLabel}>
+    <div
+      className="fixed inset-0 z-[100] flex"
+      role="dialog"
+      aria-modal="true"
+      aria-label={ariaLabel}
+    >
       <div
         className={cn(
           "fixed inset-0 bg-black/40 transition-opacity duration-300",
