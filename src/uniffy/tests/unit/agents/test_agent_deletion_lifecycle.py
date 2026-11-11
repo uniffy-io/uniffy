@@ -109,7 +109,7 @@ class TestDeleteFanOut:
         # A retired agent must not keep the org's default slot hostage.
         assert agent.is_default is False
 
-    async def test_disables_cron_tasks_and_drops_agent_bound_memories(self) -> None:
+    async def test_disables_cron_tasks_drops_memories_and_stops_task_assignments(self) -> None:
         agent = _agent()
         session = _RecordingSession()
         ops = _ops(session, agent)
@@ -127,7 +127,13 @@ class TestDeleteFanOut:
             for p in patches:
                 p.stop()
 
-        assert len(session.statements) == 2
+        assert session.targets() == [
+            "agents_cron_tasks",
+            "agents_memories",
+            "agents_task_assignments",
+            "agents_task_assignments",
+            "projects_projects",
+        ]
 
     async def test_search_row_is_removed(self) -> None:
         agent = _agent()

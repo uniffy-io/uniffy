@@ -90,9 +90,7 @@ def hint(**overrides: object) -> dict[str, object]:
 
 
 def test_the_router_reads_a_sealed_record_with_what_its_associated_data_names() -> None:
-    assert _parse_remote_update(hint()) == RemoteUpdate(
-        SEALED, GENERATION, EPOCH, 3, "u-3", ACTOR
-    )
+    assert _parse_remote_update(hint()) == RemoteUpdate(SEALED, GENERATION, EPOCH, 3, "u-3", ACTOR)
 
 
 @pytest.mark.parametrize(

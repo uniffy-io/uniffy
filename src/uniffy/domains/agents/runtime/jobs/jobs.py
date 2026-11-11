@@ -8,6 +8,7 @@ import asyncio
 import time
 from contextlib import aclosing
 from datetime import datetime
+from enum import StrEnum
 from typing import Any, cast
 from uuid import UUID
 
@@ -48,6 +49,24 @@ from uniffy.infrastructure.valkey.ops import get_ops_client
 logger = logger.bind(component="agents.runtime.jobs.jobs")
 
 RUN_AGENT_SESSION_JOB_TIMEOUT_SECONDS = 900
+
+
+class SessionRunStatus(StrEnum):
+    """The ``status`` a session run reports back to the job that drove it."""
+
+    SUCCESS = "success"
+    CANCELLED = "cancelled"
+    ERROR = "error"
+    SKIPPED = "skipped"
+
+
+class SessionRunLimit(StrEnum):
+    """Which bound ended a run before its reply."""
+
+    STEP_LIMIT = "step_limit"
+    DEADLINE = "deadline"
+
+
 _LOCK_TTL_SECONDS = RUN_AGENT_SESSION_JOB_TIMEOUT_SECONDS + 30
 _LOCK_KEY_TEMPLATE = "agent_run_lock:{run_id}"
 _DELETE_DEFER_SECONDS = 60
@@ -120,16 +139,49 @@ async def run_agent_session(
         uid = UUID(user_id)
         oid = UUID(organization_id)
         sid = UUID(session_id)
+        rerun_id = UUID(rerun_message_id) if rerun_message_id else None
+        skill_id = UUID(invoked_skill_id) if invoked_skill_id else None
     except ValueError:
         logger.error(
             f"run_agent_session: invalid UUID args run={run_id} "
             f"user={user_id} org={organization_id} session={session_id}"
         )
-        return {"status": "error", "error": "invalid_uuid"}
+        return {"status": SessionRunStatus.ERROR, "error": "invalid_uuid"}
 
+    return await drive_session_run(
+        ctx,
+        run_id=rid,
+        user_id=uid,
+        organization_id=oid,
+        session_id=sid,
+        content=content,
+        files=_files_from_payload(files),
+        user_timezone=user_timezone,
+        rerun_message_id=rerun_id,
+        invoked_skill_id=skill_id,
+    )
+
+
+async def drive_session_run(
+    ctx: dict[str, Any],
+    *,
+    run_id: UUID,
+    user_id: UUID,
+    organization_id: UUID,
+    session_id: UUID,
+    content: str,
+    files: list[FileContext] | None = None,
+    user_timezone: str | None = None,
+    rerun_message_id: UUID | None = None,
+    invoked_skill_id: UUID | None = None,
+    trigger_brief: str | None = None,
+) -> dict[str, Any]:
+    """Run one session turn on this egress worker, publishing every event to its run stream."""
+    rid, uid, oid, sid = run_id, user_id, organization_id, session_id
+    run_id_text = str(run_id)
     lock_token = await _acquire_lock(rid)
     if lock_token is None:
-        return {"status": "skipped", "reason": "lock_held", "run_id": run_id}
+        return {"status": SessionRunStatus.SKIPPED, "reason": "lock_held", "run_id": run_id_text}
 
     queued_state = await get_run_state(rid)
     if queued_state is not None:
@@ -149,7 +201,7 @@ async def run_agent_session(
         organization_id=oid,
         session_id=sid,
     )
-    file_contexts = _files_from_payload(files)
+    file_contexts = files
     valkey = ctx.get("valkey")
     run_started = time.monotonic()
     AGENT_RUN_ACTIVE.inc()
@@ -178,12 +230,15 @@ async def run_agent_session(
             destination = SessionDestination(session_id=sid)
             done_seen = False
             cancelled = False
+            final_message_id: UUID | None = None
+            run_error: str | None = None
+            limit: SessionRunLimit | None = None
             deadline_at = time.monotonic() + runtime_settings.send_deadline_seconds
             if rerun_message_id:
                 event_stream = runtime_ops.stream_rerun_from_message(
                     user_id=uid,
                     organization_id=oid,
-                    message_id=UUID(rerun_message_id),
+                    message_id=rerun_message_id,
                     user_timezone=user_timezone,
                 )
             else:
@@ -194,9 +249,10 @@ async def run_agent_session(
                     content=content,
                     files=file_contexts,
                     user_timezone=user_timezone,
-                    invoked_skill_id=UUID(invoked_skill_id) if invoked_skill_id else None,
+                    invoked_skill_id=invoked_skill_id,
                     run_id=rid,
                     deadline_at=deadline_at,
+                    trigger_brief=trigger_brief,
                 )
             try:
                 async with (
@@ -205,8 +261,14 @@ async def run_agent_session(
                 ):
                     async for event in event_stream:
                         await publisher.publish(event)
+                        if event.type is EventType.ERROR and event.error:
+                            run_error = event.error
+                        if event.type is EventType.EXCEED_MAX_ITERS:
+                            limit = SessionRunLimit.STEP_LIMIT
                         if event.type is EventType.DONE:
                             done_seen = True
+                            if event.assistant_message is not None:
+                                final_message_id = event.assistant_message.id
                             break
                         # Polling between events keeps the cancel window tight (one HGET per event).
                         if await is_cancel_requested(rid):
@@ -235,16 +297,17 @@ async def run_agent_session(
                     StreamEvent(type=EventType.ERROR, error="agent_deadline_exceeded")
                 )
                 return {
-                    "status": "error",
+                    "status": SessionRunStatus.ERROR,
                     "error": "agent_deadline_exceeded",
-                    "run_id": run_id,
+                    "limit": SessionRunLimit.DEADLINE,
+                    "run_id": run_id_text,
                 }
 
         if (done_seen or cancelled) and valkey is not None:
             try:
                 await valkey.enqueue_job(
                     DELETE_RUN_STREAM.name,
-                    run_id,
+                    run_id_text,
                     _defer_by=_DELETE_DEFER_SECONDS,
                 )
             except Exception:
@@ -253,8 +316,15 @@ async def run_agent_session(
                 )
 
         if cancelled:
-            return {"status": "cancelled", "run_id": run_id}
-        return {"status": "success", "run_id": run_id}
+            return {"status": SessionRunStatus.CANCELLED, "run_id": run_id_text}
+        return {
+            "status": SessionRunStatus.SUCCESS,
+            "run_id": run_id_text,
+            "replied": done_seen,
+            "error": run_error,
+            "limit": limit,
+            "final_message_id": str(final_message_id) if final_message_id else None,
+        }
 
     except Exception as exc:
         error_text = str(exc)[:_ERROR_TRUNCATE_LIMIT]

@@ -75,9 +75,7 @@ async def test_stream_xadd_writes_json_bytes(monkeypatch) -> None:
 
 
 async def test_stream_xread_accepts_json_bytes(monkeypatch) -> None:
-    client = _FakeStreamsClient(
-        result=[("agent:run:test", [("1-0", {"data": b'{"seq":1}'})])]
-    )
+    client = _FakeStreamsClient(result=[("agent:run:test", [("1-0", {"data": b'{"seq":1}'})])])
     monkeypatch.setattr(streams_mod, "_get_streams_client", lambda: client)
 
     assert await streams_mod.xread("agent:run:test") == [("1-0", {"seq": 1})]

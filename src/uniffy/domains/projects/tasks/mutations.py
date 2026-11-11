@@ -27,11 +27,13 @@ from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import (
     ContentType,
 )
+from uniffy.domains.agents.tasks.admission import after_commit, stage_unassign
 from uniffy.domains.files.attachments.inline import stage_inline_reconciliation
 from uniffy.domains.files.attachments.purge import purge_attachments_for_content
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.statuses import (
     load_task_status_semantics,
+    require_known_status,
 )
 from uniffy.domains.projects.tasks.activity import FIELD_ACTIONS, TaskActivityRecorder
 from uniffy.domains.projects.tasks.content import TaskContentOperations
@@ -78,6 +80,7 @@ class TaskMutationOperations:
         new_status_completed = status_semantics.is_completed(proposed_status)
 
         if "status" in kwargs and kwargs["status"] != task.status:  # noqa: PLR2004
+            await require_known_status(self.session, task.project_id, kwargs["status"])
             unresolved = await TaskValidator(self.session).blockers_resolved(
                 task, new_status_completed
             )
@@ -413,6 +416,11 @@ class TaskMutationOperations:
             task.is_deleted = True
             task.deleted_at = datetime.now(UTC)
 
+        # A deleted task has nothing left to work on.
+        retired_agent = await stage_unassign(
+            self.session, organization_id=organization_id, task_id=task_id
+        )
+
         await write_audit_event(
             self.session,
             organization_id=organization_id,
@@ -424,6 +432,7 @@ class TaskMutationOperations:
         )
 
         await self.session.commit()
+        await after_commit([retired_agent])
         await retire()
         if staged_tags is not None:
             await tag_ops.finish_unassign_all_after_commit(staged_tags)

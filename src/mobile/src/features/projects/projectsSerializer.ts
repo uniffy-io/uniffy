@@ -14,6 +14,11 @@ import {
   ViewType,
   ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  TaskAgentAssignmentReason,
+  TaskAgentAssignmentStatus,
+  type TaskAgentAssignment,
+} from "@uniffy/proto/projects/v1/agents_pb";
 import { create } from "@bufbuild/protobuf";
 import { AccessMode } from "@uniffy/proto/common/v1/common_pb";
 import type { ThemeColors } from "@theme/theme";
@@ -72,6 +77,8 @@ export interface SerializedProject {
   estimatedMinutes: number;
   timeSpentMinutes: number;
   fieldDefinitions: SerializedFieldDefinition[];
+  /** New tasks are picked up by this agent, working as each task's creator. */
+  agentAssigneeId?: string;
   /** Shared views and the caller's own personal views, as the server lists them. */
   views: SerializedView[];
   defaultViewId: string;
@@ -131,8 +138,108 @@ export interface SerializedTask {
   outgoingReferences: string[];
   fieldValues: { [key: string]: string };
   tags: SerializedTaskTag[];
+  agentAssignment?: SerializedTaskAgent;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type TaskAgentRunStatus =
+  | "waiting"
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "stopped"
+  | "skipped"
+  | "uncertain";
+
+export interface SerializedTaskAgent {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentAvatarEmoji?: string;
+  agentIsDeleted: boolean;
+  /** The run works with this person's permissions; only they get the session id. */
+  assignedById: string;
+  status: TaskAgentRunStatus;
+  reason: "task" | "project";
+  sessionId?: string;
+  /** Set while a pending run waits for the time it was scheduled for. */
+  startAt?: string;
+}
+
+/** When a newly assigned agent starts: now, when someone presses Start, or at a time. */
+export type AgentRunStart = { kind: "now" } | { kind: "wait" } | { kind: "at"; at: Date };
+
+const AGENT_RUN_STATUS: Record<number, TaskAgentRunStatus> = {
+  [TaskAgentAssignmentStatus.PENDING]: "pending",
+  [TaskAgentAssignmentStatus.RUNNING]: "running",
+  [TaskAgentAssignmentStatus.COMPLETED]: "completed",
+  [TaskAgentAssignmentStatus.FAILED]: "failed",
+  [TaskAgentAssignmentStatus.STOPPED]: "stopped",
+  [TaskAgentAssignmentStatus.SKIPPED]: "skipped",
+  [TaskAgentAssignmentStatus.UNCERTAIN]: "uncertain",
+  [TaskAgentAssignmentStatus.WAITING]: "waiting",
+};
+
+const AGENT_RUN_LABEL: Record<TaskAgentRunStatus, string> = {
+  waiting: "Waiting to start",
+  pending: "Starting",
+  running: "Working",
+  completed: "Finished",
+  failed: "Could not finish",
+  stopped: "Stopped",
+  skipped: "Did not start",
+  uncertain: "Interrupted",
+};
+
+const ENDED_RUN_STATUSES: ReadonlySet<TaskAgentRunStatus> = new Set([
+  "completed",
+  "failed",
+  "stopped",
+  "uncertain",
+]);
+
+export function agentRunStatusLabel(agent: SerializedTaskAgent): string {
+  return isAgentRunScheduled(agent) ? "Scheduled" : AGENT_RUN_LABEL[agent.status];
+}
+
+/** Queued for a time that has not come yet. */
+export function isAgentRunScheduled(agent: SerializedTaskAgent | undefined): boolean {
+  return agent?.status === "pending" && !!agent.startAt;
+}
+
+/** Starting or working now: the task refreshes while this holds. */
+export function isAgentRunActive(agent: SerializedTaskAgent | undefined): boolean {
+  if (!agent || isAgentRunScheduled(agent)) return false;
+  return agent.status === "pending" || agent.status === "running";
+}
+
+/** Not finished: waiting, scheduled, starting or working; Stop applies. */
+export function isAgentRunOpen(agent: SerializedTaskAgent | undefined): boolean {
+  return agent?.status === "waiting" || agent?.status === "pending" || agent?.status === "running";
+}
+
+/** Ended with a session its owner can send changes to. */
+export function canRequestAgentChanges(agent: SerializedTaskAgent | undefined): boolean {
+  return (
+    !!agent && ENDED_RUN_STATUSES.has(agent.status) && !!agent.sessionId && !agent.agentIsDeleted
+  );
+}
+
+function taskAgentToPlain(proto: TaskAgentAssignment): SerializedTaskAgent {
+  return {
+    id: proto.id,
+    agentId: proto.agentId,
+    agentName: proto.agentName,
+    agentAvatarEmoji: proto.agentAvatarEmoji,
+    agentIsDeleted: proto.agentIsDeleted,
+    assignedById: proto.assignedById,
+    status: AGENT_RUN_STATUS[proto.status] ?? "pending",
+    reason: proto.reason === TaskAgentAssignmentReason.PROJECT ? "project" : "task",
+    sessionId: proto.sessionId,
+    startAt: tsToIso(proto.startAt),
+  };
 }
 
 export interface SerializedTaskTag {
@@ -303,6 +410,7 @@ export function projectToPlain(project: Project): SerializedProject {
     estimatedMinutes: project.estimatedMinutes,
     timeSpentMinutes: project.timeSpentMinutes,
     fieldDefinitions: project.fieldDefinitions.map(fieldDefinitionToPlain),
+    agentAssigneeId: project.agentAssigneeId,
     views: project.views.map(viewToPlain),
     defaultViewId: project.defaultViewId,
     createdAt: tsToIso(project.createdAt),
@@ -341,6 +449,7 @@ export function taskToPlain(task: Task): SerializedTask {
     outgoingReferences: task.outgoingReferences,
     fieldValues: task.fieldValues,
     tags: task.tags.map((t) => ({ id: t.id, name: t.name, color: t.color })),
+    agentAssignment: task.agentAssignment ? taskAgentToPlain(task.agentAssignment) : undefined,
     createdAt: tsToIso(task.createdAt),
     updatedAt: tsToIso(task.updatedAt),
   };

@@ -1,6 +1,7 @@
 import { Alert } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { useAuth } from "@core/providers/AuthContext";
 import { isCurrentSession } from "@core/auth/sessionScope";
 import {
@@ -16,7 +17,11 @@ import {
   viewToPlain,
   visibilityStringToProto,
 } from "@features/projects/projectsSerializer";
-import type { SerializedProject, SerializedTask } from "@features/projects/projectsSerializer";
+import type {
+  AgentRunStart,
+  SerializedProject,
+  SerializedTask,
+} from "@features/projects/projectsSerializer";
 import { isCompletedStatus } from "@features/projects/statusSemantics";
 import type { TaskMove } from "@features/projects/taskOrdering";
 import type { GroupDrop } from "@features/projects/taskGrouping";
@@ -205,6 +210,72 @@ export function useUpdateTask() {
     },
     onError: (error) => {
       Alert.alert("Could not save task", serverMessage(error, "The changes were not saved"));
+    },
+  });
+}
+
+function runStartToProto(start: AgentRunStart) {
+  if (start.kind === "wait") return { case: "waitForStart" as const, value: true };
+  if (start.kind === "at") return { case: "startAt" as const, value: timestampFromDate(start.at) };
+  return { case: undefined };
+}
+
+function useTaskAgentRefresh() {
+  const { organizationId } = useAuth();
+  const queryClient = useQueryClient();
+  return (variables: { taskId: string; projectId: string }) => {
+    queryClient.invalidateQueries({ queryKey: ["tasks", organizationId, variables.projectId] });
+    queryClient.invalidateQueries({ queryKey: ["task", organizationId, variables.taskId] });
+    queryClient.invalidateQueries({ queryKey: ["task-activities", organizationId] });
+  };
+}
+
+/** Hand a task to an agent, or take it back with `agentId: null`. */
+export function useAssignTaskAgent() {
+  const { organizationId } = useAuth();
+  const refresh = useTaskAgentRefresh();
+
+  return useMutation({
+    mutationFn: (args: {
+      taskId: string;
+      projectId: string;
+      agentId: string | null;
+      start?: AgentRunStart;
+    }) =>
+      projectsApi.assignTaskAgent({
+        organizationId: organizationId!,
+        taskId: args.taskId,
+        ...(args.agentId
+          ? { agentId: args.agentId, start: runStartToProto(args.start ?? { kind: "now" }) }
+          : {}),
+      }),
+    onSuccess: (_data, variables) => refresh(variables),
+    onError: (error) => {
+      Alert.alert("Could not assign the agent", serverMessage(error, "Nothing was changed"));
+    },
+  });
+}
+
+/** Start a held run now, stop a run while keeping the agent, or send its owner's changes. */
+export function useTaskAgentControl() {
+  const { organizationId } = useAuth();
+  const refresh = useTaskAgentRefresh();
+
+  return useMutation({
+    mutationFn: (args: {
+      taskId: string;
+      projectId: string;
+      action: "start" | "stop" | "changes";
+      changes?: string;
+    }): Promise<unknown> => {
+      const request = { organizationId: organizationId!, taskId: args.taskId };
+      if (args.action === "start") return projectsApi.startTaskAgent(request);
+      if (args.action === "stop") return projectsApi.stopTaskAgent(request);
+      return projectsApi.requestTaskAgentChanges({ ...request, changes: args.changes ?? "" });
+    },
+    onSuccess: (_data, variables) => refresh(variables),
+    onError: (error) => {
+      Alert.alert("Could not update the agent", serverMessage(error, "Nothing was changed"));
     },
   });
 }

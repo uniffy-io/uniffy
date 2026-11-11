@@ -205,9 +205,7 @@ class TestFinish:
         creator, org_id = generate_id(), generate_id()
         store = _store(creator=creator, caller=creator, org_id=org_id, step=OnboardingStep.TEAM)
 
-        view = await OnboardingOperations(store.session).finish(
-            creator, org_id, dismissed=dismissed
-        )
+        view = await OnboardingOperations(store.session).finish(creator, org_id, dismissed=dismissed)
 
         assert view == OnboardingView(pending=False, current_step=OnboardingStep.TEAM)
         entry = store.entry
@@ -276,9 +274,7 @@ class TestStaging:
             patch(f"{_OPERATIONS}.write_audit_event", AsyncMock()),
             patch(f"{_OPERATIONS}.stage_onboarding", stage),
         ):
-            staged = await ops.stage_organization(
-                "Acme", "acme", owner_id, begin_onboarding=begin
-            )
+            staged = await ops.stage_organization("Acme", "acme", owner_id, begin_onboarding=begin)
 
         if begin:
             stage.assert_awaited_once_with(

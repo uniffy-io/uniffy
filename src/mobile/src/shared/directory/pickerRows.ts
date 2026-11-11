@@ -8,8 +8,29 @@ export interface PickerPinnedRow {
   selected: boolean;
   onPress: () => void;
   leading?: ReactNode;
+  subtitle?: string;
   /** The person the row stands for, so they are not listed again below it. */
   subjectId?: string;
+}
+
+/** A titled group of non-person rows listed after the people (for example a task's agents). */
+export interface PickerSection {
+  id: string;
+  title: string;
+  rows: PickerPinnedRow[];
+}
+
+/** Section rows whose label matches the search text; sections left empty are dropped. */
+export function filterPickerSections(sections: PickerSection[], query: string): PickerSection[] {
+  const needle = query.trim().toLowerCase();
+  return sections
+    .map((section) => ({
+      ...section,
+      rows: needle
+        ? section.rows.filter((row) => row.label.toLowerCase().includes(needle))
+        : section.rows,
+    }))
+    .filter((section) => section.rows.length > 0);
 }
 
 export interface PickerRows {

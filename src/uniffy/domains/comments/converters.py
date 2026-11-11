@@ -1,5 +1,8 @@
 """Proto <-> domain converters for comments domain."""
 
+from collections.abc import Mapping
+from uuid import UUID
+
 from protobuf.wkt import Struct
 from uniffy_proto.comments.v1.comments_pb import (
     Comment as ProtoComment,
@@ -50,6 +53,7 @@ def comment_to_proto(
     current_user_id: str,
     replies: list[ProtoComment] | None = None,
     resolved_by_name: str | None = None,
+    agent_names: Mapping[UUID, str] | None = None,
 ) -> ProtoComment:
     proto = ProtoComment(
         id=str(comment.id),
@@ -67,6 +71,13 @@ def comment_to_proto(
 
     if comment.parent_comment_id:
         proto.parent_comment_id = str(comment.parent_comment_id)
+
+    if comment.agent_id:
+        proto.agent_id = str(comment.agent_id)
+        proto.agent_name = (agent_names or {}).get(comment.agent_id, "")
+    # Only the person the agent worked for can open its session.
+    if comment.agent_session_id and str(comment.author_id) == current_user_id:
+        proto.agent_session_id = str(comment.agent_session_id)
 
     if author_avatar_url:
         proto.author_avatar_url = author_avatar_url

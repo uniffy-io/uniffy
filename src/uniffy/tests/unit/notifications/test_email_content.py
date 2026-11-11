@@ -41,9 +41,10 @@ def test_chat_email_targets_the_exact_message() -> None:
 def test_task_email_uses_the_task_redirect_route() -> None:
     task_id = generate_id()
 
-    assert notification_action_path(
-        _delivery(content_type=ContentType.TASK, content_id=task_id)
-    ) == f"/projects/task/{task_id}"
+    assert (
+        notification_action_path(_delivery(content_type=ContentType.TASK, content_id=task_id))
+        == f"/projects/task/{task_id}"
+    )
 
 
 def test_preview_strips_mention_transport_and_header_whitespace() -> None:

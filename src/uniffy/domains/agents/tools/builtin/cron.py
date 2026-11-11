@@ -250,6 +250,7 @@ cron_create = ToolDefinition(
         "required": ["name", "prompt", "cron_expression"],
     },
     executor=_execute_cron_create,
+    needs_person=True,
 )
 
 cron_list = ToolDefinition(
@@ -313,6 +314,7 @@ cron_update = ToolDefinition(
         "required": ["task_id"],
     },
     executor=_execute_cron_update,
+    needs_person=True,
 )
 
 cron_delete = ToolDefinition(

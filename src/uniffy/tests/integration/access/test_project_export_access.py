@@ -113,12 +113,8 @@ async def test_one_hidden_project_denies_the_whole_request_without_naming_it(
 
 
 async def test_a_direct_grant_and_a_group_grant_are_honoured(session, access, projects) -> None:
-    assert [row[0] for row in await _export(access, access.admin_id, projects.shared)] == [
-        "Shared"
-    ]
-    assert [row[0] for row in await _export(access, access.peer_id, projects.grouped)] == [
-        "Grouped"
-    ]
+    assert [row[0] for row in await _export(access, access.admin_id, projects.shared)] == ["Shared"]
+    assert [row[0] for row in await _export(access, access.peer_id, projects.grouped)] == ["Grouped"]
 
 
 async def test_blocked_beats_the_open_baseline(session, access, projects) -> None:

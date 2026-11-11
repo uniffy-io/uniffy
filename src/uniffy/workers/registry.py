@@ -92,6 +92,17 @@ from uniffy.domains.agents.skills.jobs.jobs import (
     expire_skill_draft_generations,
     generate_skill_draft,
 )
+from uniffy.domains.agents.tasks.jobs.contracts import (
+    DELIVER_TASK_ASSIGNMENT,
+    RECOVER_TASK_ASSIGNMENTS_SCHEDULE,
+    TASK_ASSIGNMENT_JOB_REFS,
+    TASK_ASSIGNMENT_SCHEDULED_JOB_REFS,
+)
+from uniffy.domains.agents.tasks.jobs.jobs import (
+    TASK_ASSIGNMENT_TIMEOUT_SECONDS,
+    deliver_task_assignment,
+    recover_task_assignments,
+)
 from uniffy.domains.audit.jobs.contracts import (
     AUDIT_JOB_REFS,
     AUDIT_SCHEDULED_JOB_REFS,
@@ -425,6 +436,12 @@ EGRESS_JOB_REGISTRATIONS = (
         DELIVER_CHAT_TRIGGER, deliver_chat_trigger, timeout=CHAT_TRIGGER_TIMEOUT_SECONDS, max_tries=1
     ),
     _bind(
+        DELIVER_TASK_ASSIGNMENT,
+        deliver_task_assignment,
+        timeout=TASK_ASSIGNMENT_TIMEOUT_SECONDS,
+        max_tries=1,
+    ),
+    _bind(
         COMPACT_SESSION,
         compact_session,
         timeout=COMPACT_SESSION_JOB_TIMEOUT_SECONDS,
@@ -513,6 +530,11 @@ CORE_SCHEDULED_REGISTRATIONS = (
         RECOVER_CHAT_TRIGGERS_SCHEDULE,
         recover_chat_triggers,
         second=(5, 15, 25, 35, 45, 55),
+    ),
+    _bind_schedule(
+        RECOVER_TASK_ASSIGNMENTS_SCHEDULE,
+        recover_task_assignments,
+        second=(7, 17, 27, 37, 47, 57),
     ),
     _bind_schedule(
         RECOVER_NOTIFICATION_EVENTS_SCHEDULE,
@@ -654,6 +676,7 @@ EGRESS_SCHEDULED_REGISTRATIONS = (
 _JOB_REFS = (
     *EVENT_JOB_REFS,
     *CHAT_INTEGRATION_JOB_REFS,
+    *TASK_ASSIGNMENT_JOB_REFS,
     *CRON_JOB_REFS,
     *RUNTIME_JOB_REFS,
     *SESSION_JOB_REFS,
@@ -679,6 +702,7 @@ _JOB_REFS = (
 _SCHEDULED_JOB_REFS = (
     *EVENT_SCHEDULED_JOB_REFS,
     *CHAT_INTEGRATION_SCHEDULED_JOB_REFS,
+    *TASK_ASSIGNMENT_SCHEDULED_JOB_REFS,
     *CRON_SCHEDULED_JOB_REFS,
     *RUNTIME_SCHEDULED_JOB_REFS,
     *SESSION_SCHEDULED_JOB_REFS,

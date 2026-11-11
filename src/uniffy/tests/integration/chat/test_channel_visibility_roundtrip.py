@@ -379,4 +379,3 @@ async def test_a_join_waits_for_an_in_flight_lock_down(session, env: NS, monkeyp
     finally:
         release.set()
         await engine.dispose()
-

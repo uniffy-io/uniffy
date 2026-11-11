@@ -201,6 +201,13 @@ class Action:
     TASK_RESTORED = "task.restored"
     TASK_PERMANENTLY_DELETED = "task.permanently_deleted"
     TASK_MOVED = "task.moved"
+    TASK_AGENT_ASSIGNED = "task.agent_assigned"
+    TASK_AGENT_UNASSIGNED = "task.agent_unassigned"
+    TASK_AGENT_STARTED = "task.agent_started"
+    TASK_AGENT_STOPPED = "task.agent_stopped"
+    TASK_AGENT_CHANGES_REQUESTED = "task.agent_changes_requested"
+    PROJECT_AGENT_ASSIGNEE_CHANGED = "project.agent_assignee_changed"
+    AGENT_ASSIGNMENT_POLICY_UPDATED = "agent_assignment_policy.updated"
 
     # Time tracking (self-logged entries ride the task activity log; these
     # cover writes on someone else's behalf, admin overrides and policy edits)

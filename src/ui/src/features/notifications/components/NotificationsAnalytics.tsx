@@ -38,6 +38,7 @@ const TYPE_LABELS: Record<number, string> = {
   [NotificationType.ACCESS_REQUEST_DENIED]: "Request denied",
   [NotificationType.SYSTEM_ANNOUNCEMENT]: "System",
   [NotificationType.TASK_ASSIGNED]: "Assigned",
+  [NotificationType.TASK_AGENT_FINISHED]: "Agent finished",
   [NotificationType.TASK_DUE_SOON]: "Due soon",
   [NotificationType.TASK_OVERDUE]: "Overdue",
   [NotificationType.TIMER_LIMIT_REACHED]: "Timer paused",

@@ -89,6 +89,10 @@ import { SYSTEM_FIELD_IDS } from "@/features/projects/types";
 import type { Task, FieldDefinition, SelectOption } from "@/features/projects/types";
 import { SubjectAvatarStack, SubjectPicker } from "@/components/subject";
 import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
+import { useAgentAssigneeSection } from "@/features/projects/hooks/useAgentAssigneeSection";
+import { TaskAgentBadge } from "@/features/projects/components/agents/TaskAgentBadge";
+import { assignTaskAgent } from "@/features/projects/store/taskAgentsThunks";
+import { promptAgentStart } from "@/features/projects/store/taskAgentsSlice";
 import { TagChip } from "@/features/tags";
 import { useTagsByIds } from "@/features/tags/store/selectors";
 import { EmptyState } from "./EmptyState";
@@ -1498,6 +1502,7 @@ function EditableFieldCell({
         <Plus size={12} weight="bold" className="text-muted-foreground shrink-0 ml-1" />
         {isEditing && (
           <InlineAssigneeEditor
+            task={task}
             currentAssigneeIds={assigneeIds}
             onSave={onSave}
             onClose={onEndEdit}
@@ -1926,15 +1931,32 @@ function InlineDateEditor({
 }
 
 function InlineAssigneeEditor({
+  task,
   currentAssigneeIds,
   onSave,
   onClose,
 }: {
+  task: Task;
   currentAssigneeIds: string[];
   onSave: (value: unknown) => void;
   onClose: () => void;
 }) {
   const triggerRef = useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
+  const selectAgent = useCallback(
+    (agentId: string | null) => {
+      if (agentId) {
+        // The start prompt replaces the picker; leaving both open stacks the picker over it.
+        onClose();
+        dispatch(promptAgentStart({ taskId: task.id, agentId }));
+      } else void dispatch(assignTaskAgent({ taskId: task.id, agentId: null }));
+    },
+    [dispatch, task.id, onClose],
+  );
+  const sections = useAgentAssigneeSection({
+    currentAgentId: task.agentAssignment?.agentId ?? null,
+    onSelect: selectAgent,
+  });
 
   const handleChange = useCallback(
     (ids: string[]) => {
@@ -1957,6 +1979,7 @@ function InlineAssigneeEditor({
         value={currentAssigneeIds}
         onChange={handleChange}
         pinnedOptions={pinnedOptions}
+        sections={sections}
         portal
         anchorRef={triggerRef}
         onClose={onClose}
@@ -2032,10 +2055,16 @@ function FieldCell({ task, field }: FieldCellProps) {
 
     case "person": {
       const personIds = toIdList(value);
-      if (personIds.length === 0) {
+      const agent = field.id === SYSTEM_FIELD_IDS.ASSIGNEE ? task.agentAssignment : null;
+      if (personIds.length === 0 && !agent) {
         return <span className="text-muted-foreground text-sm">-</span>;
       }
-      return <AvatarStack ids={personIds} />;
+      return (
+        <div className="flex items-center gap-1.5 min-w-0">
+          {personIds.length > 0 && <AvatarStack ids={personIds} />}
+          {agent && <TaskAgentBadge assignment={agent} size="sm" />}
+        </div>
+      );
     }
 
     case "date": {

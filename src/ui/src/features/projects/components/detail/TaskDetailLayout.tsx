@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { TaskAgentSection } from "@/features/projects/components/agents/TaskAgentSection";
 import { Group, Panel } from "react-resizable-panels";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useAppDispatch } from "@/app/hooks";
@@ -221,6 +222,12 @@ export function TaskDetailLayout({
         project={project}
         allProjectTasks={allProjectTasks}
         sprints={sprints}
+        canEdit={canEdit}
+      />
+
+      <TaskAgentSection
+        task={task}
+        taskKey={`${project?.slug ?? ""}-${task.number}`}
         canEdit={canEdit}
       />
 

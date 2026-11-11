@@ -34,6 +34,8 @@ class TaskActivityAction(StrEnum):
     TIME_LOGGED = "time_logged"
     TIME_UPDATED = "time_updated"
     TIME_REMOVED = "time_removed"
+    AGENT_ASSIGNED = "agent_assigned"
+    AGENT_UNASSIGNED = "agent_unassigned"
 
 
 class TaskActivity(SQLModel, table=True):

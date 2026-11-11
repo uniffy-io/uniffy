@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -29,10 +29,14 @@ import { ActionSheet } from "@shared/components/ActionSheet";
 import { Avatar } from "@shared/components/Avatar";
 import { SubjectAvatarStack } from "@shared/directory/SubjectAvatarStack";
 import { useAssigneePinnedRows } from "@features/projects/useAssigneePinnedRows";
+import { useAgentAssigneeSection } from "@features/projects/useAgentAssigneeSection";
+import { TaskAgentRow } from "@features/projects/components/TaskAgentRow";
+import { AgentStartSheet } from "@features/projects/components/AgentStartSheet";
 import { SubjectPickerSheet } from "@shared/directory/SubjectPickerSheet";
 import { useDirectory } from "@shared/directory/useDirectory";
 import { confirmDestructive } from "@shared/lib/confirmDestructive";
 import { useAuth } from "@core/providers/AuthContext";
+import { roleCanEdit } from "@shared/permissions/contentRoles";
 import { CalendarPicker } from "@features/calendar/components/CalendarPicker";
 import { TagPickerSheet } from "@features/tags/components/TagPickerSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
@@ -66,6 +70,8 @@ import {
 import {
   useUpdateTask,
   useDeleteTask,
+  useAssignTaskAgent,
+  useTaskAgentControl,
   useToggleTaskWatcher,
 } from "@features/projects/useProjectMutations";
 import {
@@ -161,6 +167,29 @@ export function TaskDetailScreen() {
     [allTasks, taskId],
   );
 
+  const assignAgent = useAssignTaskAgent();
+  const agentControl = useTaskAgentControl();
+  const { mutate: assignAgentMutate } = assignAgent;
+  const taskProjectId = task?.projectId;
+  // A picked agent first asks when it starts; picking the current one again takes it back.
+  const [agentToStart, setAgentToStart] = useState<{ id: string; name: string } | null>(null);
+  const selectAgent = useCallback(
+    (agentId: string | null, agentName: string) => {
+      if (!taskId || !taskProjectId) return;
+      if (agentId) {
+        setAssigneesOpen(false);
+        setAgentToStart({ id: agentId, name: agentName });
+      } else {
+        assignAgentMutate({ taskId, projectId: taskProjectId, agentId: null });
+      }
+    },
+    [taskId, taskProjectId, assignAgentMutate],
+  );
+  const agentSections = useAgentAssigneeSection({
+    enabled: assigneesOpen,
+    currentAgentId: task?.agentAssignment?.agentId,
+    onSelect: selectAgent,
+  });
   const assigneePinned = useAssigneePinnedRows({
     selectedIds: task?.assigneeIds ?? [],
     onAssignToMe: (userId) => toggleAssignee(userId),
@@ -393,12 +422,58 @@ export function TaskDetailScreen() {
             <View style={styles.metaValue}>
               {task.assigneeIds.length > 0 ? (
                 <SubjectAvatarStack subjectIds={task.assigneeIds} size={24} />
-              ) : (
+              ) : null}
+              {task.agentAssignment ? (
+                <Avatar
+                  name={task.agentAssignment.agentName}
+                  emoji={task.agentAssignment.agentAvatarEmoji}
+                  isAgent
+                  size={24}
+                />
+              ) : null}
+              {task.assigneeIds.length === 0 && !task.agentAssignment ? (
                 <Text style={[styles.metaText, { color: T.textDim }]}>None</Text>
-              )}
+              ) : null}
               <CaretRight size={13} color={T.textDim} weight="bold" />
             </View>
           </TouchableOpacity>
+          {task.agentAssignment ? (
+            <TaskAgentRow
+              agent={task.agentAssignment}
+              isMine={task.agentAssignment.assignedById === currentUserId}
+              forName={directory.byId.get(task.agentAssignment.assignedById)?.name ?? "a teammate"}
+              canEdit={roleCanEdit(task.userRole)}
+              busy={assignAgent.isPending || agentControl.isPending}
+              onStart={() =>
+                agentControl.mutate({ taskId: task.id, projectId: task.projectId, action: "start" })
+              }
+              onStop={() =>
+                agentControl.mutate({ taskId: task.id, projectId: task.projectId, action: "stop" })
+              }
+              onRunAgain={() =>
+                setAgentToStart({
+                  id: task.agentAssignment!.agentId,
+                  name: task.agentAssignment!.agentName,
+                })
+              }
+              onRemove={() =>
+                assignAgent.mutate({ taskId: task.id, projectId: task.projectId, agentId: null })
+              }
+              onSendChanges={(changes) =>
+                agentControl
+                  .mutateAsync({
+                    taskId: task.id,
+                    projectId: task.projectId,
+                    action: "changes",
+                    changes,
+                  })
+                  .then(
+                    () => true,
+                    () => false,
+                  )
+              }
+            />
+          ) : null}
           <TouchableOpacity
             style={[styles.metaRow, { borderBottomColor: T.border }]}
             onPress={() => setSheet("type")}
@@ -761,6 +836,19 @@ export function TaskDetailScreen() {
         }
       />
 
+      <AgentStartSheet
+        visible={agentToStart !== null}
+        agentName={agentToStart?.name ?? "the agent"}
+        pending={assignAgent.isPending}
+        onClose={() => setAgentToStart(null)}
+        onConfirm={(start) => {
+          if (!agentToStart) return;
+          assignAgent.mutate(
+            { taskId: task.id, projectId: task.projectId, agentId: agentToStart.id, start },
+            { onSuccess: () => setAgentToStart(null) },
+          );
+        }}
+      />
       <SubjectPickerSheet
         visible={assigneesOpen}
         onClose={() => setAssigneesOpen(false)}
@@ -770,6 +858,7 @@ export function TaskDetailScreen() {
         accentColor={T.accent}
         busy={updateTask.isPending}
         pinned={assigneePinned}
+        sections={agentSections}
       />
 
       <TaskTypePickerSheet

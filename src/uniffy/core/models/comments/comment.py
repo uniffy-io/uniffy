@@ -49,6 +49,13 @@ class Comment(SQLModel, table=True):
         index=True,
     )
     author_id: UUID = Field(foreign_key="login_users.id", nullable=False, index=True)
+    # Set when an agent wrote the comment; author_id stays the person it acted for.
+    agent_id: UUID | None = Field(
+        default=None, foreign_key="agents_agents.id", nullable=True, ondelete="SET NULL"
+    )
+    agent_session_id: UUID | None = Field(
+        default=None, foreign_key="agents_sessions.id", nullable=True, ondelete="SET NULL"
+    )
     body: str = Field(sa_column=Column(Text, nullable=False))
     anchor_type: CommentAnchorType = Field(
         sa_column=Column(

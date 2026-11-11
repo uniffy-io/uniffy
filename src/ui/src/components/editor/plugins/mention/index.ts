@@ -123,8 +123,12 @@ export const mentionRemarkPlugin = $remark("mentionRemarkPlugin", () => {
     // Custom stringifier emits raw `[[[label|urn]]]` without the bracket-escaping that the default text path would apply.
     const toMarkdownExtension = {
       handlers: {
+        // A bare `|` inside a table cell would end the cell; the escaped form parses back to `|`.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mention: (node: any) => `[[[${sanitizeMentionLabel(node.label)}|${node.urn}]]]`,
+        mention: (node: any, _parent: unknown, state: { stack: string[] }) => {
+          const pipe = state.stack.includes("tableCell") ? "\\|" : "|";
+          return `[[[${sanitizeMentionLabel(node.label)}${pipe}${node.urn}]]]`;
+        },
       },
     };
 

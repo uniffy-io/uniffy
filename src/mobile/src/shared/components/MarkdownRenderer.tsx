@@ -5,7 +5,11 @@ import { useTheme } from "@shared/hooks/useTheme";
 import { FONT } from "@theme/typography";
 import { getServerUrl } from "@core/config/serverUrl";
 import { appPathForLink } from "@shared/lib/appLinks";
-import { markdownDisplayText, normalizeMarkdownListMarker } from "@shared/lib/markdownPresentation";
+import {
+  markdownDisplayText,
+  normalizeMarkdownListMarker,
+  parseTableRow,
+} from "@shared/lib/markdownPresentation";
 import { ReferenceChip } from "@shared/mentions/ReferenceChip";
 import { isBroadcastUrn } from "@shared/mentions/broadcastMentions";
 import { MentionToken, isPeopleTokenUrnType } from "@shared/mentions/MentionToken";
@@ -424,14 +428,29 @@ function isTableSeparator(line: string) {
   return /^\|[\s:|-]+\|$/.test(line.trim());
 }
 
-function parseTableRow(line: string): string[] {
-  return line
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim());
+function renderTableCell(
+  cell: string,
+  key: number,
+  textStyle: any,
+  T: ThemeColors,
+  onMentionPress?: (urn: string, label: string) => void,
+) {
+  if (!cell.includes("[[[")) {
+    return (
+      <Text style={textStyle} numberOfLines={2}>
+        {cell}
+      </Text>
+    );
+  }
+  return renderLineContent(cell, T, key, textStyle, undefined, onMentionPress);
 }
 
-function renderTable(rows: string[], startIndex: number, T: ThemeColors) {
+function renderTable(
+  rows: string[],
+  startIndex: number,
+  T: ThemeColors,
+  onMentionPress?: (urn: string, label: string) => void,
+) {
   const dataRows: string[][] = [];
   let headerRow: string[] | null = null;
 
@@ -462,9 +481,13 @@ function renderTable(rows: string[], startIndex: number, T: ThemeColors) {
               },
             ]}
           >
-            <Text style={[styles.tableCellTextBold, { color: T.textBright }]} numberOfLines={2}>
-              {cell}
-            </Text>
+            {renderTableCell(
+              cell,
+              ci,
+              [styles.tableCellTextBold, { color: T.textBright }],
+              T,
+              onMentionPress,
+            )}
           </View>
         ))}
       </View>
@@ -490,9 +513,13 @@ function renderTable(rows: string[], startIndex: number, T: ThemeColors) {
                 },
               ]}
             >
-              <Text style={[styles.tableCellText, { color: T.text }]} numberOfLines={2}>
-                {cell}
-              </Text>
+              {renderTableCell(
+                cell,
+                ci,
+                [styles.tableCellText, { color: T.text }],
+                T,
+                onMentionPress,
+              )}
             </View>
           ))}
           {row.length < colCount &&
@@ -732,7 +759,7 @@ export const MarkdownRenderer = React.memo(function MarkdownRenderer({
         tableLines.push(lines[i]);
         i++;
       }
-      const table = renderTable(tableLines, tableStart, T);
+      const table = renderTable(tableLines, tableStart, T, onMentionPress);
       if (table) elements.push(table);
       continue;
     }

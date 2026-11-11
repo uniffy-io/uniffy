@@ -72,6 +72,8 @@ const (
 	NotificationType_NOTIFICATION_TYPE_CALENDAR_CONNECTION_NEEDS_RECONNECT NotificationType = 36
 	// A change to a synced event was replaced by a newer edit on the other side
 	NotificationType_NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT NotificationType = 37
+	// An agent assigned to a task finished, or could not finish, its run
+	NotificationType_NOTIFICATION_TYPE_TASK_AGENT_FINISHED NotificationType = 38
 )
 
 // Enum value maps for NotificationType.
@@ -115,6 +117,7 @@ var (
 		35: "NOTIFICATION_TYPE_CALENDAR_SUBSCRIPTION_FAILED",
 		36: "NOTIFICATION_TYPE_CALENDAR_CONNECTION_NEEDS_RECONNECT",
 		37: "NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT",
+		38: "NOTIFICATION_TYPE_TASK_AGENT_FINISHED",
 	}
 	NotificationType_value = map[string]int32{
 		"NOTIFICATION_TYPE_UNSPECIFIED":                         0,
@@ -155,6 +158,7 @@ var (
 		"NOTIFICATION_TYPE_CALENDAR_SUBSCRIPTION_FAILED":        35,
 		"NOTIFICATION_TYPE_CALENDAR_CONNECTION_NEEDS_RECONNECT": 36,
 		"NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT":              37,
+		"NOTIFICATION_TYPE_TASK_AGENT_FINISHED":                 38,
 	}
 )
 
@@ -2668,7 +2672,7 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"\x15ContentChangedPayload\x129\n" +
 	"\fcontent_type\x18\x01 \x01(\x0e2\x16.common.v1.ContentTypeR\vcontentType\x12\x1d\n" +
 	"\n" +
-	"content_id\x18\x02 \x01(\tR\tcontentId*\xc7\f\n" +
+	"content_id\x18\x02 \x01(\tR\tcontentId*\xf2\f\n" +
 	"\x10NotificationType\x12!\n" +
 	"\x1dNOTIFICATION_TYPE_UNSPECIFIED\x10\x00\x12$\n" +
 	" NOTIFICATION_TYPE_CONTENT_SHARED\x10\x01\x12'\n" +
@@ -2708,7 +2712,8 @@ const file_notifications_v1_notifications_proto_rawDesc = "" +
 	"$NOTIFICATION_TYPE_TIMESHEET_REMINDER\x10\"\x122\n" +
 	".NOTIFICATION_TYPE_CALENDAR_SUBSCRIPTION_FAILED\x10#\x129\n" +
 	"5NOTIFICATION_TYPE_CALENDAR_CONNECTION_NEEDS_RECONNECT\x10$\x12,\n" +
-	"(NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT\x10%2\xf2\v\n" +
+	"(NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT\x10%\x12)\n" +
+	"%NOTIFICATION_TYPE_TASK_AGENT_FINISHED\x10&2\xf2\v\n" +
 	"\x14NotificationsService\x12n\n" +
 	"\x11ListNotifications\x12*.notifications.v1.ListNotificationsRequest\x1a+.notifications.v1.ListNotificationsResponse\"\x00\x12e\n" +
 	"\x0eGetUnreadCount\x12'.notifications.v1.GetUnreadCountRequest\x1a(.notifications.v1.GetUnreadCountResponse\"\x00\x12Y\n" +

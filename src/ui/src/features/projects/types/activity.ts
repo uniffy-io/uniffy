@@ -22,6 +22,8 @@ export type ActivityAction =
   | "time_logged"
   | "time_updated"
   | "time_removed"
+  | "agent_assigned"
+  | "agent_unassigned"
   | "unknown";
 
 export interface TaskActivity {

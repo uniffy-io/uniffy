@@ -43,9 +43,7 @@ def test_clean_source_is_accepted(tmp_path: Path, source: str) -> None:
 )
 def test_ty_ignore_comments_are_rejected(tmp_path: Path, source: str) -> None:
     violations = inspect_source(tmp_path, source)
-    assert [violation.message for violation in violations] == [
-        "ty ignore comments are forbidden"
-    ]
+    assert [violation.message for violation in violations] == ["ty ignore comments are forbidden"]
 
 
 @pytest.mark.parametrize(

@@ -134,6 +134,11 @@ class ToolRegistry:
         tool = self.get(name)
         return tool.destructive if tool else False
 
+    def needs_person(self, name: str) -> bool:
+        """Deletes and lasting automations: an unattended run must leave them to a person."""
+        tool = self.get(name)
+        return bool(tool and (tool.destructive or tool.needs_person))
+
     def get_anthropic_schemas(self, enabled_tools: list[str]) -> list[dict]:
         """Convert enabled tools to Anthropic tool-use format.
 

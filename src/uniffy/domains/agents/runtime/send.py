@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.database import SessionFactory
 from uniffy.core.models.agents.message import AgentMessage
+from uniffy.core.models.agents.session import AgentSessionKind
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
@@ -44,8 +45,13 @@ from uniffy.domains.agents.sessions.operations import (
     apply_emergency_truncation,
 )
 from uniffy.domains.agents.skills.resolution import SkillSurface
+from uniffy.domains.agents.tasks.brief import TASK_CONFIRMATION_UNAVAILABLE
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
-from uniffy.domains.agents.tools.definitions import ToolContext
+from uniffy.domains.agents.tools.definitions import (
+    MAX_TASK_TOOL_ITERATIONS,
+    MAX_TOOL_ITERATIONS,
+    ToolContext,
+)
 from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.integrations.advertisement import (
@@ -259,6 +265,7 @@ class MessageSender:
                 file_ids=[file.file_id for file in files] if files else None,
                 invoked_skill_name=invoked_entry.display_name if invoked_entry else None,
             )
+            is_task_session = agent_session.kind == AgentSessionKind.TASK
             tool_context = ToolContext(
                 session=self._session,
                 user_id=user_id,
@@ -274,6 +281,12 @@ class MessageSender:
                 memory_bridge_scope=memory_bridge,
                 memory_recall_promoted=recall_promoted,
                 is_test_session=agent_session.is_test,
+                confirmation_unavailable_message=(
+                    TASK_CONFIRMATION_UNAVAILABLE if is_task_session else None
+                ),
+                max_tool_iterations=(
+                    MAX_TASK_TOOL_ITERATIONS if is_task_session else MAX_TOOL_ITERATIONS
+                ),
                 image_params=image_config.params if image_config else {},
                 image_max_resolution=image_config.max_resolution if image_config else None,
                 image_max_quality=image_config.max_quality if image_config else None,

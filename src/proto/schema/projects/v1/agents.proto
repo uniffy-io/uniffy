@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package projects.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/uniffy-io/uniffy-proto-go/projects/v1;projectsv1";
+
+enum TaskAgentAssignmentStatus {
+  TASK_AGENT_ASSIGNMENT_STATUS_UNSPECIFIED = 0;
+  TASK_AGENT_ASSIGNMENT_STATUS_PENDING = 1;
+  TASK_AGENT_ASSIGNMENT_STATUS_RUNNING = 2;
+  TASK_AGENT_ASSIGNMENT_STATUS_COMPLETED = 3;
+  TASK_AGENT_ASSIGNMENT_STATUS_FAILED = 4;
+  TASK_AGENT_ASSIGNMENT_STATUS_STOPPED = 5;
+  TASK_AGENT_ASSIGNMENT_STATUS_SKIPPED = 6;
+  // The worker stopped mid-run; whatever the agent did stays, nothing reruns on its own.
+  TASK_AGENT_ASSIGNMENT_STATUS_UNCERTAIN = 7;
+  // Assigned and held until someone starts it.
+  TASK_AGENT_ASSIGNMENT_STATUS_WAITING = 8;
+}
+
+enum TaskAgentAssignmentReason {
+  TASK_AGENT_ASSIGNMENT_REASON_UNSPECIFIED = 0;
+  // Someone assigned the agent to this task.
+  TASK_AGENT_ASSIGNMENT_REASON_TASK = 1;
+  // The project's agent assignee picked up a new task.
+  TASK_AGENT_ASSIGNMENT_REASON_PROJECT = 2;
+}
+
+// The agent assignee of a task and the state of its current run.
+message TaskAgentAssignment {
+  string id = 1;
+  string agent_id = 2;
+  string agent_name = 3;
+  optional string agent_avatar_emoji = 4;
+  bool agent_is_deleted = 5;
+  // The run works with this person's permissions.
+  string assigned_by_id = 6;
+  TaskAgentAssignmentStatus status = 7;
+  TaskAgentAssignmentReason reason = 8;
+  // Session and run ids are only sent to assigned_by, the one person who can open them.
+  optional string session_id = 9;
+  optional string run_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+  optional google.protobuf.Timestamp ended_at = 12;
+  // Set while a pending run waits for the time it was scheduled for.
+  optional google.protobuf.Timestamp start_at = 13;
+}
+
+message AgentAssignmentPolicy {
+  bool agent_assignment_enabled = 1;
+}
+
+message GetAgentAssignmentPolicyRequest {
+  string organization_id = 1;
+}
+
+message GetAgentAssignmentPolicyResponse {
+  AgentAssignmentPolicy policy = 1;
+}
+
+message UpdateAgentAssignmentPolicyRequest {
+  string organization_id = 1;
+  AgentAssignmentPolicy policy = 2;
+}
+
+message UpdateAgentAssignmentPolicyResponse {
+  AgentAssignmentPolicy policy = 1;
+}

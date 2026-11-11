@@ -14,7 +14,7 @@ import {
 } from "@/components/subject/types";
 import { SubjectAvatar } from "@/components/subject/SubjectAvatar";
 import { partitionSubjects } from "@/components/subject/utils";
-import { buildPickerRows } from "@/components/subject/pickerRows";
+import { buildPickerRows, filterPickerSections } from "@/components/subject/pickerRows";
 import { useSubjectSearch } from "@/components/subject/hooks/useSubjectSearch";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 
@@ -27,6 +27,22 @@ export interface SubjectPickerPinnedOption {
   onToggle: () => void;
   /** The person this row stands for, so they are not listed again below it. */
   subjectId?: string;
+}
+
+/** A titled group of non-person rows listed after the people (for example a task's agents). */
+export interface SubjectPickerSection {
+  id: string;
+  label: string;
+  rows: SubjectPickerSectionRow[];
+}
+
+export interface SubjectPickerSectionRow {
+  id: string;
+  /** Rendered with its avatar, and matched by name against the search text. */
+  subject: Subject;
+  badge?: string;
+  selected: boolean;
+  onToggle: () => void;
 }
 
 interface SubjectPickerProps {
@@ -48,6 +64,7 @@ interface SubjectPickerProps {
   pinnedOptions?: SubjectPickerPinnedOption[];
   /** Offer the caller as a "Me" row; for pickers where choosing yourself is a normal choice. */
   showSelf?: boolean;
+  sections?: SubjectPickerSection[];
 }
 
 export function SubjectPicker({
@@ -67,6 +84,7 @@ export function SubjectPicker({
   align = "right",
   pinnedOptions = [],
   showSelf = false,
+  sections = [],
 }: SubjectPickerProps) {
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<{ top: number; left: number; width: number } | null>(
@@ -271,6 +289,42 @@ export function SubjectPicker({
     );
   };
 
+  const visibleSections = filterPickerSections(sections, query);
+
+  const renderSections = () =>
+    visibleSections.map((section) => (
+      <div
+        key={section.id}
+        className="border-t border-border/60 mt-1 pt-1"
+        data-testid={`subject-picker-section-${section.id}`}
+      >
+        <div className="text-xs uppercase text-muted-foreground px-3 pt-2 pb-1">
+          {section.label}
+        </div>
+        {section.rows.map((row) => (
+          <button
+            key={row.id}
+            type="button"
+            onClick={row.onToggle}
+            className={cn(
+              "flex w-full min-h-11 md:min-h-0 touch:min-h-11 items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors",
+              row.selected ? "bg-primary/10" : "hover:bg-muted",
+            )}
+            data-testid={`subject-picker-section-row-${row.id}`}
+          >
+            <SubjectAvatar subject={row.subject} size="sm" />
+            <span className="flex-1 min-w-0 truncate text-foreground">{row.subject.name}</span>
+            {row.badge && (
+              <span className="text-xs px-2 py-0.5 rounded-full shrink-0 bg-muted text-muted-foreground">
+                {row.badge}
+              </span>
+            )}
+            {row.selected && <Check size={14} className="text-primary shrink-0" />}
+          </button>
+        ))}
+      </div>
+    ));
+
   const dropdownContent = (
     <div
       ref={dropdownRef}
@@ -354,7 +408,9 @@ export function SubjectPicker({
         ) : loading && results.length === 0 ? (
           <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
         ) : results.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
+          visibleSections.length === 0 && (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
+          )
         ) : subjectTypes === "all" ? (
           partitionSubjects(results).map((section) => (
             <div key={section.label}>
@@ -367,6 +423,7 @@ export function SubjectPicker({
         ) : (
           results.map(renderResultRow)
         )}
+        {renderSections()}
       </div>
     </div>
   );

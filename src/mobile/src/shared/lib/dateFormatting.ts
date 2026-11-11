@@ -4,6 +4,8 @@
  * clients - a note that says "1y ago" on the web must not say "412d ago" here.
  */
 
+import { getEffectiveTimeZone } from "@core/datetimePrefs";
+
 /**
  * Reads a plain `YYYY-MM-DD` as a date on the device's calendar.
  *
@@ -34,6 +36,23 @@ export function formatDateShort(value: string): string {
   const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   if (date.getFullYear() !== new Date().getFullYear()) options.year = "numeric";
   return date.toLocaleDateString(undefined, options);
+}
+
+/** "Jan 22, 2:30 PM" on the display zone's clock, gaining a year once it is not this one. */
+export function formatDateTimeShort(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const timeZone = getEffectiveTimeZone();
+  const options: Intl.DateTimeFormatOptions = {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  };
+  const year = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", timeZone });
+  if (year(date) !== year(new Date())) options.year = "numeric";
+  return date.toLocaleString(undefined, options);
 }
 
 /** "Jan 22" from a `Date`, never carrying a year. */

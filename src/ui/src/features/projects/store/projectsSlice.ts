@@ -31,6 +31,13 @@ import {
   bulkUpdateTasksThunk,
   fetchActivities,
 } from "./projectsThunks";
+import {
+  assignTaskAgent,
+  requestTaskAgentChanges,
+  setProjectAgentAssignee,
+  startTaskAgent,
+  stopTaskAgent,
+} from "@/features/projects/store/taskAgentsThunks";
 
 /**
  * A live editing session owns the description until the server render lands, so a
@@ -332,6 +339,21 @@ export const projectsSlice = createSlice({
       .addCase(updateProject.fulfilled, (state, action) => {
         state.loading.updating = null;
         state.projects[action.payload.id] = action.payload;
+      })
+      .addCase(setProjectAgentAssignee.fulfilled, (state, action) => {
+        state.projects[action.payload.id] = action.payload;
+      })
+      .addCase(assignTaskAgent.fulfilled, (state, action) => {
+        acceptServerTask(state, action.payload);
+      })
+      .addCase(startTaskAgent.fulfilled, (state, action) => {
+        acceptServerTask(state, action.payload);
+      })
+      .addCase(stopTaskAgent.fulfilled, (state, action) => {
+        acceptServerTask(state, action.payload);
+      })
+      .addCase(requestTaskAgentChanges.fulfilled, (state, action) => {
+        acceptServerTask(state, action.payload);
       })
       .addCase(updateProject.rejected, (state, action) => {
         state.loading.updating = null;

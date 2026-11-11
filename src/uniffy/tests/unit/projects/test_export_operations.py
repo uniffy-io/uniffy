@@ -179,9 +179,15 @@ async def test_an_export_over_the_cap_is_refused_with_a_readable_message(
 async def test_projects_export_in_name_order(open_access: None) -> None:
     beta, alpha = _project("beta"), _project("Alpha")
     session = _session()
-    session.execute.side_effect = [_projects_result([beta, alpha]), _count_result(0), _count_result(0)]
+    session.execute.side_effect = [
+        _projects_result([beta, alpha]),
+        _count_result(0),
+        _count_result(0),
+    ]
 
-    plan = await ProjectExportOperations(session).prepare(USER, ExportRequest(ORG, (beta.id, alpha.id)))
+    plan = await ProjectExportOperations(session).prepare(
+        USER, ExportRequest(ORG, (beta.id, alpha.id))
+    )
 
     assert [project.name for project in plan.projects] == ["Alpha", "beta"]
 

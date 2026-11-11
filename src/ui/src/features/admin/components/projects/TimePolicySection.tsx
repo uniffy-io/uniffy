@@ -8,6 +8,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Select, type SelectOption } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleSwitch } from "@/components/ui/toggle-switch";
+import { PolicyRow } from "@/features/admin/components/projects/PolicyRow";
 import { friendlyErrorMessage } from "@/config";
 import { useDocumentTitle } from "@/shared/hooks/useDocumentTitle";
 import { cn } from "@/shared/utils/cn";
@@ -161,7 +162,7 @@ function TimePolicyForm() {
             className="divide-y divide-border rounded-xl bg-surface shadow-edge"
             data-testid="time-policy-tracking"
           >
-            <Row
+            <PolicyRow
               title="Time tracking"
               description="Turn logging, timers, My time and the project time pages on or off. Time spent stays visible either way."
             >
@@ -171,8 +172,8 @@ function TimePolicyForm() {
                 disabled={disabled}
                 data-testid="policy-enabled"
               />
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Required hours per workday"
               description="What a full day looks like on the week view and in reviews. Workdays come from each person's scheduling settings."
             >
@@ -193,8 +194,8 @@ function TimePolicyForm() {
                 className="w-28"
                 data-testid="policy-required-hours"
               />
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Internal time project"
               description="An organization-wide project with standing tasks for meetings, leave, training, support rotation and admin, pinned first on My time."
             >
@@ -219,8 +220,8 @@ function TimePolicyForm() {
                   {creatingInternal ? "Creating..." : "Create project"}
                 </Button>
               )}
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Timer rounding"
               description="Timers round half up to this increment when they stop."
             >
@@ -231,8 +232,8 @@ function TimePolicyForm() {
                 disabled={disabled}
                 triggerClassName="w-44"
               />
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Pause timers after"
               description="Hours a timer may run before the background job pauses it (1 to 24)."
             >
@@ -252,8 +253,8 @@ function TimePolicyForm() {
                 }}
                 className="w-28"
               />
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Allow future dates"
               description="Let people log time on days that have not happened yet."
             >
@@ -262,8 +263,8 @@ function TimePolicyForm() {
                 onChange={(v) => update("allowFutureDates", v)}
                 disabled={disabled}
               />
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Limit how far back"
               description="Days into the past a person may still log or change time. Off means until the day is locked."
             >
@@ -290,8 +291,8 @@ function TimePolicyForm() {
                   />
                 )}
               </div>
-            </Row>
-            <Row
+            </PolicyRow>
+            <PolicyRow
               title="Log time for others"
               description="Reviewers and timekeeping admins may log on someone else's behalf; every such entry is audited."
             >
@@ -300,14 +301,14 @@ function TimePolicyForm() {
                 onChange={(v) => update("allowLogForOthers", v)}
                 disabled={disabled}
               />
-            </Row>
+            </PolicyRow>
           </div>
 
           <div
             className="divide-y divide-border rounded-xl bg-surface shadow-edge"
             data-testid="time-policy-approvals"
           >
-            <Row
+            <PolicyRow
               title="Approvals"
               description="People submit each period and their manager or team lead approves it. Submitted and approved periods lock."
             >
@@ -317,9 +318,9 @@ function TimePolicyForm() {
                 disabled={disabled}
                 data-testid="policy-approvals"
               />
-            </Row>
+            </PolicyRow>
             <div className={cn("divide-y divide-border", approvalsOff && "opacity-50")}>
-              <Row title="Period" description="How long one timesheet covers.">
+              <PolicyRow title="Period" description="How long one timesheet covers.">
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <Select
                     value={form.periodType}
@@ -356,8 +357,8 @@ function TimePolicyForm() {
                     />
                   )}
                 </div>
-              </Row>
-              <Row
+              </PolicyRow>
+              <PolicyRow
                 title="Lock on submit"
                 description="A submitted period refuses edits until it is recalled. Off: an edit recalls the period on its own."
               >
@@ -366,8 +367,8 @@ function TimePolicyForm() {
                   onChange={(v) => update("lockOnSubmit", v)}
                   disabled={disabled || approvalsOff}
                 />
-              </Row>
-              <Row
+              </PolicyRow>
+              <PolicyRow
                 title="Lock delay after a period ends"
                 description="Days people have to finish a period before its open sheets lock (0 to 30). Auto-submit fires then too."
               >
@@ -388,8 +389,8 @@ function TimePolicyForm() {
                   className="w-28"
                   data-testid="policy-lock-delay"
                 />
-              </Row>
-              <Row
+              </PolicyRow>
+              <PolicyRow
                 title="Auto-submit"
                 description="At the lock date, submit every open period that has entries and remind the rest."
               >
@@ -398,8 +399,8 @@ function TimePolicyForm() {
                   onChange={(v) => update("autoSubmit", v)}
                   disabled={disabled || approvalsOff}
                 />
-              </Row>
-              <Row
+              </PolicyRow>
+              <PolicyRow
                 title="Reminders"
                 description="Remind people with an ended period they have not submitted, and reviewers with sheets waiting, once a day at this UTC hour."
               >
@@ -427,7 +428,7 @@ function TimePolicyForm() {
                     title="Hour of the day in UTC"
                   />
                 </div>
-              </Row>
+              </PolicyRow>
             </div>
             <div className="p-5">
               <h3 className="text-sm font-semibold text-foreground">Holidays</h3>
@@ -464,26 +465,6 @@ function TimePolicyForm() {
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-function Row({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-start gap-4 p-5">
-      <div className="min-w-0 flex-1">
-        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
-      </div>
-      <div className="shrink-0">{children}</div>
     </div>
   );
 }

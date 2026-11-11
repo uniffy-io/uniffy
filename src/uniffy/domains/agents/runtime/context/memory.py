@@ -6,6 +6,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.models.agents.memory import MemoryScope
+from uniffy.core.models.agents.session import AgentSessionKind
 from uniffy.core.models.chat.channel import ChannelType
 from uniffy.domains.agents.cache import fetch_memory_index
 from uniffy.domains.agents.memories.bridge import is_personal_bridge_enabled
@@ -22,6 +23,8 @@ from uniffy.domains.agents.runtime.destinations import (
 from uniffy.domains.agents.runtime.prompt import MemoryScopeBlock, build_memory_block
 from uniffy.domains.agents.runtime.settings.operations import get_runtime_settings
 from uniffy.domains.chat.access import ChatAccessChecker
+
+_SHARED_SESSION_KINDS = (AgentSessionKind.GROUP, AgentSessionKind.GLOBAL, AgentSessionKind.TASK)
 
 logger = logger.bind(component="agents.runtime.context.memory")
 
@@ -54,7 +57,9 @@ class MemoryContextBuilder:
         session_kind: str | None = None,
     ) -> MemoryScopeRef:
         if isinstance(destination, SessionDestination):
-            if session_kind in ("group", "global"):
+            # A task run reads workspace text anyone with edit rights wrote, so it keeps its own
+            # bucket instead of reading and writing the assigner's personal memory.
+            if session_kind in _SHARED_SESSION_KINDS:
                 return MemoryScopeRef.session(destination.session_id)
             return MemoryScopeRef.user(user_id)
 

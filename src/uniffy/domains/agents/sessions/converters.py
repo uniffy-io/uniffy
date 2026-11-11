@@ -13,8 +13,10 @@ SESSION_KIND_TO_PROTO: dict[str, SessionKind] = {
     "direct": _ProtoSessionKind.DIRECT,
     "group": _ProtoSessionKind.GROUP,
     "global": _ProtoSessionKind.GLOBAL,
+    "task": _ProtoSessionKind.TASK,
 }
 
+# TASK sessions are created only by task assignment, never through CreateSession.
 SESSION_KIND_FROM_PROTO: dict[int, str] = {
     _ProtoSessionKind.DIRECT: "direct",
     _ProtoSessionKind.GROUP: "group",
@@ -23,36 +25,10 @@ SESSION_KIND_FROM_PROTO: dict[int, str] = {
 
 
 def session_kind_to_proto(kind: str) -> SessionKind:
-    """Convert domain session kind string to proto enum.
-
-    Parameters
-    ----------
-    kind : str
-        Domain session kind (e.g. "direct", "group", "global").
-
-    Returns
-    -------
-    SessionKind
-        Proto enum value.
-
-    """
     return SESSION_KIND_TO_PROTO.get(kind, _ProtoSessionKind.UNSPECIFIED)
 
 
 def session_kind_from_proto(proto_kind: SessionKind) -> str:
-    """Convert proto session kind enum to domain string.
-
-    Parameters
-    ----------
-    proto_kind : SessionKind
-        Proto enum value.
-
-    Returns
-    -------
-    str
-        Domain session kind string.
-
-    """
     return SESSION_KIND_FROM_PROTO.get(proto_kind, "direct")
 
 

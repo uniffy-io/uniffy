@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { markdownDisplayText, normalizeMarkdownListMarker } from "@shared/lib/markdownPresentation";
+import {
+  markdownDisplayText,
+  normalizeMarkdownListMarker,
+  parseTableRow,
+} from "@shared/lib/markdownPresentation";
 
 describe("Markdown presentation", () => {
   it.each(["* one", "+ one", "- one"])("renders %j as a bullet", (line) => {
@@ -23,5 +27,15 @@ describe("Markdown presentation", () => {
     expect(markdownDisplayText("![diagram](/image.png)<!--uniffy:image-ratio=0.75-->")).toBe(
       "![diagram](/image.png)",
     );
+  });
+
+  it("keeps an escaped mention pipe inside its table cell", () => {
+    const urn = "urn:uniffy:content:TASK:01a0ed45-b8a9-7066-b996-ace8ba11c574";
+
+    expect(parseTableRow(`| [[[Sync bug\\|${urn}]]] | Done |`)).toEqual([
+      `[[[Sync bug|${urn}]]]`,
+      "Done",
+    ]);
+    expect(parseTableRow("| a | b |")).toEqual(["a", "b"]);
   });
 });

@@ -11,22 +11,22 @@ ICS = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n"
 
 
 def _config(**overrides) -> MailConfig:
-    return MailConfig(
-        **{"from_address": "no-reply@example.com", "smtp_host": "localhost", **overrides}
-    )
+    return MailConfig(**{
+        "from_address": "no-reply@example.com",
+        "smtp_host": "localhost",
+        **overrides,
+    })
 
 
 def _message(**overrides):
-    return _compose(
-        **{
-            "config": _config(),
-            "recipient": "attendee@example.com",
-            "subject": "Invitation",
-            "html": "<p>See you there</p>",
-            "text": "See you there",
-            **overrides,
-        }
-    )
+    return _compose(**{
+        "config": _config(),
+        "recipient": "attendee@example.com",
+        "subject": "Invitation",
+        "html": "<p>See you there</p>",
+        "text": "See you there",
+        **overrides,
+    })
 
 
 def _types(message) -> list[str]:
@@ -47,9 +47,7 @@ class TestPlainMessage:
         assert _types(message) == ["multipart/alternative", "text/plain", "text/html"]
 
     def test_envelope_metadata_is_applied(self) -> None:
-        message = _message(
-            config=_config(from_name="Uniffy", reply_to="replies@example.com")
-        )
+        message = _message(config=_config(from_name="Uniffy", reply_to="replies@example.com"))
 
         assert message["From"] == "Uniffy <no-reply@example.com>"
         assert message["Reply-To"] == "replies@example.com"
@@ -63,9 +61,7 @@ class TestCalendarPart:
     def test_the_calendar_body_rides_inside_the_alternative(self) -> None:
         """Outlook draws its accept and decline controls from an inline
         text/calendar alternative, not from the attachment."""
-        message = _message(
-            calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST)
-        )
+        message = _message(calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST))
 
         inline = [part.get_content_type() for part in _alternative(message).iter_parts()]
         assert inline == ["text/plain", "text/html", "text/calendar"]
@@ -73,9 +69,7 @@ class TestCalendarPart:
     def test_the_calendar_body_comes_last_among_the_alternatives(self) -> None:
         """A client takes the last alternative it understands, so a calendar
         body placed before the HTML one would simply never be chosen."""
-        message = _message(
-            calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST)
-        )
+        message = _message(calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST))
 
         assert list(_alternative(message).iter_parts())[-1].get_content_type() == "text/calendar"
 
@@ -93,9 +87,7 @@ class TestCalendarPart:
         assert calendar.get_param("method") == method.value
 
     def test_the_document_survives_intact(self) -> None:
-        message = _message(
-            calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST)
-        )
+        message = _message(calendar_part=CalendarPart(document=ICS, method=CalendarMethod.REQUEST))
 
         calendar = next(
             part
@@ -107,9 +99,7 @@ class TestCalendarPart:
 
 class TestAttachments:
     def test_an_attachment_turns_the_message_into_mixed(self) -> None:
-        message = _message(
-            attachments=[MailAttachment(filename="invite.ics", content=ICS)]
-        )
+        message = _message(attachments=[MailAttachment(filename="invite.ics", content=ICS)])
 
         assert message.get_content_type() == "multipart/mixed"
         assert "multipart/alternative" in _types(message)
@@ -134,10 +124,7 @@ class TestAttachments:
             attachments=[MailAttachment(filename="invite.ics", content=ICS)],
         )
 
-        inline = [
-            part.get_content_type()
-            for part in _alternative(message).iter_parts()
-        ]
+        inline = [part.get_content_type() for part in _alternative(message).iter_parts()]
         attached = [
             part for part in message.walk() if part.get_content_disposition() == "attachment"
         ]

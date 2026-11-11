@@ -73,6 +73,11 @@ export const NOTIFICATION_PREFERENCE_GROUPS: NotificationPreferenceGroup[] = [
         defaults: { in_app: true, browser: true, email: true },
       },
       {
+        type: "TASK_AGENT_FINISHED",
+        label: "An agent finished a task you gave it",
+        defaults: { in_app: true, browser: true, email: false },
+      },
+      {
         type: "TASK_DUE_SOON",
         label: "Task due soon",
         defaults: { in_app: true, browser: true, email: true },

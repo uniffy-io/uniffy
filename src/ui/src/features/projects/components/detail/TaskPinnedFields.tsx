@@ -228,6 +228,7 @@ export function TaskPinnedFields({
         return (
           <AssigneeField
             triggerClassName={pinnedControlClass}
+            task={task}
             assigneeIds={task.assigneeIds}
             onChange={(assigneeIds) => update({ assigneeIds })}
             disabled={!canEdit}

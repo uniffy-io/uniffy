@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.database import SESSION_FACTORY_CTX_KEY, SessionFactory
 from uniffy.core.errors import NotFoundError, PermissionDeniedError, ValidationError
-from uniffy.core.jobs import enqueue_job
+from uniffy.core.jobs import enqueue_job_reconnecting
 from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.agents.chat_trigger import AgentChatTrigger, ChatTriggerStatus
 from uniffy.core.models.chat.channel import ChatChannel
@@ -169,7 +169,8 @@ async def recover_chat_triggers(ctx: dict[str, Any]) -> None:
     for tid, generation in pending:
         try:
             async with asyncio.timeout(0.15):
-                await enqueue_job(
+                # The sweep runs on the core fleet, which opens the egress pool on demand.
+                await enqueue_job_reconnecting(
                     DELIVER_CHAT_TRIGGER, str(tid), _job_id=f"chat-trigger:{tid}:{generation}"
                 )
         except Exception:

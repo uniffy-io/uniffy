@@ -186,13 +186,17 @@ async def test_urn_aliases_cannot_create_duplicate_rows_for_one_content_item(
             assert checks == {alias: True}
 
         rows = (
-            await session.execute(
-                select(Bookmark).where(
-                    Bookmark.user_id == peer,
-                    Bookmark.organization_id == access.org_id,
+            (
+                await session.execute(
+                    select(Bookmark).where(
+                        Bookmark.user_id == peer,
+                        Bookmark.organization_id == access.org_id,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert [row.urn for row in rows] == [canonical]
         assert rows[0].content_type is ContentType.USER
 

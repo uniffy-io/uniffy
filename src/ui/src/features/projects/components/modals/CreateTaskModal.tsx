@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { TaskRecurrenceSelector } from "@/features/projects/components/detail/TaskRecurrenceSelector";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input, controlShellClass } from "@/components/ui/input";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { NumberInput } from "@/components/ui/number-input";
@@ -14,9 +15,10 @@ import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/shared/utils/cn";
 import type { Subject } from "@/components/subject/types";
-import { SubjectChip, SubjectPicker } from "@/components/subject";
+import { SUBJECT_TYPE, SubjectChip, SubjectPicker } from "@/components/subject";
 import { useSubjectResolver } from "@/components/subject/hooks/useSubjectResolver";
 import { useAssigneePinnedOptions } from "@/features/projects/hooks/useAssigneePinnedOptions";
+import { useAgentAssigneeSection } from "@/features/projects/hooks/useAgentAssigneeSection";
 import { selectCurrentProject } from "@/features/projects/store/projectsSlice";
 import { closeCreateTaskModal } from "@/features/projects/store/projectsUiSlice";
 import { createTask } from "@/features/projects/store/projectsThunks";
@@ -62,6 +64,17 @@ export function CreateTaskModal() {
     value: assigneeIds,
     onChange: setAssigneeIds,
   });
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [skipProjectAgent, setSkipProjectAgent] = useState(false);
+  const projectAgent = useAppSelector((state) =>
+    project?.agentAssigneeId && state.taskAgents.policy.enabled
+      ? state.taskAgents.list.agents.find((agent) => agent.id === project.agentAssigneeId)
+      : undefined,
+  );
+  const agentSections = useAgentAssigneeSection({ currentAgentId: agentId, onSelect: setAgentId });
+  const pickedAgent = useAppSelector((state) =>
+    agentId ? state.taskAgents.list.agents.find((agent) => agent.id === agentId) : undefined,
+  );
 
   const handleFileUploaded = useCallback((fileId: string) => {
     pendingFileIdsRef.current.push(fileId);
@@ -94,6 +107,8 @@ export function CreateTaskModal() {
     setDescription("");
     setAssigneeIds([]);
     setPickedAssignees([]);
+    setAgentId(null);
+    setSkipProjectAgent(false);
     setStartDate("");
     setDueDate("");
     setTaskType("task");
@@ -156,6 +171,9 @@ export function CreateTaskModal() {
           fieldValues:
             Object.keys(submittableFieldValues).length > 0 ? submittableFieldValues : undefined,
           tagIds: tagIds.length ? tagIds : undefined,
+          // One request: the server stages the chosen agent instead of the project's.
+          agentId: agentId ?? undefined,
+          skipProjectAgent: !agentId && skipProjectAgent,
         }),
       ).unwrap();
 
@@ -302,6 +320,18 @@ export function CreateTaskModal() {
                   onRemove={() => setAssigneeIds((ids) => ids.filter((id) => id !== subject.id))}
                 />
               ))}
+              {pickedAgent && (
+                <SubjectChip
+                  subject={{
+                    id: pickedAgent.id,
+                    type: SUBJECT_TYPE.AGENT,
+                    name: pickedAgent.name,
+                    avatarEmoji: pickedAgent.avatarEmoji ?? undefined,
+                  }}
+                  disabled={isSubmitting}
+                  onRemove={() => setAgentId(null)}
+                />
+              )}
               <button
                 type="button"
                 disabled={isSubmitting}
@@ -327,9 +357,22 @@ export function CreateTaskModal() {
                   setPickedAssignees(subjects);
                 }}
                 pinnedOptions={assigneePinnedOptions}
+                sections={agentSections}
                 onClose={() => setIsAssigneeDropdownOpen(false)}
                 autoFocus
               />
+            )}
+            {projectAgent && !agentId && (
+              <div className="mt-2" data-testid="create-task-project-agent">
+                <Checkbox
+                  size="sm"
+                  checked={!skipProjectAgent}
+                  onChange={(event) => setSkipProjectAgent(!event.target.checked)}
+                  disabled={isSubmitting}
+                  label={`Hand it to ${projectAgent.name}`}
+                  description="This project's agent picks up new tasks and works with your permissions."
+                />
+              </div>
             )}
           </div>
 

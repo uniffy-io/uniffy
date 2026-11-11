@@ -4,6 +4,7 @@ package projects.v1;
 
 import "common/v1/common.proto";
 import "google/protobuf/timestamp.proto";
+import "projects/v1/agents.proto";
 import "projects/v1/metrics.proto";
 import "projects/v1/time.proto";
 import "tags/v1/tags.proto";
@@ -92,6 +93,14 @@ service ProjectsService {
   // ----- Metrics -----
   // Permission-scoped task aggregates for dashboard widgets.
   rpc GetTaskMetrics(GetTaskMetricsRequest) returns (GetTaskMetricsResponse);
+
+  rpc AssignTaskAgent(AssignTaskAgentRequest) returns (AssignTaskAgentResponse);
+  rpc StartTaskAgent(StartTaskAgentRequest) returns (StartTaskAgentResponse);
+  rpc StopTaskAgent(StopTaskAgentRequest) returns (StopTaskAgentResponse);
+  rpc RequestTaskAgentChanges(RequestTaskAgentChangesRequest) returns (RequestTaskAgentChangesResponse);
+  rpc SetProjectAgentAssignee(SetProjectAgentAssigneeRequest) returns (SetProjectAgentAssigneeResponse);
+  rpc GetAgentAssignmentPolicy(GetAgentAssignmentPolicyRequest) returns (GetAgentAssignmentPolicyResponse);
+  rpc UpdateAgentAssignmentPolicy(UpdateAgentAssignmentPolicyRequest) returns (UpdateAgentAssignmentPolicyResponse);
 }
 
 // ============================================================================
@@ -243,6 +252,9 @@ enum ActivityAction {
   // On the blocking task: the change is recorded on both ends of the link.
   ACTIVITY_ACTION_BLOCKING_ADDED = 22;
   ACTIVITY_ACTION_BLOCKING_REMOVED = 23;
+  // new_value is the agent id; previous_value the agent it replaced, if any.
+  ACTIVITY_ACTION_AGENT_ASSIGNED = 24;
+  ACTIVITY_ACTION_AGENT_UNASSIGNED = 25;
 }
 
 // ============================================================================
@@ -285,6 +297,11 @@ message Project {
   int32 estimated_minutes = 25;
   // Named to match Task.time_spent_minutes - one concept, one field name.
   int32 time_spent_minutes = 26;
+  // New tasks are picked up by this agent, working as each task's creator.
+  optional string agent_assignee_id = 27;
+  reserved 28;
+  reserved "agent_assignee_name";
+  optional string agent_assignee_set_by_id = 29;
 }
 
 message Task {
@@ -320,6 +337,7 @@ message Task {
   optional int32 estimated_minutes = 30;
   optional int32 time_spent_minutes = 31;
   repeated tags.v1.Tag tags = 32;
+  optional TaskAgentAssignment agent_assignment = 33;
 }
 
 message FieldDefinition {
@@ -631,6 +649,10 @@ message CreateTaskRequest {
   optional int32 estimated_minutes = 17;
   // Optional unified-tag ids to assign on create.
   repeated string tag_ids = 19;
+  // Hand the new task to this agent instead of the project's agent assignee.
+  optional string agent_id = 20;
+  // Keep the new task away from the project's agent assignee.
+  bool skip_project_agent = 21;
 }
 
 message GetTaskRequest {
@@ -776,6 +798,66 @@ message UpdateTaskResponse {
   Task task = 1;
   optional Task updated_parent = 2;
   optional Task spawned_task = 3;
+}
+
+message AssignTaskAgentRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  // Unset removes the task's agent assignee and stops its run.
+  optional string agent_id = 3;
+  // Unset starts the run now.
+  oneof start {
+    // Assign now, start later with StartTaskAgent.
+    bool wait_for_start = 4;
+    // Start at this time, at most a year ahead.
+    google.protobuf.Timestamp start_at = 5;
+  }
+}
+
+// Starts a waiting or scheduled run now, as the person who starts it.
+message StartTaskAgentRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+// Stops the run and keeps the agent on the task.
+message StopTaskAgentRequest {
+  string organization_id = 1;
+  string task_id = 2;
+}
+
+// Continues the ended run's session with the reviewer's changes; only the person it worked for.
+message RequestTaskAgentChangesRequest {
+  string organization_id = 1;
+  string task_id = 2;
+  string changes = 3;
+}
+
+message SetProjectAgentAssigneeRequest {
+  string organization_id = 1;
+  string project_id = 2;
+  // Unset clears the project's agent assignee.
+  optional string agent_id = 3;
+}
+
+message AssignTaskAgentResponse {
+  Task task = 1;
+}
+
+message StartTaskAgentResponse {
+  Task task = 1;
+}
+
+message StopTaskAgentResponse {
+  Task task = 1;
+}
+
+message RequestTaskAgentChangesResponse {
+  Task task = 1;
+}
+
+message SetProjectAgentAssigneeResponse {
+  Project project = 1;
 }
 
 message MoveTaskResponse {

@@ -16,6 +16,7 @@ class AgentSessionKind(StrEnum):
     GROUP = "group"
     GLOBAL = "global"
     CRON = "cron"
+    TASK = "task"
 
 
 class AgentSession(SQLModel, table=True):

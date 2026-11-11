@@ -16,9 +16,7 @@ async def test_bulk_loader_combines_cache_hits_and_one_database_query() -> None:
     default_user = generate_id()
     session = AsyncMock()
     session.execute.return_value = MagicMock(
-        all=MagicMock(
-            return_value=[(loaded_user, {"email_frequency": "daily"})]
-        )
+        all=MagicMock(return_value=[(loaded_user, {"email_frequency": "daily"})])
     )
 
     with (

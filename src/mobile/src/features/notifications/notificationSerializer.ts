@@ -60,6 +60,7 @@ const TYPE_META: Record<number, TypeMeta> = {
   [NotificationType.PERMISSION_REVOKED]: { kind: "permission", tone: "danger" },
   [NotificationType.SYSTEM_ANNOUNCEMENT]: { kind: "system", tone: "warning" },
   [NotificationType.TASK_ASSIGNED]: { kind: "task" },
+  [NotificationType.TASK_AGENT_FINISHED]: { kind: "task" },
   [NotificationType.TASK_DUE_SOON]: { kind: "task", tone: "warning" },
   [NotificationType.TASK_OVERDUE]: { kind: "task", tone: "danger" },
   [NotificationType.TIMER_LIMIT_REACHED]: { kind: "task", tone: "warning" },

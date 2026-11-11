@@ -55,8 +55,19 @@ def test_a_keyword_argument_with_a_non_string_key_is_refused() -> None:
 
 def test_a_failed_result_keeps_its_error_as_text() -> None:
     raw = serialize_result(
-        "f", ["x"], {}, 1, _ENQUEUED_MS, False, RuntimeError("boom"), 2, 3, "ref", "q",
-        job_id="job", serializer=serialize_job_payload,
+        "f",
+        ["x"],
+        {},
+        1,
+        _ENQUEUED_MS,
+        False,
+        RuntimeError("boom"),
+        2,
+        3,
+        "ref",
+        "q",
+        job_id="job",
+        serializer=serialize_job_payload,
     )
 
     assert raw is not None
@@ -68,8 +79,19 @@ def test_a_failed_result_keeps_its_error_as_text() -> None:
 
 def test_a_result_json_cannot_carry_is_kept_as_text() -> None:
     raw = serialize_result(
-        "f", [], {}, 1, _ENQUEUED_MS, True, {"member"}, 2, 3, "ref", "q",
-        job_id="job", serializer=serialize_job_payload,
+        "f",
+        [],
+        {},
+        1,
+        _ENQUEUED_MS,
+        True,
+        {"member"},
+        2,
+        3,
+        "ref",
+        "q",
+        job_id="job",
+        serializer=serialize_job_payload,
     )
 
     assert raw is not None

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.events.job_contracts import PROCESS_NOTIFICATION_EVENT
 from uniffy.core.events.types import NotificationEvent
-from uniffy.core.jobs import enqueue_job
+from uniffy.core.jobs import JobEnqueueOutcome, enqueue_job_reconnecting
 from uniffy.core.json_codec import dumps_str, loads
 from uniffy.core.models.notifications.notification import Notification
 from uniffy.core.models.notifications.outbox import NotificationOutbox
@@ -142,7 +142,10 @@ async def emit_notification(event: NotificationEvent) -> None:
         return
     try:
         event_json = _event_to_json(event)
-        await enqueue_job(PROCESS_NOTIFICATION_EVENT, event_json)
+        # Agent runs emit from the egress fleet, which opens the core pool only on demand.
+        result = await enqueue_job_reconnecting(PROCESS_NOTIFICATION_EVENT, event_json)
+        if result.outcome == JobEnqueueOutcome.UNAVAILABLE:
+            logger.warning("Notification queue unavailable, skipping event")
     except RuntimeError:
         logger.warning("Notification queue unavailable, skipping event")
     except Exception:

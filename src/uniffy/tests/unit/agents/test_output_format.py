@@ -37,6 +37,16 @@ MENTION = f"[[[Roadmap|{URN}]]]"
             ["fence_unwrap", "directive", "self_prefix"],
         ),
         (
+            f"| Task | Status |\n| :-- | --- |\n| {MENTION} | Done |\n\n{MENTION}\n",
+            f"| Task | Status |\n| :-- | --- |\n| [[[Roadmap\\|{URN}]]] | Done |\n\n{MENTION}\n",
+            ["table_mention_pipe"],
+        ),
+        (
+            f"Task | {MENTION}\n--- | ---\nA | {URN}\n",
+            f"Task | [[[Roadmap\\|{URN}]]]\n--- | ---\nA | [[[Note\\|{URN}]]]\n",
+            ["bare_urn", "table_mention_pipe"],
+        ),
+        (
             f"[[  Road\\map  |{URN}]] [A|B]({URN})",
             f"[[[Road map|{URN}]]] [[[A B|{URN}]]]",
             ["mention_brackets", "mention_link"],
@@ -78,6 +88,9 @@ def test_repairs_are_reported_once_and_idempotent(source, expected, kinds) -> No
         f"[[[Label\ncontinued|{URN}]]]",
         f"[[[Label `code`|{URN}]]]",
         f"![image]({URN})",
+        f"| Task |\n| --- |\n| [[[Roadmap\\|{URN}]]] |\n",
+        f"```\n| Task |\n| --- |\n| {MENTION} |\n```",
+        f"| Not a table | {MENTION}\n\n--- | ---\n",
         "Example `code`:::note\n",
         "::: not a directive\n",
         "[Someone Else]: Reply",

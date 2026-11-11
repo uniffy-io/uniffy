@@ -20,6 +20,7 @@ import {
   EnvelopeOpen,
   Funnel,
   ListChecks,
+  Robot,
   LockKeyOpen,
   Megaphone,
   PaperPlaneTilt,
@@ -123,6 +124,7 @@ const TYPE_CATEGORIES: TypeCategory[] = [
     icon: ListChecks,
     types: [
       { value: NotificationType.TASK_ASSIGNED, label: "Assigned", icon: ListChecks },
+      { value: NotificationType.TASK_AGENT_FINISHED, label: "Agent finished", icon: Robot },
       { value: NotificationType.TASK_DUE_SOON, label: "Due soon", icon: ClockCountdown },
       { value: NotificationType.TASK_OVERDUE, label: "Overdue", icon: Warning },
       { value: NotificationType.TIMER_LIMIT_REACHED, label: "Timer paused", icon: Timer },

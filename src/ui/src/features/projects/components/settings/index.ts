@@ -8,3 +8,4 @@ export { MembersSection } from "./MembersSection";
 export { AuditLogSection } from "./AuditLogSection";
 export { DangerZoneSection } from "./DangerZoneSection";
 export { TypeFieldSchemasSection } from "./TypeFieldSchemasSection";
+export { AgentAssigneeSection } from "./AgentAssigneeSection";

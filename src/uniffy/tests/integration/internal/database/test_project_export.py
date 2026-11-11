@@ -82,8 +82,7 @@ async def _seed(session: AsyncSession, env: SimpleNamespace) -> SimpleNamespace:
         session.add(task)
     await session.flush()
     session.add_all([
-        TaskActivity(task_id=task.id, actor_id=env.admin_id, action="created")
-        for task in tasks
+        TaskActivity(task_id=task.id, actor_id=env.admin_id, action="created") for task in tasks
     ])
     session.add_all([
         Comment(
@@ -164,7 +163,11 @@ async def test_every_task_streams_past_the_list_page_size(session, env, seeded) 
 
     assert len(chunks) > 1
     assert len(rows) == TASK_COUNT + 1
-    assert [row[2] for row in rows[1:4]] == [f"{seeded.slug}-1", f"{seeded.slug}-2", f"{seeded.slug}-3"]
+    assert [row[2] for row in rows[1:4]] == [
+        f"{seeded.slug}-1",
+        f"{seeded.slug}-2",
+        f"{seeded.slug}-3",
+    ]
 
 
 async def test_subtasks_carry_their_parent_key_and_depth(session, env, seeded) -> None:
@@ -199,7 +202,9 @@ async def test_outline_lists_each_root_then_its_descendants_depth_first(
 
 async def test_a_filtered_bundle_only_names_tasks_its_tasks_file_has(session, env, seeded) -> None:
     archive = zipfile.ZipFile(
-        io.BytesIO(b"".join(await _export(env, seeded, task_filter=_done_only(), include_bundle=True)))
+        io.BytesIO(
+            b"".join(await _export(env, seeded, task_filter=_done_only(), include_bundle=True))
+        )
     )
     assert archive.testzip() is None
     assert archive.namelist() == [
@@ -254,13 +259,22 @@ async def test_an_export_records_one_audit_event_per_project(session, env, seede
         await record_export(audit_session, env.member_id, plan)
 
     events = (
-        await session.execute(
-            select(AuditEvent).where(
-                AuditEvent.organization_id == env.org_id,
-                AuditEvent.action == Action.PROJECT_EXPORTED,
+        (
+            await session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.organization_id == env.org_id,
+                    AuditEvent.action == Action.PROJECT_EXPORTED,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert len(events) == 1
     assert events[0].resource_id == seeded.project_id
-    assert events[0].details == {"rows": TASK_COUNT, "projects": 1, "scope": "project", "bundle": True}
+    assert events[0].details == {
+        "rows": TASK_COUNT,
+        "projects": 1,
+        "scope": "project",
+        "bundle": True,
+    }

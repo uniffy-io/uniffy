@@ -292,7 +292,7 @@ async def test_interrupted_agent_is_not_automatically_replayed(
     session.add(trigger)
     await session.commit()
     enqueue = AsyncMock()
-    monkeypatch.setattr(invocations, "enqueue_job", enqueue)
+    monkeypatch.setattr(invocations, "enqueue_job_reconnecting", enqueue)
     await invocations.recover_chat_triggers(context)
     await session.refresh(trigger)
     assert (

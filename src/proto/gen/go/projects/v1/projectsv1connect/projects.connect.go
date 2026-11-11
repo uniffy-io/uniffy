@@ -206,6 +206,27 @@ const (
 	// ProjectsServiceGetTaskMetricsProcedure is the fully-qualified name of the ProjectsService's
 	// GetTaskMetrics RPC.
 	ProjectsServiceGetTaskMetricsProcedure = "/projects.v1.ProjectsService/GetTaskMetrics"
+	// ProjectsServiceAssignTaskAgentProcedure is the fully-qualified name of the ProjectsService's
+	// AssignTaskAgent RPC.
+	ProjectsServiceAssignTaskAgentProcedure = "/projects.v1.ProjectsService/AssignTaskAgent"
+	// ProjectsServiceStartTaskAgentProcedure is the fully-qualified name of the ProjectsService's
+	// StartTaskAgent RPC.
+	ProjectsServiceStartTaskAgentProcedure = "/projects.v1.ProjectsService/StartTaskAgent"
+	// ProjectsServiceStopTaskAgentProcedure is the fully-qualified name of the ProjectsService's
+	// StopTaskAgent RPC.
+	ProjectsServiceStopTaskAgentProcedure = "/projects.v1.ProjectsService/StopTaskAgent"
+	// ProjectsServiceRequestTaskAgentChangesProcedure is the fully-qualified name of the
+	// ProjectsService's RequestTaskAgentChanges RPC.
+	ProjectsServiceRequestTaskAgentChangesProcedure = "/projects.v1.ProjectsService/RequestTaskAgentChanges"
+	// ProjectsServiceSetProjectAgentAssigneeProcedure is the fully-qualified name of the
+	// ProjectsService's SetProjectAgentAssignee RPC.
+	ProjectsServiceSetProjectAgentAssigneeProcedure = "/projects.v1.ProjectsService/SetProjectAgentAssignee"
+	// ProjectsServiceGetAgentAssignmentPolicyProcedure is the fully-qualified name of the
+	// ProjectsService's GetAgentAssignmentPolicy RPC.
+	ProjectsServiceGetAgentAssignmentPolicyProcedure = "/projects.v1.ProjectsService/GetAgentAssignmentPolicy"
+	// ProjectsServiceUpdateAgentAssignmentPolicyProcedure is the fully-qualified name of the
+	// ProjectsService's UpdateAgentAssignmentPolicy RPC.
+	ProjectsServiceUpdateAgentAssignmentPolicyProcedure = "/projects.v1.ProjectsService/UpdateAgentAssignmentPolicy"
 )
 
 // ProjectsServiceClient is a client for the projects.v1.ProjectsService service.
@@ -279,6 +300,13 @@ type ProjectsServiceClient interface {
 	// ----- Metrics -----
 	// Permission-scoped task aggregates for dashboard widgets.
 	GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error)
+	AssignTaskAgent(context.Context, *connect.Request[v1.AssignTaskAgentRequest]) (*connect.Response[v1.AssignTaskAgentResponse], error)
+	StartTaskAgent(context.Context, *connect.Request[v1.StartTaskAgentRequest]) (*connect.Response[v1.StartTaskAgentResponse], error)
+	StopTaskAgent(context.Context, *connect.Request[v1.StopTaskAgentRequest]) (*connect.Response[v1.StopTaskAgentResponse], error)
+	RequestTaskAgentChanges(context.Context, *connect.Request[v1.RequestTaskAgentChangesRequest]) (*connect.Response[v1.RequestTaskAgentChangesResponse], error)
+	SetProjectAgentAssignee(context.Context, *connect.Request[v1.SetProjectAgentAssigneeRequest]) (*connect.Response[v1.SetProjectAgentAssigneeResponse], error)
+	GetAgentAssignmentPolicy(context.Context, *connect.Request[v1.GetAgentAssignmentPolicyRequest]) (*connect.Response[v1.GetAgentAssignmentPolicyResponse], error)
+	UpdateAgentAssignmentPolicy(context.Context, *connect.Request[v1.UpdateAgentAssignmentPolicyRequest]) (*connect.Response[v1.UpdateAgentAssignmentPolicyResponse], error)
 }
 
 // NewProjectsServiceClient constructs a client for the projects.v1.ProjectsService service. By
@@ -640,69 +668,118 @@ func NewProjectsServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(projectsServiceMethods.ByName("GetTaskMetrics")),
 			connect.WithClientOptions(opts...),
 		),
+		assignTaskAgent: connect.NewClient[v1.AssignTaskAgentRequest, v1.AssignTaskAgentResponse](
+			httpClient,
+			baseURL+ProjectsServiceAssignTaskAgentProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("AssignTaskAgent")),
+			connect.WithClientOptions(opts...),
+		),
+		startTaskAgent: connect.NewClient[v1.StartTaskAgentRequest, v1.StartTaskAgentResponse](
+			httpClient,
+			baseURL+ProjectsServiceStartTaskAgentProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("StartTaskAgent")),
+			connect.WithClientOptions(opts...),
+		),
+		stopTaskAgent: connect.NewClient[v1.StopTaskAgentRequest, v1.StopTaskAgentResponse](
+			httpClient,
+			baseURL+ProjectsServiceStopTaskAgentProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("StopTaskAgent")),
+			connect.WithClientOptions(opts...),
+		),
+		requestTaskAgentChanges: connect.NewClient[v1.RequestTaskAgentChangesRequest, v1.RequestTaskAgentChangesResponse](
+			httpClient,
+			baseURL+ProjectsServiceRequestTaskAgentChangesProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("RequestTaskAgentChanges")),
+			connect.WithClientOptions(opts...),
+		),
+		setProjectAgentAssignee: connect.NewClient[v1.SetProjectAgentAssigneeRequest, v1.SetProjectAgentAssigneeResponse](
+			httpClient,
+			baseURL+ProjectsServiceSetProjectAgentAssigneeProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("SetProjectAgentAssignee")),
+			connect.WithClientOptions(opts...),
+		),
+		getAgentAssignmentPolicy: connect.NewClient[v1.GetAgentAssignmentPolicyRequest, v1.GetAgentAssignmentPolicyResponse](
+			httpClient,
+			baseURL+ProjectsServiceGetAgentAssignmentPolicyProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("GetAgentAssignmentPolicy")),
+			connect.WithClientOptions(opts...),
+		),
+		updateAgentAssignmentPolicy: connect.NewClient[v1.UpdateAgentAssignmentPolicyRequest, v1.UpdateAgentAssignmentPolicyResponse](
+			httpClient,
+			baseURL+ProjectsServiceUpdateAgentAssignmentPolicyProcedure,
+			connect.WithSchema(projectsServiceMethods.ByName("UpdateAgentAssignmentPolicy")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // projectsServiceClient implements ProjectsServiceClient.
 type projectsServiceClient struct {
-	createProject             *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
-	getProject                *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
-	updateProject             *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
-	deleteProject             *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
-	listProjects              *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
-	createTask                *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
-	getTask                   *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
-	updateTask                *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
-	deleteTask                *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
-	listTasks                 *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
-	moveTask                  *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
-	bulkUpdateTasks           *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
-	deleteTasks               *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
-	exportTasks               *connect.Client[v1.ExportTasksRequest, v1.ExportTasksResponse]
-	createField               *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
-	updateField               *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
-	deleteField               *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
-	createView                *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
-	updateView                *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
-	deleteView                *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
-	reorderViews              *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
-	getViewCatalog            *connect.Client[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse]
-	listActivities            *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
-	createSprint              *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
-	updateSprint              *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
-	startSprint               *connect.Client[v1.StartSprintRequest, v1.StartSprintResponse]
-	completeSprint            *connect.Client[v1.CompleteSprintRequest, v1.CompleteSprintResponse]
-	deleteSprint              *connect.Client[v1.DeleteSprintRequest, v1.DeleteSprintResponse]
-	listSprints               *connect.Client[v1.ListSprintsRequest, v1.ListSprintsResponse]
-	toggleTaskWatcher         *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
-	listTaskWatchers          *connect.Client[v1.ListTaskWatchersRequest, v1.ListTaskWatchersResponse]
-	bulkCheckTaskWatchers     *connect.Client[v1.BulkCheckTaskWatchersRequest, v1.BulkCheckTaskWatchersResponse]
-	createWorklog             *connect.Client[v1.CreateWorklogRequest, v1.CreateWorklogResponse]
-	updateWorklog             *connect.Client[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse]
-	deleteWorklog             *connect.Client[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse]
-	listTaskWorklogs          *connect.Client[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse]
-	listUserWorklogs          *connect.Client[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse]
-	startTimer                *connect.Client[v1.StartTimerRequest, v1.StartTimerResponse]
-	pauseTimer                *connect.Client[v1.PauseTimerRequest, v1.PauseTimerResponse]
-	resumeTimer               *connect.Client[v1.ResumeTimerRequest, v1.ResumeTimerResponse]
-	stopTimer                 *connect.Client[v1.StopTimerRequest, v1.StopTimerResponse]
-	getActiveTimer            *connect.Client[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse]
-	getTimePolicy             *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
-	updateTimePolicy          *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
-	aggregateWorklogs         *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
-	getTimesheet              *connect.Client[v1.GetTimesheetRequest, v1.GetTimesheetResponse]
-	submitTimesheet           *connect.Client[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse]
-	recallTimesheet           *connect.Client[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse]
-	listReviewTimesheets      *connect.Client[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse]
-	approveTimesheet          *connect.Client[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse]
-	rejectTimesheet           *connect.Client[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse]
-	grantGrace                *connect.Client[v1.GrantGraceRequest, v1.GrantGraceResponse]
-	closePeriod               *connect.Client[v1.ClosePeriodRequest, v1.ClosePeriodResponse]
-	reopenPeriod              *connect.Client[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse]
-	listPeriods               *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
-	createInternalTimeProject *connect.Client[v1.CreateInternalTimeProjectRequest, v1.CreateInternalTimeProjectResponse]
-	getSprintCapacity         *connect.Client[v1.GetSprintCapacityRequest, v1.GetSprintCapacityResponse]
-	getTaskMetrics            *connect.Client[v1.GetTaskMetricsRequest, v1.GetTaskMetricsResponse]
+	createProject               *connect.Client[v1.CreateProjectRequest, v1.CreateProjectResponse]
+	getProject                  *connect.Client[v1.GetProjectRequest, v1.GetProjectResponse]
+	updateProject               *connect.Client[v1.UpdateProjectRequest, v1.UpdateProjectResponse]
+	deleteProject               *connect.Client[v1.DeleteProjectRequest, v1.DeleteProjectResponse]
+	listProjects                *connect.Client[v1.ListProjectsRequest, v1.ListProjectsResponse]
+	createTask                  *connect.Client[v1.CreateTaskRequest, v1.CreateTaskResponse]
+	getTask                     *connect.Client[v1.GetTaskRequest, v1.GetTaskResponse]
+	updateTask                  *connect.Client[v1.UpdateTaskRequest, v1.UpdateTaskResponse]
+	deleteTask                  *connect.Client[v1.DeleteTaskRequest, v1.DeleteTaskResponse]
+	listTasks                   *connect.Client[v1.ListTasksRequest, v1.ListTasksResponse]
+	moveTask                    *connect.Client[v1.MoveTaskRequest, v1.MoveTaskResponse]
+	bulkUpdateTasks             *connect.Client[v1.BulkUpdateTasksRequest, v1.BulkUpdateTasksResponse]
+	deleteTasks                 *connect.Client[v1.DeleteTasksRequest, v1.DeleteTasksResponse]
+	exportTasks                 *connect.Client[v1.ExportTasksRequest, v1.ExportTasksResponse]
+	createField                 *connect.Client[v1.CreateFieldRequest, v1.CreateFieldResponse]
+	updateField                 *connect.Client[v1.UpdateFieldRequest, v1.UpdateFieldResponse]
+	deleteField                 *connect.Client[v1.DeleteFieldRequest, v1.DeleteFieldResponse]
+	createView                  *connect.Client[v1.CreateViewRequest, v1.CreateViewResponse]
+	updateView                  *connect.Client[v1.UpdateViewRequest, v1.UpdateViewResponse]
+	deleteView                  *connect.Client[v1.DeleteViewRequest, v1.DeleteViewResponse]
+	reorderViews                *connect.Client[v1.ReorderViewsRequest, v1.ReorderViewsResponse]
+	getViewCatalog              *connect.Client[v1.GetViewCatalogRequest, v1.GetViewCatalogResponse]
+	listActivities              *connect.Client[v1.ListActivitiesRequest, v1.ListActivitiesResponse]
+	createSprint                *connect.Client[v1.CreateSprintRequest, v1.CreateSprintResponse]
+	updateSprint                *connect.Client[v1.UpdateSprintRequest, v1.UpdateSprintResponse]
+	startSprint                 *connect.Client[v1.StartSprintRequest, v1.StartSprintResponse]
+	completeSprint              *connect.Client[v1.CompleteSprintRequest, v1.CompleteSprintResponse]
+	deleteSprint                *connect.Client[v1.DeleteSprintRequest, v1.DeleteSprintResponse]
+	listSprints                 *connect.Client[v1.ListSprintsRequest, v1.ListSprintsResponse]
+	toggleTaskWatcher           *connect.Client[v1.ToggleTaskWatcherRequest, v1.ToggleTaskWatcherResponse]
+	listTaskWatchers            *connect.Client[v1.ListTaskWatchersRequest, v1.ListTaskWatchersResponse]
+	bulkCheckTaskWatchers       *connect.Client[v1.BulkCheckTaskWatchersRequest, v1.BulkCheckTaskWatchersResponse]
+	createWorklog               *connect.Client[v1.CreateWorklogRequest, v1.CreateWorklogResponse]
+	updateWorklog               *connect.Client[v1.UpdateWorklogRequest, v1.UpdateWorklogResponse]
+	deleteWorklog               *connect.Client[v1.DeleteWorklogRequest, v1.DeleteWorklogResponse]
+	listTaskWorklogs            *connect.Client[v1.ListTaskWorklogsRequest, v1.ListTaskWorklogsResponse]
+	listUserWorklogs            *connect.Client[v1.ListUserWorklogsRequest, v1.ListUserWorklogsResponse]
+	startTimer                  *connect.Client[v1.StartTimerRequest, v1.StartTimerResponse]
+	pauseTimer                  *connect.Client[v1.PauseTimerRequest, v1.PauseTimerResponse]
+	resumeTimer                 *connect.Client[v1.ResumeTimerRequest, v1.ResumeTimerResponse]
+	stopTimer                   *connect.Client[v1.StopTimerRequest, v1.StopTimerResponse]
+	getActiveTimer              *connect.Client[v1.GetActiveTimerRequest, v1.GetActiveTimerResponse]
+	getTimePolicy               *connect.Client[v1.GetTimePolicyRequest, v1.GetTimePolicyResponse]
+	updateTimePolicy            *connect.Client[v1.UpdateTimePolicyRequest, v1.UpdateTimePolicyResponse]
+	aggregateWorklogs           *connect.Client[v1.AggregateWorklogsRequest, v1.AggregateWorklogsResponse]
+	getTimesheet                *connect.Client[v1.GetTimesheetRequest, v1.GetTimesheetResponse]
+	submitTimesheet             *connect.Client[v1.SubmitTimesheetRequest, v1.SubmitTimesheetResponse]
+	recallTimesheet             *connect.Client[v1.RecallTimesheetRequest, v1.RecallTimesheetResponse]
+	listReviewTimesheets        *connect.Client[v1.ListReviewTimesheetsRequest, v1.ListReviewTimesheetsResponse]
+	approveTimesheet            *connect.Client[v1.ApproveTimesheetRequest, v1.ApproveTimesheetResponse]
+	rejectTimesheet             *connect.Client[v1.RejectTimesheetRequest, v1.RejectTimesheetResponse]
+	grantGrace                  *connect.Client[v1.GrantGraceRequest, v1.GrantGraceResponse]
+	closePeriod                 *connect.Client[v1.ClosePeriodRequest, v1.ClosePeriodResponse]
+	reopenPeriod                *connect.Client[v1.ReopenPeriodRequest, v1.ReopenPeriodResponse]
+	listPeriods                 *connect.Client[v1.ListPeriodsRequest, v1.ListPeriodsResponse]
+	createInternalTimeProject   *connect.Client[v1.CreateInternalTimeProjectRequest, v1.CreateInternalTimeProjectResponse]
+	getSprintCapacity           *connect.Client[v1.GetSprintCapacityRequest, v1.GetSprintCapacityResponse]
+	getTaskMetrics              *connect.Client[v1.GetTaskMetricsRequest, v1.GetTaskMetricsResponse]
+	assignTaskAgent             *connect.Client[v1.AssignTaskAgentRequest, v1.AssignTaskAgentResponse]
+	startTaskAgent              *connect.Client[v1.StartTaskAgentRequest, v1.StartTaskAgentResponse]
+	stopTaskAgent               *connect.Client[v1.StopTaskAgentRequest, v1.StopTaskAgentResponse]
+	requestTaskAgentChanges     *connect.Client[v1.RequestTaskAgentChangesRequest, v1.RequestTaskAgentChangesResponse]
+	setProjectAgentAssignee     *connect.Client[v1.SetProjectAgentAssigneeRequest, v1.SetProjectAgentAssigneeResponse]
+	getAgentAssignmentPolicy    *connect.Client[v1.GetAgentAssignmentPolicyRequest, v1.GetAgentAssignmentPolicyResponse]
+	updateAgentAssignmentPolicy *connect.Client[v1.UpdateAgentAssignmentPolicyRequest, v1.UpdateAgentAssignmentPolicyResponse]
 }
 
 // CreateProject calls projects.v1.ProjectsService.CreateProject.
@@ -995,6 +1072,41 @@ func (c *projectsServiceClient) GetTaskMetrics(ctx context.Context, req *connect
 	return c.getTaskMetrics.CallUnary(ctx, req)
 }
 
+// AssignTaskAgent calls projects.v1.ProjectsService.AssignTaskAgent.
+func (c *projectsServiceClient) AssignTaskAgent(ctx context.Context, req *connect.Request[v1.AssignTaskAgentRequest]) (*connect.Response[v1.AssignTaskAgentResponse], error) {
+	return c.assignTaskAgent.CallUnary(ctx, req)
+}
+
+// StartTaskAgent calls projects.v1.ProjectsService.StartTaskAgent.
+func (c *projectsServiceClient) StartTaskAgent(ctx context.Context, req *connect.Request[v1.StartTaskAgentRequest]) (*connect.Response[v1.StartTaskAgentResponse], error) {
+	return c.startTaskAgent.CallUnary(ctx, req)
+}
+
+// StopTaskAgent calls projects.v1.ProjectsService.StopTaskAgent.
+func (c *projectsServiceClient) StopTaskAgent(ctx context.Context, req *connect.Request[v1.StopTaskAgentRequest]) (*connect.Response[v1.StopTaskAgentResponse], error) {
+	return c.stopTaskAgent.CallUnary(ctx, req)
+}
+
+// RequestTaskAgentChanges calls projects.v1.ProjectsService.RequestTaskAgentChanges.
+func (c *projectsServiceClient) RequestTaskAgentChanges(ctx context.Context, req *connect.Request[v1.RequestTaskAgentChangesRequest]) (*connect.Response[v1.RequestTaskAgentChangesResponse], error) {
+	return c.requestTaskAgentChanges.CallUnary(ctx, req)
+}
+
+// SetProjectAgentAssignee calls projects.v1.ProjectsService.SetProjectAgentAssignee.
+func (c *projectsServiceClient) SetProjectAgentAssignee(ctx context.Context, req *connect.Request[v1.SetProjectAgentAssigneeRequest]) (*connect.Response[v1.SetProjectAgentAssigneeResponse], error) {
+	return c.setProjectAgentAssignee.CallUnary(ctx, req)
+}
+
+// GetAgentAssignmentPolicy calls projects.v1.ProjectsService.GetAgentAssignmentPolicy.
+func (c *projectsServiceClient) GetAgentAssignmentPolicy(ctx context.Context, req *connect.Request[v1.GetAgentAssignmentPolicyRequest]) (*connect.Response[v1.GetAgentAssignmentPolicyResponse], error) {
+	return c.getAgentAssignmentPolicy.CallUnary(ctx, req)
+}
+
+// UpdateAgentAssignmentPolicy calls projects.v1.ProjectsService.UpdateAgentAssignmentPolicy.
+func (c *projectsServiceClient) UpdateAgentAssignmentPolicy(ctx context.Context, req *connect.Request[v1.UpdateAgentAssignmentPolicyRequest]) (*connect.Response[v1.UpdateAgentAssignmentPolicyResponse], error) {
+	return c.updateAgentAssignmentPolicy.CallUnary(ctx, req)
+}
+
 // ProjectsServiceHandler is an implementation of the projects.v1.ProjectsService service.
 type ProjectsServiceHandler interface {
 	// ----- Projects -----
@@ -1066,6 +1178,13 @@ type ProjectsServiceHandler interface {
 	// ----- Metrics -----
 	// Permission-scoped task aggregates for dashboard widgets.
 	GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error)
+	AssignTaskAgent(context.Context, *connect.Request[v1.AssignTaskAgentRequest]) (*connect.Response[v1.AssignTaskAgentResponse], error)
+	StartTaskAgent(context.Context, *connect.Request[v1.StartTaskAgentRequest]) (*connect.Response[v1.StartTaskAgentResponse], error)
+	StopTaskAgent(context.Context, *connect.Request[v1.StopTaskAgentRequest]) (*connect.Response[v1.StopTaskAgentResponse], error)
+	RequestTaskAgentChanges(context.Context, *connect.Request[v1.RequestTaskAgentChangesRequest]) (*connect.Response[v1.RequestTaskAgentChangesResponse], error)
+	SetProjectAgentAssignee(context.Context, *connect.Request[v1.SetProjectAgentAssigneeRequest]) (*connect.Response[v1.SetProjectAgentAssigneeResponse], error)
+	GetAgentAssignmentPolicy(context.Context, *connect.Request[v1.GetAgentAssignmentPolicyRequest]) (*connect.Response[v1.GetAgentAssignmentPolicyResponse], error)
+	UpdateAgentAssignmentPolicy(context.Context, *connect.Request[v1.UpdateAgentAssignmentPolicyRequest]) (*connect.Response[v1.UpdateAgentAssignmentPolicyResponse], error)
 }
 
 // NewProjectsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -1423,6 +1542,48 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 		connect.WithSchema(projectsServiceMethods.ByName("GetTaskMetrics")),
 		connect.WithHandlerOptions(opts...),
 	)
+	projectsServiceAssignTaskAgentHandler := connect.NewUnaryHandler(
+		ProjectsServiceAssignTaskAgentProcedure,
+		svc.AssignTaskAgent,
+		connect.WithSchema(projectsServiceMethods.ByName("AssignTaskAgent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceStartTaskAgentHandler := connect.NewUnaryHandler(
+		ProjectsServiceStartTaskAgentProcedure,
+		svc.StartTaskAgent,
+		connect.WithSchema(projectsServiceMethods.ByName("StartTaskAgent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceStopTaskAgentHandler := connect.NewUnaryHandler(
+		ProjectsServiceStopTaskAgentProcedure,
+		svc.StopTaskAgent,
+		connect.WithSchema(projectsServiceMethods.ByName("StopTaskAgent")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceRequestTaskAgentChangesHandler := connect.NewUnaryHandler(
+		ProjectsServiceRequestTaskAgentChangesProcedure,
+		svc.RequestTaskAgentChanges,
+		connect.WithSchema(projectsServiceMethods.ByName("RequestTaskAgentChanges")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceSetProjectAgentAssigneeHandler := connect.NewUnaryHandler(
+		ProjectsServiceSetProjectAgentAssigneeProcedure,
+		svc.SetProjectAgentAssignee,
+		connect.WithSchema(projectsServiceMethods.ByName("SetProjectAgentAssignee")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceGetAgentAssignmentPolicyHandler := connect.NewUnaryHandler(
+		ProjectsServiceGetAgentAssignmentPolicyProcedure,
+		svc.GetAgentAssignmentPolicy,
+		connect.WithSchema(projectsServiceMethods.ByName("GetAgentAssignmentPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectsServiceUpdateAgentAssignmentPolicyHandler := connect.NewUnaryHandler(
+		ProjectsServiceUpdateAgentAssignmentPolicyProcedure,
+		svc.UpdateAgentAssignmentPolicy,
+		connect.WithSchema(projectsServiceMethods.ByName("UpdateAgentAssignmentPolicy")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/projects.v1.ProjectsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ProjectsServiceCreateProjectProcedure:
@@ -1541,6 +1702,20 @@ func NewProjectsServiceHandler(svc ProjectsServiceHandler, opts ...connect.Handl
 			projectsServiceGetSprintCapacityHandler.ServeHTTP(w, r)
 		case ProjectsServiceGetTaskMetricsProcedure:
 			projectsServiceGetTaskMetricsHandler.ServeHTTP(w, r)
+		case ProjectsServiceAssignTaskAgentProcedure:
+			projectsServiceAssignTaskAgentHandler.ServeHTTP(w, r)
+		case ProjectsServiceStartTaskAgentProcedure:
+			projectsServiceStartTaskAgentHandler.ServeHTTP(w, r)
+		case ProjectsServiceStopTaskAgentProcedure:
+			projectsServiceStopTaskAgentHandler.ServeHTTP(w, r)
+		case ProjectsServiceRequestTaskAgentChangesProcedure:
+			projectsServiceRequestTaskAgentChangesHandler.ServeHTTP(w, r)
+		case ProjectsServiceSetProjectAgentAssigneeProcedure:
+			projectsServiceSetProjectAgentAssigneeHandler.ServeHTTP(w, r)
+		case ProjectsServiceGetAgentAssignmentPolicyProcedure:
+			projectsServiceGetAgentAssignmentPolicyHandler.ServeHTTP(w, r)
+		case ProjectsServiceUpdateAgentAssignmentPolicyProcedure:
+			projectsServiceUpdateAgentAssignmentPolicyHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -1780,4 +1955,32 @@ func (UnimplementedProjectsServiceHandler) GetSprintCapacity(context.Context, *c
 
 func (UnimplementedProjectsServiceHandler) GetTaskMetrics(context.Context, *connect.Request[v1.GetTaskMetricsRequest]) (*connect.Response[v1.GetTaskMetricsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetTaskMetrics is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) AssignTaskAgent(context.Context, *connect.Request[v1.AssignTaskAgentRequest]) (*connect.Response[v1.AssignTaskAgentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.AssignTaskAgent is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) StartTaskAgent(context.Context, *connect.Request[v1.StartTaskAgentRequest]) (*connect.Response[v1.StartTaskAgentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.StartTaskAgent is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) StopTaskAgent(context.Context, *connect.Request[v1.StopTaskAgentRequest]) (*connect.Response[v1.StopTaskAgentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.StopTaskAgent is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) RequestTaskAgentChanges(context.Context, *connect.Request[v1.RequestTaskAgentChangesRequest]) (*connect.Response[v1.RequestTaskAgentChangesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.RequestTaskAgentChanges is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) SetProjectAgentAssignee(context.Context, *connect.Request[v1.SetProjectAgentAssigneeRequest]) (*connect.Response[v1.SetProjectAgentAssigneeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.SetProjectAgentAssignee is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) GetAgentAssignmentPolicy(context.Context, *connect.Request[v1.GetAgentAssignmentPolicyRequest]) (*connect.Response[v1.GetAgentAssignmentPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.GetAgentAssignmentPolicy is not implemented"))
+}
+
+func (UnimplementedProjectsServiceHandler) UpdateAgentAssignmentPolicy(context.Context, *connect.Request[v1.UpdateAgentAssignmentPolicyRequest]) (*connect.Response[v1.UpdateAgentAssignmentPolicyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("projects.v1.ProjectsService.UpdateAgentAssignmentPolicy is not implemented"))
 }

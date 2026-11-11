@@ -14,6 +14,7 @@ import {
   ClockCountdown,
   GitDiff,
   ListChecks,
+  Robot,
   LockKeyOpen,
   Megaphone,
   PaperPlaneTilt,
@@ -137,6 +138,12 @@ const NOTIFICATION_TYPE_CONFIG: Record<number, NotificationTypeConfig> = {
   [NotificationType.TASK_ASSIGNED]: {
     icon: ListChecks,
     label: "Assigned",
+    color: "text-teal-400",
+    bgColor: "bg-teal-500",
+  },
+  [NotificationType.TASK_AGENT_FINISHED]: {
+    icon: Robot,
+    label: "Agent",
     color: "text-teal-400",
     bgColor: "bg-teal-500",
   },

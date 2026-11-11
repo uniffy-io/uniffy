@@ -22,6 +22,8 @@ export interface SerializedComment {
   replyCount: number;
   reactions: SerializedReaction[];
   replies: SerializedComment[];
+  /** Set when an agent wrote the comment for the author. */
+  agentName: string | null;
 }
 
 function tsToSeconds(ts: Timestamp | undefined): number {
@@ -51,5 +53,6 @@ export function commentToPlain(proto: ProtoComment): SerializedComment {
       currentUserReacted: r.currentUserReacted,
     })),
     replies: proto.replies.map(commentToPlain),
+    agentName: proto.agentId ? proto.agentName || "An agent" : null,
   };
 }

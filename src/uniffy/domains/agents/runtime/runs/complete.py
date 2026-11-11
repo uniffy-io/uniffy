@@ -13,6 +13,7 @@ from uniffy.core.database import SessionFactory
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.message import AgentMessage
 from uniffy.core.models.agents.run_log import AgentRunStatus
+from uniffy.domains.agents.metrics import AGENT_TOOL_CALLS_TOTAL
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     CompletionStopReason,
@@ -32,7 +33,6 @@ from uniffy.domains.agents.runtime.settings.operations import get_runtime_settin
 from uniffy.domains.agents.runtime.skills import InvocationRun
 from uniffy.domains.agents.runtime.tooling import (
     MAX_LOAD_ONLY_ITERATIONS,
-    MAX_TOOL_ITERATIONS,
     expand_loaded_schemas,
     gather_read_tool_results,
     is_load_only_turn,
@@ -130,12 +130,13 @@ class CompletionToolLoop:
         usage = run_usage or RunUsageAccumulator()
         work_iterations = 0
         load_iterations = 0
+        max_iterations = executor.context.max_tool_iterations
         while True:
             if is_load_only_turn(result.tool_calls):
                 load_iterations += 1
             else:
                 work_iterations += 1
-            if work_iterations > MAX_TOOL_ITERATIONS or load_iterations > MAX_LOAD_ONLY_ITERATIONS:
+            if work_iterations > max_iterations or load_iterations > MAX_LOAD_ONLY_ITERATIONS:
                 break
             logger.debug(
                 "Tool loop iteration",
@@ -208,6 +209,14 @@ class CompletionToolLoop:
             for call_id, tool_result in tool_results.items():
                 turn_traces[call_id]["success"] = tool_result.success
             for tool_call in write_calls:
+                refusal = base_context.confirmation_unavailable_message
+                if refusal and registry.needs_person(tool_call.name):
+                    AGENT_TOOL_CALLS_TOTAL.labels(
+                        tool=tool_call.name, status="needs_confirmation"
+                    ).inc()
+                    tool_results[tool_call.id] = ToolResult(success=False, data="", error=refusal)
+                    turn_traces[tool_call.id]["success"] = False
+                    continue
                 tool_results[tool_call.id] = await executor.execute(tool_call)
                 # A later write that fails rolls the shared session back, so this one's rows
                 # and audit fact commit first, as the streaming loop's writer does.
@@ -261,7 +270,7 @@ class CompletionToolLoop:
 
         raise ValidationError(
             "tool_loop",
-            f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
+            f"Agent exceeded maximum tool iterations ({max_iterations})",
         )
 
 

@@ -9,6 +9,7 @@ import { zonedDayKey } from "@shared/lib/zonedTime";
 import { fetchAllPages } from "@shared/lib/fetchAllPages";
 import { projectsApi } from "@features/projects/projectsApi";
 import {
+  isAgentRunActive,
   projectToPlain,
   taskToPlain,
   activityToPlain,
@@ -139,11 +140,16 @@ export function useViewTasks(
   });
 }
 
+/** Polls while an agent works the task, so its state follows the run. */
+const AGENT_RUN_REFRESH_MS = 5000;
+
 export function useTask(taskId: string | undefined) {
   const { organizationId } = useAuth();
 
   return useQuery({
     queryKey: ["task", organizationId, taskId],
+    refetchInterval: (query) =>
+      isAgentRunActive(query.state.data?.agentAssignment) ? AGENT_RUN_REFRESH_MS : false,
     queryFn: async () => {
       const response = await projectsApi.getTask({
         organizationId: organizationId!,
@@ -205,5 +211,19 @@ export function useTaskActivities(taskId: string | undefined) {
       return response.activities.map(activityToPlain);
     },
     enabled: !!organizationId && !!taskId,
+  });
+}
+
+/** Whether members may hand tasks to agents in this organization. */
+export function useAgentAssignmentPolicy(enabled = true) {
+  const { organizationId, isAuthenticated } = useAuth();
+  return useQuery({
+    queryKey: ["agent-assignment-policy", organizationId],
+    enabled: enabled && !!organizationId && isAuthenticated,
+    staleTime: 60 * 1000,
+    queryFn: async (): Promise<boolean> => {
+      const res = await projectsApi.getAgentAssignmentPolicy({ organizationId: organizationId! });
+      return res.policy?.agentAssignmentEnabled ?? true;
+    },
   });
 }

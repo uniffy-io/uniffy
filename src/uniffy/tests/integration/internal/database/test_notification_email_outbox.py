@@ -53,9 +53,7 @@ async def test_staging_is_idempotent_per_event_and_recipient(session, env) -> No
         assert duplicate is None
         row = (
             await session.execute(
-                select(NotificationEmailDelivery).where(
-                    NotificationEmailDelivery.id == first.id
-                )
+                select(NotificationEmailDelivery).where(NotificationEmailDelivery.id == first.id)
             )
         ).scalar_one()
         assert row.event_id == event.event_id

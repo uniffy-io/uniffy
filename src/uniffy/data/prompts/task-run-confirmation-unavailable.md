@@ -1,0 +1,1 @@
+Not done: this needs the assigner's confirmation, and nobody can confirm during a task run. Use tasks.add_comment to describe exactly what should be done and why, then carry on with the rest of the task.

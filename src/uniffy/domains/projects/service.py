@@ -3,6 +3,7 @@
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
+from uniffy.domains.projects.agents.handlers import AgentAssigneeHandlers
 from uniffy.domains.projects.export.handlers import ExportHandlers
 from uniffy.domains.projects.fields.handlers import FieldHandlers
 from uniffy.domains.projects.handlers import ProjectsHandlers
@@ -26,6 +27,7 @@ class ProjectsServiceImpl(
     TimeHandlers,
     TimesheetHandlers,
     MetricsHandlers,
+    AgentAssigneeHandlers,
 ):
     def __init__(
         self, storage: ObjectStorage, search_indexer: SearchIndexer, buffer: UpdateBuffer

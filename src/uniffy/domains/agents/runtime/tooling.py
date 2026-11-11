@@ -15,7 +15,6 @@ from uniffy.domains.agents.tools.definitions import ToolContext, ToolResult
 from uniffy.domains.agents.tools.executor import ToolExecutor
 from uniffy.domains.agents.tools.registry import ToolRegistry, from_api_name
 
-MAX_TOOL_ITERATIONS = 10
 MAX_LOAD_ONLY_ITERATIONS = 3
 READ_TOOL_POOL_SIZE = 5
 

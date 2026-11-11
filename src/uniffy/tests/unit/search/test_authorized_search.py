@@ -135,8 +135,7 @@ async def test_search_stops_after_three_hundred_denied_candidates(monkeypatch) -
 
     async def deny_all(**kwargs):
         return {
-            key: ResourceAccessDecision(key, ResourceRowState.LIVE, False)
-            for key in kwargs["keys"]
+            key: ResourceAccessDecision(key, ResourceRowState.LIVE, False) for key in kwargs["keys"]
         }
 
     operations.resource_access.resolve.side_effect = deny_all

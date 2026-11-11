@@ -48,12 +48,14 @@ from uniffy.domains.agents.providers.catalog import (
 )
 from uniffy.domains.agents.rules.validation import validate_rule_selection
 from uniffy.domains.agents.skills.validation import validate_skill_selection
+from uniffy.domains.agents.tasks.admission import after_commit, stage_retire_agent_assignments
 from uniffy.domains.integrations.registry import get_integration_registry
 from uniffy.domains.organizations.operations import OrganizationOperations
 from uniffy.domains.permissions.members import (
     ContentMembersOperations,
     StagedContentMemberAdd,
 )
+from uniffy.domains.projects.agents.pickup import stage_clear_agent_assignee
 from uniffy.domains.tags.operations import StagedManualTagReplacement, TagOperations
 
 logger = logger.bind(component="agents.agents.operations")
@@ -926,7 +928,16 @@ class AgentOperations(BaseContentOperations[Agent]):
             )
         )
 
+        # A retired agent works on nothing and picks up nothing.
+        retired_assignments = await stage_retire_agent_assignments(
+            self.session, organization_id=organization_id, agent_id=agent_id
+        )
+        await stage_clear_agent_assignee(
+            self.session, organization_id=organization_id, agent_id=agent_id
+        )
+
         await self.session.commit()
+        await after_commit([retired_assignments])
 
         await self.search_indexer.remove(
             build_content_urn(self.content_type, agent_id), organization_id

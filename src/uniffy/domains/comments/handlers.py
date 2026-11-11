@@ -96,6 +96,7 @@ class CommentsHandlers:
                     reply_count=0,
                     reactions=[],
                     current_user_id=str(user_id),
+                    agent_names=await ops.agent_names([comment]),
                 )
 
                 response = CreateCommentResponse()
@@ -147,6 +148,7 @@ class CommentsHandlers:
                     reply_count=0,
                     reactions=reactions,
                     current_user_id=str(user_id),
+                    agent_names=await ops.agent_names([comment]),
                 )
 
                 response = UpdateCommentResponse()
@@ -242,6 +244,10 @@ class CommentsHandlers:
                     page_size=page_size,
                 )
 
+                agent_names = await ops.agent_names(
+                    [row[0] for row in comments_data]
+                    + [reply for row in comments_data for reply, _, _ in row[5]]
+                )
                 proto_comments = []
                 for (
                     comment,
@@ -259,6 +265,7 @@ class CommentsHandlers:
                             reply_count=0,
                             reactions=reply_reactions,
                             current_user_id=str(user_id),
+                            agent_names=agent_names,
                         )
                         for reply, reply_author_name, reply_reactions in replies
                     ]
@@ -271,6 +278,7 @@ class CommentsHandlers:
                             reactions=reactions,
                             current_user_id=str(user_id),
                             replies=proto_replies,
+                            agent_names=agent_names,
                         )
                     )
 
@@ -320,6 +328,7 @@ class CommentsHandlers:
                     comment_id=comment_id,
                 )
 
+                agent_names = await ops.agent_names([comment] + [row[0] for row in replies])
                 proto_replies = []
                 for (
                     reply,
@@ -336,6 +345,7 @@ class CommentsHandlers:
                             reply_count=reply_reply_count,
                             reactions=reply_reactions,
                             current_user_id=str(user_id),
+                            agent_names=agent_names,
                         )
                     )
 
@@ -347,6 +357,7 @@ class CommentsHandlers:
                     reactions=reactions,
                     current_user_id=str(user_id),
                     replies=proto_replies,
+                    agent_names=agent_names,
                 )
 
                 response = GetCommentResponse()
@@ -394,6 +405,7 @@ class CommentsHandlers:
                     reply_count=0,
                     reactions=reactions,
                     current_user_id=str(user_id),
+                    agent_names=await ops.agent_names([comment]),
                 )
 
                 response = ResolveCommentResponse()
@@ -441,6 +453,7 @@ class CommentsHandlers:
                     reply_count=0,
                     reactions=reactions,
                     current_user_id=str(user_id),
+                    agent_names=await ops.agent_names([comment]),
                 )
 
                 response = ReopenCommentResponse()

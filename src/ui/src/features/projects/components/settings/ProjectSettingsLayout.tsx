@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Users,
   ClockCounterClockwise,
+  Robot,
 } from "@phosphor-icons/react";
 import { cn } from "@/shared/utils/cn";
 import { roleCanManage } from "@/shared/utils/contentRoles";
@@ -19,6 +20,7 @@ import { StatusesSection } from "@/features/projects/components/settings/Statuse
 import { CustomFieldsSection } from "@/features/projects/components/settings/CustomFieldsSection";
 import { TaskTypesSection } from "@/features/projects/components/settings/TaskTypesSection";
 import { SprintsSection } from "@/features/projects/components/settings/SprintsSection";
+import { AgentAssigneeSection } from "@/features/projects/components/settings/AgentAssigneeSection";
 import { MembersSection } from "@/features/projects/components/settings/MembersSection";
 import { DangerZoneSection } from "@/features/projects/components/settings/DangerZoneSection";
 import { AuditLogSection } from "@/features/projects/components/settings/AuditLogSection";
@@ -31,6 +33,7 @@ type SettingsSection =
   | "fields"
   | "types"
   | "sprints"
+  | "agent"
   | "audit"
   | "danger";
 
@@ -49,6 +52,7 @@ const SECTIONS: SectionDef[] = [
   { id: "fields", label: "Custom Fields", icon: Columns },
   { id: "types", label: "Task Types", icon: StackSimple },
   { id: "sprints", label: "Sprints", icon: Lightning },
+  { id: "agent", label: "Agent Assignee", icon: Robot },
   { id: "audit", label: "Access History", icon: ClockCounterClockwise, adminOnly: true },
   { id: "danger", label: "Danger Zone", icon: Warning, danger: true },
 ];
@@ -95,6 +99,8 @@ export function ProjectSettingsLayout({ project }: ProjectSettingsLayoutProps) {
         return <TaskTypesSection project={project} />;
       case "sprints":
         return <SprintsSection project={project} />;
+      case "agent":
+        return <AgentAssigneeSection project={project} />;
       case "audit":
         return <AuditLogSection project={project} />;
       case "danger":

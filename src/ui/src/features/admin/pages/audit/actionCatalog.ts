@@ -219,6 +219,7 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "project.archived", label: "Archived" },
       { value: "project.unarchived", label: "Unarchived" },
       { value: "project.exported", label: "Exported" },
+      { value: "project.agent_assignee_changed", label: "Agent assignee changed" },
     ],
   },
   {
@@ -230,6 +231,11 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
       { value: "task.restored", label: "Restored" },
       { value: "task.permanently_deleted", label: "Permanently deleted" },
       { value: "task.moved", label: "Moved" },
+      { value: "task.agent_assigned", label: "Agent assigned" },
+      { value: "task.agent_unassigned", label: "Agent removed" },
+      { value: "task.agent_started", label: "Agent started" },
+      { value: "task.agent_stopped", label: "Agent stopped" },
+      { value: "task.agent_changes_requested", label: "Agent changes requested" },
     ],
   },
   {
@@ -248,6 +254,12 @@ export const ACTION_GROUPS: readonly ActionGroup[] = [
     label: "Time policy",
     badgeClass: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400",
     actions: [{ value: "time_policy.updated", label: "Updated" }],
+  },
+  {
+    domain: "agent_assignment_policy",
+    label: "Agent assignment",
+    badgeClass: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+    actions: [{ value: "agent_assignment_policy.updated", label: "Policy updated" }],
   },
   {
     domain: "timesheet",

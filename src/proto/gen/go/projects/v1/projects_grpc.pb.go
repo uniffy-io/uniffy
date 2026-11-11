@@ -19,64 +19,71 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProjectsService_CreateProject_FullMethodName             = "/projects.v1.ProjectsService/CreateProject"
-	ProjectsService_GetProject_FullMethodName                = "/projects.v1.ProjectsService/GetProject"
-	ProjectsService_UpdateProject_FullMethodName             = "/projects.v1.ProjectsService/UpdateProject"
-	ProjectsService_DeleteProject_FullMethodName             = "/projects.v1.ProjectsService/DeleteProject"
-	ProjectsService_ListProjects_FullMethodName              = "/projects.v1.ProjectsService/ListProjects"
-	ProjectsService_CreateTask_FullMethodName                = "/projects.v1.ProjectsService/CreateTask"
-	ProjectsService_GetTask_FullMethodName                   = "/projects.v1.ProjectsService/GetTask"
-	ProjectsService_UpdateTask_FullMethodName                = "/projects.v1.ProjectsService/UpdateTask"
-	ProjectsService_DeleteTask_FullMethodName                = "/projects.v1.ProjectsService/DeleteTask"
-	ProjectsService_ListTasks_FullMethodName                 = "/projects.v1.ProjectsService/ListTasks"
-	ProjectsService_MoveTask_FullMethodName                  = "/projects.v1.ProjectsService/MoveTask"
-	ProjectsService_BulkUpdateTasks_FullMethodName           = "/projects.v1.ProjectsService/BulkUpdateTasks"
-	ProjectsService_DeleteTasks_FullMethodName               = "/projects.v1.ProjectsService/DeleteTasks"
-	ProjectsService_ExportTasks_FullMethodName               = "/projects.v1.ProjectsService/ExportTasks"
-	ProjectsService_CreateField_FullMethodName               = "/projects.v1.ProjectsService/CreateField"
-	ProjectsService_UpdateField_FullMethodName               = "/projects.v1.ProjectsService/UpdateField"
-	ProjectsService_DeleteField_FullMethodName               = "/projects.v1.ProjectsService/DeleteField"
-	ProjectsService_CreateView_FullMethodName                = "/projects.v1.ProjectsService/CreateView"
-	ProjectsService_UpdateView_FullMethodName                = "/projects.v1.ProjectsService/UpdateView"
-	ProjectsService_DeleteView_FullMethodName                = "/projects.v1.ProjectsService/DeleteView"
-	ProjectsService_ReorderViews_FullMethodName              = "/projects.v1.ProjectsService/ReorderViews"
-	ProjectsService_GetViewCatalog_FullMethodName            = "/projects.v1.ProjectsService/GetViewCatalog"
-	ProjectsService_ListActivities_FullMethodName            = "/projects.v1.ProjectsService/ListActivities"
-	ProjectsService_CreateSprint_FullMethodName              = "/projects.v1.ProjectsService/CreateSprint"
-	ProjectsService_UpdateSprint_FullMethodName              = "/projects.v1.ProjectsService/UpdateSprint"
-	ProjectsService_StartSprint_FullMethodName               = "/projects.v1.ProjectsService/StartSprint"
-	ProjectsService_CompleteSprint_FullMethodName            = "/projects.v1.ProjectsService/CompleteSprint"
-	ProjectsService_DeleteSprint_FullMethodName              = "/projects.v1.ProjectsService/DeleteSprint"
-	ProjectsService_ListSprints_FullMethodName               = "/projects.v1.ProjectsService/ListSprints"
-	ProjectsService_ToggleTaskWatcher_FullMethodName         = "/projects.v1.ProjectsService/ToggleTaskWatcher"
-	ProjectsService_ListTaskWatchers_FullMethodName          = "/projects.v1.ProjectsService/ListTaskWatchers"
-	ProjectsService_BulkCheckTaskWatchers_FullMethodName     = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
-	ProjectsService_CreateWorklog_FullMethodName             = "/projects.v1.ProjectsService/CreateWorklog"
-	ProjectsService_UpdateWorklog_FullMethodName             = "/projects.v1.ProjectsService/UpdateWorklog"
-	ProjectsService_DeleteWorklog_FullMethodName             = "/projects.v1.ProjectsService/DeleteWorklog"
-	ProjectsService_ListTaskWorklogs_FullMethodName          = "/projects.v1.ProjectsService/ListTaskWorklogs"
-	ProjectsService_ListUserWorklogs_FullMethodName          = "/projects.v1.ProjectsService/ListUserWorklogs"
-	ProjectsService_StartTimer_FullMethodName                = "/projects.v1.ProjectsService/StartTimer"
-	ProjectsService_PauseTimer_FullMethodName                = "/projects.v1.ProjectsService/PauseTimer"
-	ProjectsService_ResumeTimer_FullMethodName               = "/projects.v1.ProjectsService/ResumeTimer"
-	ProjectsService_StopTimer_FullMethodName                 = "/projects.v1.ProjectsService/StopTimer"
-	ProjectsService_GetActiveTimer_FullMethodName            = "/projects.v1.ProjectsService/GetActiveTimer"
-	ProjectsService_GetTimePolicy_FullMethodName             = "/projects.v1.ProjectsService/GetTimePolicy"
-	ProjectsService_UpdateTimePolicy_FullMethodName          = "/projects.v1.ProjectsService/UpdateTimePolicy"
-	ProjectsService_AggregateWorklogs_FullMethodName         = "/projects.v1.ProjectsService/AggregateWorklogs"
-	ProjectsService_GetTimesheet_FullMethodName              = "/projects.v1.ProjectsService/GetTimesheet"
-	ProjectsService_SubmitTimesheet_FullMethodName           = "/projects.v1.ProjectsService/SubmitTimesheet"
-	ProjectsService_RecallTimesheet_FullMethodName           = "/projects.v1.ProjectsService/RecallTimesheet"
-	ProjectsService_ListReviewTimesheets_FullMethodName      = "/projects.v1.ProjectsService/ListReviewTimesheets"
-	ProjectsService_ApproveTimesheet_FullMethodName          = "/projects.v1.ProjectsService/ApproveTimesheet"
-	ProjectsService_RejectTimesheet_FullMethodName           = "/projects.v1.ProjectsService/RejectTimesheet"
-	ProjectsService_GrantGrace_FullMethodName                = "/projects.v1.ProjectsService/GrantGrace"
-	ProjectsService_ClosePeriod_FullMethodName               = "/projects.v1.ProjectsService/ClosePeriod"
-	ProjectsService_ReopenPeriod_FullMethodName              = "/projects.v1.ProjectsService/ReopenPeriod"
-	ProjectsService_ListPeriods_FullMethodName               = "/projects.v1.ProjectsService/ListPeriods"
-	ProjectsService_CreateInternalTimeProject_FullMethodName = "/projects.v1.ProjectsService/CreateInternalTimeProject"
-	ProjectsService_GetSprintCapacity_FullMethodName         = "/projects.v1.ProjectsService/GetSprintCapacity"
-	ProjectsService_GetTaskMetrics_FullMethodName            = "/projects.v1.ProjectsService/GetTaskMetrics"
+	ProjectsService_CreateProject_FullMethodName               = "/projects.v1.ProjectsService/CreateProject"
+	ProjectsService_GetProject_FullMethodName                  = "/projects.v1.ProjectsService/GetProject"
+	ProjectsService_UpdateProject_FullMethodName               = "/projects.v1.ProjectsService/UpdateProject"
+	ProjectsService_DeleteProject_FullMethodName               = "/projects.v1.ProjectsService/DeleteProject"
+	ProjectsService_ListProjects_FullMethodName                = "/projects.v1.ProjectsService/ListProjects"
+	ProjectsService_CreateTask_FullMethodName                  = "/projects.v1.ProjectsService/CreateTask"
+	ProjectsService_GetTask_FullMethodName                     = "/projects.v1.ProjectsService/GetTask"
+	ProjectsService_UpdateTask_FullMethodName                  = "/projects.v1.ProjectsService/UpdateTask"
+	ProjectsService_DeleteTask_FullMethodName                  = "/projects.v1.ProjectsService/DeleteTask"
+	ProjectsService_ListTasks_FullMethodName                   = "/projects.v1.ProjectsService/ListTasks"
+	ProjectsService_MoveTask_FullMethodName                    = "/projects.v1.ProjectsService/MoveTask"
+	ProjectsService_BulkUpdateTasks_FullMethodName             = "/projects.v1.ProjectsService/BulkUpdateTasks"
+	ProjectsService_DeleteTasks_FullMethodName                 = "/projects.v1.ProjectsService/DeleteTasks"
+	ProjectsService_ExportTasks_FullMethodName                 = "/projects.v1.ProjectsService/ExportTasks"
+	ProjectsService_CreateField_FullMethodName                 = "/projects.v1.ProjectsService/CreateField"
+	ProjectsService_UpdateField_FullMethodName                 = "/projects.v1.ProjectsService/UpdateField"
+	ProjectsService_DeleteField_FullMethodName                 = "/projects.v1.ProjectsService/DeleteField"
+	ProjectsService_CreateView_FullMethodName                  = "/projects.v1.ProjectsService/CreateView"
+	ProjectsService_UpdateView_FullMethodName                  = "/projects.v1.ProjectsService/UpdateView"
+	ProjectsService_DeleteView_FullMethodName                  = "/projects.v1.ProjectsService/DeleteView"
+	ProjectsService_ReorderViews_FullMethodName                = "/projects.v1.ProjectsService/ReorderViews"
+	ProjectsService_GetViewCatalog_FullMethodName              = "/projects.v1.ProjectsService/GetViewCatalog"
+	ProjectsService_ListActivities_FullMethodName              = "/projects.v1.ProjectsService/ListActivities"
+	ProjectsService_CreateSprint_FullMethodName                = "/projects.v1.ProjectsService/CreateSprint"
+	ProjectsService_UpdateSprint_FullMethodName                = "/projects.v1.ProjectsService/UpdateSprint"
+	ProjectsService_StartSprint_FullMethodName                 = "/projects.v1.ProjectsService/StartSprint"
+	ProjectsService_CompleteSprint_FullMethodName              = "/projects.v1.ProjectsService/CompleteSprint"
+	ProjectsService_DeleteSprint_FullMethodName                = "/projects.v1.ProjectsService/DeleteSprint"
+	ProjectsService_ListSprints_FullMethodName                 = "/projects.v1.ProjectsService/ListSprints"
+	ProjectsService_ToggleTaskWatcher_FullMethodName           = "/projects.v1.ProjectsService/ToggleTaskWatcher"
+	ProjectsService_ListTaskWatchers_FullMethodName            = "/projects.v1.ProjectsService/ListTaskWatchers"
+	ProjectsService_BulkCheckTaskWatchers_FullMethodName       = "/projects.v1.ProjectsService/BulkCheckTaskWatchers"
+	ProjectsService_CreateWorklog_FullMethodName               = "/projects.v1.ProjectsService/CreateWorklog"
+	ProjectsService_UpdateWorklog_FullMethodName               = "/projects.v1.ProjectsService/UpdateWorklog"
+	ProjectsService_DeleteWorklog_FullMethodName               = "/projects.v1.ProjectsService/DeleteWorklog"
+	ProjectsService_ListTaskWorklogs_FullMethodName            = "/projects.v1.ProjectsService/ListTaskWorklogs"
+	ProjectsService_ListUserWorklogs_FullMethodName            = "/projects.v1.ProjectsService/ListUserWorklogs"
+	ProjectsService_StartTimer_FullMethodName                  = "/projects.v1.ProjectsService/StartTimer"
+	ProjectsService_PauseTimer_FullMethodName                  = "/projects.v1.ProjectsService/PauseTimer"
+	ProjectsService_ResumeTimer_FullMethodName                 = "/projects.v1.ProjectsService/ResumeTimer"
+	ProjectsService_StopTimer_FullMethodName                   = "/projects.v1.ProjectsService/StopTimer"
+	ProjectsService_GetActiveTimer_FullMethodName              = "/projects.v1.ProjectsService/GetActiveTimer"
+	ProjectsService_GetTimePolicy_FullMethodName               = "/projects.v1.ProjectsService/GetTimePolicy"
+	ProjectsService_UpdateTimePolicy_FullMethodName            = "/projects.v1.ProjectsService/UpdateTimePolicy"
+	ProjectsService_AggregateWorklogs_FullMethodName           = "/projects.v1.ProjectsService/AggregateWorklogs"
+	ProjectsService_GetTimesheet_FullMethodName                = "/projects.v1.ProjectsService/GetTimesheet"
+	ProjectsService_SubmitTimesheet_FullMethodName             = "/projects.v1.ProjectsService/SubmitTimesheet"
+	ProjectsService_RecallTimesheet_FullMethodName             = "/projects.v1.ProjectsService/RecallTimesheet"
+	ProjectsService_ListReviewTimesheets_FullMethodName        = "/projects.v1.ProjectsService/ListReviewTimesheets"
+	ProjectsService_ApproveTimesheet_FullMethodName            = "/projects.v1.ProjectsService/ApproveTimesheet"
+	ProjectsService_RejectTimesheet_FullMethodName             = "/projects.v1.ProjectsService/RejectTimesheet"
+	ProjectsService_GrantGrace_FullMethodName                  = "/projects.v1.ProjectsService/GrantGrace"
+	ProjectsService_ClosePeriod_FullMethodName                 = "/projects.v1.ProjectsService/ClosePeriod"
+	ProjectsService_ReopenPeriod_FullMethodName                = "/projects.v1.ProjectsService/ReopenPeriod"
+	ProjectsService_ListPeriods_FullMethodName                 = "/projects.v1.ProjectsService/ListPeriods"
+	ProjectsService_CreateInternalTimeProject_FullMethodName   = "/projects.v1.ProjectsService/CreateInternalTimeProject"
+	ProjectsService_GetSprintCapacity_FullMethodName           = "/projects.v1.ProjectsService/GetSprintCapacity"
+	ProjectsService_GetTaskMetrics_FullMethodName              = "/projects.v1.ProjectsService/GetTaskMetrics"
+	ProjectsService_AssignTaskAgent_FullMethodName             = "/projects.v1.ProjectsService/AssignTaskAgent"
+	ProjectsService_StartTaskAgent_FullMethodName              = "/projects.v1.ProjectsService/StartTaskAgent"
+	ProjectsService_StopTaskAgent_FullMethodName               = "/projects.v1.ProjectsService/StopTaskAgent"
+	ProjectsService_RequestTaskAgentChanges_FullMethodName     = "/projects.v1.ProjectsService/RequestTaskAgentChanges"
+	ProjectsService_SetProjectAgentAssignee_FullMethodName     = "/projects.v1.ProjectsService/SetProjectAgentAssignee"
+	ProjectsService_GetAgentAssignmentPolicy_FullMethodName    = "/projects.v1.ProjectsService/GetAgentAssignmentPolicy"
+	ProjectsService_UpdateAgentAssignmentPolicy_FullMethodName = "/projects.v1.ProjectsService/UpdateAgentAssignmentPolicy"
 )
 
 // ProjectsServiceClient is the client API for ProjectsService service.
@@ -152,6 +159,13 @@ type ProjectsServiceClient interface {
 	// ----- Metrics -----
 	// Permission-scoped task aggregates for dashboard widgets.
 	GetTaskMetrics(ctx context.Context, in *GetTaskMetricsRequest, opts ...grpc.CallOption) (*GetTaskMetricsResponse, error)
+	AssignTaskAgent(ctx context.Context, in *AssignTaskAgentRequest, opts ...grpc.CallOption) (*AssignTaskAgentResponse, error)
+	StartTaskAgent(ctx context.Context, in *StartTaskAgentRequest, opts ...grpc.CallOption) (*StartTaskAgentResponse, error)
+	StopTaskAgent(ctx context.Context, in *StopTaskAgentRequest, opts ...grpc.CallOption) (*StopTaskAgentResponse, error)
+	RequestTaskAgentChanges(ctx context.Context, in *RequestTaskAgentChangesRequest, opts ...grpc.CallOption) (*RequestTaskAgentChangesResponse, error)
+	SetProjectAgentAssignee(ctx context.Context, in *SetProjectAgentAssigneeRequest, opts ...grpc.CallOption) (*SetProjectAgentAssigneeResponse, error)
+	GetAgentAssignmentPolicy(ctx context.Context, in *GetAgentAssignmentPolicyRequest, opts ...grpc.CallOption) (*GetAgentAssignmentPolicyResponse, error)
+	UpdateAgentAssignmentPolicy(ctx context.Context, in *UpdateAgentAssignmentPolicyRequest, opts ...grpc.CallOption) (*UpdateAgentAssignmentPolicyResponse, error)
 }
 
 type projectsServiceClient struct {
@@ -751,6 +765,76 @@ func (c *projectsServiceClient) GetTaskMetrics(ctx context.Context, in *GetTaskM
 	return out, nil
 }
 
+func (c *projectsServiceClient) AssignTaskAgent(ctx context.Context, in *AssignTaskAgentRequest, opts ...grpc.CallOption) (*AssignTaskAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssignTaskAgentResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_AssignTaskAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) StartTaskAgent(ctx context.Context, in *StartTaskAgentRequest, opts ...grpc.CallOption) (*StartTaskAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StartTaskAgentResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_StartTaskAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) StopTaskAgent(ctx context.Context, in *StopTaskAgentRequest, opts ...grpc.CallOption) (*StopTaskAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StopTaskAgentResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_StopTaskAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) RequestTaskAgentChanges(ctx context.Context, in *RequestTaskAgentChangesRequest, opts ...grpc.CallOption) (*RequestTaskAgentChangesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequestTaskAgentChangesResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequestTaskAgentChanges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) SetProjectAgentAssignee(ctx context.Context, in *SetProjectAgentAssigneeRequest, opts ...grpc.CallOption) (*SetProjectAgentAssigneeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetProjectAgentAssigneeResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_SetProjectAgentAssignee_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) GetAgentAssignmentPolicy(ctx context.Context, in *GetAgentAssignmentPolicyRequest, opts ...grpc.CallOption) (*GetAgentAssignmentPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAgentAssignmentPolicyResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_GetAgentAssignmentPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) UpdateAgentAssignmentPolicy(ctx context.Context, in *UpdateAgentAssignmentPolicyRequest, opts ...grpc.CallOption) (*UpdateAgentAssignmentPolicyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateAgentAssignmentPolicyResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_UpdateAgentAssignmentPolicy_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProjectsServiceServer is the server API for ProjectsService service.
 // All implementations must embed UnimplementedProjectsServiceServer
 // for forward compatibility.
@@ -824,6 +908,13 @@ type ProjectsServiceServer interface {
 	// ----- Metrics -----
 	// Permission-scoped task aggregates for dashboard widgets.
 	GetTaskMetrics(context.Context, *GetTaskMetricsRequest) (*GetTaskMetricsResponse, error)
+	AssignTaskAgent(context.Context, *AssignTaskAgentRequest) (*AssignTaskAgentResponse, error)
+	StartTaskAgent(context.Context, *StartTaskAgentRequest) (*StartTaskAgentResponse, error)
+	StopTaskAgent(context.Context, *StopTaskAgentRequest) (*StopTaskAgentResponse, error)
+	RequestTaskAgentChanges(context.Context, *RequestTaskAgentChangesRequest) (*RequestTaskAgentChangesResponse, error)
+	SetProjectAgentAssignee(context.Context, *SetProjectAgentAssigneeRequest) (*SetProjectAgentAssigneeResponse, error)
+	GetAgentAssignmentPolicy(context.Context, *GetAgentAssignmentPolicyRequest) (*GetAgentAssignmentPolicyResponse, error)
+	UpdateAgentAssignmentPolicy(context.Context, *UpdateAgentAssignmentPolicyRequest) (*UpdateAgentAssignmentPolicyResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
 }
 
@@ -1007,6 +1098,27 @@ func (UnimplementedProjectsServiceServer) GetSprintCapacity(context.Context, *Ge
 }
 func (UnimplementedProjectsServiceServer) GetTaskMetrics(context.Context, *GetTaskMetricsRequest) (*GetTaskMetricsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetTaskMetrics not implemented")
+}
+func (UnimplementedProjectsServiceServer) AssignTaskAgent(context.Context, *AssignTaskAgentRequest) (*AssignTaskAgentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AssignTaskAgent not implemented")
+}
+func (UnimplementedProjectsServiceServer) StartTaskAgent(context.Context, *StartTaskAgentRequest) (*StartTaskAgentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StartTaskAgent not implemented")
+}
+func (UnimplementedProjectsServiceServer) StopTaskAgent(context.Context, *StopTaskAgentRequest) (*StopTaskAgentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method StopTaskAgent not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequestTaskAgentChanges(context.Context, *RequestTaskAgentChangesRequest) (*RequestTaskAgentChangesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RequestTaskAgentChanges not implemented")
+}
+func (UnimplementedProjectsServiceServer) SetProjectAgentAssignee(context.Context, *SetProjectAgentAssigneeRequest) (*SetProjectAgentAssigneeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetProjectAgentAssignee not implemented")
+}
+func (UnimplementedProjectsServiceServer) GetAgentAssignmentPolicy(context.Context, *GetAgentAssignmentPolicyRequest) (*GetAgentAssignmentPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetAgentAssignmentPolicy not implemented")
+}
+func (UnimplementedProjectsServiceServer) UpdateAgentAssignmentPolicy(context.Context, *UpdateAgentAssignmentPolicyRequest) (*UpdateAgentAssignmentPolicyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateAgentAssignmentPolicy not implemented")
 }
 func (UnimplementedProjectsServiceServer) mustEmbedUnimplementedProjectsServiceServer() {}
 func (UnimplementedProjectsServiceServer) testEmbeddedByValue()                         {}
@@ -2066,6 +2178,132 @@ func _ProjectsService_GetTaskMetrics_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_AssignTaskAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignTaskAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).AssignTaskAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_AssignTaskAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).AssignTaskAgent(ctx, req.(*AssignTaskAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_StartTaskAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartTaskAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).StartTaskAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_StartTaskAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).StartTaskAgent(ctx, req.(*StartTaskAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_StopTaskAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopTaskAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).StopTaskAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_StopTaskAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).StopTaskAgent(ctx, req.(*StopTaskAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_RequestTaskAgentChanges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequestTaskAgentChangesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequestTaskAgentChanges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequestTaskAgentChanges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequestTaskAgentChanges(ctx, req.(*RequestTaskAgentChangesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_SetProjectAgentAssignee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetProjectAgentAssigneeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).SetProjectAgentAssignee(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_SetProjectAgentAssignee_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).SetProjectAgentAssignee(ctx, req.(*SetProjectAgentAssigneeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_GetAgentAssignmentPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAgentAssignmentPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).GetAgentAssignmentPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_GetAgentAssignmentPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).GetAgentAssignmentPolicy(ctx, req.(*GetAgentAssignmentPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_UpdateAgentAssignmentPolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAgentAssignmentPolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).UpdateAgentAssignmentPolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_UpdateAgentAssignmentPolicy_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).UpdateAgentAssignmentPolicy(ctx, req.(*UpdateAgentAssignmentPolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProjectsService_ServiceDesc is the grpc.ServiceDesc for ProjectsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2300,6 +2538,34 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetTaskMetrics",
 			Handler:    _ProjectsService_GetTaskMetrics_Handler,
+		},
+		{
+			MethodName: "AssignTaskAgent",
+			Handler:    _ProjectsService_AssignTaskAgent_Handler,
+		},
+		{
+			MethodName: "StartTaskAgent",
+			Handler:    _ProjectsService_StartTaskAgent_Handler,
+		},
+		{
+			MethodName: "StopTaskAgent",
+			Handler:    _ProjectsService_StopTaskAgent_Handler,
+		},
+		{
+			MethodName: "RequestTaskAgentChanges",
+			Handler:    _ProjectsService_RequestTaskAgentChanges_Handler,
+		},
+		{
+			MethodName: "SetProjectAgentAssignee",
+			Handler:    _ProjectsService_SetProjectAgentAssignee_Handler,
+		},
+		{
+			MethodName: "GetAgentAssignmentPolicy",
+			Handler:    _ProjectsService_GetAgentAssignmentPolicy_Handler,
+		},
+		{
+			MethodName: "UpdateAgentAssignmentPolicy",
+			Handler:    _ProjectsService_UpdateAgentAssignmentPolicy_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
