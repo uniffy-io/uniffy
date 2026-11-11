@@ -3,8 +3,8 @@ syntax = "proto3";
 package projects.v1;
 
 import "common/v1/common.proto";
-import "projects/v1/agents.proto";
 import "google/protobuf/timestamp.proto";
+import "projects/v1/agents.proto";
 import "projects/v1/metrics.proto";
 import "projects/v1/time.proto";
 import "tags/v1/tags.proto";

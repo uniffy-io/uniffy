@@ -8521,7 +8521,7 @@ var File_projects_v1_projects_proto protoreflect.FileDescriptor
 
 const file_projects_v1_projects_proto_rawDesc = "" +
 	"\n" +
-	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x18projects/v1/agents.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x19projects/v1/metrics.proto\x1a\x16projects/v1/time.proto\x1a\x12tags/v1/tags.proto\"\xa3\v\n" +
+	"\x1aprojects/v1/projects.proto\x12\vprojects.v1\x1a\x16common/v1/common.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x18projects/v1/agents.proto\x1a\x19projects/v1/metrics.proto\x1a\x16projects/v1/time.proto\x1a\x12tags/v1/tags.proto\"\xa3\v\n" +
 	"\aProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x12\x19\n" +
