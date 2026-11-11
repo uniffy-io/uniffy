@@ -1,7 +1,7 @@
 import { createClient } from "@connectrpc/connect";
 import { transport, unaryTransport } from "@/config/api";
 import { create, type MessageInitShape } from "@bufbuild/protobuf";
-import { timestampDate } from "@bufbuild/protobuf/wkt";
+import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { fetchAllPages } from "@/shared/utils/fetchAllPages";
 import {
   ProjectsService,
@@ -18,6 +18,11 @@ import {
   type ViewVisibility,
 } from "@uniffy/proto/projects/v1/projects_pb";
 import type { TypeFieldSchema as ProtoTypeFieldSchema } from "@uniffy/proto/projects/v1/projects_pb";
+import {
+  TaskAgentAssignmentReason as ProtoAgentRunReason,
+  TaskAgentAssignmentStatus as ProtoAgentRunStatus,
+  type TaskAgentAssignment as ProtoTaskAgentAssignment,
+} from "@uniffy/proto/projects/v1/agents_pb";
 import type {
   Project as ProtoProject,
   Task as ProtoTask,
@@ -29,6 +34,9 @@ import type {
 import type {
   Project,
   Task,
+  TaskAgentAssignment,
+  AgentRunStart,
+  TaskAgentRunStatus,
   Sprint,
   CreateProjectRequest as FrontendCreateProjectRequest,
   UpdateProjectRequest as FrontendUpdateProjectRequest,
@@ -161,7 +169,46 @@ function protoProjectToFrontend(proto: ProtoProject): Project {
     overdueTaskCount: proto.overdueTaskCount,
     estimatedMinutes: proto.estimatedMinutes,
     timeSpentMinutes: proto.timeSpentMinutes,
+    agentAssigneeId: proto.agentAssigneeId ?? null,
+    agentAssigneeSetById: proto.agentAssigneeSetById ?? null,
   };
+}
+
+const AGENT_RUN_STATUS: Record<number, TaskAgentRunStatus> = {
+  [ProtoAgentRunStatus.PENDING]: "pending",
+  [ProtoAgentRunStatus.RUNNING]: "running",
+  [ProtoAgentRunStatus.COMPLETED]: "completed",
+  [ProtoAgentRunStatus.FAILED]: "failed",
+  [ProtoAgentRunStatus.STOPPED]: "stopped",
+  [ProtoAgentRunStatus.SKIPPED]: "skipped",
+  [ProtoAgentRunStatus.UNCERTAIN]: "uncertain",
+  [ProtoAgentRunStatus.WAITING]: "waiting",
+};
+
+function protoAgentAssignmentToFrontend(proto: ProtoTaskAgentAssignment): TaskAgentAssignment {
+  return {
+    id: proto.id,
+    agentId: proto.agentId,
+    agentName: proto.agentName,
+    agentAvatarEmoji: proto.agentAvatarEmoji ?? null,
+    agentIsDeleted: proto.agentIsDeleted,
+    assignedById: proto.assignedById,
+    status: AGENT_RUN_STATUS[proto.status] ?? "pending",
+    reason: proto.reason === ProtoAgentRunReason.PROJECT ? "project" : "task",
+    sessionId: proto.sessionId ?? null,
+    runId: proto.runId ?? null,
+    createdAt: proto.createdAt
+      ? timestampDate(proto.createdAt).toISOString()
+      : new Date().toISOString(),
+    endedAt: proto.endedAt ? timestampDate(proto.endedAt).toISOString() : null,
+    startAt: proto.startAt ? timestampDate(proto.startAt).toISOString() : null,
+  };
+}
+
+function runStartToProto(start: AgentRunStart) {
+  if (start.kind === "wait") return { case: "waitForStart" as const, value: true };
+  if (start.kind === "at") return { case: "startAt" as const, value: timestampFromDate(start.at) };
+  return { case: undefined };
 }
 
 function protoTaskToFrontend(proto: ProtoTask): Task {
@@ -211,6 +258,9 @@ function protoTaskToFrontend(proto: ProtoTask): Task {
     estimatedMinutes: proto.estimatedMinutes ?? null,
     timeSpentMinutes: proto.timeSpentMinutes ?? null,
     tagIds: proto.tags.map((t) => t.id),
+    agentAssignment: proto.agentAssignment
+      ? protoAgentAssignmentToFrontend(proto.agentAssignment)
+      : null,
   };
 }
 
@@ -266,6 +316,8 @@ const ACTIVITY_ACTIONS: Partial<Record<ProtoActivityAction, ActivityAction>> = {
   [ProtoActivityAction.TIME_LOGGED]: "time_logged",
   [ProtoActivityAction.TIME_UPDATED]: "time_updated",
   [ProtoActivityAction.TIME_REMOVED]: "time_removed",
+  [ProtoActivityAction.AGENT_ASSIGNED]: "agent_assigned",
+  [ProtoActivityAction.AGENT_UNASSIGNED]: "agent_unassigned",
 };
 
 /** A newer server can send an action this client does not know; it renders generically. */
@@ -532,6 +584,8 @@ export const projectsApi = {
       ...(data.blockedByTaskIds ? { blockedByTaskIds: data.blockedByTaskIds } : {}),
       ...(data.recurrenceRule !== undefined ? { recurrenceRule: data.recurrenceRule ?? "" } : {}),
       ...(data.tagIds ? { tagIds: data.tagIds } : {}),
+      ...(data.agentId ? { agentId: data.agentId } : {}),
+      skipProjectAgent: data.skipProjectAgent ?? false,
     });
     return {
       task: protoTaskToFrontend(response.task!),
@@ -541,6 +595,77 @@ export const projectsApi = {
       protoTask: response.task!,
       protoUpdatedParent: response.updatedParent,
     };
+  },
+
+  assignTaskAgent: async (
+    taskId: string,
+    agentId: string | null,
+    organizationId: string,
+    start: AgentRunStart = { kind: "now" },
+  ): Promise<{ task: Task; protoTask: ProtoTask }> => {
+    const response = await projectsClient.assignTaskAgent({
+      organizationId,
+      taskId,
+      ...(agentId ? { agentId, start: runStartToProto(start) } : {}),
+    });
+    if (!response.task) throw new Error("No task returned");
+    return { task: protoTaskToFrontend(response.task), protoTask: response.task };
+  },
+
+  startTaskAgent: async (taskId: string, organizationId: string): Promise<Task> => {
+    const response = await projectsClient.startTaskAgent({ organizationId, taskId });
+    if (!response.task) throw new Error("No task returned");
+    return protoTaskToFrontend(response.task);
+  },
+
+  stopTaskAgent: async (taskId: string, organizationId: string): Promise<Task> => {
+    const response = await projectsClient.stopTaskAgent({ organizationId, taskId });
+    if (!response.task) throw new Error("No task returned");
+    return protoTaskToFrontend(response.task);
+  },
+
+  requestTaskAgentChanges: async (
+    taskId: string,
+    changes: string,
+    organizationId: string,
+  ): Promise<Task> => {
+    const response = await projectsClient.requestTaskAgentChanges({
+      organizationId,
+      taskId,
+      changes,
+    });
+    if (!response.task) throw new Error("No task returned");
+    return protoTaskToFrontend(response.task);
+  },
+
+  setProjectAgentAssignee: async (
+    projectId: string,
+    agentId: string | null,
+    organizationId: string,
+  ): Promise<Project> => {
+    const response = await projectsClient.setProjectAgentAssignee({
+      organizationId,
+      projectId,
+      ...(agentId ? { agentId } : {}),
+    });
+    if (!response.project) throw new Error("No project returned");
+    return protoProjectToFrontend(response.project);
+  },
+
+  getAgentAssignmentPolicy: async (organizationId: string): Promise<boolean> => {
+    const response = await projectsClient.getAgentAssignmentPolicy({ organizationId });
+    return response.policy?.agentAssignmentEnabled ?? true;
+  },
+
+  updateAgentAssignmentPolicy: async (
+    enabled: boolean,
+    organizationId: string,
+  ): Promise<boolean> => {
+    const response = await projectsClient.updateAgentAssignmentPolicy({
+      organizationId,
+      policy: { agentAssignmentEnabled: enabled },
+    });
+    return response.policy?.agentAssignmentEnabled ?? enabled;
   },
 
   updateTask: async (

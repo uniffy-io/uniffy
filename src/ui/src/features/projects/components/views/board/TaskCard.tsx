@@ -12,6 +12,7 @@ import { useTagsByIds } from "@/features/tags/store/selectors";
 import { formatMinutes } from "@/features/projects/utils/timeFormatting";
 import { formatDateShort, isOverdue } from "@/shared/utils/dateFormatting";
 import { SubjectAvatarStack } from "@/components/subject";
+import { TaskAgentBadge } from "@/features/projects/components/agents/TaskAgentBadge";
 import { MentionChipCompact } from "@/components/mention";
 import { useMentionState } from "@/components/mention/useMentionState";
 import type { Task, SelectOption } from "@/features/projects/types";
@@ -209,7 +210,9 @@ export function TaskCard({
         )}
 
         {/* Footer with assignees */}
-        {(task.assigneeIds.length > 0 || task.outgoingReferences.length > 0) && (
+        {(task.assigneeIds.length > 0 ||
+          task.outgoingReferences.length > 0 ||
+          task.agentAssignment) && (
           <div className="flex items-center justify-between pt-2 border-t border-border/50 mt-2">
             {/* Reference chips */}
             <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
@@ -224,9 +227,12 @@ export function TaskCard({
             </div>
 
             {/* Assignee avatars */}
-            {task.assigneeIds.length > 0 && (
-              <div className="ml-auto">
-                <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
+            {(task.assigneeIds.length > 0 || task.agentAssignment) && (
+              <div className="ml-auto flex items-center gap-1">
+                {task.assigneeIds.length > 0 && (
+                  <SubjectAvatarStack subjectIds={task.assigneeIds} maxDisplay={2} size="xs" />
+                )}
+                {task.agentAssignment && <TaskAgentBadge assignment={task.agentAssignment} />}
               </div>
             )}
           </div>

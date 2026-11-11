@@ -140,6 +140,7 @@ export function TaskFieldsList({
             <span className="text-sm text-muted-foreground w-20">Assignee</span>
             <div className="flex-1 min-w-0">
               <AssigneeField
+                task={task}
                 assigneeIds={task.assigneeIds}
                 onChange={(ids) => {
                   dispatch(

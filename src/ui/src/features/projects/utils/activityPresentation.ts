@@ -44,6 +44,8 @@ const CATEGORY: Record<ActivityAction, ActivityCategory> = {
   time_logged: "time",
   time_updated: "time",
   time_removed: "time",
+  agent_assigned: "people",
+  agent_unassigned: "people",
   unknown: "other",
 };
 

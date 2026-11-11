@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPickerRows } from "@/components/subject/pickerRows";
+import { buildPickerRows, filterPickerSections } from "@/components/subject/pickerRows";
 import { SUBJECT_TYPE, type Subject } from "@/components/subject/types";
 
 const person = (id: string): Subject => ({ id, type: SUBJECT_TYPE.USER, name: id });
@@ -57,5 +57,25 @@ describe("buildPickerRows", () => {
     });
     expect(rows.selectedRows).toEqual([full]);
     expect(rows.suggestions).toEqual([]);
+  });
+});
+
+describe("filterPickerSections", () => {
+  const agents = {
+    id: "agents",
+    label: "Agents",
+    rows: [
+      { id: "a1", subject: { id: "a1", type: SUBJECT_TYPE.AGENT, name: "Writer" } },
+      { id: "a2", subject: { id: "a2", type: SUBJECT_TYPE.AGENT, name: "Reviewer" } },
+    ],
+  };
+
+  it("keeps every row while nothing is typed", () => {
+    expect(filterPickerSections([agents], "  ")[0].rows).toHaveLength(2);
+  });
+
+  it("matches names case-insensitively and drops sections that end up empty", () => {
+    expect(filterPickerSections([agents], "WRI")[0].rows.map((row) => row.id)).toEqual(["a1"]);
+    expect(filterPickerSections([agents], "nobody")).toEqual([]);
   });
 });

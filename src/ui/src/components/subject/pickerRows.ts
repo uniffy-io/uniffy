@@ -62,3 +62,19 @@ export function buildPickerRows({
     : [];
   return { self, selectedRows, suggestions };
 }
+
+/** Section rows whose name matches the search text; sections left empty are dropped. */
+export function filterPickerSections<T extends { rows: readonly { subject: { name: string } }[] }>(
+  sections: readonly T[],
+  query: string,
+): T[] {
+  const needle = query.trim().toLowerCase();
+  return sections
+    .map((section) => ({
+      ...section,
+      rows: needle
+        ? section.rows.filter((row) => row.subject.name.toLowerCase().includes(needle))
+        : section.rows,
+    }))
+    .filter((section) => section.rows.length > 0);
+}

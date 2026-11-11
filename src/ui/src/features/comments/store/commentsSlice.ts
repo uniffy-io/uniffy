@@ -27,6 +27,10 @@ export interface SerializedComment {
   replyCount: number;
   reactions: SerializedReaction[];
   replies: SerializedComment[];
+  /** Set when an agent wrote the comment for the author. */
+  agentId: string;
+  agentName: string;
+  agentSessionId: string;
 }
 
 export interface SerializedReaction {
@@ -83,6 +87,9 @@ export function serializeComment(comment: ProtoComment): SerializedComment {
     replyCount: comment.replyCount,
     reactions: comment.reactions.map(serializeReaction),
     replies: comment.replies.map(serializeComment),
+    agentId: comment.agentId ?? "",
+    agentName: comment.agentName ?? "",
+    agentSessionId: comment.agentSessionId ?? "",
   };
 }
 

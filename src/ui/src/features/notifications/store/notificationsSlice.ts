@@ -366,6 +366,7 @@ const FILTER_TYPE_MAP: Record<string, number[]> = {
   ],
   tasks: [
     NotificationType.TASK_ASSIGNED,
+    NotificationType.TASK_AGENT_FINISHED,
     NotificationType.TASK_DUE_SOON,
     NotificationType.TASK_OVERDUE,
     NotificationType.TIMER_LIMIT_REACHED,

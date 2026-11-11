@@ -74,7 +74,41 @@ export interface Project {
   overdueTaskCount: number;
   estimatedMinutes: number;
   timeSpentMinutes: number;
+  /** New tasks are picked up by this agent, working as each task's creator. */
+  agentAssigneeId?: string | null;
+  agentAssigneeSetById?: string | null;
 }
+
+export type TaskAgentRunStatus =
+  | "waiting"
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "stopped"
+  | "skipped"
+  | "uncertain";
+
+export interface TaskAgentAssignment {
+  id: string;
+  agentId: string;
+  agentName: string;
+  agentAvatarEmoji: string | null;
+  agentIsDeleted: boolean;
+  /** The run works with this person's permissions; only they get the session and run ids. */
+  assignedById: string;
+  status: TaskAgentRunStatus;
+  reason: "task" | "project";
+  sessionId: string | null;
+  runId: string | null;
+  createdAt: string;
+  endedAt: string | null;
+  /** Set while a pending run waits for the time it was scheduled for. */
+  startAt: string | null;
+}
+
+/** When a newly assigned agent starts: now, when someone presses Start, or at a time. */
+export type AgentRunStart = { kind: "now" } | { kind: "wait" } | { kind: "at"; at: Date };
 
 export interface Task {
   id: string;
@@ -112,6 +146,7 @@ export interface Task {
   estimatedMinutes: number | null;
   timeSpentMinutes: number | null;
   tagIds: string[];
+  agentAssignment?: TaskAgentAssignment | null;
 }
 
 export interface CreateProjectRequest {
@@ -155,6 +190,10 @@ export interface CreateTaskRequest {
   estimatedMinutes?: number | null;
   recurrenceRule?: string | null;
   tagIds?: string[];
+  /** Hand the new task to this agent instead of the project's agent assignee. */
+  agentId?: string | null;
+  /** Keep the new task away from the project's agent assignee. */
+  skipProjectAgent?: boolean;
 }
 
 export interface UpdateTaskRequest {

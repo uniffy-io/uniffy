@@ -23,6 +23,7 @@ import { MainLayout } from "@/shared/layouts/MainLayout";
 import { SpotlightSearch } from "@/features/search/components/SpotlightSearch";
 import { ZenModeHandler } from "@/components/layout/ZenModeHandler";
 import { TimerShortcutHandler } from "@/features/projects/components/time/TimerShortcutHandler";
+import { AgentStartPrompt } from "@/features/projects/components/agents/AgentStartPrompt";
 import { StreamingProvider } from "@/components/streaming/StreamingProvider";
 import { notificationHref } from "@/features/notifications/utils/notificationTarget";
 import { FileViewerModal } from "@/features/files/components/viewer/FileViewerModal";
@@ -444,6 +445,8 @@ export function App() {
           <ZenModeHandler />
           {/* Global timer shortcut - pause, resume or start on the open task */}
           <TimerShortcutHandler />
+          {/* Global prompt for when a newly picked task agent starts; outlives the picker */}
+          <AgentStartPrompt />
           {/* Global streaming connections (notifications, chat, presence) - mounts once, hooks no-op when unauthenticated */}
           <StreamingProvider />
           {/* Global toast notifications */}

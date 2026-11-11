@@ -76,6 +76,7 @@ import { contentAccessMiddleware } from "@/app/contentAccessMiddleware";
 import { presenceReducer } from "@/features/presence/store/presenceSlice";
 import { sprintsReducer } from "@/features/projects/store/sprintsSlice";
 import { timeReducer } from "@/features/projects/store/timeSlice";
+import { taskAgentsReducer } from "@/features/projects/store/taskAgentsSlice";
 import { roomsReducer } from "@/features/rooms/store/roomsSlice";
 import { chatChannelsReducer } from "@/features/chat/store/chatChannelsSlice";
 import { chatMessagesReducer } from "@/features/chat/store/chatMessagesSlice";
@@ -216,6 +217,7 @@ const rootReducer = combineReducers({
   integrations: integrationsReducer,
   sprints: sprintsReducer,
   time: timeReducer,
+  taskAgents: taskAgentsReducer,
   rooms: roomsReducer,
   zenMode: zenModeReducer,
   files: filesReducer,

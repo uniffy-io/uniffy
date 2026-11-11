@@ -16,6 +16,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { ContentType } from "@uniffy/proto/common/v1/common_pb";
 import { useContentRefresh } from "@/features/notifications/hooks/useContentRefresh";
+import { fetchTaskAgents } from "@/features/projects/store/taskAgentsThunks";
 import { useAppSelector, useAppDispatch } from "@/app/hooks";
 import {
   selectActivitiesForTask,
@@ -69,6 +70,7 @@ interface Lookups {
   tasks: Record<string, Task>;
   sprints: Record<string, Sprint>;
   people: Record<string, Subject>;
+  agents: Record<string, string>;
 }
 
 /** The activity kind picker, for a section header that hosts an embedded log. */
@@ -139,6 +141,13 @@ export function ActivityLog({ taskId, maxInitialItems, filter }: ActivityLogProp
     return [...ids];
   }, [visible]);
   const { subjects } = useSubjectResolver(personIds);
+  const agents = useAppSelector((state) => state.taskAgents.list.agents);
+  const showsAgents = visible.some(
+    (entry) => entry.action === "agent_assigned" || entry.action === "agent_unassigned",
+  );
+  useEffect(() => {
+    if (showsAgents) dispatch(fetchTaskAgents());
+  }, [dispatch, showsAgents]);
 
   const lookups = useMemo<Lookups>(
     () => ({
@@ -146,8 +155,9 @@ export function ActivityLog({ taskId, maxInitialItems, filter }: ActivityLogProp
       tasks,
       sprints,
       people: Object.fromEntries(subjects.map((s) => [s.id, s])),
+      agents: Object.fromEntries(agents.map((agent) => [agent.id, agent.name])),
     }),
-    [project, tasks, sprints, subjects],
+    [project, tasks, sprints, subjects, agents],
   );
 
   return (
@@ -285,6 +295,9 @@ function activityIcon(action: ActivityAction) {
       return <LinkSimple size={12} />;
     case "tags_changed":
       return <TagIcon size={12} />;
+    case "agent_assigned":
+    case "agent_unassigned":
+      return <Robot size={12} />;
     case "time_logged":
     case "time_updated":
     case "time_removed":
@@ -516,6 +529,18 @@ function activityContent(entry: TaskActivity, lookups: Lookups): ReactNode {
       return (
         <span>
           removed a time entry of <Strong>{formatMinutes(Number(from))}</Strong>
+        </span>
+      );
+    case "agent_assigned":
+      return (
+        <span>
+          gave the task to <Strong>{(to && lookups.agents[to]) || "an agent"}</Strong>
+        </span>
+      );
+    case "agent_unassigned":
+      return (
+        <span>
+          took the task back from <Strong>{(from && lookups.agents[from]) || "an agent"}</Strong>
         </span>
       );
     default:

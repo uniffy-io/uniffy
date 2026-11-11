@@ -430,8 +430,9 @@ export const {
   clearAgentMessages,
 } = agentMessagesSlice.actions;
 
+const NO_MESSAGES: SerializedMessage[] = [];
 export const selectMessagesForSession = (sessionId: string | null) => (state: RootState) =>
-  sessionId ? (state.agentMessages.messagesBySession[sessionId] ?? []) : [];
+  sessionId ? (state.agentMessages.messagesBySession[sessionId] ?? NO_MESSAGES) : NO_MESSAGES;
 export const selectStreamingContent = (state: RootState) => state.agentMessages.streamingContent;
 export const selectStreamingThinking = (state: RootState) => state.agentMessages.streamingThinking;
 export const selectThinkingByMessage = (state: RootState) => state.agentMessages.thinkingByMessage;

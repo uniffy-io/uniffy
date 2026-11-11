@@ -10,6 +10,7 @@ import {
 import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/dateFormatting";
 import { getInitials } from "@/components/subject/utils";
+import { CommentAgentAvatar, CommentAuthor } from "@/features/comments/components/CommentAuthor";
 import { CommentInput } from "@/features/comments/components/CommentInput";
 import { CommentReactions } from "@/features/comments/components/CommentReactions";
 import type { SerializedComment } from "@/features/comments/store/commentsSlice";
@@ -89,8 +90,12 @@ function ReplyItem({
   return (
     <div className="py-2 first:pt-0">
       <div className="flex items-center gap-2 mb-1">
-        <AuthorAvatar name={reply.authorName} avatarUrl={reply.authorAvatarUrl || undefined} />
-        <span className="text-sm font-medium">{reply.authorName}</span>
+        {reply.agentId ? (
+          <CommentAgentAvatar comment={reply} />
+        ) : (
+          <AuthorAvatar name={reply.authorName} avatarUrl={reply.authorAvatarUrl || undefined} />
+        )}
+        <CommentAuthor comment={reply} />
         <span className="text-xs text-muted-foreground">{formatRelativeTime(reply.createdAt)}</span>
         {reply.updatedAt && <span className="text-xs text-muted-foreground">(edited)</span>}
       </div>
@@ -230,9 +235,16 @@ export function CommentThread({ comment, contentType, contentId, onRefresh }: Co
 
       {/* Comment header */}
       <div className="flex items-center gap-2 mb-1.5">
-        <AuthorAvatar name={comment.authorName} avatarUrl={comment.authorAvatarUrl || undefined} />
+        {comment.agentId ? (
+          <CommentAgentAvatar comment={comment} />
+        ) : (
+          <AuthorAvatar
+            name={comment.authorName}
+            avatarUrl={comment.authorAvatarUrl || undefined}
+          />
+        )}
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-medium truncate">{comment.authorName}</span>
+          <CommentAuthor comment={comment} />
           <span className="text-xs text-muted-foreground ml-2">
             {formatRelativeTime(comment.createdAt)}
           </span>
