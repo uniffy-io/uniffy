@@ -3010,6 +3010,76 @@ Database regression suite: `src/uniffy/tests/integration/access/test_task_activi
 checkpoint contributors, recovery, rollback, passive hydration, agent merges, recurring creation,
 initial blockers and batched inserts for 100 field changes or 100 dependency links.
 
+## Projects: agent assignees
+
+Needs an organization with a working provider key, an agent "Writer" open to the organization with
+the Tasks tools enabled (including "Comment on Task"), a project an admin (A) manages that member B
+can edit, and an agent C cannot view. Watch the egress worker log, the backend access log and
+`agents_task_assignments` while testing. `(both products)`
+
+- [ ] A opens New task, adds Writer from the Agents section of the assignee picker and creates the
+      task. `AssignTaskAgent` returns 200, one row is current with status `pending` then
+      `running`, and the egress worker logs `deliver_task_assignment` within a second.
+- [ ] On an existing task, picking Writer in the assignee picker opens "Hand this task to Writer"
+      with Start now, Start later and Start at a set time; Cancel assigns nothing.
+- [ ] The task shows "Writer · Working, Working for you" with View session and Stop. A comment
+      "Writer for A: Started working on this." appears. View session updates the transcript while
+      the agent works; the stored user turn is only "Work on task KEY" (`agents_messages`), never
+      the task text.
+- [ ] Writer's edits show in Activity as "Writer for A". Subtasks it creates start no other run.
+- [ ] On finish the task moves to the project's review status (or keeps its status where the
+      project has none), the last comment is the summary, A gets one "Writer finished KEY"
+      notification (`notifications`, type `TASK_AGENT_FINISHED`), the row is `completed`, and its
+      run logs have kind `task`.
+- [ ] A task asking Writer to delete something: nothing is deleted; Writer leaves a comment asking A
+      to do it. Where it tried the delete tool, the tool row reads "Not done: deleting needs the
+      assigner's confirmation".
+- [ ] Writer setting a status the project does not have is refused with the list of the project's
+      statuses.
+- [ ] B opens the same task: Writer's comments read "Writer for A" with no View session and no
+      Request changes, and the agent row says "Working for A". B can still Stop or Run again (that
+      run works as B).
+- [ ] Stop during a run: within seconds the row is `stopped` and still current, Writer stays on the
+      task with Request changes, Run again and Remove, and the task's status is not changed by a
+      hand-back. Run again opens the start choice and starts a new session.
+- [ ] Start later: the row is `waiting`, the agent row reads "Waiting for Start" with Start and
+      Remove, and no delivery runs (the egress log stays quiet past the 10-second sweep). A presses
+      Start: the same row becomes `pending` and runs. When B presses Start on A's waiting row, a new
+      row with `assigned_by` B runs instead.
+- [ ] Start at a set time: the row is `pending` with `start_at`, the agent row reads "Starts ...",
+      and nothing runs before that time; Start now runs it at once; Stop leaves it `stopped`. A time in
+      the past is refused.
+- [ ] Request changes on a finished run (A only): the text goes in, a new row shares the earlier
+      `session_id` with `change_request` set, the comment "Working on the requested changes."
+      appears, the session shows the request as A's turn after the earlier work, and the task goes
+      back to review with a new summary. The audit event `task.agent_changes_requested` carries no
+      text. A forged `RequestTaskAgentChanges` from B returns permission denied.
+- [ ] A comment from B before the run ("Mention the faster search") is read by Writer through
+      Read Task Comments when it is enabled.
+- [ ] A run that hits the step limit leaves "Stopped at the step limit before finishing" and the
+      row `failed`; Run again carries on.
+- [ ] A sets the project's Agent Assignee in project settings (audit `project.agent_assignee_changed`).
+      B opens New task: a "Hand it to Writer" box is checked. Creating it gives a row with reason
+      `project` and `assigned_by` B, and the session belongs to B. Unchecking it creates the task
+      with no row; picking another agent in the picker gives one row for that agent only. Tasks
+      created before the setting are untouched. Clearing it stops new pickups.
+- [ ] Delete a task while its agent works: within a few seconds the row is `stopped`.
+- [ ] With an organization budget at its hard cap, assigning is refused, and a queued run is
+      skipped with "the agent spending limit ... is reached".
+- [ ] Edit one of Writer's comments as A: it now reads as A's own, with no agent credit.
+- [ ] C does not see Writer in any picker; a forged `AssignTaskAgent` for Writer returns not found.
+- [ ] An org admin turns off "Assign tasks to agents" on `/admin/projects` (`org_settings`
+      `projects/agent_policy`, audit `agent_assignment_policy.updated`): the Agents section
+      disappears, new tasks in a project with an agent are not picked up, and a queued run is
+      skipped.
+- [ ] Delete Writer: its current runs stop and every project setting naming it clears.
+- [ ] Mobile: the assignee sheet lists Agents, the task shows the agent row with Session for the
+      assigner, comments read "Writer for A", and project settings show the agent read-only.
+
+Database regression suite: `src/uniffy/tests/integration/access/test_task_agent_assignment.py`
+covers the run as the assigner, destructive refusal, hand-back, unassign and reassign, access and
+policy denials, project pickup identity, concurrency and recovery.
+
 ## Projects: task detail, description first and full page
 
 Needs a project you edit, a task with a description of about 5,000 words, and a second person
