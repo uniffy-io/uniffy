@@ -143,6 +143,10 @@ export function describeActivity(act: SerializedActivity, look: ActivityLookups)
       return { headline: "changed a time entry", detail: fromTo(minutes(from), minutes(to)) };
     case "TIME_REMOVED":
       return { headline: `removed a time entry of ${minutes(from) ?? "time"}` };
+    case "AGENT_ASSIGNED":
+      return { headline: "gave the task to an agent" };
+    case "AGENT_UNASSIGNED":
+      return { headline: "took the task back from an agent" };
     default:
       return { headline: "updated the task" };
   }

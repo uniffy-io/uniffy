@@ -40,6 +40,7 @@ import { isRequiredStatusOption, statusIdForSemantic } from "@features/projects/
 import { StatusEditorSheet } from "@features/projects/components/StatusEditorSheet";
 import { OptionPickerSheet } from "@features/projects/components/OptionPickerSheet";
 import type { PlainSelectOption } from "@features/projects/projectsSerializer";
+import { useAgents } from "@features/agents/useAgents";
 
 type EditTarget = { mode: "add" } | { mode: "edit"; option: PlainSelectOption } | null;
 
@@ -53,6 +54,7 @@ export function ProjectSettingsScreen() {
   const insets = useSafeAreaInsets();
 
   const projectQuery = useProject(id);
+  const agentsQuery = useAgents({ enabled: !!projectQuery.data?.agentAssigneeId });
   const tasksQuery = useProjectTasks(id);
   const updateField = useUpdateField();
   const bulkUpdateTasks = useBulkUpdateTasks();
@@ -166,6 +168,7 @@ export function ProjectSettingsScreen() {
   }
 
   const projectColor = project.color || T.accent;
+  const projectAgent = agentsQuery.data?.find((agent) => agent.id === project.agentAssigneeId);
   const busy = updateField.isPending || bulkUpdateTasks.isPending;
 
   return (
@@ -190,6 +193,19 @@ export function ProjectSettingsScreen() {
             </Text>
           </View>
         )}
+
+        <View style={{ gap: 8 }} testID="project-agent-assignee">
+          <Text style={[styles.sectionTitle, { color: T.textDim }]}>Agent assignee</Text>
+          <Text style={[styles.sectionHint, { color: T.textDim }]}>
+            New tasks are picked up by this agent, working as the person who created each task.
+            Change it on the web app.
+          </Text>
+          <View style={[styles.card, { backgroundColor: T.surface, borderColor: T.border }]}>
+            <Text style={[styles.statusLabel, { color: T.textBright }]}>
+              {projectAgent?.name ?? (project.agentAssigneeId ? "An agent" : "None")}
+            </Text>
+          </View>
+        </View>
 
         <View style={{ gap: 8 }}>
           <Text style={[styles.sectionTitle, { color: T.textDim }]}>Statuses</Text>

@@ -289,15 +289,26 @@ function CommentNode({
   return (
     <View style={[styles.commentNode, isReply && { marginLeft: 38, marginTop: 10 }]}>
       <View style={styles.commentRow}>
-        <Avatar
-          name={comment.authorName}
-          avatarUrl={comment.authorAvatarUrl ?? undefined}
-          size={30}
-        />
+        {comment.agentName ? (
+          <Avatar name={comment.agentName} isAgent size={30} />
+        ) : (
+          <Avatar
+            name={comment.authorName}
+            avatarUrl={comment.authorAvatarUrl ?? undefined}
+            size={30}
+          />
+        )}
         <View style={{ flex: 1 }}>
           <View style={styles.commentHeader}>
             <Text style={[styles.author, { color: T.textBright }]} numberOfLines={1}>
-              {comment.authorName}
+              {comment.agentName ? (
+                <>
+                  {comment.agentName}
+                  <Text style={{ color: T.textDim }}> for {comment.authorName}</Text>
+                </>
+              ) : (
+                comment.authorName
+              )}
             </Text>
             <Text style={[styles.time, { color: T.textDim }]}>
               {comment.timeLabel}

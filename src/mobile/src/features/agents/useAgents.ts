@@ -5,12 +5,12 @@ import { chatApi } from "@features/chat/chatApi";
 import { agentToPlain, type SerializedAgent } from "@features/agents/agentSerializer";
 import { rememberToolLabels } from "@features/agents/toolLabels";
 
-export function useAgents() {
+export function useAgents({ enabled = true }: { enabled?: boolean } = {}) {
   const { organizationId, isAuthenticated } = useAuth();
 
   return useQuery({
     queryKey: ["agents", organizationId],
-    enabled: !!organizationId && isAuthenticated,
+    enabled: enabled && !!organizationId && isAuthenticated,
     queryFn: async (): Promise<SerializedAgent[]> => {
       const res = await agentsApi.listAgents({
         organizationId: organizationId!,

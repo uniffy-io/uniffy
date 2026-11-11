@@ -1,7 +1,12 @@
 import { createClient } from "@connectrpc/connect";
 import type { MessageInitShape } from "@bufbuild/protobuf";
+import type { GetAgentAssignmentPolicyRequestSchema } from "@uniffy/proto/projects/v1/agents_pb";
 import {
   ProjectsService,
+  AssignTaskAgentRequestSchema,
+  RequestTaskAgentChangesRequestSchema,
+  StartTaskAgentRequestSchema,
+  StopTaskAgentRequestSchema,
   CreateProjectRequestSchema,
   CreateTaskRequestSchema,
   DeleteProjectRequestSchema,
@@ -80,6 +85,23 @@ export const projectsApi = {
 
   updateTask: (request: MessageInitShape<typeof UpdateTaskRequestSchema>) =>
     client.updateTask(request),
+
+  assignTaskAgent: (request: MessageInitShape<typeof AssignTaskAgentRequestSchema>) =>
+    client.assignTaskAgent(request),
+
+  startTaskAgent: (request: MessageInitShape<typeof StartTaskAgentRequestSchema>) =>
+    client.startTaskAgent(request),
+
+  stopTaskAgent: (request: MessageInitShape<typeof StopTaskAgentRequestSchema>) =>
+    client.stopTaskAgent(request),
+
+  requestTaskAgentChanges: (
+    request: MessageInitShape<typeof RequestTaskAgentChangesRequestSchema>,
+  ) => client.requestTaskAgentChanges(request),
+
+  getAgentAssignmentPolicy: (
+    request: MessageInitShape<typeof GetAgentAssignmentPolicyRequestSchema>,
+  ) => client.getAgentAssignmentPolicy(request),
 
   deleteTask: (request: MessageInitShape<typeof DeleteTaskRequestSchema>) =>
     client.deleteTask(request),

@@ -1,4 +1,5 @@
 import type { AgentInfo } from "@uniffy/proto/agents/v1/agents_pb";
+import { MessageRole, type MessageInfo } from "@uniffy/proto/agents/v1/sessions_pb";
 import { getApiBaseUrl } from "@core/config/serverUrl";
 
 export interface SerializedAgent {
@@ -52,4 +53,27 @@ export function agentAvatarUrl(
 ): string | null {
   if (!avatarKey) return null;
   return `${getApiBaseUrl()}/agents/avatars/${organizationId}/${agentId}`;
+}
+
+export interface SessionLine {
+  id: string;
+  kind: "brief" | "tool" | "reply";
+  text: string;
+}
+
+/** A background session's rows as the read-only transcript shows them. */
+export function sessionLinesFromMessages(messages: MessageInfo[]): SessionLine[] {
+  return messages.flatMap((message): SessionLine[] => {
+    if (message.role === MessageRole.USER) {
+      return [{ id: message.id, kind: "brief", text: message.content ?? "" }];
+    }
+    if (message.role === MessageRole.TOOL) {
+      return [{ id: message.id, kind: "tool", text: message.toolName ?? "" }];
+    }
+    // Tool-loop rows repeat the preamble before each call; only the reply is shown.
+    if (message.role === MessageRole.ASSISTANT && !message.toolCallId && message.content) {
+      return [{ id: message.id, kind: "reply", text: message.content }];
+    }
+    return [];
+  });
 }

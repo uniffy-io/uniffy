@@ -9,7 +9,12 @@ import { SheetSectionLabel } from "@shared/components/SheetSection";
 import { Avatar } from "@shared/components/Avatar";
 import { useTheme } from "@shared/hooks/useTheme";
 import { useDirectory, type DirectorySubject } from "@shared/directory/useDirectory";
-import { orderPickerRows, type PickerPinnedRow } from "@shared/directory/pickerRows";
+import {
+  filterPickerSections,
+  orderPickerRows,
+  type PickerPinnedRow,
+  type PickerSection,
+} from "@shared/directory/pickerRows";
 import { usePeoplePicker } from "@shared/directory/usePeoplePicker";
 import { FONT } from "@theme/typography";
 
@@ -29,6 +34,7 @@ export function SubjectPickerSheet({
   accentColor,
   busy,
   pinned = [],
+  sections = [],
 }: {
   visible: boolean;
   onClose: () => void;
@@ -40,6 +46,7 @@ export function SubjectPickerSheet({
   busy?: boolean;
   /** Action rows above the list, such as "Assign to me" or "Unassigned". */
   pinned?: PickerPinnedRow[];
+  sections?: PickerSection[];
 }) {
   const T = useTheme();
   const [query, setQuery] = useState("");
@@ -97,6 +104,7 @@ export function SubjectPickerSheet({
   );
 
   const showPinned = !searching && query.trim() === "" && pinned.length > 0;
+  const visibleSections = filterPickerSections(sections, query);
   const empty = !isLoading && rows.selected.length === 0 && rows.rest.length === 0;
 
   return (
@@ -132,7 +140,25 @@ export function SubjectPickerSheet({
             <ActivityIndicator size="small" color={accent} />
           </View>
         )}
-        {empty && searching && <Text style={[styles.empty, { color: T.textDim }]}>No matches</Text>}
+        {visibleSections.map((section) => (
+          <View key={`section:${section.id}`}>
+            <SheetSectionLabel title={section.title} style={styles.sectionTitle} />
+            {section.rows.map((row) => (
+              <SheetRow
+                key={`section:${section.id}:${row.id}`}
+                title={row.label}
+                subtitle={row.subtitle}
+                leading={row.leading}
+                selected={row.selected}
+                accentColor={accent}
+                onPress={row.onPress}
+              />
+            ))}
+          </View>
+        ))}
+        {empty && searching && visibleSections.length === 0 && (
+          <Text style={[styles.empty, { color: T.textDim }]}>No matches</Text>
+        )}
       </ScrollView>
     </BottomSheet>
   );
