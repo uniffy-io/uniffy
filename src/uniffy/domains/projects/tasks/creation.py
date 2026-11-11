@@ -14,11 +14,14 @@ from uniffy.core.models.projects.field_definition import (
 )
 from uniffy.core.models.projects.task import Task
 from uniffy.core.realtime.limits import validate_document_size
+from uniffy.domains.agents.tasks.admission import after_commit
 from uniffy.domains.projects import queries
+from uniffy.domains.projects.agents.pickup import stage_new_task_agent
 from uniffy.domains.projects.audience import publish_project_access
 from uniffy.domains.projects.projects import ProjectOperations
 from uniffy.domains.projects.statuses import (
     load_task_status_semantics,
+    require_known_status,
 )
 from uniffy.domains.projects.tasks.activity import TaskActivityRecorder
 from uniffy.domains.projects.tasks.content import TaskContentOperations
@@ -42,6 +45,8 @@ class TaskCreateOperations:
         title: str,
         task_type: str = "task",
         tag_ids: list[UUID] | None = None,
+        agent_id: UUID | None = None,
+        skip_project_agent: bool = False,
         **kwargs,
     ) -> Task:
         """Requires EDIT on the parent project."""
@@ -107,6 +112,8 @@ class TaskCreateOperations:
 
         status_semantics = await load_task_status_semantics(self.session, project_id)
         initial_status = kwargs.get("status") or status_semantics.id_for(TaskStatusSemantic.TODO)
+        if kwargs.get("status"):
+            await require_known_status(self.session, project_id, initial_status)
 
         task = Task(
             project_id=project_id,
@@ -155,6 +162,22 @@ class TaskCreateOperations:
             watcher_user_ids, organization_id, task.id
         )
 
+        staged_agent, starting_agent_id = await stage_new_task_agent(
+            self.session,
+            task=task,
+            project=project,
+            user_id=user_id,
+            agent_id=agent_id,
+            skip_project_agent=skip_project_agent,
+        )
+        if starting_agent_id is not None:
+            await TaskNotifications(self.session).log_activity(
+                task.id,
+                user_id,
+                TaskActivityAction.AGENT_ASSIGNED,
+                new_value=str(starting_agent_id),
+            )
+
         await self.session.commit()
         await self.session.refresh(task)
 
@@ -170,5 +193,7 @@ class TaskCreateOperations:
         )
 
         await publish_project_access(self.session, project, ContentAccessAction.CHILD_ADDED)
+        # Woken last, so the run briefs on a task whose tags and index entry already exist.
+        await after_commit([staged_agent])
 
         return task

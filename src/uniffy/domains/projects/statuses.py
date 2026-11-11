@@ -164,3 +164,17 @@ async def ensure_removed_statuses_unused(
             f"Move the tasks in {', '.join(repr(label) for label in in_use)} to another status "
             "before removing it",
         )
+
+
+async def require_known_status(session: AsyncSession, project_id: UUID, status: str) -> None:
+    """A status the project does not define drops the task off every board column."""
+    config = await session.scalar(
+        select(FieldDefinition.config).where(
+            FieldDefinition.project_id == project_id,
+            FieldDefinition.id == SystemProjectFieldId.STATUS,
+        )
+    )
+    labels = _option_labels(config)
+    if status not in labels:
+        known = ", ".join(f"{option_id} ({label})" for option_id, label in labels.items())
+        raise ValidationError("status", f"Unknown status {status!r}; this project has: {known}")

@@ -31,6 +31,7 @@ const (
 	SessionKind_SESSION_KIND_DIRECT      SessionKind = 1 // 1:1 user<->agent
 	SessionKind_SESSION_KIND_GROUP       SessionKind = 2 // multi-user with agent
 	SessionKind_SESSION_KIND_GLOBAL      SessionKind = 3 // agent background/automation session
+	SessionKind_SESSION_KIND_TASK        SessionKind = 4 // agent working an assigned task, owned by the assigner
 )
 
 // Enum value maps for SessionKind.
@@ -40,12 +41,14 @@ var (
 		1: "SESSION_KIND_DIRECT",
 		2: "SESSION_KIND_GROUP",
 		3: "SESSION_KIND_GLOBAL",
+		4: "SESSION_KIND_TASK",
 	}
 	SessionKind_value = map[string]int32{
 		"SESSION_KIND_UNSPECIFIED": 0,
 		"SESSION_KIND_DIRECT":      1,
 		"SESSION_KIND_GROUP":       2,
 		"SESSION_KIND_GLOBAL":      3,
+		"SESSION_KIND_TASK":        4,
 	}
 )
 
@@ -1220,12 +1223,13 @@ const file_agents_v1_sessions_proto_rawDesc = "" +
 	"message_id\x18\x02 \x01(\tR\tmessageId\"K\n" +
 	"\x14RetryMessageResponse\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x19\n" +
-	"\bfile_ids\x18\x02 \x03(\tR\afileIds*u\n" +
+	"\bfile_ids\x18\x02 \x03(\tR\afileIds*\x8c\x01\n" +
 	"\vSessionKind\x12\x1c\n" +
 	"\x18SESSION_KIND_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13SESSION_KIND_DIRECT\x10\x01\x12\x16\n" +
 	"\x12SESSION_KIND_GROUP\x10\x02\x12\x17\n" +
-	"\x13SESSION_KIND_GLOBAL\x10\x03*\xa8\x01\n" +
+	"\x13SESSION_KIND_GLOBAL\x10\x03\x12\x15\n" +
+	"\x11SESSION_KIND_TASK\x10\x04*\xa8\x01\n" +
 	"\vMessageRole\x12\x1c\n" +
 	"\x18MESSAGE_ROLE_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11MESSAGE_ROLE_USER\x10\x01\x12\x1a\n" +

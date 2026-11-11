@@ -69,6 +69,9 @@ def create_task_arguments(request: CreateTaskRequest) -> dict[str, Any]:
         kwargs["estimated_minutes"] = request.estimated_minutes or None
     if request.field_values:
         kwargs["field_values"] = _parse_field_values(request.field_values)
+    if request.has_field("agent_id"):
+        kwargs["agent_id"] = parse_uuid(request.agent_id, "agent_id")
+    kwargs["skip_project_agent"] = request.skip_project_agent
     return kwargs
 
 

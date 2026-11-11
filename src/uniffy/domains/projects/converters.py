@@ -3,6 +3,15 @@
 from collections.abc import Mapping
 from uuid import UUID
 
+from uniffy_proto.projects.v1.agents_pb import (
+    TaskAgentAssignment as ProtoTaskAgentAssignment,
+)
+from uniffy_proto.projects.v1.agents_pb import (
+    TaskAgentAssignmentReason as ProtoAssignmentReason,
+)
+from uniffy_proto.projects.v1.agents_pb import (
+    TaskAgentAssignmentStatus as ProtoAssignmentStatus,
+)
 from uniffy_proto.projects.v1.projects_pb import (
     ActivityAction,
     FieldType,
@@ -38,6 +47,7 @@ from uniffy.core.converters.common_proto import (
 from uniffy.core.converters.proto import datetime_to_timestamp
 from uniffy.core.errors import ValidationError
 from uniffy.core.json_codec import dumps_str
+from uniffy.core.models.agents.task_assignment import TaskAssignmentReason, TaskAssignmentStatus
 from uniffy.core.models.projects.activity import TaskActivity, TaskActivityAction
 from uniffy.core.models.projects.field_definition import FieldDefinition
 from uniffy.core.models.projects.project import Project
@@ -50,6 +60,7 @@ from uniffy.core.models.projects.view_config import (
 )
 from uniffy.core.models.tags.tag import Tag
 from uniffy.core.types import AccessMode, ContentRole
+from uniffy.domains.agents.tasks.admission import AssignmentView
 from uniffy.domains.projects.views.definition import definition_from_dict
 from uniffy.domains.tags.converters import tag_to_proto
 
@@ -108,6 +119,8 @@ ACTIVITY_ACTION_TO_PROTO: dict[str, ActivityAction] = {
     TaskActivityAction.TIME_LOGGED: ActivityAction.TIME_LOGGED,
     TaskActivityAction.TIME_UPDATED: ActivityAction.TIME_UPDATED,
     TaskActivityAction.TIME_REMOVED: ActivityAction.TIME_REMOVED,
+    TaskActivityAction.AGENT_ASSIGNED: ActivityAction.AGENT_ASSIGNED,
+    TaskActivityAction.AGENT_UNASSIGNED: ActivityAction.AGENT_UNASSIGNED,
 }
 
 
@@ -196,6 +209,10 @@ def project_to_proto(
 
     if project.deleted_at:
         proto.deleted_at = datetime_to_timestamp(project.deleted_at)
+    if project.agent_assignee_id:
+        proto.agent_assignee_id = str(project.agent_assignee_id)
+    if project.agent_assignee_set_by:
+        proto.agent_assignee_set_by_id = str(project.agent_assignee_set_by)
 
     return proto
 
@@ -206,6 +223,8 @@ def task_to_proto(
     subtask_total: int = 0,
     subtask_completed: int = 0,
     tags: list[Tag] | None = None,
+    agent_assignment: AssignmentView | None = None,
+    viewer_id: UUID | None = None,
 ) -> ProtoTask:
     field_values_map: dict[str, str] = {}
     if task.field_values:
@@ -262,7 +281,52 @@ def task_to_proto(
 
     if user_role is not None:
         proto.user_role = content_role_to_proto(user_role)
+    if agent_assignment is not None:
+        proto.agent_assignment = agent_assignment_to_proto(agent_assignment, viewer_id)
 
+    return proto
+
+
+_ASSIGNMENT_STATUS_TO_PROTO = {
+    TaskAssignmentStatus.WAITING: ProtoAssignmentStatus.WAITING,
+    TaskAssignmentStatus.PENDING: ProtoAssignmentStatus.PENDING,
+    TaskAssignmentStatus.RUNNING: ProtoAssignmentStatus.RUNNING,
+    TaskAssignmentStatus.COMPLETED: ProtoAssignmentStatus.COMPLETED,
+    TaskAssignmentStatus.FAILED: ProtoAssignmentStatus.FAILED,
+    TaskAssignmentStatus.STOPPED: ProtoAssignmentStatus.STOPPED,
+    TaskAssignmentStatus.SKIPPED: ProtoAssignmentStatus.SKIPPED,
+    TaskAssignmentStatus.UNCERTAIN: ProtoAssignmentStatus.UNCERTAIN,
+}
+_ASSIGNMENT_REASON_TO_PROTO = {
+    TaskAssignmentReason.TASK: ProtoAssignmentReason.TASK,
+    TaskAssignmentReason.PROJECT: ProtoAssignmentReason.PROJECT,
+}
+
+
+def agent_assignment_to_proto(
+    view: AssignmentView, viewer_id: UUID | None
+) -> ProtoTaskAgentAssignment:
+    proto = ProtoTaskAgentAssignment(
+        id=str(view.id),
+        agent_id=str(view.agent_id),
+        agent_name=view.agent_name,
+        agent_is_deleted=view.agent_is_deleted,
+        assigned_by_id=str(view.assigned_by),
+        status=_ASSIGNMENT_STATUS_TO_PROTO[view.status],
+        reason=_ASSIGNMENT_REASON_TO_PROTO[view.reason],
+        created_at=datetime_to_timestamp(view.created_at),
+    )
+    if view.agent_avatar_emoji:
+        proto.agent_avatar_emoji = view.agent_avatar_emoji
+    if view.ended_at:
+        proto.ended_at = datetime_to_timestamp(view.ended_at)
+    if view.start_at and view.status == TaskAssignmentStatus.PENDING:
+        proto.start_at = datetime_to_timestamp(view.start_at)
+    # Only the person the agent works for can open its session and run stream.
+    if viewer_id is not None and viewer_id == view.assigned_by:
+        if view.session_id:
+            proto.session_id = str(view.session_id)
+        proto.run_id = str(view.run_id)
     return proto
 
 

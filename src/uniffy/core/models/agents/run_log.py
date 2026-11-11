@@ -27,6 +27,7 @@ class AgentRunKind(StrEnum):
     IMAGE = "image"
     CRON = "cron"
     EVALUATION = "evaluation"
+    TASK = "task"
 
 
 class AgentRunStatus(StrEnum):

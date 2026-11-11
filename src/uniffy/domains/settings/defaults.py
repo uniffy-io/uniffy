@@ -234,6 +234,7 @@ DEFAULT_NOTIFICATION_CHANNELS: dict[NotificationType, dict[str, bool]] = {
     NotificationType.TIMESHEET_APPROVED: {"in_app": True, "browser": False, "email": False},
     NotificationType.TIMESHEET_REJECTED: {"in_app": True, "browser": True, "email": True},
     NotificationType.TIMESHEET_REMINDER: {"in_app": True, "browser": True, "email": True},
+    NotificationType.TASK_AGENT_FINISHED: {"in_app": True, "browser": True, "email": False},
 }
 
 # Types whose own domain composes and sends the message, so the generic

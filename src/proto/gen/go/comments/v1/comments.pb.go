@@ -103,8 +103,13 @@ type Comment struct {
 	ReplyCount      int32                  `protobuf:"varint,18,opt,name=reply_count,json=replyCount,proto3" json:"reply_count,omitempty"`
 	Reactions       []*CommentReaction     `protobuf:"bytes,19,rep,name=reactions,proto3" json:"reactions,omitempty"`
 	Replies         []*Comment             `protobuf:"bytes,20,rep,name=replies,proto3" json:"replies,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Set when an agent wrote the comment for author_id.
+	AgentId   *string `protobuf:"bytes,21,opt,name=agent_id,json=agentId,proto3,oneof" json:"agent_id,omitempty"`
+	AgentName *string `protobuf:"bytes,22,opt,name=agent_name,json=agentName,proto3,oneof" json:"agent_name,omitempty"`
+	// The task session that produced it; only its owner (author_id) can open it.
+	AgentSessionId *string `protobuf:"bytes,23,opt,name=agent_session_id,json=agentSessionId,proto3,oneof" json:"agent_session_id,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Comment) Reset() {
@@ -275,6 +280,27 @@ func (x *Comment) GetReplies() []*Comment {
 		return x.Replies
 	}
 	return nil
+}
+
+func (x *Comment) GetAgentId() string {
+	if x != nil && x.AgentId != nil {
+		return *x.AgentId
+	}
+	return ""
+}
+
+func (x *Comment) GetAgentName() string {
+	if x != nil && x.AgentName != nil {
+		return *x.AgentName
+	}
+	return ""
+}
+
+func (x *Comment) GetAgentSessionId() string {
+	if x != nil && x.AgentSessionId != nil {
+		return *x.AgentSessionId
+	}
+	return ""
 }
 
 // CommentReaction represents aggregated reaction data.
@@ -1492,7 +1518,7 @@ var File_comments_v1_comments_proto protoreflect.FileDescriptor
 
 const file_comments_v1_comments_proto_rawDesc = "" +
 	"\n" +
-	"\x1acomments/v1/comments.proto\x12\vcomments.v1\x1a\x16common/v1/common.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x83\b\n" +
+	"\x1acomments/v1/comments.proto\x12\vcomments.v1\x1a\x16common/v1/common.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xa7\t\n" +
 	"\aComment\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0forganization_id\x18\x02 \x01(\tR\x0eorganizationId\x129\n" +
@@ -1523,13 +1549,20 @@ const file_comments_v1_comments_proto_rawDesc = "" +
 	"\vreply_count\x18\x12 \x01(\x05R\n" +
 	"replyCount\x12:\n" +
 	"\treactions\x18\x13 \x03(\v2\x1c.comments.v1.CommentReactionR\treactions\x12.\n" +
-	"\areplies\x18\x14 \x03(\v2\x14.comments.v1.CommentR\arepliesB\x14\n" +
+	"\areplies\x18\x14 \x03(\v2\x14.comments.v1.CommentR\areplies\x12\x1e\n" +
+	"\bagent_id\x18\x15 \x01(\tH\x06R\aagentId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"agent_name\x18\x16 \x01(\tH\aR\tagentName\x88\x01\x01\x12-\n" +
+	"\x10agent_session_id\x18\x17 \x01(\tH\bR\x0eagentSessionId\x88\x01\x01B\x14\n" +
 	"\x12_parent_comment_idB\x14\n" +
 	"\x12_author_avatar_urlB\x11\n" +
 	"\x0f_resolved_by_idB\x13\n" +
 	"\x11_resolved_by_nameB\x0e\n" +
 	"\f_resolved_atB\r\n" +
-	"\v_updated_at\"\x8a\x01\n" +
+	"\v_updated_atB\v\n" +
+	"\t_agent_idB\r\n" +
+	"\v_agent_nameB\x13\n" +
+	"\x11_agent_session_id\"\x8a\x01\n" +
 	"\x0fCommentReaction\x12\x14\n" +
 	"\x05emoji\x18\x01 \x01(\tR\x05emoji\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x19\n" +

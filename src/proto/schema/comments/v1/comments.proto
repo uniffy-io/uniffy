@@ -80,6 +80,11 @@ message Comment {
   int32 reply_count = 18;
   repeated CommentReaction reactions = 19;
   repeated Comment replies = 20;
+  // Set when an agent wrote the comment for author_id.
+  optional string agent_id = 21;
+  optional string agent_name = 22;
+  // The task session that produced it; only its owner (author_id) can open it.
+  optional string agent_session_id = 23;
 }
 
 // CommentReaction represents aggregated reaction data.

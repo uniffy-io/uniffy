@@ -22,6 +22,11 @@ CATEGORY_PLATFORM = "platform"
 CATEGORY_EXTERNAL = "external"
 
 
+MAX_TOOL_ITERATIONS = 10
+# Unattended task runs research before they write, and nobody is there to send a follow-up turn.
+MAX_TASK_TOOL_ITERATIONS = 25
+
+
 @dataclass
 class ToolContext:
     """Execution context passed to every tool executor."""
@@ -42,6 +47,11 @@ class ToolContext:
     # True when the run belongs to a test-drawer session: memory write tools
     # return a structured error instead of persisting anything.
     is_test_session: bool = False
+    # Set for unattended runs nobody can confirm in (task assignments): destructive tools
+    # are refused instead of waiting for an approval that cannot arrive.
+    confirmation_unavailable_message: str | None = None
+    # Tool rounds one reply may take before it stops.
+    max_tool_iterations: int = MAX_TOOL_ITERATIONS
     # Audience scope the runtime resolved for this run; memory tools refuse
     # to operate without it (no silent fallback to personal scope).
     memory_scope: MemoryScopeRef | None = None
@@ -128,6 +138,9 @@ class ToolDefinition:
         default=None  # type: ignore[assignment]
     )
     destructive: bool = False
+    # Creates something that keeps acting as the person later (a schedule), so an unattended
+    # run may not do it on its own, like a delete.
+    needs_person: bool = False
     read_only: bool = False
     timeout_seconds: int = 15
     display_name: str = ""

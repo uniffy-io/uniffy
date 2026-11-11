@@ -11,6 +11,7 @@ from uniffy.core.models.agents.skill import AgentSkill
 from uniffy.core.models.agents.skill_draft import AgentSkillDraft
 from uniffy.core.models.agents.skill_invocation import AgentSkillInvocation
 from uniffy.core.models.agents.skill_version import AgentSkillVersion
+from uniffy.core.models.agents.task_assignment import AgentTaskAssignment
 from uniffy.core.models.audit.event import AuditEvent
 from uniffy.core.models.bookmarks.bookmark import Bookmark
 from uniffy.core.models.calendar.activity import EventActivity
@@ -129,6 +130,7 @@ from uniffy.core.models.tags import Tag, TagAssignment
 
 __all__ = [
     "AgentChatTrigger",
+    "AgentTaskAssignment",
     "ChatDelivery",
     # Attachments
     "Attachment",

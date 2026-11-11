@@ -19,8 +19,9 @@ from connectrpc.server import ConnectASGIApplication, ConnectWSGIApplication, DE
 from protobuf import DescService
 
 from . import projects_pb
+from .agents_pb import GetAgentAssignmentPolicyRequest, GetAgentAssignmentPolicyResponse, UpdateAgentAssignmentPolicyRequest, UpdateAgentAssignmentPolicyResponse
 from .metrics_pb import GetTaskMetricsRequest, GetTaskMetricsResponse
-from .projects_pb import BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, StartSprintRequest, StartSprintResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
+from .projects_pb import AssignTaskAgentRequest, AssignTaskAgentResponse, BulkCheckTaskWatchersRequest, BulkCheckTaskWatchersResponse, BulkUpdateTasksRequest, BulkUpdateTasksResponse, CompleteSprintRequest, CompleteSprintResponse, CreateFieldRequest, CreateFieldResponse, CreateProjectRequest, CreateProjectResponse, CreateSprintRequest, CreateSprintResponse, CreateTaskRequest, CreateTaskResponse, CreateViewRequest, CreateViewResponse, DeleteFieldRequest, DeleteFieldResponse, DeleteProjectRequest, DeleteProjectResponse, DeleteSprintRequest, DeleteSprintResponse, DeleteTaskRequest, DeleteTaskResponse, DeleteTasksRequest, DeleteTasksResponse, DeleteViewRequest, DeleteViewResponse, ExportTasksRequest, ExportTasksResponse, GetProjectRequest, GetProjectResponse, GetTaskRequest, GetTaskResponse, GetViewCatalogRequest, GetViewCatalogResponse, ListActivitiesRequest, ListActivitiesResponse, ListProjectsRequest, ListProjectsResponse, ListSprintsRequest, ListSprintsResponse, ListTaskWatchersRequest, ListTaskWatchersResponse, ListTasksRequest, ListTasksResponse, MoveTaskRequest, MoveTaskResponse, ReorderViewsRequest, ReorderViewsResponse, RequestTaskAgentChangesRequest, RequestTaskAgentChangesResponse, SetProjectAgentAssigneeRequest, SetProjectAgentAssigneeResponse, StartSprintRequest, StartSprintResponse, StartTaskAgentRequest, StartTaskAgentResponse, StopTaskAgentRequest, StopTaskAgentResponse, ToggleTaskWatcherRequest, ToggleTaskWatcherResponse, UpdateFieldRequest, UpdateFieldResponse, UpdateProjectRequest, UpdateProjectResponse, UpdateSprintRequest, UpdateSprintResponse, UpdateTaskRequest, UpdateTaskResponse, UpdateViewRequest, UpdateViewResponse
 from .time_pb import AggregateWorklogsRequest, AggregateWorklogsResponse, ApproveTimesheetRequest, ApproveTimesheetResponse, ClosePeriodRequest, ClosePeriodResponse, CreateInternalTimeProjectRequest, CreateInternalTimeProjectResponse, CreateWorklogRequest, CreateWorklogResponse, DeleteWorklogRequest, DeleteWorklogResponse, GetActiveTimerRequest, GetActiveTimerResponse, GetSprintCapacityRequest, GetSprintCapacityResponse, GetTimePolicyRequest, GetTimePolicyResponse, GetTimesheetRequest, GetTimesheetResponse, GrantGraceRequest, GrantGraceResponse, ListPeriodsRequest, ListPeriodsResponse, ListReviewTimesheetsRequest, ListReviewTimesheetsResponse, ListTaskWorklogsRequest, ListTaskWorklogsResponse, ListUserWorklogsRequest, ListUserWorklogsResponse, PauseTimerRequest, PauseTimerResponse, RecallTimesheetRequest, RecallTimesheetResponse, RejectTimesheetRequest, RejectTimesheetResponse, ReopenPeriodRequest, ReopenPeriodResponse, ResumeTimerRequest, ResumeTimerResponse, StartTimerRequest, StartTimerResponse, StopTimerRequest, StopTimerResponse, SubmitTimesheetRequest, SubmitTimesheetResponse, UpdateTimePolicyRequest, UpdateTimePolicyResponse, UpdateWorklogRequest, UpdateWorklogResponse
 
 if TYPE_CHECKING:
@@ -236,6 +237,27 @@ class ProjectsService(Protocol):
         ----- Metrics -----
         Permission-scoped task aggregates for dashboard widgets.
         """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def assign_task_agent(self, request: AssignTaskAgentRequest, ctx: RequestContext[AssignTaskAgentRequest, AssignTaskAgentResponse], /) -> AssignTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def start_task_agent(self, request: StartTaskAgentRequest, ctx: RequestContext[StartTaskAgentRequest, StartTaskAgentResponse], /) -> StartTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def stop_task_agent(self, request: StopTaskAgentRequest, ctx: RequestContext[StopTaskAgentRequest, StopTaskAgentResponse], /) -> StopTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def request_task_agent_changes(self, request: RequestTaskAgentChangesRequest, ctx: RequestContext[RequestTaskAgentChangesRequest, RequestTaskAgentChangesResponse], /) -> RequestTaskAgentChangesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def set_project_agent_assignee(self, request: SetProjectAgentAssigneeRequest, ctx: RequestContext[SetProjectAgentAssigneeRequest, SetProjectAgentAssigneeResponse], /) -> SetProjectAgentAssigneeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def get_agent_assignment_policy(self, request: GetAgentAssignmentPolicyRequest, ctx: RequestContext[GetAgentAssignmentPolicyRequest, GetAgentAssignmentPolicyResponse], /) -> GetAgentAssignmentPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    async def update_agent_assignment_policy(self, request: UpdateAgentAssignmentPolicyRequest, ctx: RequestContext[UpdateAgentAssignmentPolicyRequest, UpdateAgentAssignmentPolicyResponse], /) -> UpdateAgentAssignmentPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -893,6 +915,83 @@ class ProjectsServiceASGIApplication(ConnectASGIApplication[ProjectsService]):
                         stream_type=StreamType.UNARY,
                     ),
                     function=svc.get_task_metrics,
+                ),
+                "/projects.v1.ProjectsService/AssignTaskAgent": Endpoint.unary(
+                    method=MethodInfo(
+                        name="AssignTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=AssignTaskAgentRequest,
+                        output=AssignTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.assign_task_agent,
+                ),
+                "/projects.v1.ProjectsService/StartTaskAgent": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StartTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=StartTaskAgentRequest,
+                        output=StartTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.start_task_agent,
+                ),
+                "/projects.v1.ProjectsService/StopTaskAgent": Endpoint.unary(
+                    method=MethodInfo(
+                        name="StopTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=StopTaskAgentRequest,
+                        output=StopTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.stop_task_agent,
+                ),
+                "/projects.v1.ProjectsService/RequestTaskAgentChanges": Endpoint.unary(
+                    method=MethodInfo(
+                        name="RequestTaskAgentChanges",
+                        service_name="projects.v1.ProjectsService",
+                        input=RequestTaskAgentChangesRequest,
+                        output=RequestTaskAgentChangesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.request_task_agent_changes,
+                ),
+                "/projects.v1.ProjectsService/SetProjectAgentAssignee": Endpoint.unary(
+                    method=MethodInfo(
+                        name="SetProjectAgentAssignee",
+                        service_name="projects.v1.ProjectsService",
+                        input=SetProjectAgentAssigneeRequest,
+                        output=SetProjectAgentAssigneeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.set_project_agent_assignee,
+                ),
+                "/projects.v1.ProjectsService/GetAgentAssignmentPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="GetAgentAssignmentPolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetAgentAssignmentPolicyRequest,
+                        output=GetAgentAssignmentPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.get_agent_assignment_policy,
+                ),
+                "/projects.v1.ProjectsService/UpdateAgentAssignmentPolicy": Endpoint.unary(
+                    method=MethodInfo(
+                        name="UpdateAgentAssignmentPolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateAgentAssignmentPolicyRequest,
+                        output=UpdateAgentAssignmentPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=svc.update_agent_assignment_policy,
                 ),
             },
             interceptors=interceptors,
@@ -2099,6 +2198,146 @@ class ProjectsServiceClient(ConnectClient):
             headers=headers,
             timeout_ms=timeout_ms,
         )
+    async def assign_task_agent(
+        self,
+        request: AssignTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AssignTaskAgentResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AssignTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=AssignTaskAgentRequest,
+                output=AssignTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def start_task_agent(
+        self,
+        request: StartTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StartTaskAgentResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=StartTaskAgentRequest,
+                output=StartTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def stop_task_agent(
+        self,
+        request: StopTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StopTaskAgentResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=StopTaskAgentRequest,
+                output=StopTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def request_task_agent_changes(
+        self,
+        request: RequestTaskAgentChangesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RequestTaskAgentChangesResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RequestTaskAgentChanges",
+                service_name="projects.v1.ProjectsService",
+                input=RequestTaskAgentChangesRequest,
+                output=RequestTaskAgentChangesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def set_project_agent_assignee(
+        self,
+        request: SetProjectAgentAssigneeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetProjectAgentAssigneeResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetProjectAgentAssignee",
+                service_name="projects.v1.ProjectsService",
+                input=SetProjectAgentAssigneeRequest,
+                output=SetProjectAgentAssigneeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def get_agent_assignment_policy(
+        self,
+        request: GetAgentAssignmentPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetAgentAssignmentPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAgentAssignmentPolicy",
+                service_name="projects.v1.ProjectsService",
+                input=GetAgentAssignmentPolicyRequest,
+                output=GetAgentAssignmentPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    async def update_agent_assignment_policy(
+        self,
+        request: UpdateAgentAssignmentPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateAgentAssignmentPolicyResponse:
+        return await self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateAgentAssignmentPolicy",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateAgentAssignmentPolicyRequest,
+                output=UpdateAgentAssignmentPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
 
 class ProjectsServiceSync(Protocol):
     def create_project(self, request: CreateProjectRequest, ctx: RequestContext[CreateProjectRequest, CreateProjectResponse], /) -> CreateProjectResponse:
@@ -2304,6 +2543,27 @@ class ProjectsServiceSync(Protocol):
         ----- Metrics -----
         Permission-scoped task aggregates for dashboard widgets.
         """
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def assign_task_agent(self, request: AssignTaskAgentRequest, ctx: RequestContext[AssignTaskAgentRequest, AssignTaskAgentResponse], /) -> AssignTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def start_task_agent(self, request: StartTaskAgentRequest, ctx: RequestContext[StartTaskAgentRequest, StartTaskAgentResponse], /) -> StartTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def stop_task_agent(self, request: StopTaskAgentRequest, ctx: RequestContext[StopTaskAgentRequest, StopTaskAgentResponse], /) -> StopTaskAgentResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def request_task_agent_changes(self, request: RequestTaskAgentChangesRequest, ctx: RequestContext[RequestTaskAgentChangesRequest, RequestTaskAgentChangesResponse], /) -> RequestTaskAgentChangesResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def set_project_agent_assignee(self, request: SetProjectAgentAssigneeRequest, ctx: RequestContext[SetProjectAgentAssigneeRequest, SetProjectAgentAssigneeResponse], /) -> SetProjectAgentAssigneeResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def get_agent_assignment_policy(self, request: GetAgentAssignmentPolicyRequest, ctx: RequestContext[GetAgentAssignmentPolicyRequest, GetAgentAssignmentPolicyResponse], /) -> GetAgentAssignmentPolicyResponse:
+        raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
+
+    def update_agent_assignment_policy(self, request: UpdateAgentAssignmentPolicyRequest, ctx: RequestContext[UpdateAgentAssignmentPolicyRequest, UpdateAgentAssignmentPolicyResponse], /) -> UpdateAgentAssignmentPolicyResponse:
         raise ConnectError(Code.UNIMPLEMENTED, 'Not implemented')
 
     @classmethod
@@ -2959,6 +3219,83 @@ class ProjectsServiceWSGIApplication(ConnectWSGIApplication):
                         stream_type=StreamType.UNARY,
                     ),
                     function=service.get_task_metrics,
+                ),
+                "/projects.v1.ProjectsService/AssignTaskAgent": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="AssignTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=AssignTaskAgentRequest,
+                        output=AssignTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.assign_task_agent,
+                ),
+                "/projects.v1.ProjectsService/StartTaskAgent": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StartTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=StartTaskAgentRequest,
+                        output=StartTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.start_task_agent,
+                ),
+                "/projects.v1.ProjectsService/StopTaskAgent": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="StopTaskAgent",
+                        service_name="projects.v1.ProjectsService",
+                        input=StopTaskAgentRequest,
+                        output=StopTaskAgentResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.stop_task_agent,
+                ),
+                "/projects.v1.ProjectsService/RequestTaskAgentChanges": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="RequestTaskAgentChanges",
+                        service_name="projects.v1.ProjectsService",
+                        input=RequestTaskAgentChangesRequest,
+                        output=RequestTaskAgentChangesResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.request_task_agent_changes,
+                ),
+                "/projects.v1.ProjectsService/SetProjectAgentAssignee": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="SetProjectAgentAssignee",
+                        service_name="projects.v1.ProjectsService",
+                        input=SetProjectAgentAssigneeRequest,
+                        output=SetProjectAgentAssigneeResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.set_project_agent_assignee,
+                ),
+                "/projects.v1.ProjectsService/GetAgentAssignmentPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="GetAgentAssignmentPolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=GetAgentAssignmentPolicyRequest,
+                        output=GetAgentAssignmentPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.get_agent_assignment_policy,
+                ),
+                "/projects.v1.ProjectsService/UpdateAgentAssignmentPolicy": EndpointSync.unary(
+                    method=MethodInfo(
+                        name="UpdateAgentAssignmentPolicy",
+                        service_name="projects.v1.ProjectsService",
+                        input=UpdateAgentAssignmentPolicyRequest,
+                        output=UpdateAgentAssignmentPolicyResponse,
+                        idempotency_level=IdempotencyLevel.UNKNOWN,
+                        stream_type=StreamType.UNARY,
+                    ),
+                    function=service.update_agent_assignment_policy,
                 ),
             },
             interceptors=interceptors,
@@ -4159,6 +4496,146 @@ class ProjectsServiceClientSync(ConnectClientSync):
                 service_name="projects.v1.ProjectsService",
                 input=GetTaskMetricsRequest,
                 output=GetTaskMetricsResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def assign_task_agent(
+        self,
+        request: AssignTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> AssignTaskAgentResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="AssignTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=AssignTaskAgentRequest,
+                output=AssignTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def start_task_agent(
+        self,
+        request: StartTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StartTaskAgentResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StartTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=StartTaskAgentRequest,
+                output=StartTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def stop_task_agent(
+        self,
+        request: StopTaskAgentRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> StopTaskAgentResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="StopTaskAgent",
+                service_name="projects.v1.ProjectsService",
+                input=StopTaskAgentRequest,
+                output=StopTaskAgentResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def request_task_agent_changes(
+        self,
+        request: RequestTaskAgentChangesRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> RequestTaskAgentChangesResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="RequestTaskAgentChanges",
+                service_name="projects.v1.ProjectsService",
+                input=RequestTaskAgentChangesRequest,
+                output=RequestTaskAgentChangesResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def set_project_agent_assignee(
+        self,
+        request: SetProjectAgentAssigneeRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> SetProjectAgentAssigneeResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="SetProjectAgentAssignee",
+                service_name="projects.v1.ProjectsService",
+                input=SetProjectAgentAssigneeRequest,
+                output=SetProjectAgentAssigneeResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def get_agent_assignment_policy(
+        self,
+        request: GetAgentAssignmentPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> GetAgentAssignmentPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="GetAgentAssignmentPolicy",
+                service_name="projects.v1.ProjectsService",
+                input=GetAgentAssignmentPolicyRequest,
+                output=GetAgentAssignmentPolicyResponse,
+                idempotency_level=IdempotencyLevel.UNKNOWN,
+                stream_type=StreamType.UNARY,
+            ),
+            headers=headers,
+            timeout_ms=timeout_ms,
+        )
+    def update_agent_assignment_policy(
+        self,
+        request: UpdateAgentAssignmentPolicyRequest,
+        *,
+        headers: Headers | Mapping[str, str] | None = None,
+        timeout_ms: int | None = None,
+    ) -> UpdateAgentAssignmentPolicyResponse:
+        return self.execute_unary(
+            request=request,
+            method=MethodInfo(
+                name="UpdateAgentAssignmentPolicy",
+                service_name="projects.v1.ProjectsService",
+                input=UpdateAgentAssignmentPolicyRequest,
+                output=UpdateAgentAssignmentPolicyResponse,
                 idempotency_level=IdempotencyLevel.UNKNOWN,
                 stream_type=StreamType.UNARY,
             ),

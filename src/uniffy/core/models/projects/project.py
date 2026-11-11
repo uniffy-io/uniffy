@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime, Enum
+from sqlalchemy import Column, DateTime, Enum, Index, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -15,6 +15,13 @@ class Project(SQLModel, table=True):
     """Org-scoped project/workspace for tasks. `slug` prefixes generated task IDs."""
 
     __tablename__ = "projects_projects"
+    __table_args__ = (
+        Index(
+            "ix_projects_projects_agent_assignee",
+            "agent_assignee_id",
+            postgresql_where=text("agent_assignee_id IS NOT NULL"),
+        ),
+    )
 
     id: UUID = Field(default_factory=generate_id, primary_key=True, nullable=False)
     organization_id: UUID = Field(foreign_key="login_organizations.id", nullable=False, index=True)
@@ -52,6 +59,16 @@ class Project(SQLModel, table=True):
     task_counter: int = Field(default=0, nullable=False)
     default_view_id: str | None = Field(default=None, max_length=100)
     type_field_schemas: dict[str, Any] | None = Field(default=None, sa_column=Column(JSONB))
+    # New tasks are picked up by this agent, working as each task's creator.
+    agent_assignee_id: UUID | None = Field(
+        default=None, foreign_key="agents_agents.id", nullable=True, ondelete="SET NULL"
+    )
+    agent_assignee_set_by: UUID | None = Field(
+        default=None, foreign_key="login_users.id", nullable=True, ondelete="SET NULL"
+    )
+    agent_assignee_set_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True))
+    )
     is_deleted: bool = Field(default=False, nullable=False)
     version: int = Field(default=1, nullable=False)
     created_at: datetime = Field(

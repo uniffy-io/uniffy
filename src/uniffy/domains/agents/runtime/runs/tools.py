@@ -8,6 +8,7 @@ from uuid import UUID
 from loguru import logger
 
 from uniffy.core.database import SessionFactory
+from uniffy.domains.agents.metrics import AGENT_TOOL_CALLS_TOTAL
 from uniffy.domains.agents.providers.base import (
     CompletionResult,
     CompletionStopReason,
@@ -22,7 +23,6 @@ from uniffy.domains.agents.runtime.runs.segments import (
 )
 from uniffy.domains.agents.runtime.tooling import (
     MAX_LOAD_ONLY_ITERATIONS,
-    MAX_TOOL_ITERATIONS,
     expand_loaded_schemas,
     gather_read_tool_results,
     is_load_only_turn,
@@ -58,12 +58,13 @@ class StreamingToolLoop:
     ) -> AsyncIterator[StreamEvent]:
         work_iterations = 0
         load_iterations = 0
+        max_iterations = executor.context.max_tool_iterations
         while True:
             if is_load_only_turn(result.tool_calls):
                 load_iterations += 1
             else:
                 work_iterations += 1
-            if work_iterations > MAX_TOOL_ITERATIONS or load_iterations > MAX_LOAD_ONLY_ITERATIONS:
+            if work_iterations > max_iterations or load_iterations > MAX_LOAD_ONLY_ITERATIONS:
                 break
             logger.debug(
                 "Stream tool loop iteration",
@@ -161,6 +162,29 @@ class StreamingToolLoop:
                 results_content[tool_call.id] = content
 
             for tool_call in write_calls:
+                refusal = base_context.confirmation_unavailable_message
+                if refusal and tool_registry.needs_person(tool_call.name):
+                    turn_traces[tool_call.id]["success"] = False
+                    AGENT_TOOL_CALLS_TOTAL.labels(
+                        tool=tool_call.name, status="needs_confirmation"
+                    ).inc()
+                    stored_result = await writer.add_message(
+                        role="tool",
+                        content=refusal,
+                        tool_name=tool_call.name,
+                        tool_call_id=tool_call.id,
+                        tool_result=refusal,
+                    )
+                    yield StreamEvent(
+                        type=EventType.TOOL_RESULT_END,
+                        tool_call_id=tool_call.id,
+                        tool_name=tool_call.name,
+                        success=False,
+                        tool_result=refusal,
+                        message_id=stored_result.id,
+                    )
+                    results_content[tool_call.id] = refusal
+                    continue
                 if tool_registry.is_destructive(tool_call.name):
                     await approval_store.register(
                         writer.approval_scope_id,
@@ -334,5 +358,5 @@ class StreamingToolLoop:
         yield StreamEvent(type=EventType.EXCEED_MAX_ITERS)
         yield StreamEvent(
             type=EventType.ERROR,
-            error=f"Agent exceeded maximum tool iterations ({MAX_TOOL_ITERATIONS})",
+            error=f"Agent exceeded maximum tool iterations ({max_iterations})",
         )

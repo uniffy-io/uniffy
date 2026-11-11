@@ -14,6 +14,7 @@ from uniffy.core.database import SessionFactory
 from uniffy.core.errors import ValidationError
 from uniffy.core.models.agents.channel_binding import AgentChannelBinding
 from uniffy.core.models.agents.message import AgentMessage, AgentMessageRole
+from uniffy.core.models.agents.session import AgentSessionKind
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search import SearchIndexer
 from uniffy.core.storage import ObjectStorage
@@ -64,8 +65,13 @@ from uniffy.domains.agents.sessions.operations import (
     apply_emergency_truncation,
 )
 from uniffy.domains.agents.skills.resolution import SkillSurface
+from uniffy.domains.agents.tasks.brief import TASK_CONFIRMATION_UNAVAILABLE
 from uniffy.domains.agents.tools.deferral import plan_tool_advertisement
-from uniffy.domains.agents.tools.definitions import ToolContext
+from uniffy.domains.agents.tools.definitions import (
+    MAX_TASK_TOOL_ITERATIONS,
+    MAX_TOOL_ITERATIONS,
+    ToolContext,
+)
 from uniffy.domains.agents.tools.registry import get_tool_registry
 from uniffy.domains.chat.lifecycle import ChannelCallLifecycle
 from uniffy.domains.integrations.advertisement import (
@@ -153,6 +159,7 @@ class MessageStreamer:
         rerun_anchor: AgentMessage | None = None,
         run_id: UUID | None = None,
         deadline_at: float | None = None,
+        trigger_brief: str | None = None,
     ) -> AsyncGenerator[StreamEvent]:
         async with InvocationRun(
             self._session_factory, run_id=run_id, deadline_at=deadline_at
@@ -367,6 +374,9 @@ class MessageStreamer:
             thread_note = await self._chat.build_thread(destination)
             if thread_note:
                 attach_to_trigger_turn(llm_messages, thread_note)
+            if trigger_brief:
+                # Ephemeral like the recall block: the stored user row keeps only `content`.
+                attach_to_trigger_turn(llm_messages, trigger_brief)
 
             if rerun_anchor is None:
                 user_message = await writer.add_message(
@@ -381,6 +391,9 @@ class MessageStreamer:
                 yield StreamEvent(type=EventType.MESSAGE_STORED, message=rerun_anchor)
             yield StreamEvent(type=EventType.REPLY_START)
 
+            is_task_session = (
+                agent_session is not None and agent_session.kind == AgentSessionKind.TASK
+            )
             tool_context = ToolContext(
                 session=self._session,
                 user_id=user_id,
@@ -396,6 +409,12 @@ class MessageStreamer:
                 memory_bridge_scope=memory_bridge,
                 memory_recall_promoted=recall_promoted,
                 is_test_session=agent_session.is_test if agent_session else False,
+                confirmation_unavailable_message=(
+                    TASK_CONFIRMATION_UNAVAILABLE if is_task_session else None
+                ),
+                max_tool_iterations=(
+                    MAX_TASK_TOOL_ITERATIONS if is_task_session else MAX_TOOL_ITERATIONS
+                ),
                 image_params=image_config.params if image_config else {},
                 image_max_resolution=image_config.max_resolution if image_config else None,
                 image_max_quality=image_config.max_quality if image_config else None,

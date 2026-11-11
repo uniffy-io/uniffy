@@ -1,5 +1,7 @@
 """Business logic for comments domain."""
 
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -8,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniffy.core.errors import NotFoundError, PermissionDeniedError
 from uniffy.core.events import NotificationEvent, emit_notification
+from uniffy.core.models.agents.agent import Agent
 from uniffy.core.models.comments.comment import Comment, CommentAnchorType
 from uniffy.core.models.comments.comment_reaction import CommentReaction
 from uniffy.core.models.login.user import User
@@ -35,6 +38,14 @@ def _comment_snippet(body: str, limit: int = 140) -> str:
     return f"{text[:limit]}..." if len(text) > limit else text
 
 
+@dataclass(frozen=True)
+class AgentAuthor:
+    """An agent writing a comment for the person in ``author_id``."""
+
+    agent_id: UUID
+    session_id: UUID | None = None
+
+
 class CommentOperations:
     """Comments require COMMENTER on parent to add, VIEW to read, EDIT to resolve/reopen."""
 
@@ -52,6 +63,7 @@ class CommentOperations:
         anchor_type: CommentAnchorType = CommentAnchorType.PAGE,
         anchor_data: dict | None = None,
         parent_comment_id: UUID | None = None,
+        agent_author: AgentAuthor | None = None,
     ) -> tuple[Comment, str, str | None]:
         """Create a comment; requires COMMENTER on the parent content."""
         await self._verify_content_comment(user_id, organization_id, content_type, content_id)
@@ -74,6 +86,8 @@ class CommentOperations:
             content_id=content_id,
             parent_comment_id=parent_comment_id,
             author_id=user_id,
+            agent_id=agent_author.agent_id if agent_author else None,
+            agent_session_id=agent_author.session_id if agent_author else None,
             body=body,
             anchor_type=anchor_type,
             anchor_data=anchor_data,
@@ -107,6 +121,9 @@ class CommentOperations:
 
         comment.body = body
         comment.updated_at = datetime.now(UTC)
+        # Edited text is the person's own, so it no longer reads as the agent's.
+        comment.agent_id = None
+        comment.agent_session_id = None
         await self._session.flush()
         await self._session.commit()
         await self._session.refresh(comment)
@@ -532,6 +549,14 @@ class CommentOperations:
             )
         )
         return result.scalar_one_or_none()
+
+    async def agent_names(self, comments: Iterable[Comment]) -> dict[UUID, str]:
+        """Display names for agents that wrote comments; deleted agents keep theirs."""
+        ids = {comment.agent_id for comment in comments if comment.agent_id}
+        if not ids:
+            return {}
+        rows = await self._session.execute(select(Agent.id, Agent.name).where(Agent.id.in_(ids)))
+        return {agent_id: name for agent_id, name in rows.all()}
 
     async def _get_user_info(self, user_id: UUID) -> tuple[str, str | None]:
         result = await self._session.execute(select(User.full_name).where(User.id == user_id))

@@ -53,6 +53,7 @@ NOTIFICATION_TYPE_TO_PROTO: dict[NotificationType, int] = {
     NotificationType.TIMESHEET_APPROVED: ProtoNotificationType.TIMESHEET_APPROVED,
     NotificationType.TIMESHEET_REJECTED: ProtoNotificationType.TIMESHEET_REJECTED,
     NotificationType.TIMESHEET_REMINDER: ProtoNotificationType.TIMESHEET_REMINDER,
+    NotificationType.TASK_AGENT_FINISHED: ProtoNotificationType.TASK_AGENT_FINISHED,
 }
 
 NOTIFICATION_TYPE_FROM_PROTO: dict[int, NotificationType] = {

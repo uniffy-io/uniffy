@@ -96,6 +96,7 @@ class RuntimeOperations:
         rerun_anchor: AgentMessage | None = None,
         run_id: UUID | None = None,
         deadline_at: float | None = None,
+        trigger_brief: str | None = None,
     ) -> AsyncGenerator[StreamEvent]:
         return self._streamer.stream(
             user_id=user_id,
@@ -108,4 +109,5 @@ class RuntimeOperations:
             rerun_anchor=rerun_anchor,
             run_id=run_id,
             deadline_at=deadline_at,
+            trigger_brief=trigger_brief,
         )

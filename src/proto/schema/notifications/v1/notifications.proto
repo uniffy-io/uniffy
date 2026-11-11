@@ -96,6 +96,8 @@ enum NotificationType {
   NOTIFICATION_TYPE_CALENDAR_CONNECTION_NEEDS_RECONNECT = 36;
   // A change to a synced event was replaced by a newer edit on the other side
   NOTIFICATION_TYPE_CALENDAR_SYNC_CONFLICT = 37;
+  // An agent assigned to a task finished, or could not finish, its run
+  NOTIFICATION_TYPE_TASK_AGENT_FINISHED = 38;
 }
 
 // Notification model

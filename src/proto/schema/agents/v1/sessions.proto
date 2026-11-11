@@ -39,6 +39,7 @@ enum SessionKind {
   SESSION_KIND_DIRECT = 1; // 1:1 user<->agent
   SESSION_KIND_GROUP = 2; // multi-user with agent
   SESSION_KIND_GLOBAL = 3; // agent background/automation session
+  SESSION_KIND_TASK = 4; // agent working an assigned task, owned by the assigner
 }
 
 // Role of a message in the conversation

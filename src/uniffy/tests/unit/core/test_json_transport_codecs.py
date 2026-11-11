@@ -55,7 +55,7 @@ def test_notification_event_codec_accepts_pre_outbox_payloads() -> None:
 
 async def test_notification_event_bus_dispatches_through_core_contract(monkeypatch) -> None:
     enqueue = AsyncMock()
-    monkeypatch.setattr(event_bus, "enqueue_job", enqueue)
+    monkeypatch.setattr(event_bus, "enqueue_job_reconnecting", enqueue)
     event = NotificationEvent(
         notification_type=NotificationType.SYSTEM_ANNOUNCEMENT,
         organization_id=generate_id(),

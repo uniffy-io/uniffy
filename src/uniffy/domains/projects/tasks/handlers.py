@@ -40,6 +40,7 @@ from uniffy.core.models.tags.tag import Tag
 from uniffy.core.realtime.buffer import UpdateBuffer
 from uniffy.core.search.indexer import build_content_urn
 from uniffy.core.types import ContentType
+from uniffy.domains.agents.tasks.admission import read_current_assignments
 from uniffy.domains.projects import queries
 from uniffy.domains.projects.converters import activity_to_proto, task_to_proto
 from uniffy.domains.projects.projects import ProjectOperations
@@ -93,6 +94,7 @@ async def _task_payload(
     subtask_counts = await queries.get_subtask_counts(session, count_ids)
     hydrate_ids = count_ids + ([spawned_task.id] if spawned_task else [])
     tags_by_id = await _hydrate_task_tags(session, organization_id, hydrate_ids)
+    agents_by_id = await read_current_assignments(session, organization_id, hydrate_ids)
 
     updated_parent = None
     if task.parent_id:
@@ -104,6 +106,8 @@ async def _task_payload(
             subtask_total=p_total,
             subtask_completed=p_done,
             tags=tags_by_id.get(parent.id),
+            agent_assignment=agents_by_id.get(parent.id),
+            viewer_id=user_id,
         )
 
     st_total, st_done = subtask_counts.get(task.id, (0, 0))
@@ -114,10 +118,18 @@ async def _task_payload(
             subtask_total=st_total,
             subtask_completed=st_done,
             tags=tags_by_id.get(task.id),
+            agent_assignment=agents_by_id.get(task.id),
+            viewer_id=user_id,
         ),
         updated_parent=updated_parent,
         spawned_task=(
-            task_to_proto(spawned_task, user_role, tags=tags_by_id.get(spawned_task.id))
+            task_to_proto(
+                spawned_task,
+                user_role,
+                tags=tags_by_id.get(spawned_task.id),
+                agent_assignment=agents_by_id.get(spawned_task.id),
+                viewer_id=user_id,
+            )
             if spawned_task
             else None
         ),
@@ -182,10 +194,17 @@ class TaskHandlers:
                 subtask_counts = await queries.get_subtask_counts(session, [task.id])
                 st_total, st_done = subtask_counts.get(task.id, (0, 0))
                 tags_by_id = await _hydrate_task_tags(session, organization_id, [task.id])
+                agents_by_id = await read_current_assignments(session, organization_id, [task.id])
 
                 return GetTaskResponse(
                     task=task_to_proto(
-                        task, user_role, st_total, st_done, tags=tags_by_id.get(task.id)
+                        task,
+                        user_role,
+                        st_total,
+                        st_done,
+                        tags=tags_by_id.get(task.id),
+                        agent_assignment=agents_by_id.get(task.id),
+                        viewer_id=user_id,
                     )
                 )
         except ConnectError:
@@ -297,9 +316,21 @@ class TaskHandlers:
                 tags_by_id = await _hydrate_task_tags(
                     session, organization_id, [t.id for t in tasks]
                 )
+                agents_by_id = await read_current_assignments(
+                    session, organization_id, [t.id for t in tasks]
+                )
 
                 return BulkUpdateTasksResponse(
-                    tasks=[task_to_proto(t, user_role, tags=tags_by_id.get(t.id)) for t in tasks],
+                    tasks=[
+                        task_to_proto(
+                            t,
+                            user_role,
+                            tags=tags_by_id.get(t.id),
+                            agent_assignment=agents_by_id.get(t.id),
+                            viewer_id=user_id,
+                        )
+                        for t in tasks
+                    ],
                     updated_count=len(tasks),
                 )
         except ConnectError:
@@ -412,6 +443,7 @@ class TaskHandlers:
                 task_ids = [t.id for t in tasks]
                 subtask_counts = await queries.get_subtask_counts(session, task_ids)
                 tags_by_id = await _hydrate_task_tags(session, organization_id, task_ids)
+                agents_by_id = await read_current_assignments(session, organization_id, task_ids)
 
                 task_protos = []
                 for t in tasks:
@@ -423,6 +455,8 @@ class TaskHandlers:
                             subtask_total=st_total,
                             subtask_completed=st_done,
                             tags=tags_by_id.get(t.id),
+                            agent_assignment=agents_by_id.get(t.id),
+                            viewer_id=user_id,
                         )
                     )
 
