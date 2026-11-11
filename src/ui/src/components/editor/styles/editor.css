@@ -282,6 +282,13 @@
    wrapping as one giant inline word. */
 .crepe-editor .mention-wrapper {
   display: inline-block;
+  max-width: 100%;
+}
+/* Capped at the container so a narrow box (a table cell) truncates the title
+   instead of letting the nowrap label push the pill past its edge. */
+.crepe-editor .mention-wrapper .mention-chip,
+.crepe-editor .mention-wrapper .mention-chip-compact {
+  max-width: 100%;
 }
 .crepe-editor .mention-wrapper:has(.mention-expanded-card) {
   display: inline;
