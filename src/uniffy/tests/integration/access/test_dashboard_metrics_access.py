@@ -180,9 +180,7 @@ async def test_selected_projects_stay_limited_to_readable_ones(access, board) ->
 
 
 async def test_me_and_my_teams_resolve_for_the_viewer(access, board) -> None:
-    mine = await _metric(
-        access, access.member_id, "overdue", MetricScope(people=PeopleScope.ME), 10
-    )
+    mine = await _metric(access, access.member_id, "overdue", MetricScope(people=PeopleScope.ME), 10)
     assert [item.project_id for item in mine.items] == [board.private]
     # The team holds member and ghost; peer's membership is inactive.
     _, rows = await _metric(
@@ -241,18 +239,18 @@ async def test_sprints_under_me_skip_sprints_without_the_viewers_work(
     await session.commit()
     everyone = await _metric(access, access.member_id, "sprints", MetricScope(), 1)
     assert [s.name for s in everyone] == ["Sprint 0"]
-    mine = await _metric(
-        access, access.member_id, "sprints", MetricScope(people=PeopleScope.ME), 1
-    )
+    mine = await _metric(access, access.member_id, "sprints", MetricScope(people=PeopleScope.ME), 1)
     assert [(s.sprint_id, s.total) for s in mine] == [(board.sprint, 1)]
 
 
 async def test_project_refs_name_only_readable_projects(access, board) -> None:
     async with open_session() as db:
         resolved = await resolve_scope(db, access.admin_id, access.org_id, MetricScope())
-        refs = await TaskMetricsReader(db, resolved).project_refs(
-            {board.open, board.shared, board.private}
-        )
+        refs = await TaskMetricsReader(db, resolved).project_refs({
+            board.open,
+            board.shared,
+            board.private,
+        })
     assert {ref.project_id: ref.name for ref in refs} == {
         board.open: "Open",
         board.shared: "Shared",

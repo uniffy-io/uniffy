@@ -29,9 +29,9 @@ def test_the_tool_is_registered_read_only_in_its_own_group() -> None:
 
 
 def test_the_schema_offers_exactly_the_widget_catalog() -> None:
-    widget_enum = dashboard_propose.parameter_schema["properties"]["widgets"]["items"][
-        "properties"
-    ]["widget"]["enum"]
+    widget_enum = dashboard_propose.parameter_schema["properties"]["widgets"]["items"]["properties"][
+        "widget"
+    ]["enum"]
     assert widget_enum == [widget.widget_id for widget in load_catalog().widgets]
 
 

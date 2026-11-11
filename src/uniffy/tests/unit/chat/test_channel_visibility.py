@@ -417,4 +417,3 @@ class TestJoin:
 
         assert lock.await_args.args[1:] == (channel.id, channel.organization_id)
         assert lock.await_args.kwargs == {"shared": True}
-

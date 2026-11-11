@@ -624,7 +624,13 @@ class TestGoogleMalformedToolCall:
         provider = GoogleProvider("google-test-key")
         calls = _install_google_attempts(
             provider,
-            [[_google_chunk([_google_part(text="Working on it")], finish_reason="MALFORMED_FUNCTION_CALL")]],
+            [
+                [
+                    _google_chunk(
+                        [_google_part(text="Working on it")], finish_reason="MALFORMED_FUNCTION_CALL"
+                    )
+                ]
+            ],
         )
 
         events = await _collect(provider.chat_completion(MESSAGES, "gemini-2.5-flash", stream=True))

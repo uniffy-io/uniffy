@@ -28,9 +28,7 @@ def _pseudo(pseudo: TaskPseudoField):
 
 def test_every_custom_field_type_and_task_attribute_is_listed() -> None:
     catalog = view_catalog()
-    assert {entry.type for entry in catalog.field_types} == set(FieldType) - {
-        FieldType.UNSPECIFIED
-    }
+    assert {entry.type for entry in catalog.field_types} == set(FieldType) - {FieldType.UNSPECIFIED}
     assert {entry.pseudo for entry in catalog.pseudo_fields} == set(PSEUDO_FIELD_KINDS)
 
 

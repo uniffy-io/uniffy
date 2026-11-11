@@ -163,9 +163,7 @@ async def test_frequency_change_reschedules_pending_delivery() -> None:
     with (
         patch(
             "uniffy.domains.notifications.delivery.outbox.load_notification_overrides",
-            new=AsyncMock(
-                return_value={"email_frequency": "daily", "email_digest_time": "14:00"}
-            ),
+            new=AsyncMock(return_value={"email_frequency": "daily", "email_digest_time": "14:00"}),
         ),
         patch(
             "uniffy.domains.notifications.delivery.outbox.get_user_timezone",

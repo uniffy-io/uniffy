@@ -20,9 +20,7 @@ class TestFromBlob:
         assert policy.broadcast_confirm_threshold == DEFAULT_BROADCAST_CONFIRM_THRESHOLD
 
     def test_stored_values_round_trip(self) -> None:
-        policy = _from_blob(
-            ORG, {"broadcast_min_role": "admin", "broadcast_confirm_threshold": 100}
-        )
+        policy = _from_blob(ORG, {"broadcast_min_role": "admin", "broadcast_confirm_threshold": 100})
         assert policy.broadcast_min_role is BroadcastMinRole.ADMIN
         assert policy.broadcast_confirm_threshold == 100
 

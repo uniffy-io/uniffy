@@ -79,10 +79,16 @@ def deny(harness: Harness) -> None:
 
 async def test_create_checks_manage_on_the_project(harness) -> None:
     field = await ops(harness).create(
-        harness.user_id, harness.organization_id, harness.project_id, name="Effort", field_type="number"
+        harness.user_id,
+        harness.organization_id,
+        harness.project_id,
+        name="Effort",
+        field_type="number",
     )
 
-    harness.gate.assert_awaited_once_with(harness.user_id, harness.organization_id, harness.project_id)
+    harness.gate.assert_awaited_once_with(
+        harness.user_id, harness.organization_id, harness.project_id
+    )
     assert field.id.startswith("field_")
     assert field.is_system is False
     harness.session.commit.assert_awaited_once()
@@ -233,7 +239,9 @@ async def test_a_system_field_cannot_be_deleted(harness) -> None:
 async def test_delete_removes_a_custom_field(harness) -> None:
     field = stored_field(harness)
 
-    await ops(harness).delete(harness.user_id, harness.organization_id, harness.project_id, "field_abc")
+    await ops(harness).delete(
+        harness.user_id, harness.organization_id, harness.project_id, "field_abc"
+    )
 
     harness.session.delete.assert_awaited_once_with(field)
     harness.session.commit.assert_awaited_once()

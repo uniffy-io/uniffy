@@ -29,7 +29,9 @@ ORG = generate_id()
 
 
 def _project(name: str, slug: str) -> Project:
-    return Project(id=generate_id(), organization_id=ORG, owner_id=generate_id(), name=name, slug=slug)
+    return Project(
+        id=generate_id(), organization_id=ORG, owner_id=generate_id(), name=name, slug=slug
+    )
 
 
 def _field(project: Project, field_id: str, name: str, field_type: ProjectFieldType, **kw):
@@ -321,10 +323,10 @@ def test_a_formula_like_title_is_defused_in_the_row() -> None:
     project = _project("=Evil", "ALP")
     labels = _Labels([project], {project.id: []})
 
-    row = task_row(_task(project, 1, title="=HYPERLINK(\"x\")"), project, labels, [])
+    row = task_row(_task(project, 1, title='=HYPERLINK("x")'), project, labels, [])
 
     assert _cell(row, "project") == "'=Evil"
-    assert _cell(row, "title") == "'=HYPERLINK(\"x\")"
+    assert _cell(row, "title") == '\'=HYPERLINK("x")'
 
 
 def test_numbers_drop_an_integral_fraction_and_keep_others() -> None:

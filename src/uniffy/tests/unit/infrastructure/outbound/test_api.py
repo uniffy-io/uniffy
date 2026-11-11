@@ -15,20 +15,16 @@ BASE = "https://api.example.com/v1"
 def _app(seen: list, *, status: int = 200, body: bytes = b'{"ok": true}', headers=None, delay=0.0):
     async def app(scope, receive, send):
         message = await receive()
-        seen.append(
-            {
-                "method": scope["method"],
-                "path": scope["path"],
-                "query": scope["query_string"].decode(),
-                "headers": {k.decode(): v.decode() for k, v in scope["headers"]},
-                "body": message.get("body", b""),
-            }
-        )
+        seen.append({
+            "method": scope["method"],
+            "path": scope["path"],
+            "query": scope["query_string"].decode(),
+            "headers": {k.decode(): v.decode() for k, v in scope["headers"]},
+            "body": message.get("body", b""),
+        })
         if delay:
             await asyncio.sleep(delay)
-        await send(
-            {"type": "http.response.start", "status": status, "headers": headers or []}
-        )
+        await send({"type": "http.response.start", "status": status, "headers": headers or []})
         await send({"type": "http.response.body", "body": body})
 
     return app

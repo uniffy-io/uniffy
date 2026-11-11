@@ -100,9 +100,9 @@ async def test_note_folder_child_count_is_visible_notes_only(session, env) -> No
     await session.commit()
 
     try:
-        meta = await NoteProjectionOperations(
-            session, MagicMock()
-        )._get_search_metadata_async(folder_note)
+        meta = await NoteProjectionOperations(session, MagicMock())._get_search_metadata_async(
+            folder_note
+        )
         assert meta is not None
         assert meta["child_count"] == "1"
     finally:

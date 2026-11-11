@@ -156,9 +156,7 @@ class TestMentionStateGate:
         urn = f"urn:uniffy:content:NOTE:{generate_id()}"
 
         assert (
-            await relay.allows_mention_state(
-                {"urn": urn, "changes": {"urn_status": "DELETED"}}
-            )
+            await relay.allows_mention_state({"urn": urn, "changes": {"urn_status": "DELETED"}})
             is True
         )
         relay._can_view_content.assert_not_awaited()
@@ -170,11 +168,9 @@ class TestMentionStateGate:
         urn = f"urn:uniffy:content:NOTE:{generate_id()}"
 
         assert (
-            await relay.allows_mention_state(
-                {
-                    "urn": urn,
-                    "changes": {"urn_status": "DELETED", "name": "private"},
-                }
-            )
+            await relay.allows_mention_state({
+                "urn": urn,
+                "changes": {"urn_status": "DELETED", "name": "private"},
+            })
             is False
         )

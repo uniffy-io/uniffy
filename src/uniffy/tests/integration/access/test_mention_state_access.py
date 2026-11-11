@@ -13,7 +13,9 @@ async def test_private_update_reaches_owner_but_not_peer(session, access) -> Non
     payload = {"urn": urn, "changes": {"title": "private update"}}
 
     assert (
-        await TagEventRelay(access.peer_id, access.org_id, open_session).allows_mention_state(payload)
+        await TagEventRelay(access.peer_id, access.org_id, open_session).allows_mention_state(
+            payload
+        )
         is False
     )
     assert (
@@ -31,6 +33,8 @@ async def test_type_only_tombstone_reaches_an_active_member(session, access) -> 
     payload = {"urn": urn, "changes": {"urn_status": "DELETED"}}
 
     assert (
-        await TagEventRelay(access.peer_id, access.org_id, open_session).allows_mention_state(payload)
+        await TagEventRelay(access.peer_id, access.org_id, open_session).allows_mention_state(
+            payload
+        )
         is True
     )

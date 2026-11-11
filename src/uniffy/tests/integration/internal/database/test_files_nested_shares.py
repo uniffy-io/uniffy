@@ -122,9 +122,7 @@ async def test_direct_folder_grant_reaches_nested_folder(session, env, quiet_sea
 
         accessible = await FolderOperations(
             session, search_indexer=quiet_search
-        ).list_accessible_folders(
-            env.member_id, env.org_id
-        )
+        ).list_accessible_folders(env.member_id, env.org_id)
         accessible_ids = {f.id for f in accessible}
         assert nested.id in accessible_ids
         assert private_parent.id not in accessible_ids

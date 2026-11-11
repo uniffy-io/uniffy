@@ -41,9 +41,7 @@ async def _seed_channels(db_session: AsyncSession) -> NS:
     await db_session.flush()
 
     db_session.add_all([
-        OrganizationMember(
-            user_id=owner.id, organization_id=org.id, role=OrganizationRole.MEMBER
-        ),
+        OrganizationMember(user_id=owner.id, organization_id=org.id, role=OrganizationRole.MEMBER),
         OrganizationMember(
             user_id=owner.id, organization_id=other_org.id, role=OrganizationRole.MEMBER
         ),
@@ -151,19 +149,21 @@ async def test_unarchive_brings_it_back_with_an_audit_row(session, channels) -> 
     ops = _operations(session)
     await ops.archive_channel(channels.owner_id, channels.org_id, channels.paused_id)
 
-    restored = await ops.unarchive_channel(
-        channels.owner_id, channels.org_id, channels.paused_id
-    )
+    restored = await ops.unarchive_channel(channels.owner_id, channels.org_id, channels.paused_id)
 
     assert restored.is_archived is False
     assert await _list_ids(ops, channels, archived_only=False) == set(channels.channel_ids)
     assert await _list_ids(ops, channels, archived_only=True) == set()
 
     actions = (
-        await session.execute(
-            select(AuditEvent.action).where(AuditEvent.resource_id == channels.paused_id)
+        (
+            await session.execute(
+                select(AuditEvent.action).where(AuditEvent.resource_id == channels.paused_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     assert Action.CHAT_CHANNEL_UNARCHIVED in actions
 
 
@@ -179,9 +179,7 @@ async def test_a_channel_in_another_org_is_not_found(session, channels) -> None:
     await ops.archive_channel(channels.owner_id, channels.org_id, channels.paused_id)
 
     with pytest.raises(NotFoundError):
-        await ops.unarchive_channel(
-            channels.owner_id, channels.other_org_id, channels.paused_id
-        )
+        await ops.unarchive_channel(channels.owner_id, channels.other_org_id, channels.paused_id)
 
 
 async def test_a_deleted_channel_is_not_found(session, channels) -> None:

@@ -15,10 +15,14 @@ def test_json_codec_roundtrip_supports_text_and_bytes() -> None:
     encoded_text = dumps_str(payload)
 
     assert encoded_bytes == encoded_text.encode()
-    assert loads(encoded_bytes) == loads(encoded_text) == {
-        "message": payload["message"],
-        "created_at": "2026-08-15T12:30:00+00:00",
-    }
+    assert (
+        loads(encoded_bytes)
+        == loads(encoded_text)
+        == {
+            "message": payload["message"],
+            "created_at": "2026-08-15T12:30:00+00:00",
+        }
+    )
 
 
 def test_json_codec_supports_default_and_options() -> None:
